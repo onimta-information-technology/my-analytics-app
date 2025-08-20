@@ -1,0 +1,253 @@
+import 'package:ballys_reservation_app/data/services/api_service.dart';
+import 'package:ballys_reservation_app/models/airport_search_response.dart';
+import 'package:ballys_reservation_app/models/reservation/airport_cost_response.dart';
+import 'package:ballys_reservation_app/models/reservation/hotel_response.dart';
+import 'package:ballys_reservation_app/models/reservation/room_category_response.dart';
+import 'package:ballys_reservation_app/models/reservation/room_type_response.dart';
+
+class AirportRepository {
+  final ApiService apiService;
+
+  AirportRepository(this.apiService);
+
+  Future<List<Airport>> getAllAirports() async {
+    final response = await apiService.post('CommonExecute', {
+      "HasReturnData": "T",
+      "Parameters": [
+        {
+          "Para_Data": 9018,
+          "Para_Direction": "Input",
+          "Para_Lenth": 1,
+          "Para_Name": "@Iid",
+          "Para_Type": "int"
+        },
+      ],
+      "SpName": "sp_CRM_Common_API",
+      "con": "1"
+    });
+
+    if (response['CommonResult'] != null &&
+        response['CommonResult']['Table'] is List &&
+        response['CommonResult']['Table'].isNotEmpty) {
+      final tableData = response['CommonResult']['Table'];
+
+      List<Airport> airports = [];
+
+      if (tableData.length > 0) {
+        for (var json in tableData) {
+          Airport airportResponse = Airport.fromJson(json);
+          airports.add(airportResponse);
+        }
+        print("######################### airports #########################");
+        print(airports);
+        print("#########################################");
+
+        return airports;
+      } else {
+        throw Exception(
+            'Login failed: Invalid credentials or LoginStatus is not True');
+      }
+    } else {
+      throw Exception('Login failed: unexpected response structure');
+    }
+  }
+
+  Future<List<HotelResponse>> getAllHotels() async {
+    final response = await apiService.post('CommonExecute', {
+      "HasReturnData": "T",
+      "Parameters": [
+        {
+          "Para_Data": 9015,
+          "Para_Direction": "Input",
+          "Para_Lenth": 1,
+          "Para_Name": "@Iid",
+          "Para_Type": "int"
+        },
+      ],
+      "SpName": "sp_CRM_Common_API",
+      "con": "1"
+    });
+
+    if (response['CommonResult'] != null &&
+        response['CommonResult']['Table'] is List &&
+        response['CommonResult']['Table'].isNotEmpty) {
+      final tableData = response['CommonResult']['Table'];
+
+      List<HotelResponse> hotels = [];
+
+      if (tableData.length > 0) {
+        for (var json in tableData) {
+          HotelResponse hotelResponse = HotelResponse.fromJson(json);
+          hotels.add(hotelResponse);
+        }
+        return hotels;
+      } else {
+        throw Exception(
+            'Login failed: Invalid credentials or LoginStatus is not True');
+      }
+    } else {
+      throw Exception('Login failed: unexpected response structure');
+    }
+  }
+
+  Future<List<RoomCategoryResponse>> getSelectedHotelRoomCategories(
+      double hotelId) async {
+    final response = await apiService.post('CommonExecute', {
+      "HasReturnData": "T",
+      "Parameters": [
+        {
+          "Para_Data": 9016,
+          "Para_Direction": "Input",
+          "Para_Lenth": 1,
+          "Para_Name": "@Iid",
+          "Para_Type": "int"
+        },
+        {
+          "Para_Data": hotelId.toInt(),
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text1",
+          "Para_Type": "varchar"
+        },
+      ],
+      "SpName": "sp_CRM_Common_API",
+      "con": "1"
+    });
+
+    if (response['CommonResult'] != null &&
+        response['CommonResult']['Table'] is List &&
+        response['CommonResult']['Table'].isNotEmpty) {
+      final tableData = response['CommonResult']['Table'];
+
+      List<RoomCategoryResponse> roomCategories = [];
+
+      if (tableData.length > 0) {
+        for (var json in tableData) {
+          RoomCategoryResponse roomCategoryResponse =
+              RoomCategoryResponse.fromJson(json);
+          roomCategories.add(roomCategoryResponse);
+        }
+        return roomCategories;
+      } else {
+        throw Exception('Room Category API failed');
+      }
+    } else {
+      throw Exception('Room Category API failed');
+    }
+  }
+
+  Future<List<RoomTypeResponse>> getSelectedHotelCategoryRoomTypes(
+      double hotelId, int categoryId) async {
+    final response = await apiService.post('CommonExecute', {
+      "HasReturnData": "T",
+      "Parameters": [
+        {
+          "Para_Data": 9017,
+          "Para_Direction": "Input",
+          "Para_Lenth": 1,
+          "Para_Name": "@Iid",
+          "Para_Type": "int"
+        },
+        {
+          "Para_Data": hotelId.toInt(),
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text1",
+          "Para_Type": "varchar"
+        },
+        {
+          "Para_Data": categoryId,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text2",
+          "Para_Type": "varchar"
+        },
+      ],
+      "SpName": "sp_CRM_Common_API",
+      "con": "1"
+    });
+
+    if (response['CommonResult'] != null &&
+        response['CommonResult']['Table'] is List &&
+        response['CommonResult']['Table'].isNotEmpty) {
+      final tableData = response['CommonResult']['Table'];
+
+      List<RoomTypeResponse> roomTypes = [];
+
+      if (tableData.length > 0) {
+        for (var json in tableData) {
+          RoomTypeResponse roomTypeResponse = RoomTypeResponse.fromJson(json);
+          roomTypes.add(roomTypeResponse);
+        }
+        return roomTypes;
+      } else {
+        throw Exception('Room Types API failed');
+      }
+    } else {
+      throw Exception('Room Types API failed');
+    }
+  }
+
+  Future<List<AirportCostResponse>> getAirportCosts(
+      {required String departureFrom,
+      required String departureTo,
+      required String returnTo}) async {
+    final response = await apiService.post('CommonExecute', {
+      "HasReturnData": "T",
+      "Parameters": [
+        {
+          "Para_Data": 9023,
+          "Para_Direction": "Input",
+          "Para_Lenth": 1,
+          "Para_Name": "@Iid",
+          "Para_Type": "int"
+        },
+        {
+          "Para_Data": departureFrom,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text1",
+          "Para_Type": "varchar"
+        },
+        {
+          "Para_Data": departureTo,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text2",
+          "Para_Type": "varchar"
+        },
+        {
+          "Para_Data": returnTo,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text3",
+          "Para_Type": "varchar"
+        }
+      ],
+      "SpName": "sp_CRM_Common_API",
+      "con": "1"
+    });
+
+    if (response['CommonResult'] != null &&
+        response['CommonResult']['Table'] is List &&
+        response['CommonResult']['Table'].isNotEmpty) {
+      final tableData = response['CommonResult']['Table'];
+
+      List<AirportCostResponse> airpotCosts = [];
+
+      if (tableData.length > 0) {
+        for (var json in tableData) {
+          AirportCostResponse airportCostResponse =
+              AirportCostResponse.fromJson(json);
+          airpotCosts.add(airportCostResponse);
+        }
+
+        return airpotCosts;
+      } else {
+        throw Exception('Airport Cost API failed');
+      }
+    } else {
+      throw Exception('Airport Cost API failed');
+    }
+  }
+}

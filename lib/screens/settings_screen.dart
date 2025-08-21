@@ -26,6 +26,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
+              'App Mode',
+              style: TextStyle(fontSize: 16.0),
+            ),
+            const SizedBox(height: 20),
+            Row(
+  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+  children: [
+    _buildAppModeButton(AppMode.myData, 'Show My Data'),
+    _buildAppModeButton(AppMode.overallData, 'Show Overall Data'),
+  ],
+),
+
+            const Text(
               'Font Size Settings',
               style: TextStyle(fontSize: 16.0),
             ),
@@ -91,4 +104,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       child: Text(name),
     );
   }
+
+  Widget _buildAppModeButton(AppMode mode, String name) {
+  final selectedMode = ref.watch(fontSettingsProvider).appMode;
+
+  return ElevatedButton(
+    onPressed: () {
+      ref.read(fontSettingsProvider.notifier).setAppMode(mode);
+    },
+    style: ElevatedButton.styleFrom(
+      backgroundColor: selectedMode == mode
+          ? Constants.kSecondaryColor
+          : Colors.grey[300],
+      foregroundColor: selectedMode == mode ? Colors.white : Colors.black,
+    ),
+    child: Text(name),
+  );
+}
+
 }

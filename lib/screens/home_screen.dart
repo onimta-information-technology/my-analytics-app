@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'dart:async';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -19,7 +18,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   String? userName;
   DateTime? lastseen;
-  Timer? _timer;
+
   @override
   void initState() {
     super.initState();
@@ -27,23 +26,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _loadGuestData();
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
   _loadUserName() async {
     final name = await StorageUtil.getUserName();
     setState(() {
       userName = name;
       lastseen = DateTime.now();
-    });
-
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      setState(() {
-        lastseen = DateTime.now();
-      });
     });
   }
 
@@ -69,44 +56,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       body: Stack(
         children: [
-          IgnorePointer(
-            child: Opacity(
-              opacity: 0.1,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final width = constraints.maxWidth;
-                  final height = constraints.maxHeight;
-
-                  // create a grid of watermark texts
-                  return Wrap(
-                    alignment: WrapAlignment.center,
-                    runAlignment: WrapAlignment.center,
-                    spacing: 50,
-                    runSpacing: 80,
-                    children: List.generate(
-                      50, // number of watermarks
-                      (index) => Transform.rotate(
-                        angle: -0.5,
-                        child: Text(
-                          (userName ?? "Loading...") +
-                              "\n" +
-                              (lastseen != null
-                                  ? formattedLastSeen
-                                  : "Loading..."),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
+          // 🔹 Background watermark
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -155,7 +105,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   style: const TextStyle(
                                     fontSize: 50.0,
                                     fontWeight: FontWeight.w500,
-                                    color: Colors.white,
+                                    color: Color.fromARGB(255, 255, 255, 255),
                                   ),
                                 ),
                                 const Text(
@@ -200,7 +150,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           }
                         },
                         child: Card(
-                          color: Colors.green,
+                          color: const Color.fromARGB(255, 78, 179, 81),
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: Column(
@@ -261,7 +211,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           }
                         },
                         child: Card(
-                          color: const Color.fromARGB(255, 42, 125, 192),
+                          color: const Color.fromARGB(155, 42, 125, 192),
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: Column(
@@ -294,6 +244,42 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ],
                 ),
               ],
+            ),
+          ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Opacity(
+                opacity: 0.2,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Wrap(
+                      alignment: WrapAlignment.center,
+                      runAlignment: WrapAlignment.center,
+                      spacing: 8,
+                      runSpacing: 25,
+                      children: List.generate(
+                        100,
+                        (index) => Transform.rotate(
+                          angle: -0.7,
+                          child: Text(
+                            (userName ?? "Loading...") +
+                                "\n" +
+                                (lastseen != null
+                                    ? formattedLastSeen
+                                    : "Loading..."),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
           ),
         ],

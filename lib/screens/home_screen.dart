@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'dart:async';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -18,6 +19,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   String? userName;
   DateTime? lastseen;
+  Timer? _timer;
   @override
   void initState() {
     super.initState();
@@ -25,11 +27,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _loadGuestData();
   }
 
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
   _loadUserName() async {
     final name = await StorageUtil.getUserName();
     setState(() {
       userName = name;
       lastseen = DateTime.now();
+    });
+
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      setState(() {
+        lastseen = DateTime.now();
+      });
     });
   }
 
@@ -45,7 +59,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final guests = ref.watch(guestsProvider);
     final formattedLastSeen = lastseen != null
         ? DateFormat('dd MMM yyyy, hh:mm a').format(lastseen!)
-        :'';
+        : '';
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -56,41 +70,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: Stack(
         children: [
           IgnorePointer(
-      child: Opacity(
-        opacity: 0.1,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final width = constraints.maxWidth;
-            final height = constraints.maxHeight;
+            child: Opacity(
+              opacity: 0.1,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final width = constraints.maxWidth;
+                  final height = constraints.maxHeight;
 
-            // create a grid of watermark texts
-            return Wrap(
-              alignment: WrapAlignment.center,
-              runAlignment: WrapAlignment.center,
-              spacing: 80,
-              runSpacing: 80,
-              children: List.generate(
-                50, // number of watermarks
-                (index) => Transform.rotate(
-                  angle: -0.5,
-                  child: Text(
-                    userName != null
-                        ? '$userName\n$formattedLastSeen'
-                        : 'Loading...',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                  // create a grid of watermark texts
+                  return Wrap(
+                    alignment: WrapAlignment.center,
+                    runAlignment: WrapAlignment.center,
+                    spacing: 50,
+                    runSpacing: 80,
+                    children: List.generate(
+                      50, // number of watermarks
+                      (index) => Transform.rotate(
+                        angle: -0.5,
+                        child: Text(
+                          (userName ?? "Loading...") +
+                              "\n" +
+                              (lastseen != null
+                                  ? formattedLastSeen
+                                  : "Loading..."),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
-            );
-          },
-        ),
-      ),
-    ),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(

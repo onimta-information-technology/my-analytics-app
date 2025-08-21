@@ -13,6 +13,7 @@ import 'package:ballys_reservation_app/providers/member_summary_provider.dart';
 import 'package:ballys_reservation_app/providers/profile_date_filter_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/providers/trip_information_provider.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -30,10 +31,14 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen>
     with SingleTickerProviderStateMixin {
   bool _isLoading = false;
+  DateTime? lastseen;
+  String? userName;
 
   @override
+
   void initState() {
     super.initState();
+     _loadUserName();
     _getGuestImage();
     if (GoRouter.of(context).routerDelegate.currentConfiguration.fullPath ==
         '/members') {
@@ -46,6 +51,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     )..repeat();
 
     _animation = Tween<double>(begin: 0.0, end: 1.0).animate(_controller);
+    
+  }
+   _loadUserName() async{
+    final name =await StorageUtil.getUserName();
+    setState(() {
+      userName=name;
+      lastseen = DateTime.now();
+    });
   }
 
   final TextEditingController _whatsappNumberController =
@@ -118,7 +131,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     final guestProfileDetails = ref.watch(mainProfileDetailsProvider);
 
     final String? imagePath = ratingImageMap[guest.gRating];
-
+    final formattedLastSeen = lastseen != null
+        ? DateFormat('dd MMM yyyy, hh:mm a').format(lastseen!)
+        : '';
     return Scaffold(
       appBar: AppBar(
         title: const Text("Guest Profile"),
@@ -628,7 +643,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                     ),
                 ],
               ),
+              
             ),
+            
           ),
         ),
       ),

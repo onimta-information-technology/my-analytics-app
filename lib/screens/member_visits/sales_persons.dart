@@ -133,13 +133,13 @@ class _SalesPersonsScreenState extends State<SalesPersonsScreen> {
     Positioned.fill(
       child: IgnorePointer(
         child: Opacity(
-          opacity: 0.1,
+          opacity: 0.2,
           child: LayoutBuilder(
             builder: (context, constraints) {
               return Wrap(
-                alignment: WrapAlignment.center,
+                alignment: WrapAlignment.start,
                 runAlignment: WrapAlignment.center,
-                spacing: 8,
+                spacing: 1,
                 runSpacing: 25,
                 children: List.generate(
                   100,
@@ -153,7 +153,7 @@ class _SalesPersonsScreenState extends State<SalesPersonsScreen> {
                               : "Loading..."),
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                        fontSize: 10,
+                        fontSize: 11,
                         fontWeight: FontWeight.bold,
                         color: Colors.black,
                       ),

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/member_profile_repository.dart';
 import 'package:ballys_reservation_app/models/member/trip_history.dart';
@@ -707,6 +708,7 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                 ),
               ),
             ),
+            const Watermark(),
         ],
       ),
     );

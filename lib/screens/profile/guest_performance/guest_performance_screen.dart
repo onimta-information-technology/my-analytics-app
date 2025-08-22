@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/member_profile_repository.dart';
 import 'package:ballys_reservation_app/models/member/loyalty_summary.dart';
@@ -36,8 +37,7 @@ class GuestPerformanceScreen extends ConsumerStatefulWidget {
 }
 
 class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
-  String? userName;
-  DateTime? lastseen;
+ 
 
   final TextEditingController _startDateController = TextEditingController();
   final TextEditingController _endDateController = TextEditingController();
@@ -55,15 +55,9 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final dateFilter = ref.watch(dateFilterProvider);
     });
-     _loadUserName();
+  
   }
-  _loadUserName() async {
-    final name = await StorageUtil.getUserName();
-    setState(() {
-      userName = name;
-      lastseen = DateTime.now();
-    });
-  }
+ 
 
   int selectedMenu = 1;
 
@@ -284,9 +278,7 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
   Widget build(BuildContext context) {
     final guest = ref.watch(selectedGuestProvider);
     final dateFilter = ref.watch(dateFilterProvider);
-    final formattedLastSeen = lastseen != null
-        ? DateFormat('dd MMM yyyy, hh:mm a').format(lastseen!)
-        : '';
+  
     String formattedDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
     if (dateFilter.dateFrom == null) {
       startDateNotifier.value = DateTime.parse(formattedDate);
@@ -679,42 +671,7 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
                 ),
               ),
             ),
-             Positioned.fill(
-            child: IgnorePointer(
-              child: Opacity(
-                opacity: 0.2,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    return Wrap(
-                      alignment: WrapAlignment.start,
-                      runAlignment: WrapAlignment.center,
-                      spacing: 1,
-                      runSpacing: 25,
-                      children: List.generate(
-                        100,
-                        (index) => Transform.rotate(
-                          angle: -0.7,
-                          child: Text(
-                            (userName ?? "Loading...") +
-                                "\n" +
-                                (lastseen != null
-                                    ? formattedLastSeen
-                                    : "Loading..."),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
+             const Watermark(),
         ],
       ),
     );

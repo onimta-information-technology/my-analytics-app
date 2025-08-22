@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/guests_provider.dart';
 import 'package:ballys_reservation_app/screens/member_visits.dart';
@@ -17,7 +18,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   String? userName;
-  DateTime? lastseen;
+ 
 
   @override
   void initState() {
@@ -30,7 +31,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final name = await StorageUtil.getUserName();
     setState(() {
       userName = name;
-      lastseen = DateTime.now();
+     
     });
   }
 
@@ -44,9 +45,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final guests = ref.watch(guestsProvider);
-    final formattedLastSeen = lastseen != null
-        ? DateFormat('dd MMM yyyy, hh:mm a').format(lastseen!)
-        : '';
+   
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -246,42 +245,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ],
             ),
           ),
-          Positioned.fill(
-            child: IgnorePointer(
-              child: Opacity(
-                opacity: 0.2,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    return Wrap(
-                      alignment: WrapAlignment.start,
-                      runAlignment: WrapAlignment.center,
-                      spacing: 1,
-                      runSpacing: 25,
-                      children: List.generate(
-                        100,
-                        (index) => Transform.rotate(
-                          angle: -0.7,
-                          child: Text(
-                            (userName ?? "Loading...") +
-                                "\n" +
-                                (lastseen != null
-                                    ? formattedLastSeen
-                                    : "Loading..."),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
+           const Watermark(),
+
         ],
       ),
     );

@@ -1,11 +1,13 @@
 import 'dart:convert';
 
+import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/member_profile_repository.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/member_summary_provider.dart';
 import 'package:ballys_reservation_app/providers/profile_date_filter_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -20,8 +22,7 @@ class MemberSummaryScreen extends ConsumerStatefulWidget {
 }
 
 class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
-  String? userName;
-  DateTime? lastseen;
+
   final TextEditingController _startDateController = TextEditingController();
   final TextEditingController _endDateController = TextEditingController();
   final ValueNotifier<DateTime?> startDateNotifier =
@@ -36,7 +37,9 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
     String formattedDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
     _startDateController.text = formattedDate;
     _endDateController.text = formattedDate;
+    
   }
+   
 
   bool _isLoading = false;
   DateTime? _dateFrom;
@@ -151,7 +154,6 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
     final fontSettings = ref.watch(fontSettingsProvider);
     final guest = ref.watch(selectedGuestProvider);
     final memberSummary = ref.watch(memberSummaryProvider);
-
     if (guest == null) {
       return Scaffold(
         appBar: AppBar(title: const Text("Guest Profile")),
@@ -727,6 +729,7 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                 ),
               ),
             ),
+             const Watermark(),
         ],
       ),
     );

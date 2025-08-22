@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -20,22 +21,14 @@ class SalesPersonsScreen extends StatefulWidget {
 }
 
 class _SalesPersonsScreenState extends State<SalesPersonsScreen> {
-  DateTime? lastseen;
-  String? userName;
+  
   List<MapEntry<String, List<Guest>>> _filteredSalesPersons = [];
 
   @override
   void initState() {
     super.initState();
     _filteredSalesPersons = widget.salesPersons.entries.toList();
-    _loadUserName();
-  }
-  _loadUserName() async{
-    final name =await StorageUtil.getUserName();
-    setState(() {
-      userName=name;
-      lastseen = DateTime.now();
-    });
+   
   }
 
   void _filterSalesPersons(String query) {
@@ -56,9 +49,7 @@ class _SalesPersonsScreenState extends State<SalesPersonsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final formattedLastSeen = lastseen != null
-        ? DateFormat('dd MMM yyyy, hh:mm a').format(lastseen!)
-        : '';
+    
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
      body: Stack(
@@ -130,42 +121,7 @@ class _SalesPersonsScreenState extends State<SalesPersonsScreen> {
     ),
 
     // Watermark (placed last so it stays on top)
-    Positioned.fill(
-      child: IgnorePointer(
-        child: Opacity(
-          opacity: 0.2,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return Wrap(
-                alignment: WrapAlignment.start,
-                runAlignment: WrapAlignment.center,
-                spacing: 1,
-                runSpacing: 25,
-                children: List.generate(
-                  100,
-                  (index) => Transform.rotate(
-                    angle: -0.7,
-                    child: Text(
-                      (userName ?? "Loading...") +
-                          "\n" +
-                          (lastseen != null
-                              ? formattedLastSeen
-                              : "Loading..."),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ),
-    ),
+     const Watermark(),
   ],
 ),
     );

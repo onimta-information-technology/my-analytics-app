@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/models/birthday.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
@@ -167,6 +168,7 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                 ),
               ),
             ),
+            const Watermark(),
         ],
       ),
     );

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/providers/airline_history_provider.dart';
 import 'package:ballys_reservation_app/providers/birthdays_provider.dart';
@@ -29,13 +30,11 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen>
     with SingleTickerProviderStateMixin {
   bool _isLoading = false;
-  DateTime? lastseen;
-  String? userName;
+ 
 
   @override
   void initState() {
     super.initState();
-    _loadUserName();
     _getGuestImage();
     if (GoRouter.of(context).routerDelegate.currentConfiguration.fullPath ==
         '/members') {
@@ -50,13 +49,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     _animation = Tween<double>(begin: 0.0, end: 1.0).animate(_controller);
   }
 
-  _loadUserName() async {
-    final name = await StorageUtil.getUserName();
-    setState(() {
-      userName = name;
-      lastseen = DateTime.now();
-    });
-  }
+  
 
   final TextEditingController _whatsappNumberController =
       TextEditingController();
@@ -128,9 +121,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     final guestProfileDetails = ref.watch(mainProfileDetailsProvider);
 
     final String? imagePath = ratingImageMap[guest.gRating];
-    final formattedLastSeen = lastseen != null
-        ? DateFormat('dd MMM yyyy, hh:mm a').format(lastseen!)
-        : '';
+    
     return Scaffold(
       appBar: AppBar(title: const Text("Guest Profile")),
       body: Stack(
@@ -665,41 +656,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               ),
             ),
           ),
-        Positioned.fill(
-            child: IgnorePointer(
-              child: Opacity(
-                opacity: 0.2,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final formattedLastSeen = lastseen != null
-                        ? DateFormat('dd MMM yyyy, hh:mm a').format(lastseen!)
-                        : "Loading...";
-                    return Wrap(
-                      alignment: WrapAlignment.start,
-                      runAlignment: WrapAlignment.center,
-                      spacing: 1,
-                      runSpacing: 25,
-                      children: List.generate(
-                        100,
-                        (index) => Transform.rotate(
-                          angle: -0.7,
-                          child: Text(
-                            "${userName ?? "Loading..."}\n$formattedLastSeen",
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
+        const Watermark(),
         ],
       ),
     );

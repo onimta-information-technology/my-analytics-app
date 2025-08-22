@@ -168,7 +168,7 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                 ),
               ),
             ),
-            const Watermark(),
+             const Watermark(),
         ],
       ),
     );

@@ -7,7 +7,6 @@ import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -18,7 +17,10 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   String? userName;
- 
+
+  int? todayCount;
+  int? yesterdayCount;
+  int? monthlyCount;
 
   @override
   void initState() {
@@ -31,21 +33,85 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final name = await StorageUtil.getUserName();
     setState(() {
       userName = name;
-     
     });
   }
 
   _loadGuestData() async {
     String? salesCode = await StorageUtil.getSalesCode();
+
+    // 🔹 Today count
     await ref.read(guestsProvider.notifier).getGuestData(9009, salesCode!);
+    setState(() {
+      todayCount = ref.read(guestsProvider).todayGuests
+          .where((guest) => guest.mid.isNotEmpty)
+          .length;
+    });
+
+    // 🔹 Yesterday count
     await ref.read(guestsProvider.notifier).getGuestData(9010, salesCode);
+    setState(() {
+      yesterdayCount = ref.read(guestsProvider).yesterdayGuests
+          .where((guest) => guest.mid.isNotEmpty)
+          .length;
+    });
+
+    // 🔹 Monthly count
     await ref.read(guestsProvider.notifier).getGuestData(9011, salesCode);
+    setState(() {
+      monthlyCount = ref.read(guestsProvider).monthlyGuests
+          .where((guest) => guest.mid.isNotEmpty)
+          .length;
+    });
+  }
+
+  // 🔹 Reusable box widget
+  Widget buildCountBox({
+    required int? count,
+    required String label,
+    required Color color,
+  }) {
+    return Card(
+      color: color,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            count == null
+                ? const SizedBox(
+                    height: 40,
+                    width: 40,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 3,
+                    ),
+                  )
+                : Text(
+                    count.toString(),
+                    style: const TextStyle(
+                      fontSize: 50.0,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
+                  ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 16.0,
+                fontWeight: FontWeight.normal,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final guests = ref.watch(guestsProvider);
-   
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -55,29 +121,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       body: Stack(
         children: [
-          // 🔹 Background watermark
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
+                // 🔹 Today & Yesterday
                 Row(
                   children: [
                     Expanded(
                       child: GestureDetector(
                         onTap: () async {
-                          // Navigator.of(context).push(MaterialPageRoute(
-                          //     builder: (context) => const MemberVisits(
-                          //           title: 'Today Member Visits',
-                          //         )));
                           final userLevel = await StorageUtil.getUserLevel();
                           if (userLevel == '1') {
                             context.push(
                               '/home/sales-persons',
                               extra: {
                                 'title': 'All Sales Persons (Today)',
-                                'salesPersons': groupByMGroup(
-                                  guests.todayGuests,
-                                ),
+                                'salesPersons':
+                                    groupByMGroup(guests.todayGuests),
                               },
                             );
                           } else {
@@ -90,38 +151,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             );
                           }
                         },
-                        child: Card(
+                        child: buildCountBox(
+                          count: todayCount,
+                          label: "Today",
                           color: const Color.fromARGB(255, 228, 117, 14),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              children: [
-                                Text(
-                                  guests.todayGuests
-                                      .where((guest) => guest.mid.isNotEmpty)
-                                      .length
-                                      .toString(),
-                                  style: const TextStyle(
-                                    fontSize: 50.0,
-                                    fontWeight: FontWeight.w500,
-                                    color: Color.fromARGB(255, 255, 255, 255),
-                                  ),
-                                ),
-                                const Text(
-                                  'Today',
-                                  style: TextStyle(
-                                    fontSize: 16.0,
-                                    fontWeight: FontWeight.normal,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
                         ),
                       ),
                     ),
-                    // SizedBox(width: 16),
                     Expanded(
                       child: GestureDetector(
                         onTap: () async {
@@ -131,9 +167,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               MaterialPageRoute(
                                 builder: (context) => SalesPersonsScreen(
                                   title: 'All Sales Persons (Yesterday)',
-                                  salesPersons: groupByMGroup(
-                                    guests.yesterdayGuests,
-                                  ),
+                                  salesPersons:
+                                      groupByMGroup(guests.yesterdayGuests),
                                 ),
                               ),
                             );
@@ -148,39 +183,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             );
                           }
                         },
-                        child: Card(
+                        child: buildCountBox(
+                          count: yesterdayCount,
+                          label: "Yesterday",
                           color: const Color.fromARGB(255, 78, 179, 81),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              children: [
-                                Text(
-                                  guests.yesterdayGuests
-                                      .where((guest) => guest.mid.isNotEmpty)
-                                      .length
-                                      .toString(),
-                                  style: const TextStyle(
-                                    fontSize: 50.0,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const Text(
-                                  'Yesterday',
-                                  style: TextStyle(
-                                    fontSize: 16.0,
-                                    fontWeight: FontWeight.normal,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
                         ),
                       ),
                     ),
                   ],
                 ),
+
+                // 🔹 Monthly
                 Row(
                   children: [
                     Expanded(
@@ -192,9 +205,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               MaterialPageRoute(
                                 builder: (context) => SalesPersonsScreen(
                                   title: 'All Sales Persons (Monthly)',
-                                  salesPersons: groupByMGroup(
-                                    guests.monthlyGuests,
-                                  ),
+                                  salesPersons:
+                                      groupByMGroup(guests.monthlyGuests),
                                 ),
                               ),
                             );
@@ -209,34 +221,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             );
                           }
                         },
-                        child: Card(
+                        child: buildCountBox(
+                          count: monthlyCount,
+                          label: "Monthly",
                           color: const Color.fromARGB(155, 42, 125, 192),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              children: [
-                                Text(
-                                  guests.monthlyGuests
-                                      .where((guest) => guest.mid.isNotEmpty)
-                                      .length
-                                      .toString(),
-                                  style: const TextStyle(
-                                    fontSize: 50.0,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const Text(
-                                  'Monthly',
-                                  style: TextStyle(
-                                    fontSize: 16.0,
-                                    fontWeight: FontWeight.normal,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
                         ),
                       ),
                     ),
@@ -245,8 +233,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ],
             ),
           ),
-           const Watermark(),
-
+          const Watermark(),
         ],
       ),
     );

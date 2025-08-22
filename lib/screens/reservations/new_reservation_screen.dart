@@ -1,6 +1,7 @@
 import 'package:ballys_reservation_app/components/bottom_sheets/member_search_by_mid_bottom_sheet.dart';
 import 'package:ballys_reservation_app/components/flight_card.dart';
 import 'package:ballys_reservation_app/components/hotel_selection.dart';
+import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/hotel_repository.dart';
@@ -765,6 +766,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                   ),
                 ),
               ),
+               const Watermark(),
           ],
         ),
       ),

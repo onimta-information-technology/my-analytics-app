@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:flutter/material.dart';
@@ -20,7 +21,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       appBar: AppBar(
         title: const Text('Settings'),
       ),
-      body: Padding(
+      body: Stack(
+        children: [
+          
+      
+      Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -68,6 +73,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ],
         ),
       ),
+          const Watermark(),
+        ],
+      )
     );
   }
 

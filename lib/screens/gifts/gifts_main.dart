@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:flutter/material.dart';
@@ -27,7 +28,9 @@ class _GiftsMainScreenState extends ConsumerState<GiftsMainScreen> {
       appBar: AppBar(
         title: const Text('Gifts'),
       ),
-      body: Padding(
+      body: Stack(
+        children: [
+          Padding(
         padding: const EdgeInsets.all(10.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -122,8 +125,12 @@ class _GiftsMainScreenState extends ConsumerState<GiftsMainScreen> {
                 ),
               ],
             ),
+            
           ],
         ),
+      ),
+        const Watermark(),
+        ],
       ),
     );
   }

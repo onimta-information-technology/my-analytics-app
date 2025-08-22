@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
@@ -282,6 +283,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                   ),
                 ),
               ),
+               const Watermark(),
           ],
         ),
       ),

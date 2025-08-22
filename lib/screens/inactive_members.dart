@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/inactive_members_repository.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
@@ -222,6 +223,7 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> {
                 ),
               ),
             ),
+            const Watermark(), 
         ],
       ),
     );

@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:flutter/material.dart';
 
 class EventsScreen extends StatelessWidget {
@@ -9,7 +10,13 @@ class EventsScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Event Screen'),
       ),
-      body: const Center(child: Text('Events Screen')),
+      body: Stack(
+          children: [
+            const Center(child: Text('Events Screen')),
+           const Watermark(), 
+          ]
+      ),
+     
     );
   }
 }

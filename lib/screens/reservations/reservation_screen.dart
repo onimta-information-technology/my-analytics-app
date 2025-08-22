@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/models/reservation.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
@@ -264,6 +265,7 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
                 ),
               ),
             ),
+             const Watermark(),    
           ],
         );
       },

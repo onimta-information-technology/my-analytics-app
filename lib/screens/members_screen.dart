@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:ballys_reservation_app/components/bottom_sheets/member_search_by_mid_bottom_sheet.dart';
+import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
@@ -256,6 +257,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                 ),
               ),
             ),
+               const Watermark(),
         ],
       ),
     );

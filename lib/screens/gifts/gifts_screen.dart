@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
@@ -220,6 +221,7 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
                 ),
               ),
             ),
+              const Watermark(),
         ],
       ),
     );

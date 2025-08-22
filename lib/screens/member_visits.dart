@@ -163,7 +163,7 @@ class _MemberVisitsState extends ConsumerState<MemberVisits> {
                             child: LayoutBuilder(
                               builder: (context, constraints) {
                                 return Wrap(
-                                  alignment: WrapAlignment.start,
+                                  alignment: WrapAlignment.center,
                                   runAlignment: WrapAlignment.center,
                                   spacing: 1,
                                   runSpacing: 25,

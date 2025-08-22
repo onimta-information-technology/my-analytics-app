@@ -17,6 +17,7 @@ import 'package:ballys_reservation_app/screens/profile/guest_performance/games_s
 import 'package:ballys_reservation_app/screens/profile/guest_performance/hotel_reservation.dart';
 import 'package:ballys_reservation_app/screens/profile/guest_performance/loyalty_summary.dart';
 import 'package:ballys_reservation_app/screens/profile/guest_performance/trip_information.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -24,8 +25,10 @@ import 'package:intl/intl.dart';
 class GuestPerformanceScreen extends ConsumerStatefulWidget {
   final MemberProfileRepository memberProfileRepository;
 
-  const GuestPerformanceScreen(
-      {required this.memberProfileRepository, super.key});
+  const GuestPerformanceScreen({
+    required this.memberProfileRepository,
+    super.key,
+  });
 
   @override
   ConsumerState<GuestPerformanceScreen> createState() =>
@@ -33,12 +36,17 @@ class GuestPerformanceScreen extends ConsumerStatefulWidget {
 }
 
 class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
+  String? userName;
+  DateTime? lastseen;
+
   final TextEditingController _startDateController = TextEditingController();
   final TextEditingController _endDateController = TextEditingController();
-  final ValueNotifier<DateTime?> startDateNotifier =
-      ValueNotifier<DateTime?>(null);
-  final ValueNotifier<DateTime?> endDateNotifier =
-      ValueNotifier<DateTime?>(null);
+  final ValueNotifier<DateTime?> startDateNotifier = ValueNotifier<DateTime?>(
+    null,
+  );
+  final ValueNotifier<DateTime?> endDateNotifier = ValueNotifier<DateTime?>(
+    null,
+  );
 
   @override
   void initState() {
@@ -46,6 +54,14 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
     _getGuestImage();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final dateFilter = ref.watch(dateFilterProvider);
+    });
+     _loadUserName();
+  }
+  _loadUserName() async {
+    final name = await StorageUtil.getUserName();
+    setState(() {
+      userName = name;
+      lastseen = DateTime.now();
     });
   }
 
@@ -167,69 +183,87 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
   }
 
   Future<void> getLoyalitySummary(String mid) async {
-    await ref.read(loyaltySummaryProvider.notifier).getLoyalitySummary(
-        playerId: mid,
-        dateFrom: startDateNotifier.value != null
-            ? DateFormat('yyyy-MM-dd').format(startDateNotifier.value!)
-            : '',
-        dateTo: endDateNotifier.value != null
-            ? DateFormat('yyyy-MM-dd').format(endDateNotifier.value!)
-            : '');
+    await ref
+        .read(loyaltySummaryProvider.notifier)
+        .getLoyalitySummary(
+          playerId: mid,
+          dateFrom: startDateNotifier.value != null
+              ? DateFormat('yyyy-MM-dd').format(startDateNotifier.value!)
+              : '',
+          dateTo: endDateNotifier.value != null
+              ? DateFormat('yyyy-MM-dd').format(endDateNotifier.value!)
+              : '',
+        );
   }
 
   Future<void> getTripHistory(String mid) async {
-    await ref.read(tripHistoryProvider.notifier).getTripHistory(
-        playerId: mid,
-        dateFrom: startDateNotifier.value != null
-            ? DateFormat('yyyy-MM-dd').format(startDateNotifier.value!)
-            : '',
-        dateTo: endDateNotifier.value != null
-            ? DateFormat('yyyy-MM-dd').format(endDateNotifier.value!)
-            : '');
+    await ref
+        .read(tripHistoryProvider.notifier)
+        .getTripHistory(
+          playerId: mid,
+          dateFrom: startDateNotifier.value != null
+              ? DateFormat('yyyy-MM-dd').format(startDateNotifier.value!)
+              : '',
+          dateTo: endDateNotifier.value != null
+              ? DateFormat('yyyy-MM-dd').format(endDateNotifier.value!)
+              : '',
+        );
   }
 
   Future<void> getAirlineHistory(String mid) async {
-    await ref.read(airlineHistoryProvider.notifier).getAirlineHistory(
-        playerId: mid,
-        dateFrom: startDateNotifier.value != null
-            ? DateFormat('yyyy-MM-dd').format(startDateNotifier.value!)
-            : '',
-        dateTo: endDateNotifier.value != null
-            ? DateFormat('yyyy-MM-dd').format(endDateNotifier.value!)
-            : '');
+    await ref
+        .read(airlineHistoryProvider.notifier)
+        .getAirlineHistory(
+          playerId: mid,
+          dateFrom: startDateNotifier.value != null
+              ? DateFormat('yyyy-MM-dd').format(startDateNotifier.value!)
+              : '',
+          dateTo: endDateNotifier.value != null
+              ? DateFormat('yyyy-MM-dd').format(endDateNotifier.value!)
+              : '',
+        );
   }
 
   Future<void> getHotelHistory(String mid) async {
-    await ref.read(hotelHistoryProvider.notifier).getHotelHistory(
-        playerId: mid,
-        dateFrom: startDateNotifier.value != null
-            ? DateFormat('yyyy-MM-dd').format(startDateNotifier.value!)
-            : '',
-        dateTo: endDateNotifier.value != null
-            ? DateFormat('yyyy-MM-dd').format(endDateNotifier.value!)
-            : '');
+    await ref
+        .read(hotelHistoryProvider.notifier)
+        .getHotelHistory(
+          playerId: mid,
+          dateFrom: startDateNotifier.value != null
+              ? DateFormat('yyyy-MM-dd').format(startDateNotifier.value!)
+              : '',
+          dateTo: endDateNotifier.value != null
+              ? DateFormat('yyyy-MM-dd').format(endDateNotifier.value!)
+              : '',
+        );
   }
 
   Future<void> getFAndBHistory(String mid) async {
-    await ref.read(fAndBHistoryProvider.notifier).getFAndBHistory(
-        playerId: mid,
-        dateFrom: startDateNotifier.value != null
-            ? DateFormat('yyyy-MM-dd').format(startDateNotifier.value!)
-            : '',
-        dateTo: endDateNotifier.value != null
-            ? DateFormat('yyyy-MM-dd').format(endDateNotifier.value!)
-            : '');
+    await ref
+        .read(fAndBHistoryProvider.notifier)
+        .getFAndBHistory(
+          playerId: mid,
+          dateFrom: startDateNotifier.value != null
+              ? DateFormat('yyyy-MM-dd').format(startDateNotifier.value!)
+              : '',
+          dateTo: endDateNotifier.value != null
+              ? DateFormat('yyyy-MM-dd').format(endDateNotifier.value!)
+              : '',
+        );
   }
 
   Future<void> getGamesSummary(String mid) async {
-    await ref.read(gamesSummaryProvider.notifier).getGamesSummary(
-        playerId: mid,
-        dateFrom: startDateNotifier.value != null
-            ? DateFormat('yyyy-MM-dd').format(startDateNotifier.value!)
-            : '',
-        dateTo: endDateNotifier.value != null
-            ? DateFormat('yyyy-MM-dd').format(endDateNotifier.value!)
-            : '');
+    await ref
+        .read(gamesSummaryProvider.notifier)
+        .getGamesSummary(
+          playerId: mid,
+          dateFrom: startDateNotifier.value != null
+              ? DateFormat('yyyy-MM-dd').format(startDateNotifier.value!)
+              : '',
+          dateTo: endDateNotifier.value != null
+              ? DateFormat('yyyy-MM-dd').format(endDateNotifier.value!)
+              : '',
+        );
   }
 
   String formatDate(String dateString) {
@@ -250,7 +284,9 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
   Widget build(BuildContext context) {
     final guest = ref.watch(selectedGuestProvider);
     final dateFilter = ref.watch(dateFilterProvider);
-
+    final formattedLastSeen = lastseen != null
+        ? DateFormat('dd MMM yyyy, hh:mm a').format(lastseen!)
+        : '';
     String formattedDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
     if (dateFilter.dateFrom == null) {
       startDateNotifier.value = DateTime.parse(formattedDate);
@@ -279,8 +315,10 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Guest Performance",
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: const Text(
+          "Guest Performance",
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
         actions: [
           PopupMenuButton<int>(
             icon: const Icon(Icons.more_vert, size: 30),
@@ -375,8 +413,10 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
         children: [
           SingleChildScrollView(
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(vertical: 10.0, horizontal: 15.0),
+              padding: const EdgeInsets.symmetric(
+                vertical: 10.0,
+                horizontal: 15.0,
+              ),
               child: Column(
                 children: [
                   Stack(
@@ -385,7 +425,9 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
                         elevation: 5,
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
-                              vertical: 20.0, horizontal: 5.0),
+                            vertical: 20.0,
+                            horizontal: 5.0,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             mainAxisSize: MainAxisSize.min,
@@ -419,7 +461,8 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
                                                 child: guest.memImage2 != null
                                                     ? Image.memory(
                                                         base64Decode(
-                                                            guest.memImage2!),
+                                                          guest.memImage2!,
+                                                        ),
                                                         fit: BoxFit.contain,
                                                       )
                                                     : Image.asset(
@@ -439,9 +482,11 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
                                       radius: 70,
                                       backgroundImage: guest.memImage2 != null
                                           ? MemoryImage(
-                                              base64Decode(guest.memImage2!))
+                                              base64Decode(guest.memImage2!),
+                                            )
                                           : const AssetImage(
-                                              'assets/images/placeholder_image.jpg'),
+                                              'assets/images/placeholder_image.jpg',
+                                            ),
                                       backgroundColor: Colors.grey[200],
                                     ),
                                   ),
@@ -467,9 +512,7 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
                                     size: 16,
                                     color: Colors.grey,
                                   ),
-                                  const SizedBox(
-                                    width: 8,
-                                  ),
+                                  const SizedBox(width: 8),
                                   Text(
                                     "Last Visit on -  ${formatDate(guest.lastVisitDate)}",
                                     textAlign: TextAlign.center,
@@ -518,9 +561,7 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(
-                    height: 16.0,
-                  ),
+                  const SizedBox(height: 16.0),
                   Row(
                     children: [
                       Expanded(
@@ -600,15 +641,15 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
                           Text(
                             "Search",
                             style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(
-                    height: 16.0,
-                  ),
+                  const SizedBox(height: 16.0),
                   if (selectedMenu == 1)
                     LoyaltySummaryWidget(key: ValueKey(selectedMenu)),
                   if (selectedMenu == 2)
@@ -632,11 +673,48 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
               ),
               child: const Center(
                 child: RefreshProgressIndicator(
-                  valueColor:
-                      AlwaysStoppedAnimation<Color>(Constants.kSecondaryColor),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Constants.kSecondaryColor,
+                  ),
                 ),
               ),
             ),
+             Positioned.fill(
+            child: IgnorePointer(
+              child: Opacity(
+                opacity: 0.2,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Wrap(
+                      alignment: WrapAlignment.start,
+                      runAlignment: WrapAlignment.center,
+                      spacing: 1,
+                      runSpacing: 25,
+                      children: List.generate(
+                        100,
+                        (index) => Transform.rotate(
+                          angle: -0.7,
+                          child: Text(
+                            (userName ?? "Loading...") +
+                                "\n" +
+                                (lastseen != null
+                                    ? formattedLastSeen
+                                    : "Loading..."),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

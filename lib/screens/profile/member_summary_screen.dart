@@ -20,6 +20,8 @@ class MemberSummaryScreen extends ConsumerStatefulWidget {
 }
 
 class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
+  String? userName;
+  DateTime? lastseen;
   final TextEditingController _startDateController = TextEditingController();
   final TextEditingController _endDateController = TextEditingController();
   final ValueNotifier<DateTime?> startDateNotifier =

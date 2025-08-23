@@ -283,12 +283,12 @@ class _MenuScreenState extends State<MenuScreen>
                             child: Column(
                               children: [
                                 Icon(
-                                  Icons.airplanemode_active,
+                                  Icons.group,
                                   size: 60,
                                   color: Colors.white,
                                 ),
                                 Text(
-                                  'Airport Pickup / Drop',
+                                  'Daily Walking Guests',
                                   style: TextStyle(
                                     fontSize: 16.0,
                                     fontWeight: FontWeight.normal,

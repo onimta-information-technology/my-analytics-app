@@ -199,7 +199,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         child: buildCountBox(
                           count: counts["yesterday"],
                           label: "Yesterday",
-                          color: const Color.fromARGB(255, 78, 179, 81),
+                          color:  Colors.green,
                         ),
                       ),
                     ),
@@ -237,7 +237,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         child: buildCountBox(
                           count: counts["monthly"],
                           label: "Monthly",
-                          color: const Color.fromARGB(155, 42, 125, 192),
+                          color: const Color.fromARGB(255, 42, 125, 192),
                         ),
                       ),
                     ),

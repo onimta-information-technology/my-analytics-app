@@ -1,4 +1,5 @@
 import 'package:ballys_reservation_app/components/flight_card.dart';
+import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_booking.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_desc.dart';
@@ -531,6 +532,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
               ),
             ),
           ),
+           const Watermark(),
         ],
       ),
     );

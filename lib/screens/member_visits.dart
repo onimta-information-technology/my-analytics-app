@@ -37,7 +37,10 @@ class MemberVisits extends ConsumerWidget {
           style: const TextStyle(fontSize: 20.0),
         ),
       ),
-      body: guestList.isEmpty
+      body: Stack(children: [
+
+     
+      guestList.isEmpty
           ? Center(child: Text("No guests available for $title"))
           : Padding(
               padding: const EdgeInsets.all(8.0),
@@ -134,12 +137,16 @@ class MemberVisits extends ConsumerWidget {
                           ),
                         ),
                       ),
-                        const Watermark(),
+                      
                     ],
                   );
                 },
               ),
             ),
+              const Watermark(),
+      ]
+    ),
+    
     );
   }
 }

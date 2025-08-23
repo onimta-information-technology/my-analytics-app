@@ -106,6 +106,7 @@ class _SpecialGiftRequestScreenState
       ),
       body: Stack(
         children: [
+          
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: SingleChildScrollView(
@@ -116,6 +117,7 @@ class _SpecialGiftRequestScreenState
               ),
             ),
           ),
+           
           if (_isLoading)
             Positioned.fill(
               child: Container(
@@ -130,7 +132,7 @@ class _SpecialGiftRequestScreenState
                 ),
               ),
             ),
-             const Watermark(), 
+           const Watermark(),
         ],
       ),
       floatingActionButton: FloatingActionButton(

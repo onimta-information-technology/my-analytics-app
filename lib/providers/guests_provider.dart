@@ -58,26 +58,26 @@ class GuestsState {
   final List<Guest> todayGuests;
   final List<Guest> yesterdayGuests;
   final List<Guest> monthlyGuests;
-  final bool isLoading;
+
 
   GuestsState({
     this.todayGuests = const [],
     this.yesterdayGuests = const [],
     this.monthlyGuests = const [],
-    this.isLoading = false,
+    
   });
 
   GuestsState copyWith({
     List<Guest>? todayGuests,
     List<Guest>? yesterdayGuests,
     List<Guest>? monthlyGuests,
-     bool? isLoading,
+    
   }) {
     return GuestsState(
       todayGuests: todayGuests ?? this.todayGuests,
       yesterdayGuests: yesterdayGuests ?? this.yesterdayGuests,
       monthlyGuests: monthlyGuests ?? this.monthlyGuests,
-      isLoading: isLoading ?? this.isLoading,
+      
     );
   }
 }

@@ -104,6 +104,7 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
       ),
       body: Stack(
         children: [
+        
           TabBarView(
             controller: _tabController,
             children: [
@@ -126,6 +127,7 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
                 ),
               ),
             ),
+              const Watermark(),
         ],
       ),
     );
@@ -265,7 +267,7 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
                 ),
               ),
             ),
-             const Watermark(),    
+               
           ],
         );
       },

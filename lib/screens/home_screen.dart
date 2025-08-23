@@ -8,6 +8,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+// 🔹 Provider for guest counts
+final guestCountsProvider = StateProvider<Map<String, int?>>((ref) => {
+      "today": null,
+      "yesterday": null,
+      "monthly": null,
+    });
+
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -17,10 +24,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   String? userName;
-
-  int? todayCount;
-  int? yesterdayCount;
-  int? monthlyCount;
 
   @override
   void initState() {
@@ -39,70 +42,80 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   _loadGuestData() async {
     String? salesCode = await StorageUtil.getSalesCode();
 
-    // 🔹 Today count
-    await ref.read(guestsProvider.notifier).getGuestData(9009, salesCode!);
-    setState(() {
-      todayCount = ref.read(guestsProvider).todayGuests
-          .where((guest) => guest.mid.isNotEmpty)
-          .length;
-    });
+    if (salesCode == null || salesCode.isEmpty) {
+      print('Error: sales code not found');
+      return;
+    }
 
-    // 🔹 Yesterday count
-    await ref.read(guestsProvider.notifier).getGuestData(9010, salesCode);
-    setState(() {
-      yesterdayCount = ref.read(guestsProvider).yesterdayGuests
-          .where((guest) => guest.mid.isNotEmpty)
-          .length;
-    });
+    try {
+      // 🔹 Today count
+      await ref.read(guestsProvider.notifier).getGuestData(9009, salesCode);
+      final todayGuests = ref.read(guestsProvider).todayGuests;
 
-    // 🔹 Monthly count
-    await ref.read(guestsProvider.notifier).getGuestData(9011, salesCode);
-    setState(() {
-      monthlyCount = ref.read(guestsProvider).monthlyGuests
-          .where((guest) => guest.mid.isNotEmpty)
-          .length;
-    });
+      // 🔹 Yesterday count
+      await ref.read(guestsProvider.notifier).getGuestData(9010, salesCode);
+      final yesterdayGuests = ref.read(guestsProvider).yesterdayGuests;
+
+      // 🔹 Monthly count
+      await ref.read(guestsProvider.notifier).getGuestData(9011, salesCode);
+      final monthlyGuests = ref.read(guestsProvider).monthlyGuests;
+
+      // Update Riverpod provider instead of setState
+      ref.read(guestCountsProvider.notifier).state = {
+        "today": todayGuests.where((g) => g.mid.isNotEmpty).length,
+        "yesterday": yesterdayGuests.where((g) => g.mid.isNotEmpty).length,
+        "monthly": monthlyGuests.where((g) => g.mid.isNotEmpty).length,
+      };
+    } catch (e) {
+      print('Error loading guest data: $e');
+    }
   }
 
-  // 🔹 Reusable box widget
+  // 🔹 Reusable fixed size box widget
   Widget buildCountBox({
     required int? count,
     required String label,
     required Color color,
   }) {
-    return Card(
-      color: color,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            count == null
-                ? const SizedBox(
-                    height: 40,
-                    width: 40,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 3,
-                    ),
-                  )
-                : Text(
-                    count.toString(),
-                    style: const TextStyle(
-                      fontSize: 50.0,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
-                    ),
+    return SizedBox(
+      height: 150, // fixed height
+      child: Card(
+        color: color,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                count == null
+                    ? const SizedBox(
+                        height: 40,
+                        width: 40,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 3,
+                        ),
+                      )
+                    : Text(
+                        count.toString(),
+                        style: const TextStyle(
+                          fontSize: 40.0,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                const SizedBox(height: 8),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 16.0,
+                    fontWeight: FontWeight.normal,
+                    color: Colors.white,
                   ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 16.0,
-                fontWeight: FontWeight.normal,
-                color: Colors.white,
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -111,6 +124,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final guests = ref.watch(guestsProvider);
+    final counts = ref.watch(guestCountsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -125,7 +139,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                // 🔹 Today & Yesterday
+                // 🔹 Today & Yesterday row
                 Row(
                   children: [
                     Expanded(
@@ -152,39 +166,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           }
                         },
                         child: buildCountBox(
-                          count: todayCount,
+                          count: counts["today"],
                           label: "Today",
                           color: const Color.fromARGB(255, 228, 117, 14),
                         ),
                       ),
                     ),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: GestureDetector(
                         onTap: () async {
                           final userLevel = await StorageUtil.getUserLevel();
                           if (userLevel == '1') {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => SalesPersonsScreen(
-                                  title: 'All Sales Persons (Yesterday)',
-                                  salesPersons:
-                                      groupByMGroup(guests.yesterdayGuests),
-                                ),
-                              ),
+                            context.push(
+                              '/home/sales-persons',
+                              extra: {
+                                'title': 'All Sales Persons (Yesterday)',
+                                'salesPersons':
+                                    groupByMGroup(guests.yesterdayGuests),
+                              },
                             );
                           } else {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => MemberVisits(
-                                  title: 'Yesterday Member Visits',
-                                  guestList: guests.yesterdayGuests,
-                                ),
-                              ),
+                            context.push(
+                              '/home/member-visits',
+                              extra: {
+                                'title': 'Yesterday Member Visits',
+                                'guestList': guests.yesterdayGuests,
+                              },
                             );
                           }
                         },
                         child: buildCountBox(
-                          count: yesterdayCount,
+                          count: counts["yesterday"],
                           label: "Yesterday",
                           color: const Color.fromARGB(255, 78, 179, 81),
                         ),
@@ -193,7 +206,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ],
                 ),
 
-                // 🔹 Monthly
+                const SizedBox(height: 12),
+
+                // 🔹 Monthly row
                 Row(
                   children: [
                     Expanded(
@@ -201,28 +216,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         onTap: () async {
                           final userLevel = await StorageUtil.getUserLevel();
                           if (userLevel == '1') {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => SalesPersonsScreen(
-                                  title: 'All Sales Persons (Monthly)',
-                                  salesPersons:
-                                      groupByMGroup(guests.monthlyGuests),
-                                ),
-                              ),
+                            context.push(
+                              '/home/sales-persons',
+                              extra: {
+                                'title': 'All Sales Persons (Monthly)',
+                                'salesPersons':
+                                    groupByMGroup(guests.monthlyGuests),
+                              },
                             );
                           } else {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => MemberVisits(
-                                  title: 'Monthly Member Visits',
-                                  guestList: guests.monthlyGuests,
-                                ),
-                              ),
+                            context.push(
+                              '/home/member-visits',
+                              extra: {
+                                'title': 'Monthly Member Visits',
+                                'guestList': guests.monthlyGuests,
+                              },
                             );
                           }
                         },
                         child: buildCountBox(
-                          count: monthlyCount,
+                          count: counts["monthly"],
                           label: "Monthly",
                           color: const Color.fromARGB(155, 42, 125, 192),
                         ),

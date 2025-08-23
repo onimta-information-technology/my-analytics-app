@@ -114,7 +114,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildAppModeButton(AppMode mode, String name) {
-  final selectedMode = ref.watch(fontSettingsProvider).appMode;
+  // Only rebuild this widget when appMode changes
+  final selectedMode = ref.watch(
+    fontSettingsProvider.select((s) => s.appMode),
+  );
 
   return ElevatedButton(
     onPressed: () {
@@ -129,5 +132,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     child: Text(name),
   );
 }
+
 
 }

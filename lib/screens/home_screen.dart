@@ -34,6 +34,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _loadGuestData();
   }
 
+
   _loadUserName() async {
     final name = await StorageUtil.getUserName();
     setState(() {
@@ -129,11 +130,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final guests = ref.watch(guestsProvider);
     final counts = ref.watch(guestCountsProvider);
- ref.listen<AppModeSettings>(appmodeSettingsProvider, (prev, next) {
-    if (prev?.appMode != next.appMode) {
-      _loadGuestData(); // reload guest data when mode changes
-    }
-  });
+ref.listen<AppModeSettings>(appmodeSettingsProvider, (prev, next) {
+  if (prev?.appMode != next.appMode) {
+    // reset counts -> spinners show in boxes
+    ref.read(guestCountsProvider.notifier).state = {
+      "today": null,
+      "yesterday": null,
+      "monthly": null,
+    };
+
+    _loadGuestData(); // reload guest data when mode changes
+  }
+});
+
     return Scaffold(
       appBar: AppBar(
         title: Text(

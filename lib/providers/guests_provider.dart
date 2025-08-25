@@ -1,6 +1,7 @@
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
+import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,9 +19,7 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
 
       String? mCode = await StorageUtil.getMarketingCode();
 
-      print("HHHHHHHHHHHHHHH");
-      print(AppMode.myData);
-      print(mode);
+     
 
       if (mode == AppMode.myData) {
         guestList = guestList.where((guest) => guest.mGroup == mCode).toList();

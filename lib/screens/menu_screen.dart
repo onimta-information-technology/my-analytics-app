@@ -275,7 +275,8 @@ class _MenuScreenState extends State<MenuScreen>
                   children: [
                     Expanded(
                       child: GestureDetector(
-                        onTap: () {},
+                        onTap: () {  context.go('/daily-gests');},
+                   
                         child: const Card(
                           color: Color.fromARGB(176, 4, 123, 235),
                           child: Padding(

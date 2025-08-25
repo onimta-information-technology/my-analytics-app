@@ -7,6 +7,7 @@ import 'package:ballys_reservation_app/main.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/screens/auth/login_screen.dart';
 import 'package:ballys_reservation_app/screens/birthday_screen.dart';
+import 'package:ballys_reservation_app/screens/daily_walking_guests/daily_walking_guests.dart';
 import 'package:ballys_reservation_app/screens/events_screen.dart';
 import 'package:ballys_reservation_app/screens/gifts/gifts_main.dart';
 import 'package:ballys_reservation_app/screens/gifts/guest_gifts_screen.dart';
@@ -593,6 +594,22 @@ class AppNavigation {
         path: '/menu',
         builder: (context, state) => const MenuScreen(),
       ),
+       GoRoute(
+            path: '/daily-gests',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              fullscreenDialog: true,
+              key: state.pageKey,
+              child: const DailyWalkingGuests(),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                return FadeTransition(
+                  opacity: CurveTween(curve: Curves.easeInOutCirc)
+                      .animate(animation),
+                  child: child,
+                );
+              },
+            ),
+          ),
       // GoRoute(
       //   path: '/menu',
       //   pageBuilder: (context, state) => CustomTransitionPage(

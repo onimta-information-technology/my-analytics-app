@@ -1,6 +1,7 @@
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
-import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
+import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
+import 'package:ballys_reservation_app/providers/font_settings_provider.dart' hide AppMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -116,12 +117,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildAppModeButton(AppMode mode, String name) {
   // Only rebuild this widget when appMode changes
   final selectedMode = ref.watch(
-    fontSettingsProvider.select((s) => s.appMode),
+    appmodeSettingsProvider.select((s) => s.appMode),
   );
 
   return ElevatedButton(
     onPressed: () {
-      ref.read(fontSettingsProvider.notifier).setAppMode(mode);
+      ref.read(appmodeSettingsProvider.notifier).setAppMode(mode);
     },
     style: ElevatedButton.styleFrom(
       backgroundColor: selectedMode == mode

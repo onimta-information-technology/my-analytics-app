@@ -1,5 +1,6 @@
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
+import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/guests_provider.dart';
 import 'package:ballys_reservation_app/screens/member_visits.dart';
@@ -49,7 +50,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
 
     try {
-      final mode = ref.read(fontSettingsProvider).appMode;
+      final mode = ref.read(appmodeSettingsProvider).appMode;
 
       // 🔹 Today count
       await ref.read(guestsProvider.notifier).getGuestData(9009, salesCode,mode);
@@ -128,7 +129,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final guests = ref.watch(guestsProvider);
     final counts = ref.watch(guestCountsProvider);
- ref.listen<FontSettings>(fontSettingsProvider, (prev, next) {
+ ref.listen<AppModeSettings>(appmodeSettingsProvider, (prev, next) {
     if (prev?.appMode != next.appMode) {
       _loadGuestData(); // reload guest data when mode changes
     }

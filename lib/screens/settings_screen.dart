@@ -18,60 +18,64 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final double selectedFontSize = ref.watch(fontSettingsProvider).fontSize;
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(
+        title: const Text('Settings'),
+      ),
       body: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('App Mode', style: TextStyle(fontSize: 16.0)),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildAppModeButton(AppMode.myData, 'Show My Data'),
-                    _buildAppModeButton(
-                      AppMode.overallData,
-                      'Show Overall Data',
-                    ),
-                  ],
-                ),
+          
+      
+      Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'App Mode',
+              style: TextStyle(fontSize: 16.0),
+            ),
+            const SizedBox(height: 20),
+            Row(
+  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+  children: [
+    _buildAppModeButton(AppMode.myData, 'Show My Data'),
+    _buildAppModeButton(AppMode.overallData, 'Show Overall Data'),
+  ],
+),
 
-                const Text(
-                  'Font Size Settings',
-                  style: TextStyle(fontSize: 16.0),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildFontSizeButton(14.0, 'Small'),
-                    _buildFontSizeButton(16.0, 'Medium'),
-                    _buildFontSizeButton(18.0, 'Large'),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Font Weight Settings',
-                  style: TextStyle(fontSize: 16.0),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildFontWeightButton(FontWeight.normal, 'Normal'),
-                    _buildFontWeightButton(FontWeight.bold, 'Bold'),
-                    _buildFontWeightButton(FontWeight.w900, 'Extra Bold'),
-                  ],
-                ),
+            const Text(
+              'Font Size Settings',
+              style: TextStyle(fontSize: 16.0),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildFontSizeButton(14.0, 'Small'),
+                _buildFontSizeButton(16.0, 'Medium'),
+                _buildFontSizeButton(18.0, 'Large'),
               ],
             ),
-          ),
+            const SizedBox(height: 20),
+            const Text(
+              'Font Weight Settings',
+              style: TextStyle(fontSize: 16.0),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildFontWeightButton(FontWeight.normal, 'Normal'),
+                _buildFontWeightButton(FontWeight.bold, 'Bold'),
+                _buildFontWeightButton(FontWeight.w900, 'Extra Bold'),
+              ],
+            ),
+          ],
+        ),
+      ),
           const Watermark(),
         ],
-      ),
+      )
     );
   }
 
@@ -110,22 +114,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildAppModeButton(AppMode mode, String name) {
-    // Only rebuild this widget when appMode changes
-    final selectedMode = ref.watch(
-      fontSettingsProvider.select((s) => s.appMode),
-    );
+  // Only rebuild this widget when appMode changes
+  final selectedMode = ref.watch(
+    fontSettingsProvider.select((s) => s.appMode),
+  );
 
-    return ElevatedButton(
-      onPressed: () {
-        ref.read(fontSettingsProvider.notifier).setAppMode(mode);
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: selectedMode == mode
-            ? Constants.kSecondaryColor
-            : Colors.grey[300],
-        foregroundColor: selectedMode == mode ? Colors.white : Colors.black,
-      ),
-      child: Text(name),
-    );
-  }
+  return ElevatedButton(
+    onPressed: () {
+      ref.read(fontSettingsProvider.notifier).setAppMode(mode);
+    },
+    style: ElevatedButton.styleFrom(
+      backgroundColor: selectedMode == mode
+          ? Constants.kSecondaryColor
+          : Colors.grey[300],
+      foregroundColor: selectedMode == mode ? Colors.white : Colors.black,
+    ),
+    child: Text(name),
+  );
+}
+
+
 }

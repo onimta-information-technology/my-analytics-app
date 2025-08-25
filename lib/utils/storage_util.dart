@@ -2,11 +2,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class StorageUtil {
   static Future<void> saveUserData(
-      String userName, String userLevel, String salesCode) async {
+      String userName, String userLevel, String salesCode, String marketingCode) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('userName', userName);
     await prefs.setString('userLevel', userLevel);
     await prefs.setString('salesCode', salesCode);
+    await prefs.setString('marketingCode', marketingCode);
 
     final now = DateTime.now();
     final expiryTime = now.add(const Duration(days: 365));
@@ -36,5 +37,9 @@ class StorageUtil {
   static Future<void> clearUserData() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
+  }
+   static Future<String?> getMarketingCode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('marketingCode');
   }
 }

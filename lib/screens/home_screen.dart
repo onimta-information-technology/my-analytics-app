@@ -1,5 +1,6 @@
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
+import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/guests_provider.dart';
 import 'package:ballys_reservation_app/screens/member_visits.dart';
 import 'package:ballys_reservation_app/screens/member_visits/sales_persons.dart';
@@ -48,16 +49,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
 
     try {
+      final mode = ref.read(fontSettingsProvider).appMode;
+
       // 🔹 Today count
-      await ref.read(guestsProvider.notifier).getGuestData(9009, salesCode);
+      await ref.read(guestsProvider.notifier).getGuestData(9009, salesCode,mode);
       final todayGuests = ref.read(guestsProvider).todayGuests;
 
       // 🔹 Yesterday count
-      await ref.read(guestsProvider.notifier).getGuestData(9010, salesCode);
+      await ref.read(guestsProvider.notifier).getGuestData(9010, salesCode,mode);
       final yesterdayGuests = ref.read(guestsProvider).yesterdayGuests;
 
       // 🔹 Monthly count
-      await ref.read(guestsProvider.notifier).getGuestData(9011, salesCode);
+      await ref.read(guestsProvider.notifier).getGuestData(9011, salesCode,mode);
       final monthlyGuests = ref.read(guestsProvider).monthlyGuests;
 
       // Update Riverpod provider instead of setState
@@ -125,7 +128,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final guests = ref.watch(guestsProvider);
     final counts = ref.watch(guestCountsProvider);
-
+ ref.listen<FontSettings>(fontSettingsProvider, (prev, next) {
+    if (prev?.appMode != next.appMode) {
+      _loadGuestData(); // reload guest data when mode changes
+    }
+  });
     return Scaffold(
       appBar: AppBar(
         title: Text(

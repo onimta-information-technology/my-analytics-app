@@ -74,6 +74,7 @@ class AuthRepository {
           userName: tableData['Login_By'],
           userLevel: tableData['User_Level'].toString(),
           salesCode: tableData['Sales_Code'].toString(),
+          marketingCode: tableData['Marketing_Code'].toString(),
         );
       } else {
         throw Exception(

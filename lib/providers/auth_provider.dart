@@ -44,7 +44,7 @@ class AuthNotifier extends StateNotifier<AuthState?> {
 
       final user = await authRepository.login(username, password);
       await StorageUtil.saveUserData(
-          user.userName, user.userLevel, user.salesCode);
+          user.userName, user.userLevel, user.salesCode, user.marketingCode);
       state = AuthState(user: user, isLoading: false);
     } catch (e) {
       print('Login failed: $e');

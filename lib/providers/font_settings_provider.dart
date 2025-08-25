@@ -58,8 +58,6 @@ class FontSettingsNotifier extends StateNotifier<FontSettings> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('fontSize', state.fontSize);
     await prefs.setInt('fontWeight', state.fontWeight.index);
-   
-
   }
 
   void setFontSize(double size) {

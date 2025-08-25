@@ -82,7 +82,7 @@ class MemberVisits extends ConsumerWidget {
                                         "${guest.mid} - ${guest.memberName}",
                                         style: TextStyle(
                                           fontSize: fontSettings.fontSize,
-                                          fontWeight: FontWeight.bold,
+                                          fontWeight: fontSettings.fontWeight,
                                         ),
                                       ),
                                     ),
@@ -93,7 +93,7 @@ class MemberVisits extends ConsumerWidget {
                                   children: [
                                     const Icon(
                                       Icons.calendar_today,
-                                      color: Colors.grey,
+                                      color: Color.fromARGB(255, 89, 88, 88),
                                       size: 18,
                                     ),
                                     const SizedBox(width: 8),

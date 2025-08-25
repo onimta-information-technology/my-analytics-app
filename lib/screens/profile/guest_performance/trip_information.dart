@@ -216,7 +216,7 @@ class TripInformationWidget extends ConsumerWidget {
                                   child: Padding(
                                     padding: const EdgeInsets.all(8.0),
                                     child: Text(
-                                      "Drop",
+                                      "Drop (Est)",
                                       style: TextStyle(
                                         color: Colors.black,
                                         fontSize: fontSettings.fontSize,
@@ -246,7 +246,7 @@ class TripInformationWidget extends ConsumerWidget {
                                   child: Padding(
                                     padding: const EdgeInsets.all(8.0),
                                     child: Text(
-                                      "Cash Out",
+                                      "Cash Out (Est)",
                                       style: TextStyle(
                                         color: Colors.black,
                                         fontSize: fontSettings.fontSize,
@@ -276,7 +276,7 @@ class TripInformationWidget extends ConsumerWidget {
                                   child: Padding(
                                     padding: const EdgeInsets.all(8.0),
                                     child: Text(
-                                      "Result",
+                                      "Result (Est)",
                                       style: TextStyle(
                                         color: Colors.black,
                                         fontSize: fontSettings.fontSize,
@@ -306,7 +306,7 @@ class TripInformationWidget extends ConsumerWidget {
                                   child: Padding(
                                     padding: const EdgeInsets.all(8.0),
                                     child: Text(
-                                      "Commision",
+                                      "Commision (Est)",
                                       style: TextStyle(
                                         color: Colors.black,
                                         fontSize: fontSettings.fontSize,
@@ -336,7 +336,7 @@ class TripInformationWidget extends ConsumerWidget {
                                   child: Padding(
                                     padding: const EdgeInsets.all(8.0),
                                     child: Text(
-                                      "Actual Drop",
+                                      "Actual Drop (Est)",
                                       style: TextStyle(
                                         color: Colors.black,
                                         fontSize: fontSettings.fontSize,
@@ -366,7 +366,7 @@ class TripInformationWidget extends ConsumerWidget {
                                   child: Padding(
                                     padding: const EdgeInsets.all(8.0),
                                     child: Text(
-                                      "Total Coupon",
+                                      "Total Coupon (Est)",
                                       style: TextStyle(
                                         color: Colors.black,
                                         fontSize: fontSettings.fontSize,

@@ -136,7 +136,7 @@ class FAndBHistoryWidget extends ConsumerWidget {
                             text: TextSpan(
                               children: [
                                 TextSpan(
-                                  text: "F & B Cost: ",
+                                  text: "F & B Cost (Est): ",
                                   style: TextStyle(
                                     color: Colors.black,
                                     fontSize: fontSettings.fontSize + 3,
@@ -250,7 +250,7 @@ class FAndBHistoryWidget extends ConsumerWidget {
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
                               child: Text(
-                                "Cost",
+                                "Cost (Est)",
                                 style: TextStyle(
                                   color: Colors.black,
                                   fontSize: fontSettings.fontSize,

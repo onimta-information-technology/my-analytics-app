@@ -417,7 +417,7 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                         MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
-                                        "Total Cash In:",
+                                        "Total Cash In (Est):",
                                         style: TextStyle(
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
@@ -444,7 +444,7 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                         MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
-                                        "Total Cash Out:",
+                                        "Total Cash Out (Est):",
                                         style: TextStyle(
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
@@ -472,8 +472,8 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                     children: [
                                       Text(
                                         memberSummary.last.descrip == "WIN"
-                                            ? "Win Amount:"
-                                            : "Loss Amount:",
+                                            ? "Win Amount (Est):"
+                                            : "Loss Amount (Est):",
                                         style: TextStyle(
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,

@@ -353,7 +353,7 @@ class AirTicketReservationWidget extends ConsumerWidget {
                                   child: Padding(
                                     padding: const EdgeInsets.all(8.0),
                                     child: Text(
-                                      "Cost",
+                                      "Cost (Est)",
                                       style: TextStyle(
                                         color: Colors.black,
                                         fontSize: fontSettings.fontSize,

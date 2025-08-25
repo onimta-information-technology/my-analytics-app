@@ -7,7 +7,7 @@ import 'package:ballys_reservation_app/main.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/screens/auth/login_screen.dart';
 import 'package:ballys_reservation_app/screens/birthday_screen.dart';
-import 'package:ballys_reservation_app/screens/daily_walking_guests/daily_walking_guests.dart';
+import 'package:ballys_reservation_app/screens/daily_walking_guests/daily_walking_guests%20_screen.dart';
 import 'package:ballys_reservation_app/screens/events_screen.dart';
 import 'package:ballys_reservation_app/screens/gifts/gifts_main.dart';
 import 'package:ballys_reservation_app/screens/gifts/guest_gifts_screen.dart';
@@ -588,18 +588,12 @@ class AppNavigation {
               },
             ),
           ),
-        ],
-      ),
-      GoRoute(
-        path: '/menu',
-        builder: (context, state) => const MenuScreen(),
-      ),
-       GoRoute(
+           GoRoute(
             path: '/daily-gests',
             pageBuilder: (context, state) => CustomTransitionPage(
               fullscreenDialog: true,
               key: state.pageKey,
-              child: const DailyWalkingGuests(),
+             child: const DailyWalkingGuestScreen(),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) {
                 return FadeTransition(
@@ -610,6 +604,13 @@ class AppNavigation {
               },
             ),
           ),
+        ],
+      ),
+      GoRoute(
+        path: '/menu',
+        builder: (context, state) => const MenuScreen(),
+      ),
+      
       // GoRoute(
       //   path: '/menu',
       //   pageBuilder: (context, state) => CustomTransitionPage(

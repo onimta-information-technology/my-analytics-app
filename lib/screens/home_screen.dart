@@ -11,11 +11,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 // 🔹 Provider for guest counts
-final guestCountsProvider = StateProvider<Map<String, int?>>((ref) => {
-      "today": null,
-      "yesterday": null,
-      "monthly": null,
-    });
+final guestCountsProvider = StateProvider<Map<String, int?>>(
+  (ref) => {"today": null, "yesterday": null, "monthly": null},
+);
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -33,7 +31,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _loadUserName();
     _loadGuestData();
   }
-
 
   _loadUserName() async {
     final name = await StorageUtil.getUserName();
@@ -54,15 +51,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       final mode = ref.read(appmodeSettingsProvider).appMode;
 
       // 🔹 Today count
-      await ref.read(guestsProvider.notifier).getGuestData(9009, salesCode,mode);
+      await ref
+          .read(guestsProvider.notifier)
+          .getGuestData(9009, salesCode, mode);
       final todayGuests = ref.read(guestsProvider).todayGuests;
 
       // 🔹 Yesterday count
-      await ref.read(guestsProvider.notifier).getGuestData(9010, salesCode,mode);
+      await ref
+          .read(guestsProvider.notifier)
+          .getGuestData(9010, salesCode, mode);
       final yesterdayGuests = ref.read(guestsProvider).yesterdayGuests;
 
       // 🔹 Monthly count
-      await ref.read(guestsProvider.notifier).getGuestData(9011, salesCode,mode);
+      await ref
+          .read(guestsProvider.notifier)
+          .getGuestData(9011, salesCode, mode);
       final monthlyGuests = ref.read(guestsProvider).monthlyGuests;
 
       // Update Riverpod provider instead of setState
@@ -130,18 +133,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final guests = ref.watch(guestsProvider);
     final counts = ref.watch(guestCountsProvider);
-ref.listen<AppModeSettings>(appmodeSettingsProvider, (prev, next) {
-  if (prev?.appMode != next.appMode) {
-    // reset counts -> spinners show in boxes
-    ref.read(guestCountsProvider.notifier).state = {
-      "today": null,
-      "yesterday": null,
-      "monthly": null,
-    };
+    ref.listen<AppModeSettings>(appmodeSettingsProvider, (prev, next) {
+      if (prev?.appMode != next.appMode) {
+        ref.read(guestCountsProvider.notifier).state = {
+          "today": null,
+          "yesterday": null,
+          "monthly": null,
+        };
 
-    _loadGuestData(); // reload guest data when mode changes
-  }
-});
+        _loadGuestData(); // reload guest data when mode changes
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -149,6 +151,26 @@ ref.listen<AppModeSettings>(appmodeSettingsProvider, (prev, next) {
           userName != null ? 'Welcome, $userName' : 'Loading...',
           style: const TextStyle(fontSize: 16),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, size: 30),
+            onPressed: () async {
+              setState(() {
+                // reset data before reloading
+                userName = null;
+                ref.read(guestCountsProvider.notifier).state = {
+                  "today": null,
+                  "yesterday": null,
+                  "monthly": null,
+                };
+              });
+
+              // reload username and guest data
+              await _loadUserName();
+              await _loadGuestData();
+            },
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -156,6 +178,25 @@ ref.listen<AppModeSettings>(appmodeSettingsProvider, (prev, next) {
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
+                Consumer(
+            builder: (context, ref, _) {
+              final appMode = ref.watch(appmodeSettingsProvider).appMode;
+              String heading = appMode == AppMode.myData
+                  ? "MY PERFORMANCE"
+                  : "OVERALL PERFORMANCE";
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Text(
+                  heading,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              );
+            },
+          ),
                 // 🔹 Today & Yesterday row
                 Row(
                   children: [
@@ -168,8 +209,9 @@ ref.listen<AppModeSettings>(appmodeSettingsProvider, (prev, next) {
                               '/home/sales-persons',
                               extra: {
                                 'title': 'All Sales Persons (Today)',
-                                'salesPersons':
-                                    groupByMGroup(guests.todayGuests),
+                                'salesPersons': groupByMGroup(
+                                  guests.todayGuests,
+                                ),
                               },
                             );
                           } else {
@@ -199,8 +241,9 @@ ref.listen<AppModeSettings>(appmodeSettingsProvider, (prev, next) {
                               '/home/sales-persons',
                               extra: {
                                 'title': 'All Sales Persons (Yesterday)',
-                                'salesPersons':
-                                    groupByMGroup(guests.yesterdayGuests),
+                                'salesPersons': groupByMGroup(
+                                  guests.yesterdayGuests,
+                                ),
                               },
                             );
                           } else {
@@ -216,7 +259,7 @@ ref.listen<AppModeSettings>(appmodeSettingsProvider, (prev, next) {
                         child: buildCountBox(
                           count: counts["yesterday"],
                           label: "Yesterday",
-                          color:  Colors.green,
+                          color: Colors.green,
                         ),
                       ),
                     ),
@@ -237,8 +280,9 @@ ref.listen<AppModeSettings>(appmodeSettingsProvider, (prev, next) {
                               '/home/sales-persons',
                               extra: {
                                 'title': 'All Sales Persons (Monthly)',
-                                'salesPersons':
-                                    groupByMGroup(guests.monthlyGuests),
+                                'salesPersons': groupByMGroup(
+                                  guests.monthlyGuests,
+                                ),
                               },
                             );
                           } else {

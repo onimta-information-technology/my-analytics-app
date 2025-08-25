@@ -63,7 +63,7 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
-                          fontWeight: FontWeight.bold,
+                       fontWeight: fontSettings.fontWeight,
                         ),
                       ),
                       Text(
@@ -80,11 +80,11 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        "Ballys Rupees:",
+                        "Ballys Rupees (Est):",
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
-                          fontWeight: FontWeight.bold,
+                         fontWeight: fontSettings.fontWeight,
                         ),
                       ),
                       Text(
@@ -106,7 +106,7 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
-                          fontWeight: FontWeight.bold,
+                     fontWeight: fontSettings.fontWeight,
                         ),
                       ),
                       Text(
@@ -128,7 +128,7 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: fontSettings.fontWeight,
                         ),
                       ),
                       Text(
@@ -149,7 +149,7 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
-                          fontWeight: FontWeight.bold,
+                       fontWeight: fontSettings.fontWeight,
                         ),
                       ),
                       Text(
@@ -170,7 +170,7 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
-                          fontWeight: FontWeight.bold,
+          fontWeight: fontSettings.fontWeight,
                         ),
                       ),
                       Text(
@@ -191,7 +191,7 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
-                          fontWeight: FontWeight.bold,
+fontWeight: fontSettings.fontWeight,
                         ),
                       ),
                       Text(
@@ -213,7 +213,7 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
-                          fontWeight: FontWeight.bold,
+                         fontWeight: fontSettings.fontWeight,
                         ),
                       ),
                       Text(
@@ -234,7 +234,7 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: fontSettings.fontWeight,
                         ),
                       ),
                       Text(
@@ -251,11 +251,11 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        "Last Redeem Amount:",
+                        "Last Redeem Amount (Est):",
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: fontSettings.fontWeight,
                         ),
                       ),
                       Text(
@@ -276,7 +276,7 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
-                          fontWeight: FontWeight.bold,
+                       fontWeight: fontSettings.fontWeight,
                         ),
                       ),
                       Text(
@@ -297,7 +297,7 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: fontSettings.fontWeight,
                         ),
                       ),
                       Text(

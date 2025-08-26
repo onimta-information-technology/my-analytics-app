@@ -29,9 +29,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
     _loadUserName();
-    _loadGuestData();
-  }
-
+   WidgetsBinding.instance.addPostFrameCallback((_) {
+    _loadGuestData(); // now runs after provider finishes async load
+  });
+}
   _loadUserName() async {
     final name = await StorageUtil.getUserName();
     setState(() {

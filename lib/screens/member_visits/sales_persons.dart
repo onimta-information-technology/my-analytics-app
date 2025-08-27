@@ -97,7 +97,7 @@ class _SalesPersonsScreenState extends ConsumerState<SalesPersonsScreen> {
                             const SizedBox(width: 10),
                             CircleAvatar(
                               radius: 18,
-                              backgroundColor: Constants.kPrimaryColor
+                              backgroundColor: const Color.fromARGB(255, 152, 98, 6)
                                   .withAlpha(90),
                               child: Text(
                                 entry.value[0].mid == ''

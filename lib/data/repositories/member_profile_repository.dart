@@ -14,7 +14,8 @@ class MemberProfileRepository {
   MemberProfileRepository(this.apiService);
 
   Future<List<MemberMainProfile>> getMemberMainProfileDetails(
-      String text1) async {
+    String text1,
+  ) async {
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -23,18 +24,18 @@ class MemberProfileRepository {
           "Para_Direction": "Input",
           "Para_Lenth": 1,
           "Para_Name": "@Iid",
-          "Para_Type": "int"
+          "Para_Type": "int",
         },
         {
           "Para_Data": text1,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text1",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
       ],
       "SpName": "sp_CRM_Common_API",
-      "con": "1"
+      "con": "1",
     });
 
     if (response['CommonResult'] != null &&
@@ -53,15 +54,20 @@ class MemberProfileRepository {
       return guestMainProfileDynamicData;
     }
     throw Exception(
-        'Failed guests searching: Invalid credentials or LoginStatus is not True');
+      'Failed guests searching: Invalid credentials or LoginStatus is not True',
+    );
   }
 
-  Future<List<LoyaltySummary>> getLoyalitySummary(
-      {required String playerId,
-      required String dateFrom,
-      required String dateTo}) async {
-    final response = await apiService.post('GetLoyalitySummary',
-        {"playerId": playerId, "DateFrom": dateFrom, "DateTo": dateTo});
+  Future<List<LoyaltySummary>> getLoyalitySummary({
+    required String playerId,
+    required String dateFrom,
+    required String dateTo,
+  }) async {
+    final response = await apiService.post('GetLoyalitySummary', {
+      "playerId": playerId,
+      "DateFrom": dateFrom,
+      "DateTo": dateTo,
+    });
 
     if (response['status'] == 'SUCCESS' &&
         response['data'] is List &&
@@ -95,8 +101,36 @@ class MemberProfileRepository {
         response['data']['Visits'].isNotEmpty) {
       final data = response['data']['Visits'];
 
-      List<TripHistory> tripHistoryData =
-          data.map<TripHistory>((item) => TripHistory.fromJson(item)).toList();
+      List<TripHistory> tripHistoryData = data
+          .map<TripHistory>((item) => TripHistory.fromJson(item))
+          .toList();
+
+      return tripHistoryData;
+    } else {
+      throw Exception('Data retrieval failed: unexpected response structure');
+    }
+  }
+
+    Future<List<TripHistory>> getTripHistory2({
+    required String playerId,
+    String? dateFrom,
+    String? dateTo,
+  }) async {
+    final response = await apiService.post('GetVisitFrequency', {
+      "playerId": playerId,
+      "DateFrom": dateFrom,
+      "DateTo": dateTo,
+    });
+
+    if (response['status'] == 'SUCCESS' &&
+        response['data'] is Map &&
+        response['data']['Visits'] is List &&
+        response['data']['Visits'].isNotEmpty) {
+      final data = response['data']['Visits'];
+
+      List<TripHistory> tripHistoryData = data
+          .map<TripHistory>((item) => TripHistory.fromJson(item))
+          .toList();
 
       return tripHistoryData;
     } else {
@@ -215,32 +249,32 @@ class MemberProfileRepository {
           "Para_Direction": "Input",
           "Para_Lenth": 1,
           "Para_Name": "@Iid",
-          "Para_Type": "int"
+          "Para_Type": "int",
         },
         {
           "Para_Data": playerId,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text1",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
           "Para_Data": dateFrom,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text2",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
           "Para_Data": dateTo,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text3",
-          "Para_Type": "varchar"
-        }
+          "Para_Type": "varchar",
+        },
       ],
       "SpName": "sp_CRM_Common_API",
-      "con": "1"
+      "con": "1",
     });
 
     if (response['CommonResult'] != null &&

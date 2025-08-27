@@ -132,7 +132,7 @@ class _SpecialGiftRequestScreenState
                 ),
               ),
             ),
-           const Watermark(),
+          const Watermark(),
         ],
       ),
       floatingActionButton: FloatingActionButton(

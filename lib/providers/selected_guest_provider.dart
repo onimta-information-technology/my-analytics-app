@@ -12,6 +12,9 @@ class SelectedGuestNotifier extends StateNotifier<Guest?> {
   void setSelectedGuest(Guest guest) {
     state = guest;
   }
+  void setSelectedGuestfilterdate(){
+    
+  }
 
   Future<void> getGuestImage(int iid, String text1) async {
     try {

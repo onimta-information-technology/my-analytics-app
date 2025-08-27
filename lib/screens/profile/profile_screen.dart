@@ -21,6 +21,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
+  
   const ProfileScreen({super.key});
 
   @override
@@ -30,7 +31,6 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen>
     with SingleTickerProviderStateMixin {
   bool _isLoading = false;
- 
 
   @override
   void initState() {
@@ -48,8 +48,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
     _animation = Tween<double>(begin: 0.0, end: 1.0).animate(_controller);
   }
-
-  
 
   final TextEditingController _whatsappNumberController =
       TextEditingController();
@@ -82,7 +80,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       _isLoading = true;
     });
     final guest = ref.read(selectedGuestProvider);
-
+    print(guest);
     if (guest == null) return;
     await ref
         .read(mainProfileDetailsProvider.notifier)
@@ -121,13 +119,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     final guestProfileDetails = ref.watch(mainProfileDetailsProvider);
 
     final String? imagePath = ratingImageMap[guest.gRating];
-    
+
     return Scaffold(
       appBar: AppBar(title: const Text("Guest Profile")),
       body: Stack(
         children: [
           // 🔹 Watermark Layer
-          
           PopScope(
             onPopInvokedWithResult: (bool didPop, dynamic result) {
               ref.read(dateFilterProvider.notifier).resetDates();
@@ -656,7 +653,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               ),
             ),
           ),
-        const Watermark(),
+          const Watermark(),
         ],
       ),
     );

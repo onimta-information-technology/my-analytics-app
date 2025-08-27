@@ -37,8 +37,6 @@ class GuestPerformanceScreen extends ConsumerStatefulWidget {
 }
 
 class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
- 
-
   final TextEditingController _startDateController = TextEditingController();
   final TextEditingController _endDateController = TextEditingController();
   final ValueNotifier<DateTime?> startDateNotifier = ValueNotifier<DateTime?>(
@@ -55,9 +53,7 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final dateFilter = ref.watch(dateFilterProvider);
     });
-  
   }
- 
 
   int selectedMenu = 1;
 
@@ -202,6 +198,7 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
               ? DateFormat('yyyy-MM-dd').format(endDateNotifier.value!)
               : '',
         );
+        print("Date from: $DateFormat('yyyy-MM-dd').format(startDateNotifier.value!), Date to: $endDateNotifier, Player ID: $mid");
   }
 
   Future<void> getAirlineHistory(String mid) async {
@@ -278,7 +275,7 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
   Widget build(BuildContext context) {
     final guest = ref.watch(selectedGuestProvider);
     final dateFilter = ref.watch(dateFilterProvider);
-  
+
     String formattedDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
     if (dateFilter.dateFrom == null) {
       startDateNotifier.value = DateTime.parse(formattedDate);
@@ -671,7 +668,7 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
                 ),
               ),
             ),
-             const Watermark(),
+          const Watermark(),
         ],
       ),
     );

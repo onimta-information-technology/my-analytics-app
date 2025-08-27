@@ -1,10 +1,17 @@
 import 'dart:convert';
-
 import 'package:ballys_reservation_app/components/watermark.dart';
+import 'package:ballys_reservation_app/core/constants.dart';
+import 'package:ballys_reservation_app/models/guest_modal.dart';
+import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
+import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+import 'package:ballys_reservation_app/providers/trip_information_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ballys_reservation_app/models/Guest/daily_walking_guest.dart';
 import 'package:ballys_reservation_app/providers/daily_walking_provider.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DailyWalkingGuestScreen extends ConsumerStatefulWidget {
   const DailyWalkingGuestScreen({super.key});
@@ -16,150 +23,398 @@ class DailyWalkingGuestScreen extends ConsumerStatefulWidget {
 
 class _DailyWalkingGuestScreenState
     extends ConsumerState<DailyWalkingGuestScreen> {
+  bool _isFirstLoad = true;
+  bool _isRefreshing = false;
+
   @override
   void initState() {
     super.initState();
-    // Fetch data on page load
-    Future.microtask(() {
-      ref.read(dailyWalkingProvider.notifier).getDailyWalkingGuests();
+    _loadGuests();
+  }
+
+  Future<void> _loadGuests() async {
+    final guests = ref.read(dailyWalkingProvider);
+    if (guests.isEmpty) {
+      await ref.read(dailyWalkingProvider.notifier).getDailyWalkingGuests();
+    }
+    if (mounted) {
+      setState(() {
+        _isFirstLoad = false;
+      });
+    }
+  }
+
+  Future<void> _refreshGuests() async {
+    setState(() {
+      _isRefreshing = true;
     });
+    await ref.read(dailyWalkingProvider.notifier).getDailyWalkingGuests();
+    if (mounted) {
+      setState(() {
+        _isRefreshing = false;
+      });
+    }
+  }
+
+  String _formatDate2(String dateString) {
+    if (dateString.isEmpty) return "N/A";
+    final date = DateTime.parse(dateString);
+    return DateFormat('yyyy-MM-dd').format(date);
+  }
+
+  String _parseNumberFormat(double? value) {
+    if (value == null || value == 0) return "0.00";
+    return NumberFormat('#,##0').format(value);
+  }
+
+  Future<void> _launchPhone(String number) async {
+    final Uri url = Uri(scheme: 'tel', path: number);
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not launch phone app')),
+      );
+    }
+  }
+
+  void _goToGuestPerformance(DailyWalkingGuest guest) {
+    final now = DateTime.now();
+    final startOfToday = DateTime(now.year, now.month, now.day);
+    final endOfTomorrow = DateTime(
+      now.year,
+      now.month,
+      now.day + 1,
+      23,
+      59,
+      59,
+    );
+
+    final String today = DateFormat('yyyy-MM-dd').format(startOfToday);
+    final String tomorrow = DateFormat('yyyy-MM-dd').format(endOfTomorrow);
+
+    String safeDateFrom;
+    if (guest.dateRemark != null &&
+        RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(guest.dateRemark!)) {
+      safeDateFrom = guest.dateRemark!;
+    } else {
+      safeDateFrom = today;
+    }
+
+
+    final selectedGuest = Guest(
+      mid: guest.mId,
+      memberName: guest.mname,
+      country: guest.country ?? '',
+      lastVisitDate: safeDateFrom,
+      age: 0,
+      gRating: guest.gName,
+      mGroup: null,
+      gName: guest.gName,
+      memImage2: guest.menImage2,
+      gift: null,
+      mDrop: null,
+    );
+
+    ref.read(selectedGuestProvider.notifier).setSelectedGuest(selectedGuest);
+
+    // ref
+    //     .read(tripHistoryProvider.notifier)
+    //     .getTripHistory(
+    //       dateFrom: safeDateFrom,
+    //       dateTo: tomorrow,
+    //       playerId: guest.mId,
+    //     );
+
+    context.push('/home/profile/trip-history');
   }
 
   @override
   Widget build(BuildContext context) {
     final guests = ref.watch(dailyWalkingProvider);
+    final fontSettings = ref.watch(fontSettingsProvider);
+
+    final showSpinner = (_isFirstLoad && guests.isEmpty) || _isRefreshing;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text("Daily Walking Guests"),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              ref.read(dailyWalkingProvider.notifier).getDailyWalkingGuests();
-            },
+            icon: _isRefreshing
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Icon(Icons.refresh),
+            onPressed: _isRefreshing ? null : _refreshGuests,
           ),
         ],
       ),
-      body: Stack(children: [
-        
-      
-      Padding(
-        padding: const EdgeInsets.all(12),
-        child: guests.isEmpty
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Total Guests count
-                  Row(
-                    children: [
-                      const Text(
-                        "Total Guests: ",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        guests.length.toString(),
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Guest details list
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: guests.length,
-                      itemBuilder: (context, index) {
-                        final guest = guests[index];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(vertical: 10),
-                          elevation: 4,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Image + Details
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          detailRow("MID", guest.mId),
-                                          detailRow("Member Name", guest.mname),
-                                          detailRow("Country", guest.country),
-                                          detailRow("Contact No", guest.phone),
-                                          detailRow("Register Date", guest.rdt),
-                                          detailRow("Latest Visit", "Today"),
-                                          detailRow("Type", "WALKING"),
-                                          detailRow("DTL", guest.dlt.toString()),
-                                          detailRow("ADT", guest.adt.toString()),
-                                        ],
-                                      ),
+      body: Stack(
+        children: [
+          guests.isEmpty && !showSpinner
+              ? const Center(child: Text("No data available"))
+              : Column(
+                  children: [
+                    // Total Guest Card
+                    Card(
+                      margin: const EdgeInsets.all(16.0),
+                      elevation: 4.0,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 1,
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16.0),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.people, color: Colors.black),
+                                  const SizedBox(width: 8.0),
+                                  Text(
+                                    "Total Guest",
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: fontSettings.fontSize,
+                                      fontWeight: fontSettings.fontWeight,
                                     ),
-                                     const SizedBox(width: 12),
-                          // Guest image (base64 or placeholder)
-                          Hero(
-                            tag: "guest-image-$index",
-                            child: guest.menImage2.isNotEmpty
-                                ? Image.memory(
-                                    base64Decode(guest.menImage2),
-                                    width: 120,
-                                    height: 120,
-                                    fit: BoxFit.cover,
-                                  )
-                                : Image.asset(
-                                    'assets/images/placeholder_image.jpg',
-                                    width: 120,
-                                    height: 120,
-                                    fit: BoxFit.cover,
                                   ),
-                          ),
-
-                                  ],
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
-                        );
-                      },
+                          Expanded(
+                            flex: 1,
+                            child: Container(
+                              padding: const EdgeInsets.all(16.0),
+                              alignment: Alignment.centerRight,
+                              child: Text(
+                                guests.length.toString(),
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: fontSettings.fontSize,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
+
+                    // Scrollable Table
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Table(
+                          border: TableBorder.all(),
+                          columnWidths: const {
+                            0: FlexColumnWidth(),
+                            1: FlexColumnWidth(),
+                          },
+                          children: guests
+                              .map(
+                                (entry) => [
+                                  TableRow(
+                                    decoration: const BoxDecoration(
+                                      color: Color.fromARGB(47, 181, 225, 250),
+                                    ),
+                                    children: const [
+                                      Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Details",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  TableRow(
+                                    children: [
+                                      Container(
+                                        width: double.infinity,
+                                        color: Constants.kPrimaryColor
+                                            .withAlpha(50),
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: const Text(
+                                          "Image",
+                                          style: TextStyle(color: Colors.black),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child:
+                                            entry.menImage2 != null &&
+                                                entry.menImage2!.isNotEmpty
+                                            ? GestureDetector(
+                                                onTap: () {
+                                                  showDialog(
+                                                    context: context,
+                                                    barrierDismissible: true,
+                                                    builder: (_) => Dialog(
+                                                      backgroundColor:
+                                                          Colors.transparent,
+                                                      child: Image.memory(
+                                                        base64Decode(
+                                                          entry.menImage2!,
+                                                        ),
+                                                        fit: BoxFit.contain,
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                                child: Image.memory(
+                                                  base64Decode(
+                                                    entry.menImage2!,
+                                                  ),
+                                                  height: 155,
+                                                  width: 80,
+                                                  fit: BoxFit.cover,
+                                                ),
+                                              )
+                                            : GestureDetector(
+                                                onTap: () {
+                                                  showDialog(
+                                                    context: context,
+                                                    barrierDismissible: true,
+                                                    builder: (_) => Dialog(
+                                                      backgroundColor:
+                                                          Colors.transparent,
+                                                      child: Image.asset(
+                                                        'assets/images/placeholder_image.jpg',
+                                                        fit: BoxFit.contain,
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                                child: Image.asset(
+                                                  'assets/images/placeholder_image.jpg',
+                                                  height: 80,
+                                                  width: 80,
+                                                  fit: BoxFit.cover,
+                                                ),
+                                              ),
+                                      ),
+                                    ],
+                                  ),
+                                  ..._buildGuestRows(entry, fontSettings),
+                                ],
+                              )
+                              .expand((x) => x)
+                              .toList(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+          if (showSpinner) const Center(child: CircularProgressIndicator()),
+          const Watermark(),
+        ],
       ),
-      const Watermark(),
-      ])
     );
   }
 
-  Widget detailRow(String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+  List<TableRow> _buildGuestRows(DailyWalkingGuest entry, fontSettings) {
+    return [
+      _buildRow(
+        "Member ID",
+        entry.mId,
+        fontSettings,
+        isMemberId: true,
+        guest: entry,
+      ),
+      _buildRow("Member Name", entry.mname, fontSettings),
+      _buildRow("Country", entry.country, fontSettings),
+      _buildRow("Contact No", entry.phone, fontSettings, isPhone: true),
+      _buildRow("Register Date", _formatDate2(entry.rdt), fontSettings),
+      _buildRow("Latest Visit", entry.dateRemark, fontSettings),
+      _buildRow("Type", entry.gName, fontSettings),
+      _buildRow("DTL", _parseNumberFormat(entry.dlt), fontSettings),
+      _buildRow("ADT", _parseNumberFormat(entry.adt), fontSettings),
+    ];
+  }
+
+  TableRow _buildRow(
+    String label,
+    String value,
+    fontSettings, {
+    bool isPhone = false,
+    bool isMemberId = false,
+    DailyWalkingGuest? guest,
+  }) {
+    return TableRow(
+      children: [
+        Container(
+          width: double.infinity,
+          color: Constants.kPrimaryColor.withAlpha(50),
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: fontSettings.fontSize,
+              fontWeight: fontSettings.fontWeight,
             ),
           ),
-          Expanded(
-            child: Text(value, overflow: TextOverflow.ellipsis),
-          ),
-        ],
-      ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: isPhone && value.isNotEmpty
+              ? GestureDetector(
+                  onTap: () => _launchPhone(value),
+                  child: Text(
+                    value,
+                    textAlign: TextAlign.end,
+                    style: TextStyle(
+                      color: Colors.blue,
+                      fontSize: fontSettings.fontSize,
+                      fontWeight: fontSettings.fontWeight,
+                    ),
+                  ),
+                )
+              : isMemberId && value.isNotEmpty
+              ? GestureDetector(
+                  onTap: () {
+                    if (guest != null) _goToGuestPerformance(guest);
+                  },
+                  child: Text(
+                    value,
+                    textAlign: TextAlign.end,
+                    style: TextStyle(
+                      color: Colors.blue,
+                      fontSize: fontSettings.fontSize,
+                      fontWeight: fontSettings.fontWeight,
+                    ),
+                  ),
+                )
+              : Text(
+                  value.isEmpty ? "N/A" : value,
+                  textAlign: TextAlign.end,
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: fontSettings.fontSize,
+                    fontWeight: fontSettings.fontWeight,
+                  ),
+                ),
+        ),
+      ],
     );
   }
 }

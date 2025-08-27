@@ -12,6 +12,7 @@ import 'package:intl/intl.dart';
 
 class TripHistoryScreen extends ConsumerStatefulWidget {
   final MemberProfileRepository memberProfileRepository;
+ 
 
   const TripHistoryScreen({required this.memberProfileRepository, super.key});
 

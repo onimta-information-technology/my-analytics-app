@@ -1,5 +1,6 @@
 
 import 'package:ballys_reservation_app/data/services/api_service.dart';
+import 'package:ballys_reservation_app/models/gift/special_gift_request.dart';
 import 'package:ballys_reservation_app/models/guest_gift_modal.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -97,6 +98,51 @@ class GiftsRepository {
       }
     } else {
       throw Exception('No gifts found: unexpected response structure');
+    }
+  }
+    Future<List<SpecialGiftRequest>> getSpecialGift(int iid,String text1) async {
+  
+    final response = await apiService.post('CommonExecute', {
+      "HasReturnData": "T",
+      "Parameters": [
+        {
+          "Para_Data": iid,
+          "Para_Direction": "Input",
+          "Para_Lenth": 1,
+          "Para_Name": "@Iid",
+          "Para_Type": "int"
+        },
+        {
+          "Para_Data": text1,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text1",
+          "Para_Type": "varchar"
+        },
+      ],
+      "SpName": "sp_CRM_Common_API",
+      "con": "1"
+    });
+
+    if (response['CommonResult'] != null &&
+        response['CommonResult']['Table'] is List &&
+        response['CommonResult']['Table'].isNotEmpty) {
+      final tableData = response['CommonResult']['Table'];
+
+      List<SpecialGiftRequest> giftSpecialList = [];
+
+      if (tableData.length > 0) {
+        // for (var table in tableData) {
+        //   giftSpecialList.add(
+        //       Guest.withGift(mid: table['MID'], memberName: table['MNAME']));
+        // }
+        //print(giftSpecialList[0].memberName);
+        return giftSpecialList;
+      } else {
+        return [];
+      }
+    } else {
+      return [];
     }
   }
 }

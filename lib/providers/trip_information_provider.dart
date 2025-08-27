@@ -8,20 +8,20 @@ class TripHistoryNotifier extends StateNotifier<List<TripHistory>> {
   final MemberProfileRepository memberProfileRepository;
 
   TripHistoryNotifier(this.memberProfileRepository)
-      : super([
-          // TripHistory(
-          //     consecutiveDates: 0.0,
-          //     arrivalDate: "",
-          //     departureDate: "",
-          //     tripDrop: 0.0,
-          //     tripCashOut: 0.0,
-          //     tripResult: 0.0,
-          //     tripCommission: 0.0,
-          //     tripActDrop: 0.0,
-          //     tripTotalCoupon: 0.0,
-          //     tripHour: 0.0,
-          //     tripMinutes: 0.0),
-        ]);
+    : super([
+        // TripHistory(
+        //     consecutiveDates: 0.0,
+        //     arrivalDate: "",
+        //     departureDate: "",
+        //     tripDrop: 0.0,
+        //     tripCashOut: 0.0,
+        //     tripResult: 0.0,
+        //     tripCommission: 0.0,
+        //     tripActDrop: 0.0,
+        //     tripTotalCoupon: 0.0,
+        //     tripHour: 0.0,
+        //     tripMinutes: 0.0),
+      ]);
 
   Future<void> getTripHistory({
     required String playerId,
@@ -30,7 +30,10 @@ class TripHistoryNotifier extends StateNotifier<List<TripHistory>> {
   }) async {
     try {
       final tripHistory = await memberProfileRepository.getTripHistory(
-          dateFrom: dateFrom, dateTo: dateTo, playerId: playerId);
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+        playerId: playerId,
+      );
       state = tripHistory;
     } catch (e) {
       state = [];
@@ -55,8 +58,9 @@ class TripHistoryNotifier extends StateNotifier<List<TripHistory>> {
   }
 }
 
-final flutterSecureStorageProvider =
-    Provider((ref) => const FlutterSecureStorage());
+final flutterSecureStorageProvider = Provider(
+  (ref) => const FlutterSecureStorage(),
+);
 
 final apiServiceProvider = Provider((ref) {
   final storage = ref.read(flutterSecureStorageProvider);
@@ -70,6 +74,6 @@ final memberProfileRepositoryProvider = Provider((ref) {
 
 final tripHistoryProvider =
     StateNotifierProvider<TripHistoryNotifier, List<TripHistory>>((ref) {
-  final memberProfileRepository = ref.read(memberProfileRepositoryProvider);
-  return TripHistoryNotifier(memberProfileRepository);
-});
+      final memberProfileRepository = ref.read(memberProfileRepositoryProvider);
+      return TripHistoryNotifier(memberProfileRepository);
+    });

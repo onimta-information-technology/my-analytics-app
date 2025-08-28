@@ -81,17 +81,17 @@ class _DailyWalkingGuestScreenState
   void _goToGuestPerformance(DailyWalkingGuest guest) {
     final now = DateTime.now();
     final startOfToday = DateTime(now.year, now.month, now.day);
-    final endOfTomorrow = DateTime(
+    final endOfyesterday = DateTime(
       now.year,
       now.month,
-      now.day + 1,
+      now.day - 1,
       23,
       59,
       59,
     );
 
     final String today = DateFormat('yyyy-MM-dd').format(startOfToday);
-    final String tomorrow = DateFormat('yyyy-MM-dd').format(endOfTomorrow);
+    final String yesterday = DateFormat('yyyy-MM-dd').format(endOfyesterday);
 
     String safeDateFrom;
     if (guest.dateRemark != null &&
@@ -116,7 +116,7 @@ class _DailyWalkingGuestScreenState
       mDrop: null,
     );
 
-    ref.read(selectedGuestProvider.notifier).setSelectedGuest(selectedGuest);
+  ref.read(selectedGuestProvider.notifier).setSelectedGuest(selectedGuest);
 
     // ref
     //     .read(tripHistoryProvider.notifier)
@@ -126,7 +126,12 @@ class _DailyWalkingGuestScreenState
     //       playerId: guest.mId,
     //     );
 
-    context.push('/home/profile/trip-history');
+    context.push('/home/profile/guest-performance',extra: {
+           
+            'startDateNotifier': yesterday,
+            'endDateNotifier': safeDateFrom,
+          },);
+  
   }
 
   @override

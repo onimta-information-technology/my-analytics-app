@@ -39,7 +39,22 @@ class TripHistoryNotifier extends StateNotifier<List<TripHistory>> {
       state = [];
     }
   }
-
+  Future<void> getTripHistory2({
+    required String playerId,
+    required String dateFrom,
+    required String dateTo,
+  }) async {
+    try {
+      final tripHistory = await memberProfileRepository.getTripHistory2(
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+        playerId: playerId,
+      );
+      state = tripHistory;
+    } catch (e) {
+      state = [];
+    }
+  }
   void reset() {
     state = [
       // TripHistory(

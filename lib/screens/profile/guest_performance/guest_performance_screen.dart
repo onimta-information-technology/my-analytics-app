@@ -21,6 +21,7 @@ import 'package:ballys_reservation_app/screens/profile/guest_performance/trip_in
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 class GuestPerformanceScreen extends ConsumerStatefulWidget {
@@ -45,15 +46,39 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
   final ValueNotifier<DateTime?> endDateNotifier = ValueNotifier<DateTime?>(
     null,
   );
-
+  
   @override
-  void initState() {
-    super.initState();
-    _getGuestImage();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final dateFilter = ref.watch(dateFilterProvider);
+void initState() {
+  super.initState();
+  _getGuestImage();
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    final extras = GoRouterState.of(context).extra as Map<String, dynamic>?;
+    if (extras != null) {
+      if (extras['startDateNotifier'] != null) {
+        startDateNotifier.value = DateTime.parse(extras['startDateNotifier']);
+        _dateFrom = startDateNotifier.value;
+        ref.read(dateFilterProvider.notifier).setDateFrom(_dateFrom!);
+      }
+      if (extras['endDateNotifier'] != null) {
+        endDateNotifier.value = DateTime.parse(extras['endDateNotifier']);
+        _dateTo = endDateNotifier.value;
+        ref.read(dateFilterProvider.notifier).setDateTo(_dateTo!);
+      }
+          setState(() {
+      selectedMenu = 2;
     });
-  }
+        _performAction();
+    }
+
+    // force Trip History tab (menu = 2)
+
+
+    // auto-run search
+
+  });
+}
+
 
   int selectedMenu = 1;
 
@@ -144,7 +169,17 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
           await getLoyalitySummary(guest!.mid);
           break;
         case 2:
-          await getTripHistory(guest!.mid);
+          if (startDateNotifier.value != null ||
+              endDateNotifier.value != null) {
+            await getTripHistory2(
+              guest!.mid,
+              startDateNotifier.value?.toIso8601String() ?? "",
+              endDateNotifier.value?.toIso8601String() ?? "",
+            );
+          } else {
+            await getTripHistory(guest!.mid);
+          }
+
           break;
         case 3:
           await getAirlineHistory(guest!.mid);
@@ -198,7 +233,22 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
               ? DateFormat('yyyy-MM-dd').format(endDateNotifier.value!)
               : '',
         );
-        print("Date from: $DateFormat('yyyy-MM-dd').format(startDateNotifier.value!), Date to: $endDateNotifier, Player ID: $mid");
+    print(
+      "Date from: $DateFormat('yyyy-MM-dd').format(startDateNotifier.value!), Date to: $endDateNotifier, Player ID: $mid",
+    );
+  }
+
+  Future<void> getTripHistory2(
+    String mid,
+    String dateFrom,
+    String dateTo,
+  ) async {
+    await ref
+        .read(tripHistoryProvider.notifier)
+        .getTripHistory2(playerId: mid, dateFrom: dateFrom, dateTo: dateTo);
+    print(
+      "Date from: $DateFormat('yyyy-MM-dd').format(startDateNotifier.value!), Date to: $endDateNotifier, Player ID: $mid",
+    );
   }
 
   Future<void> getAirlineHistory(String mid) async {

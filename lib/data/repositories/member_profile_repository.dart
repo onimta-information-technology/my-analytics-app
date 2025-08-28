@@ -116,7 +116,7 @@ class MemberProfileRepository {
     String? dateFrom,
     String? dateTo,
   }) async {
-    final response = await apiService.post('GetVisitFrequency', {
+    final response = await apiService.post('GetVisitFrequency2', {
       "playerId": playerId,
       "DateFrom": dateFrom,
       "DateTo": dateTo,

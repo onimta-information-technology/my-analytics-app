@@ -58,7 +58,7 @@ class SpecialGiftRequest {
   final String? firstAppBy;
   final String? firstAppTime;
   final String? giftCategoryApp;
-  final int? descApp;
+  final String? descApp;
   SpecialGiftRequest({
     required this.idNo,
     required this.mid,

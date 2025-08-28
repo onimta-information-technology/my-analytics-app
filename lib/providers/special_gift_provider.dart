@@ -15,32 +15,43 @@ class GiftNotifier extends StateNotifier<GiftState> {
   GiftNotifier(this.giftRepository) : super(GiftState());
 
   Future<void> getSpecialGiftData(int iid, String text1) async {
-    try {
-      var gifttList = await giftRepository.getSpecialGift(iid, text1);
-      //final guestList = await guestRepository.getGuestData(iid, text1);
-        switch (iid) {
-          case 8890:
-            state = state.copyWith(pendinggift: gifttList);
-            break;
-          case 8891:
-            state = state.copyWith(approvedgift: gifttList);
-            break;
-          case 8893:
-            state = state.copyWith(rejectgift: gifttList);
-            break;
-          default:
-        }
-      
-    } catch (e) {
-      print('Data retrivng: $e');
-      state = state.copyWith(pendinggift: []);
-    } finally {}
+  try {
+    var gifttList = await giftRepository.getSpecialGift(iid, text1);
+    print('API Response for iid $iid: $gifttList'); // <- debug here
+
+    switch (iid) {
+      case 8890:
+        state = state.copyWith(pendinggift: gifttList);
+        break;
+      case 8891:
+        state = state.copyWith(approvedgift: gifttList);
+        break;
+      case 8893:
+        state = state.copyWith(rejectgift: gifttList);
+        break;
+    }
+  } catch (e) {
+    print('Error fetching gifts for iid $iid: $e');
+    // Optional: reset that specific state instead of all
+    switch (iid) {
+      case 8890:
+        state = state.copyWith(pendinggift: []);
+        break;
+      case 8891:
+        state = state.copyWith(approvedgift: []);
+        break;
+      case 8893:
+        state = state.copyWith(rejectgift: []);
+        break;
+    }
   }
+}
 
   void resetData() {
     state = GiftState();
   }
 }
+
 
 final flutterSecureStorageProvider = Provider(
   (ref) => const FlutterSecureStorage(),

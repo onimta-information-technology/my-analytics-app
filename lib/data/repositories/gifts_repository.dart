@@ -1,4 +1,3 @@
-
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/gift/special_gift_request.dart';
 import 'package:ballys_reservation_app/models/guest_gift_modal.dart';
@@ -21,18 +20,18 @@ class GiftsRepository {
           "Para_Direction": "Input",
           "Para_Lenth": 1,
           "Para_Name": "@Iid",
-          "Para_Type": "int"
+          "Para_Type": "int",
         },
         {
           "Para_Data": salesCode,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text1",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
       ],
       "SpName": "sp_CRM_Common_API",
-      "con": "1"
+      "con": "1",
     });
 
     if (response['CommonResult'] != null &&
@@ -45,7 +44,8 @@ class GiftsRepository {
       if (tableData.length > 0) {
         for (var table in tableData) {
           giftGuestsList.add(
-              Guest.withGift(mid: table['MID'], memberName: table['MNAME']));
+            Guest.withGift(mid: table['MID'], memberName: table['MNAME']),
+          );
         }
         print(giftGuestsList[0].memberName);
         return giftGuestsList;
@@ -66,18 +66,18 @@ class GiftsRepository {
           "Para_Direction": "Input",
           "Para_Lenth": 1,
           "Para_Name": "@Iid",
-          "Para_Type": "int"
+          "Para_Type": "int",
         },
         {
           "Para_Data": mid,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text1",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
       ],
       "SpName": "sp_CRM_Common_API",
-      "con": "1"
+      "con": "1",
     });
 
     if (response['CommonResult'] != null &&
@@ -100,8 +100,9 @@ class GiftsRepository {
       throw Exception('No gifts found: unexpected response structure');
     }
   }
-    Future<List<SpecialGiftRequest>> getSpecialGift(int iid,String text1) async {
-  
+  // Inside GiftsRepository class
+
+ Future<List<SpecialGiftRequest>> getSpecialGift(int iid, String text1) async {
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -127,20 +128,14 @@ class GiftsRepository {
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List &&
         response['CommonResult']['Table'].isNotEmpty) {
-      final tableData = response['CommonResult']['Table'];
+      final tableData = response['CommonResult']['Table'] as List;
 
-      List<SpecialGiftRequest> giftSpecialList = [];
+      // Map API response to SpecialGiftRequest
+      List<SpecialGiftRequest> giftSpecialList = tableData.map((item) {
+        return SpecialGiftRequest.fromJson(Map<String, dynamic>.from(item));
+      }).toList();
 
-      if (tableData.length > 0) {
-        // for (var table in tableData) {
-        //   giftSpecialList.add(
-        //       Guest.withGift(mid: table['MID'], memberName: table['MNAME']));
-        // }
-        //print(giftSpecialList[0].memberName);
-        return giftSpecialList;
-      } else {
-        return [];
-      }
+      return giftSpecialList;
     } else {
       return [];
     }

@@ -161,18 +161,20 @@ class _SpecialGiftRequestScreenState
       return Stack(
         children: [
           Card(
-            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            
+            margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
             elevation: 4,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
             child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
               title: Text(
-                '${gift.mid} - ${gift.mname}',   // ✅ use res field
+                '${gift.mid} - ${gift.mname}', 
                 style: TextStyle(
                   color: Colors.black,
                   fontSize: fontSettings.fontSize,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: fontSettings.fontWeight,
                 ),
               ),
               subtitle: Column(
@@ -183,6 +185,7 @@ class _SpecialGiftRequestScreenState
                     style: TextStyle(
                       color: Colors.black,
                       fontSize: fontSettings.fontSize,
+                  fontWeight: fontSettings.fontWeight,
                     ),
                   ),
                  
@@ -194,11 +197,11 @@ class _SpecialGiftRequestScreenState
             top: 10,
             right: 15,
             child: SizedBox(
-              width: 100,
+              width: 90,
               height: 30,
               child: Image.asset(
                 ratingImageMap[gift.gRating] ??
-                    "assets/images/ratings/CLASSIC.png", // ✅ safe lookup
+                    "assets/images/ratings/CLASSIC.png",
                 fit: BoxFit.contain,
               ),
             ),

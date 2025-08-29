@@ -39,11 +39,11 @@ class TripInformationWidget extends ConsumerWidget {
     return Center(
       child: Column(
         children: [
-          const Text("Trip Information",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-          const SizedBox(
-            height: 16.0,
+          const Text(
+            "Trip Information",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
+          const SizedBox(height: 16.0),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 16.0),
             child: tripHistory.isEmpty
@@ -64,393 +64,644 @@ class TripInformationWidget extends ConsumerWidget {
                         1: FractionColumnWidth(0.5),
                       },
                       children: [
-                        ...tripHistory.map((entry) {
-                          return [
-                            TableRow(
-                              decoration: const BoxDecoration(
-                                  color: Color.fromARGB(47, 181, 225, 250)),
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Column(
-                                    children: [
-                                      Text(
-                                        "Arrival Date",
-                                        style: TextStyle(
-                                          color: Colors.black,
-                                          fontSize: fontSettings.fontSize,
-                                          fontWeight: FontWeight.w900,
-                                        ),
-                                      ),
-                                      Text(
-                                        _formatDate2(entry.arrivalDate),
-                                        style: TextStyle(
-                                          color: Colors.black,
-                                          fontSize: fontSettings.fontSize,
-                                          fontWeight: FontWeight.w900,
-                                        ),
-                                      ),
-                                    ],
+                        ...tripHistory
+                            .map((entry) {
+                              return [
+                                TableRow(
+                                  decoration: const BoxDecoration(
+                                    color: Color.fromARGB(47, 181, 225, 250),
                                   ),
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Column(
+                                        children: [
+                                          Text(
+                                            "Arrival Date",
+                                            style: TextStyle(
+                                              color: Colors.black,
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                          Text(
+                                            _formatDate2(entry.arrivalDate),
+                                            style: TextStyle(
+                                              color: Colors.black,
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Column(
+                                        children: [
+                                          Text(
+                                            "Departure Date",
+                                            style: TextStyle(
+                                              color: Colors.black,
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                          Text(
+                                            _formatDate2(entry.departureDate),
+                                            style: TextStyle(
+                                              color: Colors.black,
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                            textAlign: TextAlign.end,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Column(
-                                    children: [
-                                      Text(
-                                        "Departure Date",
-                                        style: TextStyle(
-                                          color: Colors.black,
-                                          fontSize: fontSettings.fontSize,
-                                          fontWeight: FontWeight.w900,
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Consecutive Dates",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
                                         ),
                                       ),
-                                      Text(
-                                        _formatDate2(entry.departureDate),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        entry.consecutiveDates
+                                            .toInt()
+                                            .toString(),
+                                        textAlign: TextAlign.end,
                                         style: TextStyle(
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
-                                          fontWeight: FontWeight.w900,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Arrival Date",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _formatDate2(entry.arrivalDate),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Departure Date",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _formatDate2(entry.departureDate),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Drop (Est)",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _parseNumberFormat(entry.tripDrop),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Cash Out (Est)",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _parseNumberFormat(entry.tripCashOut),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Result (Est)",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _parseNumberFormat(entry.tripResult),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Commision (Est)",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _parseNumberFormat(
+                                          entry.tripCommission,
                                         ),
                                         textAlign: TextAlign.end,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Consecutive Dates",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    entry.consecutiveDates.toInt().toString(),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Arrival Date",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Actual Drop (Est)",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    _formatDate2(entry.arrivalDate),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Departure Date",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _parseNumberFormat(entry.tripActDrop),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    _formatDate2(entry.departureDate),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Drop (Est)",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Total Coupon (Est)",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    _parseNumberFormat(entry.tripDrop),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Cash Out (Est)",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _parseNumberFormat(
+                                          entry.tripTotalCoupon,
+                                        ),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    _parseNumberFormat(entry.tripCashOut),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Result (Est)",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "HH",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    _parseNumberFormat(entry.tripResult),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Commision (Est)",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        entry.tripHour.toInt().toString(),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    _parseNumberFormat(entry.tripCommission),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Actual Drop (Est)",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "MM",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    _parseNumberFormat(entry.tripActDrop),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Total Coupon (Est)",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        entry.tripMinutes.toInt().toString(),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    _parseNumberFormat(entry.tripTotalCoupon),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "HH",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "DTL",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    entry.tripHour.toInt().toString(),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "MM",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _parseNumberFormat(
+                                          entry.tripCommission,
+                                        ),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    entry.tripMinutes.toInt().toString(),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "DTL Description",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                  ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: entry.dtlDesc.map((dtl) {
+                                          return Card(
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              side: BorderSide(
+                                                color: Colors.grey.shade300,
+                                                width: 1,
+                                              ),
+                                            ),
+                                            margin: const EdgeInsets.only(
+                                              bottom: 8,
+                                            ),
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(
+                                                8.0,
+                                              ),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    "DTL: ${dtl.dtl.toStringAsFixed(0)}",
+                                                    style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize:
+                                                          fontSettings
+                                                              .fontSize -
+                                                          2,
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    "Game: ${dtl.gameType}",
+                                                    style: TextStyle(
+                                                      fontSize:
+                                                          fontSettings
+                                                              .fontSize -
+                                                          3,
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    "Date: ${dtl.gDate.split('T').first}",
+                                                    style: TextStyle(
+                                                      fontSize:
+                                                          fontSettings
+                                                              .fontSize -
+                                                          4,
+                                                        color:
+                                                          const Color.fromARGB(
+                                                            255,
+                                                            83,
+                                                            82,
+                                                            82,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          ];
-                        }).expand((x) => x),
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "ADT",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _parseNumberFormat(entry.adtM),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "TTL",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _parseNumberFormat(entry.ttlm),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "ATT",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _parseNumberFormat(entry.attm),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ];
+                            })
+                            .expand((x) => x),
                       ],
                     ),
                   ),

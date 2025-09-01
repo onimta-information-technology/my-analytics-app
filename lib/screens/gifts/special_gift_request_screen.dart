@@ -108,7 +108,8 @@ class _SpecialGiftRequestScreenState
                 child: const Center(
                   child: RefreshProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(
-                        Constants.kSecondaryColor),
+                      Constants.kSecondaryColor,
+                    ),
                   ),
                 ),
               ),
@@ -120,9 +121,9 @@ class _SpecialGiftRequestScreenState
         onPressed: () {
           context.go('/gifts/special-gift-requests/new-gift-request');
         },
-        backgroundColor: Colors.white,
+        backgroundColor:  Colors.red,
         shape: const CircleBorder(),
-        child: const Icon(Icons.add, color: Colors.black),
+        child: const Icon(Icons.add, color: Color.fromARGB(255, 255, 255, 255)),
       ),
     );
   }
@@ -141,80 +142,79 @@ class _SpecialGiftRequestScreenState
               count.toString(),
               style: const TextStyle(color: Colors.white, fontSize: 12),
             ),
-          )
+          ),
         ],
       ),
     );
   }
 
   Widget _buildGiftList(List<SpecialGiftRequest> gifts) {
-  final fontSettings = ref.watch(fontSettingsProvider);
+    final fontSettings = ref.watch(fontSettingsProvider);
 
-  if (gifts.isEmpty) {
-    return const Center(child: Text("No gifts found"));
-  }
+    if (gifts.isEmpty) {
+      return const Center(child: Text("No gifts found"));
+    }
 
-  return ListView.builder(
-    itemCount: gifts.length,
-    itemBuilder: (context, index) {
-      final gift = gifts[index];
-      return Stack(
-        children: [
-          Card(
-            
-            margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-            elevation: 4,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-              title: Text(
-                '${gift.mid} - ${gift.mname}', 
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: fontSettings.fontSize,
-                  fontWeight: fontSettings.fontWeight,
+    return ListView.builder(
+      itemCount: gifts.length,
+      itemBuilder: (context, index) {
+        final gift = gifts[index];
+        return Stack(
+          children: [
+            Card(
+              margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 14,
+                  horizontal: 16,
+                ),
+                title: Text(
+                  '${gift.mid} - ${gift.mname}',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: fontSettings.fontSize,
+                    fontWeight: fontSettings.fontWeight,
+                  ),
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${gift.cashierPayType}',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: fontSettings.fontSize,
+                        fontWeight: fontSettings.fontWeight,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${gift.cashierPayType}',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: fontSettings.fontSize,
-                  fontWeight: fontSettings.fontWeight,
-                    ),
-                  ),
-                 
-                ],
+            ),
+            Positioned(
+              top: 10,
+              right: 15,
+              child: SizedBox(
+                width: 90,
+                height: 30,
+                child: Image.asset(
+                  ratingImageMap[gift.gRating] ??
+                      "assets/images/ratings/CLASSIC.png",
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
-          ),
-          Positioned(
-            top: 10,
-            right: 15,
-            child: SizedBox(
-              width: 90,
-              height: 30,
-              child: Image.asset(
-                ratingImageMap[gift.gRating] ??
-                    "assets/images/ratings/CLASSIC.png",
-                fit: BoxFit.contain,
-              ),
-            ),
-          ),
-        ],
-      );
-    },
-  );
-}
+          ],
+        );
+      },
+    );
+  }
 
-  
-  
-Color _getStatusColor(String status) {
+  Color _getStatusColor(String status) {
     switch (status) {
       case 'Approved':
         return Colors.green;

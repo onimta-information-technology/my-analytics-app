@@ -1,6 +1,8 @@
 import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
+import 'package:ballys_reservation_app/models/gift/gest_gift_data.dart';
+import 'package:ballys_reservation_app/models/gift/gift_type.dart';
 import 'package:ballys_reservation_app/models/gift/special_gift_request.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
@@ -46,11 +48,84 @@ class GiftNotifier extends StateNotifier<GiftState> {
     }
   }
 }
+Future<void> getGestgiftGift(
+    int iid, String text1, String text2, String text3, String text4, String text5) async {
+  try {
+    var giftList = await giftRepository.getgestgiftGift(iid, text1, text2, text3, text4, text5);
+    state = state.copyWith(guestGiftData: giftList);
+  } catch (e) {
+    print("Error fetching guest gift data: $e");
+    state = state.copyWith(guestGiftData: []);
+  }
+}
+
+Future<void> getGiftForList() async {
+  try {
+    final giftForList = await giftRepository.getGiftForList();
+    state = state.copyWith(giftForList: giftForList);
+  } catch (e) {
+    print("Error fetching gift for list: $e");
+    state = state.copyWith(giftForList: []);
+  }
+}
+Future<bool> sendSpecialGiftFromUI({
+  required String mid,
+  required String memberName,
+  required String fromDateTime,
+  required String toDateTime,
+  required String arrivalDate,
+  required String departureDate,
+  required String giftForCode,
+  required String chipTypeUI, // "OTP Chips" | "NC Chips"
+  required String amountUI,   // might include commas
+  required String remarks,
+ required String userName,
+}) async {
+  // map UI chip label -> API code
+  String mapChip(String v) {
+    final t = v.trim().toUpperCase();
+    if (t.contains('NC')) return 'NC_CHIPS';
+    return 'OTP_CHIPS';
+  }
+
+  String cleanAmount(String v) => v.replaceAll(',', '').trim();
+
+  // Pull guest metrics from current state (after "Guest Data" was fetched)
+  final data = state.guestGiftData.isNotEmpty ? state.guestGiftData.first : null;
+
+  return await giftRepository.insertSpecialGiftRequest(
+    mid: mid,
+    memberName: memberName,
+    fromDateTime: fromDateTime,
+    toDateTime: toDateTime,
+    arrivalDate: arrivalDate,
+    departureDate: departureDate,
+    giftForCode: (giftForCode.isEmpty) ? "SPECIAL GIFT" : giftForCode,
+    chipTypeCode: mapChip(chipTypeUI),
+    amount: cleanAmount(amountUI),
+    remarks: remarks,
+    guestDrop: data?.guestDrop,
+    tmpCashout: data?.tmpCashout,
+    res: data?.res,
+    actD: data?.actD,
+    tmpAvgBet: data?.tmpAvgBet,
+    guestCoupon: data?.guestCoupon,
+    flushCoupon: data?.flushCoupon,
+    flushActDrop: data?.flushActDrop,
+    tmpPoint: data?.tmpPoint,
+    tmphh: data?.tmphh,
+    tmpCommpaid: data?.tmpCommpaid,
+    grt: data?.grt,
+    userName: userName,
+  );
+  
+}
 
   void resetData() {
     state = GiftState();
   }
 }
+  
 
 
 final flutterSecureStorageProvider = Provider(
@@ -79,22 +154,29 @@ class GiftState {
   final List<SpecialGiftRequest> pendinggift;
   final List<SpecialGiftRequest> approvedgift;
   final List<SpecialGiftRequest> rejectgift;
-
+  final List<GestGiftData> guestGiftData;
+final List<GiftType> giftForList; 
   GiftState({
     this.pendinggift = const [],
     this.approvedgift = const [],
     this.rejectgift = const [],
+    this.guestGiftData = const [],
+       this.giftForList = const [],
   });
 
   GiftState copyWith({
     List<SpecialGiftRequest>? pendinggift,
     List<SpecialGiftRequest>? approvedgift,
     List<SpecialGiftRequest>? rejectgift,
+     List<GestGiftData>? guestGiftData,
+     List<GiftType>? giftForList,
   }) {
     return GiftState(
       pendinggift: pendinggift ?? this.pendinggift,
       approvedgift: approvedgift ?? this.approvedgift,
       rejectgift: rejectgift ?? this.rejectgift,
+      guestGiftData: guestGiftData ?? this.guestGiftData,
+      giftForList: giftForList ?? this.giftForList,
     );
   }
 }

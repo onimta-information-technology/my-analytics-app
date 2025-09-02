@@ -1,6 +1,7 @@
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/gift/gest_gift_data.dart';
 import 'package:ballys_reservation_app/models/gift/gift_type.dart';
+import 'package:ballys_reservation_app/models/gift/prev_gift.dart';
 import 'package:ballys_reservation_app/models/gift/special_gift_request.dart';
 import 'package:ballys_reservation_app/models/guest_gift_modal.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
@@ -246,6 +247,41 @@ class GiftsRepository {
       return [];
     }
   }
+Future<List<PrevGift>> getPrvGiftList(String text1) async {
+  final response = await apiService.post('CommonExecute', {
+    "HasReturnData": "T",
+    "Parameters": [
+      {
+        "Para_Data": 8888,
+        "Para_Direction": "Input",
+        "Para_Lenth": 1,
+        "Para_Name": "@Iid",
+        "Para_Type": "int",
+      },
+      {
+        "Para_Data": text1,
+        "Para_Direction": "Input",
+        "Para_Lenth": 5000,
+        "Para_Name": "@Text1",
+        "Para_Type": "varchar",
+      },
+    ],
+    "SpName": "sp_CRM_Common_API",
+    "con": "1",
+  });
+
+  if (response['CommonResult'] != null &&
+      response['CommonResult']['Table'] is List &&
+      (response['CommonResult']['Table'] as List).isNotEmpty) {
+    final tableData = response['CommonResult']['Table'] as List;
+
+    return tableData.map((item) {
+      return PrevGift.fromJson(Map<String, dynamic>.from(item));
+    }).toList();
+  } else {
+    return [];
+  }
+}
 
   // GiftsRepository.dart
 
@@ -488,6 +524,116 @@ class GiftsRepository {
       return resp['strRturnRes'];
     } catch (e) {
       print('insertSpecialGiftRequest error: $e');
+      return false;
+    }
+  }
+  Future<bool> approvedSPecialgiftRequest({
+    required double reqid,
+    required String remarks,
+    required String amount,
+    required String userName,
+  }) async {
+    try {
+
+      final payload = {
+        "HasReturnData": "T",
+        "Parameters": [
+          {
+            "Para_Data": 8894,
+            "Para_Direction": "Input",
+            "Para_Lenth": 1,
+            "Para_Name": "@Iid",
+            "Para_Type": "int",
+          },
+
+          {
+            "Para_Data": reqid,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text1",
+            "Para_Type": "varchar",
+          },
+         
+          {
+            "Para_Data": userName,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text2",
+            "Para_Type": "varchar",
+          },
+
+          {
+            "Para_Data": remarks,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text3",
+            "Para_Type": "varchar",
+          },
+
+          {
+            "Para_Data": amount,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text4",
+            "Para_Type": "varchar",
+          },
+
+        ],
+        "SpName": "sp_CRM_Common_API",
+        "con": "1",
+      };
+
+      final resp = await apiService.post('CommonExecute', payload);
+
+      return resp['strRturnRes'];
+    } catch (e) {
+      print('APProve specialGiftRequest error: $e');
+      return false;
+    }
+  }
+  Future<bool> rejectSPecialgiftRequest({
+    required double reqid,
+    required String userName,
+  }) async {
+    try {
+
+      final payload = {
+        "HasReturnData": "T",
+        "Parameters": [
+          {
+            "Para_Data": 8892,
+            "Para_Direction": "Input",
+            "Para_Lenth": 1,
+            "Para_Name": "@Iid",
+            "Para_Type": "int",
+          },
+
+          {
+            "Para_Data": reqid,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text1",
+            "Para_Type": "varchar",
+          },
+         
+          {
+            "Para_Data": userName,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text2",
+            "Para_Type": "varchar",
+          },
+
+        ],
+        "SpName": "sp_CRM_Common_API",
+        "con": "1",
+      };
+
+      final resp = await apiService.post('CommonExecute', payload);
+
+      return resp['strRturnRes'];
+    } catch (e) {
+      print('APProve specialGiftRequest error: $e');
       return false;
     }
   }

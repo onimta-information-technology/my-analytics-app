@@ -8,6 +8,7 @@ import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 class SpecialGiftRequestScreen extends ConsumerStatefulWidget {
   final GiftsRepository giftsRepository;
@@ -24,7 +25,7 @@ class _SpecialGiftRequestScreenState
     with TickerProviderStateMixin {
   late TabController _tabController;
   bool _isLoading = false;
-
+  bool isPending = false;
   @override
   void initState() {
     super.initState();
@@ -45,6 +46,18 @@ class _SpecialGiftRequestScreenState
         _loadSpGiftData(salesCode);
       }
     });
+  }
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return "N/A";
+
+    try {
+      // Adjust parse format depending on how your backend sends date
+      final dateTime = DateTime.parse(dateStr);
+      return DateFormat("yyyy-MM-dd hh:mm a").format(dateTime);
+    } catch (e) {
+      return dateStr; // fallback: just show raw string if parsing fails
+    }
   }
 
   Future<void> _loadSpGiftData(String salesCode) async {
@@ -80,25 +93,38 @@ class _SpecialGiftRequestScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Special Gift Request'),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.pink,
-          tabs: [
-            _buildTab('Pending', giftsp.pendinggift.length, Colors.orange),
-            _buildTab('Approved', giftsp.approvedgift.length, Colors.green),
-            _buildTab('Rejected', giftsp.rejectgift.length, Colors.red),
-          ],
-        ),
-      ),
+  title: const Text('Special Gift Request'),
+  actions: [
+    IconButton(
+      icon: const Icon(Icons.refresh),
+      onPressed: () async {
+        String? salesCode = await StorageUtil.getSalesCode();
+        if (salesCode != null && salesCode.isNotEmpty) {
+          _loadSpGiftData(salesCode);
+        }
+      },
+      tooltip: 'Refresh',
+    ),
+  ],
+  bottom: TabBar(
+    controller: _tabController,
+    indicatorColor: Colors.pink,
+    tabs: [
+      _buildTab('Pending', giftsp.pendinggift.length, Colors.orange),
+      _buildTab('Approved', giftsp.approvedgift.length, Colors.green),
+      _buildTab('Rejected', giftsp.rejectgift.length, Colors.red),
+    ],
+  ),
+),
+
       body: Stack(
         children: [
           TabBarView(
             controller: _tabController,
             children: [
-              _buildGiftList(giftsp.pendinggift),
-              _buildGiftList(giftsp.approvedgift),
-              _buildGiftList(giftsp.rejectgift),
+              _buildGiftList(giftsp.pendinggift, isPending: true),
+              _buildGiftList(giftsp.approvedgift, isPending: false),
+              _buildGiftList(giftsp.rejectgift, isPending: false),
             ],
           ),
           if (_isLoading)
@@ -121,7 +147,7 @@ class _SpecialGiftRequestScreenState
         onPressed: () {
           context.go('/gifts/special-gift-requests/new-gift-request');
         },
-        backgroundColor:  Colors.red,
+        backgroundColor: Colors.red,
         shape: const CircleBorder(),
         child: const Icon(Icons.add, color: Color.fromARGB(255, 255, 255, 255)),
       ),
@@ -148,7 +174,7 @@ class _SpecialGiftRequestScreenState
     );
   }
 
-  Widget _buildGiftList(List<SpecialGiftRequest> gifts) {
+  Widget _buildGiftList(List<SpecialGiftRequest> gifts, {required bool isPending}) {
     final fontSettings = ref.watch(fontSettingsProvider);
 
     if (gifts.isEmpty) {
@@ -161,37 +187,81 @@ class _SpecialGiftRequestScreenState
         final gift = gifts[index];
         return Stack(
           children: [
-            Card(
-              margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  vertical: 14,
+            InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () {
+                print(" Navigating with gift: $gift");
+                context.push(
+                  '/gifts/special-gift-requests/view-specific-gift-request',
+                  extra: {
+                    'gift': gift, // the SpecialGiftRequest object
+                    'isPending': isPending, // mark it as pending
+                  }, // pass the whole object
+                );
+              },
+              child: Card(
+                margin: const EdgeInsets.symmetric(
+                  vertical: 10,
                   horizontal: 16,
                 ),
-                title: Text(
-                  '${gift.mid} - ${gift.mname}',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSettings.fontSize,
-                    fontWeight: fontSettings.fontWeight,
-                  ),
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${gift.cashierPayType}',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: fontSettings.fontSize,
-                        fontWeight: fontSettings.fontWeight,
-                      ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 16,
+                  ),
+                  title: Text(
+                    '${gift.mid} - ${gift.mname}',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: fontSettings.fontSize,
+                      fontWeight: fontSettings.fontWeight,
                     ),
-                  ],
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.card_giftcard,
+                            color: Colors.pink,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            "${gift.cashierPayType.replaceAll("_", " ")}",
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: fontSettings.fontSize,
+                              fontWeight: fontSettings.fontWeight,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.access_time,
+                            color: Colors.grey,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _formatDate(gift.insertDate),
+                            style: TextStyle(
+                              color: Colors.grey[700],
+                              fontSize: fontSettings.fontSize - 1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

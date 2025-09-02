@@ -41,7 +41,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
   String _remarks = "";
   String? userName = "";
   final TextEditingController _amountController = TextEditingController();
-
+  final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _showGuestData = false;
 
@@ -176,18 +176,20 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
     controller.text =
         "${dateTime.day}/${dateTime.month}/${dateTime.year} ${time.format(context)}";
   }
-TextStyle _inputTextStyle(FontSettings fontSettings) {
-  return TextStyle(
-    fontSize: fontSettings.fontSize,
-    fontWeight: fontSettings.fontWeight,
-  );
-}
-TextStyle _inputTextStylefroammount(FontSettings fontSettings) {
-  return TextStyle(
-    fontSize: fontSettings.fontSize+3,
-    fontWeight: fontSettings.fontWeight,
-  );
-}
+
+  TextStyle _inputTextStyle(FontSettings fontSettings) {
+    return TextStyle(
+      fontSize: fontSettings.fontSize,
+      fontWeight: fontSettings.fontWeight,
+    );
+  }
+
+  TextStyle _inputTextStylefroammount(FontSettings fontSettings) {
+    return TextStyle(
+      fontSize: fontSettings.fontSize + 3,
+      fontWeight: FontWeight.bold,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -220,93 +222,616 @@ TextStyle _inputTextStylefroammount(FontSettings fontSettings) {
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: SingleChildScrollView(
-                child: Column(
-                  children: [
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 5.0),
+                      TextFormField(
+                        controller: _fromDateController,
+                        readOnly: true,
+                        style: _inputTextStyle(fontSettings),
+                        decoration: InputDecoration(
+                          labelText: "From Date & Time",
+                          labelStyle: TextStyle(
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: fontSettings.fontWeight,
+                          ),
+                          border: const OutlineInputBorder(),
+                          suffixIcon: const Icon(Icons.calendar_today),
+                        ),
+                        onTap: () =>
+                            _pickDateTime(context, _fromDateController),
+                      ),
                       const SizedBox(height: 16.0),
-                    TextFormField(
-                      controller: _fromDateController,
-                      readOnly: true,
-                       style: _inputTextStyle(fontSettings),
-                      decoration: InputDecoration(
-                        labelText: "From Date & Time",
-                        labelStyle: TextStyle(
-                          fontSize: fontSettings.fontSize,
-                          fontWeight: fontSettings.fontWeight,
+                      TextFormField(
+                        controller: _toDateController,
+                        readOnly: true,
+                        style: _inputTextStyle(fontSettings),
+                        decoration: InputDecoration(
+                          labelText: "To Date & Time",
+                          labelStyle: TextStyle(
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: fontSettings.fontWeight,
+                          ),
+                          border: const OutlineInputBorder(),
+                          suffixIcon: const Icon(Icons.calendar_today),
                         ),
-                        border: const OutlineInputBorder(),
-                        suffixIcon: const Icon(Icons.calendar_today),
+                        onTap: () => _pickDateTime(context, _toDateController),
                       ),
-                      onTap: () => _pickDateTime(context, _fromDateController),
-                    ),
-                    const SizedBox(height: 16.0),
-                    TextFormField(
-                      controller: _toDateController,
-                      readOnly: true,
-                       style: _inputTextStyle(fontSettings),
-                      decoration: InputDecoration(
-                        labelText: "To Date & Time",
-                        labelStyle: TextStyle(
-                          fontSize: fontSettings.fontSize,
-                          fontWeight: fontSettings.fontWeight,
-                        ),
-                        border: const OutlineInputBorder(),
-                        suffixIcon: const Icon(Icons.calendar_today),
-                      ),
-                      onTap: () => _pickDateTime(context, _toDateController),
-                    ),
-                    const SizedBox(height: 16.0),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            keyboardType:
-                                const TextInputType.numberWithOptions(),
-                            autofocus: false,
-                            controller: _memberIdController,
-                             style: _inputTextStyle(fontSettings),
-                            decoration: InputDecoration(
-                              labelText: "Member ID",
-                              labelStyle: TextStyle(
+                      const SizedBox(height: 16.0),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(),
+                              autofocus: false,
+                              controller: _memberIdController,
+                              style: _inputTextStyle(fontSettings),
+                              decoration: InputDecoration(
+                                labelText: "Member ID",
+                                labelStyle: TextStyle(
+                                  fontSize: fontSettings.fontSize,
+                                  fontWeight: fontSettings.fontWeight,
+                                ),
+                                border: const OutlineInputBorder(),
+                                suffixIcon: IconButton(
+                                  icon: const Icon(Icons.search),
+                                  onPressed: () {
+                                    FocusScope.of(context).unfocus();
+                                    _openMemberSearchBottomSheet(8002);
+                                  },
+                                ),
+                              ),
+                              onChanged: (value) {
+                                _memberNameController.text = '';
+                                ref
+                                    .read(memberSearchProvider.notifier)
+                                    .resetState();
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 16.0),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              context.push('/home/profile');
+                            },
+                            icon: const Icon(Icons.person),
+                            label: Text(
+                              "Guest Details",
+                              style: TextStyle(
                                 fontSize: fontSettings.fontSize,
                                 fontWeight: fontSettings.fontWeight,
                               ),
-                              border: const OutlineInputBorder(),
-                              suffixIcon: IconButton(
-                                icon: const Icon(Icons.search),
-                                onPressed: () {
-                                  FocusScope.of(context).unfocus();
-                                  _openMemberSearchBottomSheet(8002);
-                                },
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color.fromARGB(
+                                255,
+                                70,
+                                70,
+                                70,
+                              ),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                                horizontal: 20,
                               ),
                             ),
-                            onChanged: (value) {
-                              _memberNameController.text = '';
-                              ref
-                                  .read(memberSearchProvider.notifier)
-                                  .resetState();
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16.0),
+                      TextFormField(
+                        autofocus: false,
+                        controller: _memberNameController,
+                        style: _inputTextStyle(fontSettings),
+                        decoration: InputDecoration(
+                          labelText: "Member Name",
+                          labelStyle: TextStyle(
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: fontSettings.fontWeight,
+                          ),
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.search),
+                            onPressed: () {
+                              FocusScope.of(context).requestFocus(FocusNode());
+                              _openMemberSearchBottomSheet(8003);
                             },
                           ),
                         ),
-                        const SizedBox(width: 16.0),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            context.push('/home/profile');
-                          },
-                          icon: const Icon(Icons.person),
-                          label: Text(
-                            "Guest Details",
+                        onChanged: (value) {
+                          _memberIdController.text = '';
+                          ref.read(memberSearchProvider.notifier).resetState();
+                        },
+                      ),
+                      const SizedBox(height: 16.0),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                setState(() {
+                                  _isLoading = true;
+                                  _showGuestData = false;
+                                });
+
+                                await ref
+                                    .read(giftProvider.notifier)
+                                    .getGestgiftGift(
+                                      8886,
+                                      _fromDateController.text,
+                                      _toDateController.text,
+                                      _memberIdController.text,
+                                      _fromDateController.text,
+                                      _toDateController.text,
+                                    );
+
+                                setState(() {
+                                  _isLoading = false;
+                                  _showGuestData = true;
+                                });
+                              },
+                              icon: const Icon(Icons.person),
+                              label: Text(
+                                "Guest Data",
+                                style: TextStyle(
+                                  fontSize: fontSettings.fontSize,
+                                  fontWeight: fontSettings.fontWeight,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                final memberId = _memberIdController.text
+                                    .trim();
+
+                                if (memberId.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Please enter a Member ID"),
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                // Navigate to PrvGift page with MID as parameter
+                                context.push(
+                                  '/gifts/special-gift-requests/prv-gifts/$memberId',
+                                );
+                              },
+                              icon: const Icon(Icons.card_giftcard),
+                              label: Text(
+                                "PrvGift",
+                                style: TextStyle(
+                                  fontSize: fontSettings.fontSize,
+                                  fontWeight: fontSettings.fontWeight,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16.0),
+                      if (_showGuestData) ...[
+                        const SizedBox(height: 20),
+                        Align(
+                          alignment: Alignment.center,
+                          child: Text(
+                            "Guest Gift Data",
                             style: TextStyle(
                               fontSize: fontSettings.fontSize,
                               fontWeight: fontSettings.fontWeight,
                             ),
                           ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color.fromARGB(
-                              255,
-                              70,
-                              70,
-                              70,
+                        ),
+                        const SizedBox(height: 10),
+                        Builder(
+                          builder: (context) {
+                            final giftState = ref.watch(giftProvider);
+                            if (giftState.guestGiftData.isEmpty) {
+                              return Text(
+                                "No guest gift data found",
+                                style: TextStyle(
+                                  fontSize: fontSettings.fontSize,
+                                  fontWeight: fontSettings.fontWeight,
+                                ),
+                              );
+                            }
+                            final data = giftState.guestGiftData.first;
+
+                            final rows = [
+                              {"Field": "Drop (Est)", "Value": data.guestDrop},
+                              {
+                                "Field": "Cash Out (Est)",
+                                "Value": data.tmpCashout,
+                              },
+                              {"Field": "Result (Est)", "Value": data.res},
+                              {
+                                "Field": "Actual Drop (Est)",
+                                "Value": data.actD,
+                              },
+                              {
+                                "Field": "Coupons (Est)",
+                                "Value": data.guestCoupon,
+                              },
+                              {
+                                "Field": "Commission Paid (Est)",
+                                "Value": data.tmpCommpaid,
+                              },
+                              {"Field": "Points (Est)", "Value": data.tmpPoint},
+                              {
+                                "Field": "Flush Coupon (Est)",
+                                "Value": data.flushCoupon,
+                              },
+                              {
+                                "Field": "Total Coupon (Est)",
+                                "Value": data.guestCoupon + data.flushCoupon,
+                              },
+                              {
+                                "Field": "Flush Actual Drop (Est)",
+                                "Value": data.flushActDrop,
+                              },
+                              {
+                                "Field": "Avg Bet (Est)",
+                                "Value": data.tmpAvgBet,
+                              },
+                            ];
+
+                            return Container(
+                              margin: const EdgeInsets.only(top: 10),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade400),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: DataTable(
+                                headingRowColor: WidgetStateProperty.all(
+                                  Colors.amber.shade100,
+                                ),
+                                border: TableBorder.all(
+                                  color: Colors.grey.shade300,
+                                ),
+                                columns: [
+                                  DataColumn(
+                                    label: Text(
+                                      "Field",
+                                      style: TextStyle(
+                                        fontSize: fontSettings.fontSize,
+                                        fontWeight: fontSettings.fontWeight,
+                                      ),
+                                    ),
+                                  ),
+                                  DataColumn(
+                                    label: Text(
+                                      "Value",
+                                      style: TextStyle(
+                                        fontSize: fontSettings.fontSize,
+                                        fontWeight: fontSettings.fontWeight,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                rows: rows.map((row) {
+                                  return DataRow(
+                                    cells: [
+                                      DataCell(
+                                        Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Text(
+                                            row["Field"].toString(),
+                                            style: TextStyle(
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      DataCell(
+                                        Align(
+                                          alignment: Alignment.centerRight,
+                                          child: Text(
+                                            formatNumber(row["Value"]),
+
+                                            style: TextStyle(
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                }).toList(),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                      const SizedBox(height: 16.0),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _arrivalDateController,
+                              readOnly: true,
+                              style: _inputTextStyle(fontSettings),
+                              decoration: InputDecoration(
+                                labelText: "Arrival Date *",
+                                labelStyle: TextStyle(
+                                  fontSize: fontSettings.fontSize-2,
+                                  fontWeight: fontSettings.fontWeight,
+                                ),
+                                border: const OutlineInputBorder(),
+                                suffixIcon: const Icon(Icons.calendar_today),
+                              ),
+                              validator: (v) => v == null || v.isEmpty
+                                  ? "Arrival Date required"
+                                  : null,
+                              onTap: () =>
+                                  _pickDate(context, _arrivalDateController),
                             ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _departureDateController,
+                              readOnly: true,
+                              style: _inputTextStyle(fontSettings),
+                              decoration: InputDecoration(
+                                labelText: "Departure Date *",
+                                labelStyle: TextStyle(
+                                  fontSize: fontSettings.fontSize-2,
+                                  fontWeight: fontSettings.fontWeight,
+                                ),
+                                border: const OutlineInputBorder(),
+                                suffixIcon: const Icon(Icons.calendar_today),
+                              ),
+                              validator: (v) => v == null || v.isEmpty
+                                  ? "Departure Date required"
+                                  : null,
+                              onTap: () =>
+                                  _pickDate(context, _departureDateController),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 16),
+
+                          Consumer(
+                            builder: (context, ref, child) {
+                              final giftState = ref.watch(giftProvider);
+
+                              final uniqueGiftList = {
+                                for (var gift in giftState.giftForList)
+                                  gift.code: gift,
+                              }.values.toList();
+
+                              final currentValue =
+                                  uniqueGiftList.any(
+                                    (gift) => gift.code == _selectedGift,
+                                  )
+                                  ? _selectedGift
+                                  : null;
+
+                              return DropdownButtonFormField<String>(
+                                value: currentValue,
+                                items: uniqueGiftList.map((gift) {
+                                  return DropdownMenuItem<String>(
+                                    value: gift.code,
+                                    child: Text(
+                                      gift.code.replaceAll("_", ""),
+                                      style: TextStyle(
+                                        fontSize: fontSettings.fontSize,
+                                        fontWeight: fontSettings.fontWeight,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedGift = value;
+                                  });
+                                },
+                                decoration: InputDecoration(
+                                  labelText: "Gift For *",
+                                  labelStyle: TextStyle(
+                                    fontSize: fontSettings.fontSize,
+                                    fontWeight: fontSettings.fontWeight,
+                                  ),
+
+                                  border: const OutlineInputBorder(),
+                                ),
+                                validator: (v) => v == null || v.isEmpty
+                                    ? "Gift required"
+                                    : null,
+                              );
+                            },
+                          ),
+
+                          const SizedBox(height: 16),
+                          DropdownButtonFormField<String>(
+                            style: _inputTextStyle(fontSettings),
+                            decoration: InputDecoration(
+                              labelText: "Chip Type *",
+                              labelStyle: TextStyle(
+                                fontSize: fontSettings.fontSize,
+                                fontWeight: fontSettings.fontWeight,
+                              ),
+                              border: const OutlineInputBorder(),
+                            ),
+                            value: _chipType,
+                            items: const [
+                              DropdownMenuItem(
+                                value: "OTP Chips",
+                                child: Text("OTP Chips"),
+                              ),
+                              DropdownMenuItem(
+                                value: "NC Chips",
+                                child: Text("NC Chips"),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              setState(() {
+                                _chipType = value;
+                              });
+                            },
+                            validator: (v) => v == null || v.isEmpty
+                                ? "Chip Type required"
+                                : null,
+                          ),
+
+                          const SizedBox(height: 16.0),
+
+                          TextFormField(
+                            controller: _amountController,
+                            style: _inputTextStylefroammount(fontSettings),
+                            decoration: InputDecoration(
+                              labelText: "Amount *",
+                              labelStyle: TextStyle(
+                                fontSize: fontSettings.fontSize,
+                                fontWeight: fontSettings.fontWeight,
+                              ),
+                              border: const OutlineInputBorder(),
+                            ),
+                            keyboardType: TextInputType.number,
+                            inputFormatters: <TextInputFormatter>[
+                              ThousandsSeparatorInputFormatter(),
+                            ],
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return "Please enter amount";
+                              }
+                              return null;
+                            },
+                          ),
+
+                          const SizedBox(height: 16),
+                        ],
+                      ),
+
+                      TextFormField(
+                        style: _inputTextStyle(fontSettings),
+                        decoration: InputDecoration(
+                          alignLabelWithHint: true,
+                          labelText: "Remarks",
+                          labelStyle: TextStyle(
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: fontSettings.fontWeight,
+                          ),
+                          hintText: "Enter additional details...",
+                          hintStyle: TextStyle(
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: fontSettings.fontWeight,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                        ),
+                        maxLines: 5,
+                        keyboardType: TextInputType.multiline,
+                        onChanged: (value) => _remarks = value,
+                      ),
+                      const SizedBox(height: 16.0),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _showGuestData
+                              ? () async {
+                                  if (!_formKey.currentState!.validate()) {
+                                    return;
+                                  }
+
+                                  setState(() => _isLoading = true);
+
+                                  final ok = await ref
+                                      .read(giftProvider.notifier)
+                                      .sendSpecialGiftFromUI(
+                                        mid: _memberIdController.text.trim(),
+                                        memberName: _memberNameController.text
+                                            .trim(),
+                                        fromDateTime: _fromDateController.text
+                                            .trim(),
+                                        toDateTime: _toDateController.text
+                                            .trim(),
+                                        arrivalDate: _arrivalDateController.text
+                                            .trim(),
+                                        departureDate: _departureDateController
+                                            .text
+                                            .trim(),
+                                        giftForCode:
+                                            _selectedGift ?? "SPECIAL GIFT",
+                                        chipTypeUI: _chipType ?? "OTP Chips",
+                                        amountUI: _amountController.text,
+                                        remarks: _remarks,
+                                        userName: userName ?? "",
+                                      );
+
+                                  setState(() => _isLoading = false);
+
+                                  // print(ok);
+
+                                  if (!mounted) return;
+                                  if (ok) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          "Gift request sent successfully",
+                                        ),
+                                      ),
+                                    );
+                                    Navigator.of(context).pop(true);
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          "Failed to send gift request",
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                }
+                              : null,
+
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _showGuestData
+                                ? Constants.kSecondaryColor
+                                : Colors.grey.shade400,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -316,519 +841,24 @@ TextStyle _inputTextStylefroammount(FontSettings fontSettings) {
                               horizontal: 20,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16.0),
-                    TextFormField(
-                      autofocus: false,
-                      controller: _memberNameController,
-                       style: _inputTextStyle(fontSettings),
-                      decoration: InputDecoration(
-                        labelText: "Member Name",
-                        labelStyle: TextStyle(
-                          fontSize: fontSettings.fontSize,
-                          fontWeight: fontSettings.fontWeight,
-                        ),
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.search),
-                          onPressed: () {
-                            FocusScope.of(context).requestFocus(FocusNode());
-                            _openMemberSearchBottomSheet(8003);
-                          },
-                        ),
-                      ),
-                      onChanged: (value) {
-                        _memberIdController.text = '';
-                        ref.read(memberSearchProvider.notifier).resetState();
-                      },
-                    ),
-                    const SizedBox(height: 16.0),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () async {
-                              setState(() {
-                                _isLoading = true;
-                                _showGuestData = false;
-                              });
-
-                              await ref
-                                  .read(giftProvider.notifier)
-                                  .getGestgiftGift(
-                                    8886,
-                                    _fromDateController.text,
-                                    _toDateController.text,
-                                    _memberIdController.text,
-                                    _fromDateController.text,
-                                    _toDateController.text,
-                                  );
-
-                              setState(() {
-                                _isLoading = false;
-                                _showGuestData = true;
-                              });
-                            },
-                            icon: const Icon(Icons.person),
-                            label: Text(
-                              "Guest Data",
-                              style: TextStyle(
-                                fontSize: fontSettings.fontSize,
-                                fontWeight: fontSettings.fontWeight,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              // TODO: Add your previous gift logic here
-                              context.push("/home/prvgift"); // or call API
-                            },
-                            icon: const Icon(Icons.card_giftcard),
-                            label: Text(
-                              "PrvGift",
-                              style: TextStyle(
-                                fontSize: fontSettings.fontSize,
-                                fontWeight: fontSettings.fontWeight,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 16.0),
-                    if (_showGuestData) ...[
-                      const SizedBox(height: 20),
-                      Align(
-                        alignment: Alignment.center,
-                        child: Text(
-                          "Guest Gift Data",
-                          style: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: fontSettings.fontWeight,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Builder(
-                        builder: (context) {
-                          final giftState = ref.watch(giftProvider);
-                          if (giftState.guestGiftData.isEmpty) {
-                            return Text(
-                              "No guest gift data found",
-                              style: TextStyle(
-                                fontSize: fontSettings.fontSize,
-                                fontWeight: fontSettings.fontWeight,
-                              ),
-                            );
-                          }
-                          final data = giftState.guestGiftData.first;
-
-                          final rows = [
-                            {"Field": "Drop (Est)", "Value": data.guestDrop},
-                            {
-                              "Field": "Cash Out (Est)",
-                              "Value": data.tmpCashout,
-                            },
-                            {"Field": "Result (Est)", "Value": data.res},
-                            {"Field": "Actual Drop (Est)", "Value": data.actD},
-                            {
-                              "Field": "Coupons (Est)",
-                              "Value": data.guestCoupon,
-                            },
-                            {
-                              "Field": "Commission Paid (Est)",
-                              "Value": data.tmpCommpaid,
-                            },
-                            {"Field": "Points (Est)", "Value": data.tmpPoint},
-                            {
-                              "Field": "Flush Coupon (Est)",
-                              "Value": data.flushCoupon,
-                            },
-                            {
-                              "Field": "Total Coupon (Est)",
-                              "Value": data.guestCoupon + data.flushCoupon,
-                            },
-                            {
-                              "Field": "Flush Actual Drop (Est)",
-                              "Value": data.flushActDrop,
-                            },
-                            {"Field": "Avg Bet", "Value": data.tmpAvgBet},
-                          ];
-
-                          return Container(
-                            margin: const EdgeInsets.only(top: 10),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.shade400),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(
-                                Colors.amber.shade100,
-                              ),
-                              border: TableBorder.all(
-                                color: Colors.grey.shade300,
-                              ),
-                              columns: [
-                                DataColumn(
-                                  label: Text(
-                                    "Field",
-                                    style: TextStyle(
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                                DataColumn(
-                                  label: Text(
-                                    "Value",
-                                    style: TextStyle(
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                              rows: rows.map((row) {
-                                return DataRow(
-                                  cells: [
-                                    DataCell(
-                                      Align(
-                                        alignment: Alignment.centerLeft,
-                                      child :Text(
-                                        row["Field"].toString(),
-                                        style: TextStyle(
-                                          fontSize: fontSettings.fontSize,
-                                          fontWeight: fontSettings.fontWeight,
-                                        ),
-                                      ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Align(
-                                        alignment: Alignment.centerRight,
-                                        child: Text(
-                                          formatNumber(row["Value"]),
-
-                                          style: TextStyle(
-                                            fontSize: fontSettings.fontSize,
-                                            fontWeight: fontSettings.fontWeight,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }).toList(),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                    const SizedBox(height: 16.0),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _arrivalDateController,
-                            readOnly: true,
-                             style: _inputTextStyle(fontSettings),
-                            decoration: InputDecoration(
-                              labelText: "Arrival Date",
-                              labelStyle: TextStyle(
-                                fontSize: fontSettings.fontSize,
-                                fontWeight: fontSettings.fontWeight,
-                              ),
-                              border: const OutlineInputBorder(),
-                              suffixIcon: const Icon(Icons.calendar_today),
-                            ),
-                            onTap: () =>
-                                _pickDate(context, _arrivalDateController),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _departureDateController,
-                            readOnly: true,
-                             style: _inputTextStyle(fontSettings),
-                            decoration: InputDecoration(
-                              labelText: "Departure Date",
-                              labelStyle: TextStyle(
-                                fontSize: fontSettings.fontSize,
-                                fontWeight: fontSettings.fontWeight,
-                              ),
-                              border: const OutlineInputBorder(),
-                              suffixIcon: const Icon(Icons.calendar_today),
-                            ),
-                            onTap: () =>
-                                _pickDate(context, _departureDateController),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 16),
-
-                        Consumer(
-                          builder: (context, ref, child) {
-                            final giftState = ref.watch(giftProvider);
-
-                            final uniqueGiftList = {
-                              for (var gift in giftState.giftForList)
-                                gift.code: gift,
-                            }.values.toList();
-
-                            final currentValue =
-                                uniqueGiftList.any(
-                                  (gift) => gift.code == _selectedGift,
-                                )
-                                ? _selectedGift
-                                : null;
-
-                            return DropdownButtonFormField<String>(
-                              value: currentValue,
-                              items: uniqueGiftList.map((gift) {
-                                return DropdownMenuItem<String>(
-                                  value: gift.code,
-                                  child: Text(
-                                    gift.code,
-                                    style: TextStyle(
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                              onChanged: (value) {
-                                setState(() {
-                                  _selectedGift = value;
-                                });
-                              },
-                              decoration: InputDecoration(
-                                labelText: "Gift For",
-                                labelStyle: TextStyle(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.done, size: 20),
+                              const SizedBox(width: 10),
+                              Text(
+                                "Send Request",
+                                style: TextStyle(
                                   fontSize: fontSettings.fontSize,
                                   fontWeight: fontSettings.fontWeight,
                                 ),
-                                border: const OutlineInputBorder(),
                               ),
-                            );
-                          },
-                        ),
-
-                        const SizedBox(height: 16),
-                        DropdownButtonFormField<String>(
-                           style: _inputTextStyle(fontSettings),
-                          decoration: InputDecoration(
-                            labelText: "Chip Type",
-                            labelStyle: TextStyle(
-                              fontSize: fontSettings.fontSize,
-                              fontWeight: fontSettings.fontWeight,
-                            ),
-                            border: const OutlineInputBorder(),
+                            ],
                           ),
-                          value: _chipType,
-                          items: const [
-                            DropdownMenuItem(
-                              value: "OTP Chips",
-                              child: Text("OTP Chips"),
-                            ),
-                            DropdownMenuItem(
-                              value: "NC Chips",
-                              child: Text("NC Chips"),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            setState(() {
-                              _chipType = value;
-                            });
-                          },
-                        ),
-
-                        const SizedBox(height: 16.0),
-
-                        TextFormField(
-                          controller: _amountController,
-                           style: _inputTextStylefroammount(fontSettings),
-                          decoration: InputDecoration(
-                            labelText: "Amount",
-                            labelStyle: TextStyle(
-                              fontSize: fontSettings.fontSize,
-                              fontWeight: fontSettings.fontWeight,
-                            ),
-                            border: const OutlineInputBorder(),
-                          ),
-                          keyboardType: TextInputType.number,
-                          inputFormatters: <TextInputFormatter>[
-                            ThousandsSeparatorInputFormatter(),
-                          ],
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return "Please enter amount";
-                            }
-                            return null;
-                          },
-                        ),
-
-                        const SizedBox(height: 16),
-                      ],
-                    ),
-
-                    TextFormField(
-                       style: _inputTextStyle(fontSettings),
-                      decoration: InputDecoration(
-                        alignLabelWithHint: true,
-                        labelText: "Remarks",
-                        labelStyle: TextStyle(
-                          fontSize: fontSettings.fontSize,
-                          fontWeight: fontSettings.fontWeight,
-                        ),
-                        hintText: "Enter additional details...",
-                        hintStyle: TextStyle(
-                          fontSize: fontSettings.fontSize,
-                          fontWeight: fontSettings.fontWeight,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.0),
                         ),
                       ),
-                      maxLines: 5,
-                      keyboardType: TextInputType.multiline,
-                      onChanged: (value) => _remarks = value,
-                    ),
-                    const SizedBox(height: 16.0),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _showGuestData
-                            ? () async {
-                                // basic validation
-                                if (_memberIdController.text.isEmpty ||
-                                    _memberNameController.text.isEmpty ||
-                                    _fromDateController.text.isEmpty ||
-                                    _toDateController.text.isEmpty ||
-                                    _arrivalDateController.text.isEmpty ||
-                                    _departureDateController.text.isEmpty ||
-                                    (_selectedGift ?? "").isEmpty ||
-                                    (_chipType ?? "").isEmpty ||
-                                    _amountController.text.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        "Please fill all required fields",
-                                      ),
-                                    ),
-                                  );
-                                  return;
-                                }
-
-                                setState(() => _isLoading = true);
-
-                                final ok = await ref
-                                    .read(giftProvider.notifier)
-                                    .sendSpecialGiftFromUI(
-                                      mid: _memberIdController.text.trim(),
-                                      memberName: _memberNameController.text
-                                          .trim(),
-                                      fromDateTime: _fromDateController.text
-                                          .trim(),
-                                      toDateTime: _toDateController.text.trim(),
-                                      arrivalDate: _arrivalDateController.text
-                                          .trim(),
-                                      departureDate: _departureDateController
-                                          .text
-                                          .trim(),
-                                      giftForCode:
-                                          _selectedGift ?? "SPECIAL GIFT",
-                                      chipTypeUI: _chipType ?? "OTP Chips",
-                                      amountUI: _amountController.text,
-                                      remarks: _remarks,
-                                      userName: userName ?? "",
-                                    );
-
-                                setState(() => _isLoading = false);
-
-                                // print(ok);
-
-                                if (!mounted) return;
-                                if (ok) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        "Gift request sent successfully",
-                                      ),
-                                    ),
-                                  );
-                                  Navigator.of(context).pop();
-                                } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        "Failed to send gift request",
-                                      ),
-                                    ),
-                                  );
-                                }
-                              }
-                            : null,
-
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _showGuestData
-                              ? Constants.kSecondaryColor
-                              : Colors.grey.shade400,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 16,
-                            horizontal: 20,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.done, size: 20),
-                            const SizedBox(width: 10),
-                            Text(
-                              "Send Request",
-                              style: TextStyle(
-                                fontSize: fontSettings.fontSize,
-                                fontWeight: fontSettings.fontWeight,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

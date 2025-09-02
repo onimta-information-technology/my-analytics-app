@@ -3,6 +3,7 @@ import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/gift/gest_gift_data.dart';
 import 'package:ballys_reservation_app/models/gift/gift_type.dart';
+import 'package:ballys_reservation_app/models/gift/prev_gift.dart';
 import 'package:ballys_reservation_app/models/gift/special_gift_request.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
@@ -120,6 +121,44 @@ Future<bool> sendSpecialGiftFromUI({
   );
   
 }
+Future<void> getprvGift(String text1) async {
+  try {
+    final prvgiftList = await giftRepository.getPrvGiftList(text1);
+    state = state.copyWith(prvgiftList: prvgiftList);
+  } catch (e, stack) {
+    print("Error fetching gift for list: $e");
+    print(stack);
+    state = state.copyWith(prvgiftList: []);
+  }
+}
+
+Future<bool> sendApprovedSpecialGiftFromUI({
+  required double reqid,
+  required String remarks,
+  required String amount,
+ required String userName,
+}) async {
+
+  return await giftRepository.approvedSPecialgiftRequest(
+    reqid: reqid,
+    remarks: remarks,
+    amount: amount,
+    userName: userName,
+  );
+  
+}
+Future<bool> rejectSpecialGiftFromUI({
+  required double reqid,
+ required String userName,
+}) async {
+
+  return await giftRepository.rejectSPecialgiftRequest(
+    reqid: reqid,
+    userName: userName,
+  );
+  
+}
+
 
   void resetData() {
     state = GiftState();
@@ -155,13 +194,15 @@ class GiftState {
   final List<SpecialGiftRequest> approvedgift;
   final List<SpecialGiftRequest> rejectgift;
   final List<GestGiftData> guestGiftData;
-final List<GiftType> giftForList; 
+  final List<GiftType> giftForList; 
+  final List<PrevGift> prvgiftList;
   GiftState({
     this.pendinggift = const [],
     this.approvedgift = const [],
     this.rejectgift = const [],
     this.guestGiftData = const [],
-       this.giftForList = const [],
+    this.giftForList = const [],
+    this.prvgiftList = const [],
   });
 
   GiftState copyWith({
@@ -170,6 +211,7 @@ final List<GiftType> giftForList;
     List<SpecialGiftRequest>? rejectgift,
      List<GestGiftData>? guestGiftData,
      List<GiftType>? giftForList,
+      List<PrevGift>? prvgiftList,
   }) {
     return GiftState(
       pendinggift: pendinggift ?? this.pendinggift,
@@ -177,6 +219,7 @@ final List<GiftType> giftForList;
       rejectgift: rejectgift ?? this.rejectgift,
       guestGiftData: guestGiftData ?? this.guestGiftData,
       giftForList: giftForList ?? this.giftForList,
+      prvgiftList: prvgiftList ?? this.prvgiftList,
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../services/api_service.dart';
@@ -11,6 +12,7 @@ class AuthRepository {
 
   Future<String> authenticate() async {
     try {
+  
       final response = await apiService.post('Login', {
         "UserName": "BaLlY\$#Crm619",
         "PassWord": "cRm_0987_@bL",
@@ -33,6 +35,9 @@ class AuthRepository {
   }
 
   Future<User> login(String text1, String text2) async {
+//         final deviceId = await DeviceId.get();
+// print('Device ID being used: $deviceId');
+
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -56,7 +61,14 @@ class AuthRepository {
           "Para_Lenth": 100,
           "Para_Name": "@Text2",
           "Para_Type": "varchar"
-        }
+        },
+        //  {
+        //   "Para_Data": deviceId,
+        //   "Para_Direction": "Input",
+        //   "Para_Lenth": 100,
+        //   "Para_Name": "@Text3",
+        //   "Para_Type": "varchar"
+        // }
       ],
       "SpName": "sp_CRM_Common_API",
       "con": "1"

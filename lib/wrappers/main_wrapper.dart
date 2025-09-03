@@ -16,7 +16,7 @@ class MainWrapper extends StatefulWidget {
 class _MainScreenState extends State<MainWrapper> {
   int _selectedIndex = 0;
 
-  final List<String> _locations = ['/home', '/menu', '/events', '/settings'];
+  final List<String> _locations = ['/home', '/menu', '/chats', '/settings'];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -60,10 +60,10 @@ class _MainScreenState extends State<MainWrapper> {
           ),
           BottomNavigationBarItem(
             icon: Icon(
-              Icons.event,
+              Icons.chat,
               size: 30.0,
             ),
-            label: 'Events',
+            label: 'Chat',
           ),
           BottomNavigationBarItem(
             icon: Icon(

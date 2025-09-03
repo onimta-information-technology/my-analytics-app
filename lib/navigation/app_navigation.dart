@@ -9,7 +9,7 @@ import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/screens/auth/login_screen.dart';
 import 'package:ballys_reservation_app/screens/birthday_screen.dart';
 import 'package:ballys_reservation_app/screens/daily_walking_guests/daily_walking_guests%20_screen.dart';
-import 'package:ballys_reservation_app/screens/events_screen.dart';
+import 'package:ballys_reservation_app/screens/chat_screen.dart';
 import 'package:ballys_reservation_app/screens/gifts/gifts_main.dart';
 import 'package:ballys_reservation_app/screens/gifts/guest_gifts_screen.dart';
 import 'package:ballys_reservation_app/screens/gifts/gifts_screen.dart';
@@ -357,11 +357,11 @@ class AppNavigation {
             ],
           ),
           GoRoute(
-            path: '/events',
+            path: '/chats',
             pageBuilder: (context, state) => CustomTransitionPage(
               fullscreenDialog: true,
               key: state.pageKey,
-              child: const EventsScreen(),
+              child: const ChatScreen(),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) {
                     return FadeTransition(

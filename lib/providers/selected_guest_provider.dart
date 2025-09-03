@@ -15,6 +15,18 @@ class SelectedGuestNotifier extends StateNotifier<Guest?> {
   void setSelectedGuestfilterdate(){
     
   }
+    void updateMemberInfo(String mid, String mName) {
+    state = Guest(
+      mid: mid,
+      memberName: mName ,
+      country: "",
+      lastVisitDate: "1990-01-01",
+      age: 0,
+      gRating: "",
+      mGroup: "",
+      gName: "",
+    );
+  }
 
   Future<void> getGuestImage(int iid, String text1) async {
     try {

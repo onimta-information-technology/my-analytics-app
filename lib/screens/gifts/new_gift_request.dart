@@ -420,7 +420,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                               },
                               icon: const Icon(Icons.card_giftcard),
                               label: Text(
-                                "PrvGift",
+                                "Prv Gift",
                                 style: TextStyle(
                                   fontSize: fontSettings.fontSize,
                                   fontWeight: fontSettings.fontWeight,
@@ -699,11 +699,11 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                             items: const [
                               DropdownMenuItem(
                                 value: "OTP Chips",
-                                child: Text("OTP Chips"),
+                                child: Text("OTP Chips",style: TextStyle(color: Colors.black)),
                               ),
                               DropdownMenuItem(
                                 value: "NC Chips",
-                                child: Text("NC Chips"),
+                                child: Text("NC Chips",style: TextStyle(color: Colors.black), ),
                               ),
                             ],
                             onChanged: (value) {

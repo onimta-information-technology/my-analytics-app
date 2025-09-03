@@ -29,6 +29,7 @@ class MemberSearchNotifier extends StateNotifier<Guest> {
     );
   }
 
+
   void resetState() {
     state = Guest(
       mid: "",

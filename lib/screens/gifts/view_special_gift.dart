@@ -8,6 +8,7 @@ import 'package:ballys_reservation_app/models/guest_search_response.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/member_search_provider.dart';
 import 'package:ballys_reservation_app/providers/new_reservation_provider.dart';
+import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/providers/special_gift_provider.dart';
 import 'package:ballys_reservation_app/utils/formatter.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -22,12 +23,12 @@ import 'package:intl/intl.dart';
 class ViewSpecificGiftRequest extends ConsumerStatefulWidget {
   final GiftsRepository giftsRepository;
   final SpecialGiftRequest? gift;
-   final bool isPending; 
+  final bool isPending;
   const ViewSpecificGiftRequest({
     super.key,
     required this.giftsRepository,
     this.gift,
-     this.isPending = false, 
+    this.isPending = false,
   });
 
   @override
@@ -331,13 +332,13 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                   fontWeight: fontSettings.fontWeight,
                                 ),
                                 border: const OutlineInputBorder(),
-                                suffixIcon: IconButton(
-                                  icon: const Icon(Icons.search),
-                                  onPressed: () {
-                                    FocusScope.of(context).unfocus();
-                                    _openMemberSearchBottomSheet(8002);
-                                  },
-                                ),
+                                // suffixIcon: IconButton(
+                                //   icon: const Icon(Icons.search),
+                                //   onPressed: () {
+                                //     FocusScope.of(context).unfocus();
+                                //     _openMemberSearchBottomSheet(8002);
+                                //   },
+                                // ),
                               ),
                               onChanged: (value) {
                                 _memberNameController.text = '';
@@ -350,6 +351,26 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                           const SizedBox(width: 16.0),
                           ElevatedButton.icon(
                             onPressed: () {
+                              final memberId = _memberIdController.text.trim();
+                              final memberName = _memberNameController.text
+                                  .trim();
+
+                              if (memberId.isEmpty && memberName.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "Please enter Member ID or Name",
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              ref
+                                  .read(selectedGuestProvider.notifier)
+                                  .updateMemberInfo(memberId, memberName);
+
+                              print(memberId);
                               context.push('/home/profile');
                             },
                             icon: const Icon(Icons.person),
@@ -392,13 +413,13 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             fontWeight: fontSettings.fontWeight,
                           ),
                           border: const OutlineInputBorder(),
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.search),
-                            onPressed: () {
-                              FocusScope.of(context).requestFocus(FocusNode());
-                              _openMemberSearchBottomSheet(8003);
-                            },
-                          ),
+                          // suffixIcon: IconButton(
+                          //   icon: const Icon(Icons.search),
+                          //   onPressed: () {
+                          //     FocusScope.of(context).requestFocus(FocusNode());
+                          //     _openMemberSearchBottomSheet(8003);
+                          //   },
+                          // ),
                         ),
                         onChanged: (value) {
                           _memberIdController.text = '';
@@ -592,7 +613,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                       //   ),
                       // ],
                       // Replace the _showGuestData block with this:
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 10),
                       Align(
                         alignment: Alignment.center,
                         child: Text(
@@ -648,8 +669,9 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                           ];
 
                           return Container(
-                            margin: const EdgeInsets.only(top: 10),
+                            margin: const EdgeInsets.only(top: 5),
                             decoration: BoxDecoration(
+                              
                               border: Border.all(color: Colors.grey.shade400),
                               borderRadius: BorderRadius.circular(6),
                             ),
@@ -791,30 +813,30 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             ),
 
                             inputFormatters: <TextInputFormatter>[],
-                              style: _inputTextStyle(fontSettings),
+                            style: _inputTextStyle(fontSettings),
                           ),
                           if (widget.isPending)
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                "Amount & Remarks",
-                                style: TextStyle(
-                                  fontSize: fontSettings.fontSize + 2,
-                                  fontWeight: FontWeight.bold,
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  "Amount & Remarks",
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize + 2,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
-                              IconButton(
-                                icon: Icon(Icons.edit, color: Colors.blue),
-                                onPressed: () {
-                                  setState(() {
-                                    _isEditable =
-                                        !_isEditable; // toggle edit mode
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
+                                IconButton(
+                                  icon: Icon(Icons.edit, color: Colors.blue),
+                                  onPressed: () {
+                                    setState(() {
+                                      _isEditable =
+                                          !_isEditable; // toggle edit mode
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
                           const SizedBox(height: 16.0),
 
                           TextFormField(
@@ -870,157 +892,161 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                         onChanged: (value) => _remarks = value,
                       ),
                       const SizedBox(height: 16.0),
-if (widget.isPending) 
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () async {
-                                if (widget.gift == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Gift request not found"),
-                                    ),
-                                  );
-                                  return;
-                                }
-
-                                final reqid = widget.gift!.idNo;
-                                final remarks = _remarksController.text;
-                                final amount = _amountController.text;
-                                final uname = userName ?? "";
-
-                                setState(() {
-                                  _isLoading = true;
-                                });
-
-                                try {
-                                  final success = await ref
-                                      .read(giftProvider.notifier)
-                                      .sendApprovedSpecialGiftFromUI(
-                                        reqid: reqid,
-                                        remarks: remarks,
-                                        amount: amount,
-                                        userName: uname,
-                                      );
-
-                                  if (success) {
+                      if (widget.isPending)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () async {
+                                  if (widget.gift == null) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text(
-                                          "Request Approved Successfully ",
-                                        ),
+                                        content: Text("Gift request not found"),
                                       ),
                                     );
-                                    Navigator.of(
-                                      context,
-                                    ).pop(true); 
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text("Approval Failed "),
-                                      ),
-                                    );
+                                    return;
                                   }
-                                } catch (e) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text("Error: $e")),
-                                  );
-                                } finally {
+
+                                  final reqid = widget.gift!.idNo;
+                                  final remarks = _remarksController.text;
+                                  final amount = _amountController.text;
+                                  final uname = userName ?? "";
+
                                   setState(() {
-                                    _isLoading = false;
+                                    _isLoading = true;
                                   });
-                                }
-                              },
-                              icon: const Icon(Icons.check),
-                              label: const Text("APPROVE"),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
+
+                                  try {
+                                    final success = await ref
+                                        .read(giftProvider.notifier)
+                                        .sendApprovedSpecialGiftFromUI(
+                                          reqid: reqid,
+                                          remarks: remarks,
+                                          amount: amount,
+                                          userName: uname,
+                                        );
+
+                                    if (success) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            "Request Approved Successfully ",
+                                          ),
+                                        ),
+                                      );
+                                      Navigator.of(context).pop(true);
+                                    } else {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text("Approval Failed "),
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text("Error: $e")),
+                                    );
+                                  } finally {
+                                    setState(() {
+                                      _isLoading = false;
+                                    });
+                                  }
+                                },
+                                icon: const Icon(Icons.check),
+                                label: const Text("APPROVE"),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                               onPressed: () async {
-                                if (widget.gift == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Gift request not found"),
-                                    ),
-                                  );
-                                  return;
-                                }
-
-                                final reqid = widget.gift!.idNo;
-                              
-                                final uname = userName ?? "";
-
-                                setState(() {
-                                  _isLoading = true;
-                                });
-
-                                try {
-                                  final success = await ref
-                                      .read(giftProvider.notifier)
-                                      .rejectSpecialGiftFromUI(
-                                        reqid: reqid,
-                                        userName: uname,
-                                      );
-
-                                  if (success) {
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () async {
+                                  if (widget.gift == null) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text(
-                                          "Request Reject Successfully ",
-                                        ),
+                                        content: Text("Gift request not found"),
                                       ),
                                     );
-                                    Navigator.of(
-                                      context,
-                                    ).pop(true); 
-                                    // go back after approval
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text("Reject Failed "),
-                                      ),
-                                    );
+                                    return;
                                   }
-                                } catch (e) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text("Error: $e")),
-                                  );
-                                } finally {
+
+                                  final reqid = widget.gift!.idNo;
+
+                                  final uname = userName ?? "";
+
                                   setState(() {
-                                    _isLoading = false;
+                                    _isLoading = true;
                                   });
-                                }
-                              },
-                              icon: const Icon(Icons.close),
-                              label: const Text("REJECT"),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
+
+                                  try {
+                                    final success = await ref
+                                        .read(giftProvider.notifier)
+                                        .rejectSpecialGiftFromUI(
+                                          reqid: reqid,
+                                          userName: uname,
+                                        );
+
+                                    if (success) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            "Request Reject Successfully ",
+                                          ),
+                                        ),
+                                      );
+                                      Navigator.of(context).pop(true);
+                                      // go back after approval
+                                    } else {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text("Reject Failed "),
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text("Error: $e")),
+                                    );
+                                  } finally {
+                                    setState(() {
+                                      _isLoading = false;
+                                    });
+                                  }
+                                },
+                                icon: const Icon(Icons.close),
+                                label: const Text("REJECT"),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
                     ],
                   ),
                 ),

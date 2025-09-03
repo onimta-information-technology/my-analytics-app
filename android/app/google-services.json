@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "97263077137",
+    "project_id": "my-analytics-ad905",
+    "storage_bucket": "my-analytics-ad905.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:97263077137:android:9fbe3503d37533318c6eb0",
+        "android_client_info": {
+          "package_name": "com.example.ballys_reservation"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCatJFlRni4CXXM1BZoInE6JrQFtjV7jHQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

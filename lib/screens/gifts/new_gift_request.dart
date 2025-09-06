@@ -807,24 +807,26 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                   // print(ok);
 
                                   if (!mounted) return;
-                                  if (ok) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          "Gift request sent successfully",
-                                        ),
-                                      ),
-                                    );
-                                    Navigator.of(context).pop(true);
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          "Failed to send gift request",
-                                        ),
-                                      ),
-                                    );
-                                  }
+if (ok) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text("Gift request sent successfully"),
+    ),
+  );
+  
+  // Reset providers
+  ref.read(memberSearchProvider.notifier).resetState();
+  ref.read(newReservationProvider.notifier).resetState();
+  
+  // Navigate back and return success result
+  Navigator.of(context).pop(true); // Pass true to indicate success
+} else {
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text("Failed to send gift request"),
+    ),
+  );
+}
                                 }
                               : null,
 

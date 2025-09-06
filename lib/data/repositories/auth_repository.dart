@@ -12,7 +12,6 @@ class AuthRepository {
 
   Future<String> authenticate() async {
     try {
-  
       final response = await apiService.post('Login', {
         "UserName": "BaLlY\$#Crm619",
         "PassWord": "cRm_0987_@bL",
@@ -21,9 +20,9 @@ class AuthRepository {
       if (response['Token'] != null &&
           response['Token']['access_token'] != null) {
         String accessToken = response['Token']['access_token'];
-
+        // Debug print
         await storage.write(key: 'access_token', value: accessToken);
-
+        print('accessToken: $accessToken');
         return accessToken;
       } else {
         throw Exception('Authentication failed: No token received');
@@ -35,46 +34,53 @@ class AuthRepository {
   }
 
   Future<User> login(String text1, String text2) async {
-//         final deviceId = await DeviceId.get();
-// print('Device ID being used: $deviceId');
+    final deviceId = await DeviceId.get();
+    print('Device ID being used: $deviceId');
 
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
         {
-          "Para_Data": 9014,
+          "Para_Data": 90144,
           "Para_Direction": "Input",
           "Para_Lenth": 1,
           "Para_Name": "@Iid",
-          "Para_Type": "int"
+          "Para_Type": "int",
         },
         {
           "Para_Data": text1,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text1",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
           "Para_Data": text2,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text2",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
-        //  {
-        //   "Para_Data": deviceId,
-        //   "Para_Direction": "Input",
-        //   "Para_Lenth": 100,
-        //   "Para_Name": "@Text3",
-        //   "Para_Type": "varchar"
-        // }
+        {
+          "Para_Data": deviceId,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text3",
+          "Para_Type": "varchar",
+        },
+        {
+          "Para_Data": "APP",
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text4",
+          "Para_Type": "varchar",
+        },
       ],
       "SpName": "sp_CRM_Common_API",
-      "con": "1"
+      "con": "1",
     });
 
-    print(response);
+    print('hhhhh :$response');
 
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List &&
@@ -88,9 +94,12 @@ class AuthRepository {
           salesCode: tableData['Sales_Code'].toString(),
           marketingCode: tableData['Marketing_Code'].toString(),
         );
+      } else if (tableData['LoginID'] != null) {
+        throw Exception('Login failed: login id not found ');
       } else {
         throw Exception(
-            'Login failed: Invalid credentials or LoginStatus is not True');
+          'Login failed: Invalid credentials or LoginStatus is not True',
+        );
       }
     } else {
       throw Exception('Login failed: unexpected response structure');

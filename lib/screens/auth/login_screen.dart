@@ -1,10 +1,14 @@
 import 'package:ballys_reservation_app/core/constants.dart';
+import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/providers/auth_provider.dart';
 import 'package:ballys_reservation_app/providers/guests_provider.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -45,25 +49,100 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
   }
 
-  void _onLogin() async {
-    FocusScope.of(context).unfocus();
-    if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
-      await ref
-          .read(authProvider.notifier)
-          .authenticateAndLogin(_username, _password);
+void _onLogin() async {
+  FocusScope.of(context).unfocus();
+  if (_formKey.currentState!.validate()) {
+    _formKey.currentState!.save();
 
-      final authState = ref.read(authProvider);
+    await ref
+        .read(authProvider.notifier)
+        .authenticateAndLogin(_username, _password);
 
-      if (authState != null && authState.user != null) {
-        context.go('/home');
+    final authState = ref.read(authProvider);
+
+    if (authState != null && authState.user != null) {
+      final name = await StorageUtil.getUserName();
+      final prefs = await SharedPreferences.getInstance();
+   
+      // Try to get FCM token with retry mechanism
+      String? fcmtoken = await _getFCMTokenWithRetry();
+      print('FCM Token: $fcmtoken');
+      
+      if (fcmtoken != null) {
+        await prefs.setString('FCMToken', fcmtoken);
+        
+        // Sync token with server
+        if (name != null) {
+          await _syncTokenWithServer(name, fcmtoken);
+        }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Login failed. Please check your credentials.')));
+        print('FCM Token is null - will retry on token refresh');
+        // Set up token refresh listener for when token becomes available
+        _setupTokenRefreshListener(name);
       }
+
+      // Navigate to home on successful login
+      context.go('/home');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Login failed. Please check your credentials.'),
+        ),
+      );
     }
   }
+}
 
+
+Future<String?> _getFCMTokenWithRetry({int maxRetries = 3}) async {
+  for (int i = 0; i < maxRetries; i++) {
+    try {
+      String? token = await FirebaseMessaging.instance.getToken();
+      if (token != null) return token;
+      
+      // Wait before retry
+      await Future.delayed(Duration(seconds: 1 + i));
+    } catch (e) {
+      print('FCM Token fetch attempt ${i + 1} failed: $e');
+      if (i == maxRetries - 1) return null;
+      await Future.delayed(Duration(seconds: 1 + i));
+    }
+  }
+  return null;
+}
+
+// Setup listener for token refresh
+void _setupTokenRefreshListener(String? name) {
+  FirebaseMessaging.instance.onTokenRefresh.listen((String token) async {
+    print('FCM Token refreshed: $token');
+    
+    // Save the new token
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('FCMToken', token);
+    
+    // Sync with server
+    if (name != null) {
+      await _syncTokenWithServer(name, token);
+    }
+  }).onError((err) {
+    print('FCM Token refresh error: $err');
+  });
+}
+
+// Separate method for server sync
+Future<void> _syncTokenWithServer(String name, String token) async {
+  try {
+    var result = await FirebaseApiService.syncFmcToken(name, token);
+    
+    if (result['success'] == true) {
+      print('FCM Token sent to server successfully: ${result['data']}');
+    } else {
+      print('Failed to send FCM Token: ${result['error']}');
+    }
+  } catch (e) {
+    print('Error syncing FCM token with server: $e');
+  }
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -113,8 +192,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           TextFormField(
                             decoration: InputDecoration(
                               hintText: 'Username',
-                              prefixIcon:
-                                  const Icon(Icons.person, color: Colors.grey),
+                              prefixIcon: const Icon(
+                                Icons.person,
+                                color: Colors.grey,
+                              ),
                               filled: true,
                               fillColor: Colors.grey[200],
                               border: OutlineInputBorder(
@@ -137,8 +218,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             obscureText: !_showPassword,
                             decoration: InputDecoration(
                               hintText: 'Password',
-                              prefixIcon:
-                                  const Icon(Icons.lock, color: Colors.grey),
+                              prefixIcon: const Icon(
+                                Icons.lock,
+                                color: Colors.grey,
+                              ),
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _showPassword
@@ -176,8 +259,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Constants
                                     .kSecondaryColor, // Custom gold color
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -190,7 +274,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               label: const Text(
                                 'Log In',
                                 style: TextStyle(
-                                    fontSize: 18, color: Colors.white),
+                                  fontSize: 18,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                           ),
@@ -212,8 +298,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             child: Text(
                               "Version: ${_packageInfo.version} ${_packageInfo.buildNumber}",
                               style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Color.fromARGB(117, 158, 158, 158)),
+                                fontSize: 14,
+                                color: Color.fromARGB(117, 158, 158, 158),
+                              ),
                             ),
                           ),
                         ],
@@ -227,7 +314,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         child: const Center(
                           child: RefreshProgressIndicator(
                             valueColor: AlwaysStoppedAnimation<Color>(
-                                Constants.kSecondaryColor),
+                              Constants.kSecondaryColor,
+                            ),
                           ),
                         ),
                       ),

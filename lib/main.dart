@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/navigation/app_navigation.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
@@ -56,16 +57,8 @@ class _MyAppState extends State<MyApp> {
       print('User granted notification permission');
       
       // Get FCM token
-      String? token = await FirebaseMessaging.instance.getToken();
-      print('FCM Token: $token');
-      
-      // Store token in your storage utility if needed
-      if (token != null) {
-        // You can save this token to your storage or send it to your server
-        //await StorageUtil.saveFCMToken(token);
-         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('FCMToken', token);
-      }
+     
+    
       
       // Listen for token refresh
       FirebaseMessaging.instance.onTokenRefresh.listen((String token) {

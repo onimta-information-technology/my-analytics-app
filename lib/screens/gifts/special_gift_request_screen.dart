@@ -144,9 +144,15 @@ class _SpecialGiftRequestScreenState
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.go('/gifts/special-gift-requests/new-gift-request');
-        },
+        onPressed: () async {
+            final result = await context.push('/gifts/special-gift-requests/new-gift-request');
+         if (result == true) {
+      String? salesCode = await StorageUtil.getSalesCode();
+      if (salesCode != null && salesCode.isNotEmpty) {
+        _loadSpGiftData(salesCode);
+      }
+    }
+  },
         backgroundColor: Colors.red,
         shape: const CircleBorder(),
         child: const Icon(Icons.add, color: Color.fromARGB(255, 255, 255, 255)),

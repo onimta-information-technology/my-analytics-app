@@ -1,93 +1,144 @@
+import 'package:ballys_reservation_app/providers/chat_api.dart';
 import 'package:ballys_reservation_app/screens/chatDetail_screen.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 
-// Chat data model
+// Chat data model updated for new API structure
 class ChatContact {
   final String id;
+  final String chatUuid;
   final String name;
+  final String firstName;
   final String lastMessage;
   final String time;
   final bool isOnline;
   final Color avatarColor;
   final String initials;
   final int unreadCount;
-  final String? email;
-  final String? firstName;
-  final DateTime? lastSeen;
+  final DateTime? lastMessageTime;
+  final String? lastMessageSender;
+  final List<String> participants;
+  final DateTime createdAt;
 
   ChatContact({
     required this.id,
+    required this.chatUuid,
     required this.name,
+    this.firstName = '',
     required this.lastMessage,
     required this.time,
     this.isOnline = false,
     required this.avatarColor,
     required this.initials,
     this.unreadCount = 0,
-    this.email,
-    this.firstName,
-    this.lastSeen,
+    this.lastMessageTime,
+    this.lastMessageSender,
+    required this.participants,
+    required this.createdAt,
   });
 
   Map<String, dynamic> toJson() => {
     'id': id,
+    'chatUuid': chatUuid,
     'name': name,
+    'firstName': firstName,
     'lastMessage': lastMessage,
     'time': time,
     'isOnline': isOnline,
     'avatarColor': avatarColor.value,
     'initials': initials,
     'unreadCount': unreadCount,
-    'email': email,
-    'firstName': firstName,
-    'lastSeen': lastSeen?.millisecondsSinceEpoch,
+    'lastMessageTime': lastMessageTime?.millisecondsSinceEpoch,
+    'lastMessageSender': lastMessageSender,
+    'participants': participants,
+    'createdAt': createdAt.millisecondsSinceEpoch,
   };
 
   static ChatContact fromJson(Map<String, dynamic> json) => ChatContact(
     id: json['id'],
+    chatUuid: json['chatUuid'],
     name: json['name'],
+    firstName: json['firstName'] ?? '',
     lastMessage: json['lastMessage'],
     time: json['time'],
-    isOnline: json['isOnline'],
+    isOnline: json['isOnline'] ?? false,
     avatarColor: Color(json['avatarColor']),
     initials: json['initials'],
     unreadCount: json['unreadCount'] ?? 0,
-    email: json['email'],
-    firstName: json['firstName'],
-    lastSeen: json['lastSeen'] != null
-        ? DateTime.fromMillisecondsSinceEpoch(json['lastSeen'])
+    lastMessageTime: json['lastMessageTime'] != null
+        ? DateTime.fromMillisecondsSinceEpoch(json['lastMessageTime'])
         : null,
+    lastMessageSender: json['lastMessageSender'],
+    participants: List<String>.from(json['participants'] ?? []),
+    createdAt: DateTime.fromMillisecondsSinceEpoch(json['createdAt']),
   );
 
-  // Factory constructor to create ChatContact from API response
-  static ChatContact fromApiJson(Map<String, dynamic> json) {
-    final String name = json['name'] ?? json['firstName'] ?? 'Unknown';
+  // Factory constructor to create ChatContact from chat API response
+  static ChatContact fromChatApiJson(
+    Map<String, dynamic> json,
+    String currentUserName, {
+    Map<String, dynamic>? participantDetails,
+  }) {
+    final List<String> participants = List<String>.from(
+      json['participants'] ?? [],
+    );
+
+    // Get the other participant's name (not the current user)
+    final String otherParticipant = participants.firstWhere(
+      (participant) => participant != currentUserName,
+      orElse: () => participants.isNotEmpty ? participants[0] : 'Unknown',
+    );
+
+    final String name = otherParticipant;
+
+    // Extract firstName from participantDetails if available
+    String firstName = '';
+    if (participantDetails != null &&
+        participantDetails.containsKey(otherParticipant)) {
+      firstName = participantDetails[otherParticipant]['firstName'] ?? '';
+    }
+
+    // If firstName is still empty, try to extract it from the name
+    if (firstName.isEmpty) {
+      // For names like "Mr Prathap", extract "Prathap"
+      final nameParts = name.trim().split(' ');
+      if (nameParts.length > 1) {
+        firstName = nameParts.last; // Take the last part as firstName
+      } else {
+        firstName = name; // Use the full name if no spaces
+      }
+    }
+
     final String initials = _generateInitials(name);
     final Color avatarColor = _generateColorFromName(name);
 
-    // Parse lastSeen to generate relative time
-    final DateTime? lastSeen = json['lastSeen'] != null
-        ? DateTime.parse(json['lastSeen'])
+    // Parse lastMessageTime to generate relative time
+    final DateTime? lastMessageTime = json['lastMessageTime'] != null
+        ? DateTime.parse(json['lastMessageTime'])
         : null;
-    final String timeAgo = _getTimeAgo(lastSeen);
+    final String timeAgo = _getTimeAgo(lastMessageTime);
+
+    final String lastMessage = json['lastMessage'] ?? 'No messages yet';
 
     return ChatContact(
-      id: json['id'] ?? json['userUuid'] ?? '',
+      id: json['id'] ?? '',
+      chatUuid: json['chatUuid'] ?? json['id'] ?? '',
       name: name,
-      lastMessage: json['isOnline'] == true ? 'Online' : 'Last seen $timeAgo',
+      firstName: firstName, // Now properly set
+      lastMessage: lastMessage,
       time: timeAgo,
-      isOnline: json['isOnline'] ?? false,
+      isOnline: participantDetails?[otherParticipant]?['isOnline'] ?? false,
       avatarColor: avatarColor,
       initials: initials,
-      unreadCount:
-          0, // Default to 0, can be updated based on actual unread messages
-      email: json['email'],
-      firstName: json['firstName'],
-      lastSeen: lastSeen,
+      unreadCount: json['unreadCount'] ?? 0,
+      lastMessageTime: lastMessageTime,
+      lastMessageSender: json['lastMessageSender'],
+      participants: participants,
+      createdAt: DateTime.parse(json['createdAt']),
     );
   }
 
@@ -184,15 +235,17 @@ class _ChatScreenState extends State<ChatScreen>
   late TabController _tabController;
   List<ChatContact> _contacts = [];
   List<ChatContact> _filteredContacts = [];
+  List<ChatContact> _allUsers = []; // For new chat modal
   String _searchQuery = '';
   bool _isLoading = false;
   String? _errorMessage;
+  String? _currentUserName;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-    _fetchContactsFromApi();
+    _initializeData();
   }
 
   @override
@@ -201,57 +254,156 @@ class _ChatScreenState extends State<ChatScreen>
     super.dispose();
   }
 
-  Future<void> _fetchContactsFromApi() async {
+  Future<void> _initializeData() async {
+    await _getCurrentUserName();
+    await _fetchChatsFromApi();
+  }
+
+  Future<void> _getCurrentUserName() async {
+    try {
+      final userName = await StorageUtil.getUserName();
+      setState(() {
+        _currentUserName = userName;
+      });
+    } catch (e) {
+      print('Error getting current user name: $e');
+    }
+  }
+
+  // New method to create chat
+  Future<String?> _createChat(String receiverName) async {
+    if (_currentUserName == null) {
+      print('Current user name is null');
+      return null;
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('Token') ?? '';
+
+      final response = await http.post(
+        Uri.parse(
+          'https://ballysnotifications.onimtaitsl.com/api/chats/create',
+        ),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          "participants": [receiverName, _currentUserName],
+        }),
+      );
+
+      print('Create chat response status: ${response.statusCode}');
+      print('Create chat response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        if (responseData['success'] == true && responseData['chatId'] != null) {
+          return responseData['chatId'];
+        }
+      }
+
+      print('Failed to create chat: ${response.statusCode}');
+      return null;
+    } catch (e) {
+      print('Error creating chat: $e');
+      return null;
+    }
+  }
+
+  Future<void> _fetchChatsFromApi() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final response = await http.get(
-        Uri.parse('https://ballysnotifications.onimtaitsl.com/api/users'),
-        headers: {'Content-Type': 'application/json'},
-      );
+      // Fetch both chats and users data
+      final chatData = await ChatApi.fetchUserChats();
+      final userData = await ChatApi.fetchAllUsers();
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> data = jsonDecode(response.body);
+      if (chatData['chats'] != null) {
+        final List<dynamic> chats = chatData['chats'];
 
-        if (data['success'] == true && data['users'] != null) {
-          final List<dynamic> users = data['users'];
-
-          setState(() {
-            _contacts = users
-                .map((user) => ChatContact.fromApiJson(user))
-                .toList();
-            _filteredContacts = List.from(_contacts);
-            _isLoading = false;
-          });
-
-          // Save contacts to local storage
-          await _saveChats();
-        } else {
-          setState(() {
-            _errorMessage = 'Invalid response format';
-            _isLoading = false;
-          });
+        // Create a map of user details for quick lookup
+        Map<String, dynamic> userDetailsMap = {};
+        if (userData['users'] != null) {
+          final List<dynamic> users = userData['users'];
+          for (var user in users) {
+            final userName = user['name'] ?? user['id'] ?? '';
+            userDetailsMap[userName] = user;
+          }
         }
-      } else {
+
         setState(() {
-          _errorMessage = 'Failed to fetch contacts: ${response.statusCode}';
+          _contacts = chats
+              .map(
+                (chat) => ChatContact.fromChatApiJson(
+                  chat,
+                  _currentUserName ?? '',
+                  participantDetails: userDetailsMap,
+                ),
+              )
+              .toList();
+          _filteredContacts = List.from(_contacts);
           _isLoading = false;
         });
 
-        // Fallback to cached data if available
-        await _loadChats();
+        // Save chats to local storage
+        await _saveChats();
+      } else {
+        setState(() {
+          _errorMessage = 'No chats data received';
+          _isLoading = false;
+        });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Network error: $e';
+        _errorMessage = e.toString();
         _isLoading = false;
       });
 
       // Fallback to cached data if available
       await _loadChats();
+    }
+  }
+
+  Future<void> _fetchAllUsersForNewChat() async {
+    try {
+      final data = await ChatApi.fetchAllUsers();
+
+      if (data['users'] != null) {
+        final List<dynamic> users = data['users'];
+        // Convert users to ChatContact format for display in modal
+        final List<ChatContact> userContacts = users.map((user) {
+          final String name = user['name'] ?? user['firstName'] ?? 'Unknown';
+          final String firstName = user['firstName'] ?? name;
+          final String initials = ChatContact._generateInitials(name);
+          final Color avatarColor = ChatContact._generateColorFromName(name);
+
+          return ChatContact(
+            id: user['id'] ?? user['userUuid'] ?? '',
+            chatUuid: '', // Empty for new chats
+            name: name,
+            firstName: firstName, // Properly set from API response
+            lastMessage: user['isOnline'] == true ? 'Online' : 'Offline',
+            time: '',
+            isOnline: user['isOnline'] ?? false,
+            avatarColor: avatarColor,
+            initials: initials,
+            unreadCount: 0,
+            participants: [name],
+            createdAt: DateTime.now(),
+          );
+        }).toList();
+
+        setState(() {
+          _allUsers = userContacts;
+        });
+      }
+    } catch (e) {
+      print('Error fetching all users: $e');
     }
   }
 
@@ -265,11 +417,17 @@ class _ChatScreenState extends State<ChatScreen>
     final prefs = await SharedPreferences.getInstance();
     final jsonString = prefs.getString('chat_contacts');
     if (jsonString != null) {
-      final jsonList = jsonDecode(jsonString) as List;
-      setState(() {
-        _contacts = jsonList.map((json) => ChatContact.fromJson(json)).toList();
-        _filteredContacts = List.from(_contacts);
-      });
+      try {
+        final jsonList = jsonDecode(jsonString) as List;
+        setState(() {
+          _contacts = jsonList
+              .map((json) => ChatContact.fromJson(json))
+              .toList();
+          _filteredContacts = List.from(_contacts);
+        });
+      } catch (e) {
+        print('Error loading cached chats: $e');
+      }
     }
   }
 
@@ -283,12 +441,13 @@ class _ChatScreenState extends State<ChatScreen>
             .where(
               (contact) =>
                   contact.name.toLowerCase().contains(query.toLowerCase()) ||
-                  (contact.firstName?.toLowerCase().contains(
-                        query.toLowerCase(),
-                      ) ??
-                      false) ||
-                  (contact.email?.toLowerCase().contains(query.toLowerCase()) ??
-                      false),
+                  contact.lastMessage.toLowerCase().contains(
+                    query.toLowerCase(),
+                  ) ||
+                  contact.participants.any(
+                    (participant) =>
+                        participant.toLowerCase().contains(query.toLowerCase()),
+                  ),
             )
             .toList();
       }
@@ -302,7 +461,9 @@ class _ChatScreenState extends State<ChatScreen>
       case 1: // Unread
         return _filteredContacts.where((c) => c.unreadCount > 0).toList();
       case 2: // Groups
-        return []; // No groups in this example
+        return _filteredContacts
+            .where((c) => c.participants.length > 2)
+            .toList();
       case 3: // Favorites
         return []; // No favorites in this example
       default:
@@ -311,6 +472,10 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   Widget _buildContactCard(ChatContact contact) {
+    final bool hasLastMessage =
+        contact.lastMessage.isNotEmpty &&
+        contact.lastMessage != 'No messages yet';
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       elevation: 0,
@@ -350,11 +515,33 @@ class _ChatScreenState extends State<ChatScreen>
           contact.name,
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
         ),
-        subtitle: Text(
-          contact.lastMessage,
-          style: TextStyle(color: Colors.grey[600], fontSize: 14),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (hasLastMessage) ...[
+              Text(
+                contact.lastMessage,
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                  fontWeight: contact.unreadCount > 0
+                      ? FontWeight.w500
+                      : FontWeight.normal,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (contact.lastMessageSender != null)
+                Text(
+                  'by ${contact.lastMessageSender}',
+                  style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                ),
+            ] else
+              Text(
+                'No messages yet',
+                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+              ),
+          ],
         ),
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -381,18 +568,40 @@ class _ChatScreenState extends State<ChatScreen>
                   ),
                 ),
               ),
-            if (contact.lastMessage.isNotEmpty && contact.unreadCount == 0)
-              Icon(
-                contact.isOnline ? Icons.done_all : Icons.access_time,
-                color: contact.isOnline ? Colors.green : Colors.grey,
-                size: 16,
-              ),
+            if (hasLastMessage && contact.unreadCount == 0)
+              const Icon(Icons.done_all, color: Colors.grey, size: 16),
           ],
         ),
-        onTap: () {
+        onTap: () async {
+          // Create chat before navigating to IndividualChatScreen
+          final chatId = await _createChat(
+            contact.firstName.isNotEmpty ? contact.firstName : contact.name,
+          );
+
+          // Create a new contact with the chatId for the IndividualChatScreen
+          final contactWithChatId = ChatContact(
+            id: contact.id,
+            chatUuid: chatId ?? contact.chatUuid,
+            name: contact.name,
+            firstName: contact.firstName.isNotEmpty
+                ? contact.firstName
+                : contact.name,
+            lastMessage: contact.lastMessage,
+            time: contact.time,
+            isOnline: contact.isOnline,
+            avatarColor: contact.avatarColor,
+            initials: contact.initials,
+            unreadCount: contact.unreadCount,
+            lastMessageTime: contact.lastMessageTime,
+            lastMessageSender: contact.lastMessageSender,
+            participants: contact.participants,
+            createdAt: contact.createdAt,
+          );
+
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (context) => IndividualChatScreen(contact: contact),
+              builder: (context) =>
+                  IndividualChatScreen(contact: contactWithChatId),
             ),
           );
         },
@@ -408,7 +617,7 @@ class _ChatScreenState extends State<ChatScreen>
           children: [
             CircularProgressIndicator(color: Colors.green),
             SizedBox(height: 16),
-            Text('Loading contacts...'),
+            Text('Loading chats...'),
           ],
         ),
       );
@@ -428,7 +637,7 @@ class _ChatScreenState extends State<ChatScreen>
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: _fetchContactsFromApi,
+              onPressed: _fetchChatsFromApi,
               style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
               child: const Text('Retry', style: TextStyle(color: Colors.white)),
             ),
@@ -454,9 +663,9 @@ class _ChatScreenState extends State<ChatScreen>
             ),
             const SizedBox(height: 8),
             TextButton(
-              onPressed: _fetchContactsFromApi,
+              onPressed: _fetchChatsFromApi,
               child: const Text(
-                "Refresh contacts",
+                "Refresh chats",
                 style: TextStyle(color: Colors.green),
               ),
             ),
@@ -466,7 +675,7 @@ class _ChatScreenState extends State<ChatScreen>
     }
 
     return RefreshIndicator(
-      onRefresh: _fetchContactsFromApi,
+      onRefresh: _fetchChatsFromApi,
       child: ListView.builder(
         itemCount: contacts.length,
         itemBuilder: (context, index) {
@@ -500,7 +709,7 @@ class _ChatScreenState extends State<ChatScreen>
           IconButton(icon: const Icon(Icons.menu), onPressed: () {}),
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _fetchContactsFromApi,
+            onPressed: _fetchChatsFromApi,
           ),
           IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
         ],
@@ -577,7 +786,10 @@ class _ChatScreenState extends State<ChatScreen>
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.green,
-        onPressed: () {
+        onPressed: () async {
+          // Fetch all users when opening the modal
+          await _fetchAllUsersForNewChat();
+
           showModalBottomSheet(
             context: context,
             isScrollControlled: true,
@@ -603,7 +815,7 @@ class _ChatScreenState extends State<ChatScreen>
                         ),
                       ),
                       onChanged: (query) {
-                        // Implement local search in modal
+                        // Implement local search in modal if needed
                       },
                     ),
                     const SizedBox(height: 16),
@@ -616,12 +828,12 @@ class _ChatScreenState extends State<ChatScreen>
                     ),
                     const SizedBox(height: 16),
                     Expanded(
-                      child: _contacts.isEmpty
+                      child: _allUsers.isEmpty
                           ? const Center(child: Text('No contacts available'))
                           : ListView.builder(
-                              itemCount: _contacts.length,
+                              itemCount: _allUsers.length,
                               itemBuilder: (context, index) {
-                                final contact = _contacts[index];
+                                final contact = _allUsers[index];
                                 return ListTile(
                                   leading: CircleAvatar(
                                     backgroundColor: contact.avatarColor,
@@ -636,17 +848,123 @@ class _ChatScreenState extends State<ChatScreen>
                                   subtitle: Text(
                                     contact.isOnline ? "Online" : "Offline",
                                   ),
-                                  onTap: () {
-                                    Navigator.pop(context);
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            IndividualChatScreen(
-                                              contact: contact,
-                                            ),
-                                      ),
-                                    );
-                                  },
+  // Alternative approach: Use inline loading instead of modal dialog
+onTap: () async {
+  // Store the navigator for safe navigation
+  final navigator = Navigator.of(context);
+  final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+  // Close the bottom sheet first
+  navigator.pop();
+
+  // Show inline loading message instead of modal
+  scaffoldMessenger.showSnackBar(
+    const SnackBar(
+      content: Row(
+        children: [
+          SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          ),
+          SizedBox(width: 16),
+          Text('Creating chat...'),
+        ],
+      ),
+      duration: Duration(seconds: 30), // Long duration
+      backgroundColor: Colors.blue,
+    ),
+  );
+
+  try {
+    // Create chat
+    final chatId = await _createChat(
+      contact.firstName.isNotEmpty
+          ? contact.firstName
+          : contact.name,
+    );
+
+    // Remove loading message
+    scaffoldMessenger.hideCurrentSnackBar();
+
+    // Create contact with chatId
+    final contactWithChatId = ChatContact(
+      id: contact.id,
+      chatUuid: chatId ?? contact.chatUuid ?? '',
+      name: contact.name,
+      firstName: contact.firstName.isNotEmpty
+          ? contact.firstName
+          : contact.name,
+      lastMessage: contact.lastMessage,
+      time: contact.time,
+      isOnline: contact.isOnline,
+      avatarColor: contact.avatarColor,
+      initials: contact.initials,
+      unreadCount: contact.unreadCount,
+      lastMessageTime: contact.lastMessageTime,
+      lastMessageSender: contact.lastMessageSender,
+      participants: contact.participants,
+      createdAt: contact.createdAt,
+    );
+
+    // Navigate to IndividualChatScreen
+    await navigator.push(
+      MaterialPageRoute(
+        builder: (context) => IndividualChatScreen(
+          contact: contactWithChatId,
+        ),
+      ),
+    );
+
+    // Refresh chats after returning from IndividualChatScreen
+    _fetchChatsFromApi();
+    
+  } catch (e) {
+    // Remove loading message and show error
+    scaffoldMessenger.hideCurrentSnackBar();
+    
+    print('Error in contact tap: $e');
+    
+    // Show error message
+    scaffoldMessenger.showSnackBar(
+      SnackBar(
+        content: Text('Error creating chat: $e'),
+        backgroundColor: Colors.orange,
+      ),
+    );
+    
+    // Navigate anyway with existing contact data
+    final contactWithChatId = ChatContact(
+      id: contact.id,
+      chatUuid: contact.chatUuid,
+      name: contact.name,
+      firstName: contact.firstName.isNotEmpty
+          ? contact.firstName
+          : contact.name,
+      lastMessage: contact.lastMessage,
+      time: contact.time,
+      isOnline: contact.isOnline,
+      avatarColor: contact.avatarColor,
+      initials: contact.initials,
+      unreadCount: contact.unreadCount,
+      lastMessageTime: contact.lastMessageTime,
+      lastMessageSender: contact.lastMessageSender,
+      participants: contact.participants,
+      createdAt: contact.createdAt,
+    );
+
+    await navigator.push(
+      MaterialPageRoute(
+        builder: (context) => IndividualChatScreen(
+          contact: contactWithChatId,
+        ),
+      ),
+    );
+  }
+},
                                 );
                               },
                             ),

@@ -1,7 +1,9 @@
 import 'package:ballys_reservation_app/screens/chat_screen.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class IndividualChatScreen extends StatefulWidget {
   final ChatContact contact;
@@ -16,12 +18,25 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   List<ChatMessage> _messages = [];
+  String? _currentUserName;
 
   @override
   void initState() {
     super.initState();
     _loadMessages();
     _loadInitialMessages();
+    _getCurrentUserName();
+  }
+
+  Future<void> _getCurrentUserName() async {
+    try {
+      final userName = await StorageUtil.getUserName();
+      setState(() {
+        _currentUserName = userName;
+      });
+    } catch (e) {
+      print('Error getting current user name: $e');
+    }
   }
 
   void _loadInitialMessages() {
@@ -30,24 +45,66 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
       _messages = [
         ChatMessage(
           id: '1',
-          text: 'hi',
+          text: 'Hello! How can I help you today?',
           isMe: false,
           timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
         ),
-        ChatMessage(
-          id: '2',
-          text: 'Hello',
-          isMe: false,
-          timestamp: DateTime.now().subtract(const Duration(minutes: 3)),
-        ),
-        ChatMessage(
-          id: '3',
-          text: 'Hi',
-          isMe: true,
-          timestamp: DateTime.now().subtract(const Duration(minutes: 1)),
-        ),
       ];
       _saveMessages();
+    }
+  }
+
+  // New method to send message with API call
+  Future<void> _sendMessageWithApi(String messageText) async {
+    if (_currentUserName == null) {
+      print('Current user name is null');
+      return;
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('Token') ?? '';
+
+      final response = await http.post(
+        Uri.parse(
+          'https://ballysnotifications.onimtaitsl.com/api/chat/send-message-with-notification',
+        ),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          "senderFirstName": "Sterling",
+          "recipientFirstName": "BM15125",
+          "message": messageText,
+          "title": "New Message from $_currentUserName",
+          "body": messageText,
+          "chatId": widget.contact.chatUuid,
+        }),
+      );
+
+      print('Send message response status: ${response.statusCode}');
+      print('Send message response body: ${response.body}');
+
+      if (response.statusCode != 200) {
+        print('Failed to send message via API: ${response.statusCode}');
+        // Show error to user
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send message. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error sending message via API: $e');
+      // Show error to user
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error sending message. Please check your connection.'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -65,14 +122,19 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
   Future<void> _saveMessages() async {
     final prefs = await SharedPreferences.getInstance();
     final jsonList = _messages.map((message) => message.toJson()).toList();
-    await prefs.setString('messages_${widget.contact.id}', jsonEncode(jsonList));
+    await prefs.setString(
+      'messages_${widget.contact.id}',
+      jsonEncode(jsonList),
+    );
   }
 
-  void _sendMessage() {
+  void _sendMessage() async {
     if (_messageController.text.trim().isNotEmpty) {
+      final messageText = _messageController.text.trim();
+
       final message = ChatMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        text: _messageController.text.trim(),
+        text: messageText,
         isMe: true,
         timestamp: DateTime.now(),
       );
@@ -84,6 +146,9 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
       _messageController.clear();
       _saveMessages();
       _scrollToBottom();
+
+      // Send message via API
+      await _sendMessageWithApi(messageText);
     }
   }
 
@@ -107,7 +172,9 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
-        mainAxisAlignment: message.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: message.isMe
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         children: [
           if (!message.isMe) ...[
             CircleAvatar(
@@ -144,17 +211,15 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
                       Text(
                         _formatTime(message.timestamp),
                         style: TextStyle(
-                          color: message.isMe ? Colors.white70 : Colors.grey[600],
+                          color: message.isMe
+                              ? Colors.white70
+                              : Colors.grey[600],
                           fontSize: 12,
                         ),
                       ),
                       if (message.isMe) ...[
                         const SizedBox(width: 4),
-                        Icon(
-                          Icons.done_all,
-                          color: Colors.white70,
-                          size: 16,
-                        ),
+                        Icon(Icons.done_all, color: Colors.white70, size: 16),
                       ],
                     ],
                   ),
@@ -162,9 +227,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
               ),
             ),
           ),
-          if (message.isMe) ...[
-            const SizedBox(width: 8),
-          ],
+          if (message.isMe) ...[const SizedBox(width: 8)],
         ],
       ),
     );
@@ -226,11 +289,17 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
                 children: [
                   Text(
                     widget.contact.name,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   Text(
                     widget.contact.isOnline ? "Online" : "Last seen recently",
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.normal,
+                    ),
                   ),
                 ],
               ),
@@ -285,10 +354,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
                         horizontal: 20,
                         vertical: 10,
                       ),
-                      // suffixIcon: IconButton(
-                      //   //icon: const Icon(Icons.attach_file, color: Colors.grey),
-                      //   onPressed: () {},
-                      // ),
                     ),
                     maxLines: null,
                     textInputAction: TextInputAction.newline,

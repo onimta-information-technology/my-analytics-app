@@ -60,16 +60,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   //     if (authState != null && authState.user != null) {
   //       print('Login credentials validated successfully');
-        
+
   //       // If credentials are valid, get phone number and navigate to OTP screen
   //       String? phoneNumber = await _getUserPhoneNumber();
-        
+
   //       if (phoneNumber != null && phoneNumber.isNotEmpty) {
   //         print('Phone number retrieved: $phoneNumber');
-          
+
   //         // Send OTP (simulate for now since no SMS gateway)
   //         await _sendOTP(phoneNumber);
-          
+
   //         // Navigate to OTP verification screen
   //         if (mounted) {
   //           context.push('/otp-verification', extra: {
@@ -96,103 +96,109 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   //     }
   //   }
   // }
-void _onLogin() async {
-  FocusScope.of(context).unfocus();
-  if (_formKey.currentState!.validate()) {
-    _formKey.currentState!.save();
+  void _onLogin() async {
+    FocusScope.of(context).unfocus();
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
 
-    print('Attempting login for username: $_username');
+      print('Attempting login for username: $_username');
 
-    // Clear any previous errors
-    ref.read(authProvider.notifier).clearError();
+      // Clear any previous errors
+      ref.read(authProvider.notifier).clearError();
 
-    // Attempt authentication and login
-    await ref
-        .read(authProvider.notifier)
-        .authenticateAndLogin(_username, _password);
+      // Attempt authentication and login
+      await ref
+          .read(authProvider.notifier)
+          .authenticateAndLogin(_username, _password);
 
-    final authState = ref.read(authProvider);
+      final authState = ref.read(authProvider);
 
-    if (authState != null) {
-      // Check if there's an error and display it
-      if (authState.error != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(authState.error!),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.all(16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+      if (authState != null) {
+        // Check if there's an error and display it
+        if (authState.error != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(authState.error!),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
-          ),
-        );
-        return; // Don't proceed further if there's an error
-      }
+          );
+          return; // Don't proceed further if there's an error
+        }
 
-      // If no error and user is authenticated, proceed with OTP flow
-      if (authState.user != null) {
-        print('Login credentials validated successfully');
-        
-        // If credentials are valid, get phone number and navigate to OTP screen
-        String? phoneNumber = await _getUserPhoneNumber();
-        
-        if (phoneNumber != null && phoneNumber.isNotEmpty) {
-          print('Phone number retrieved: $phoneNumber');
-          
-          // Send OTP (simulate for now since no SMS gateway)
-          try {
-            await _sendOTP(phoneNumber);
-            
-            // Navigate to OTP verification screen
-            if (mounted) {
-              context.push('/otp-verification', extra: {
-                'phoneNumber': phoneNumber,
-                'username': _username,
-                'password': _password,
-              });
+        // If no error and user is authenticated, proceed with OTP flow
+        if (authState.user != null) {
+          print('Login credentials validated successfully');
+
+          // If credentials are valid, get phone number and navigate to OTP screen
+          String? phoneNumber = await _getUserPhoneNumber();
+          print(phoneNumber);
+          if (phoneNumber != null && phoneNumber.isNotEmpty) {
+            print('Phone number retrieved: $phoneNumber');
+
+            // Send OTP (simulate for now since no SMS gateway)
+            try {
+              await _sendOTP(phoneNumber);
+
+              // Navigate to OTP verification screen
+              if (mounted) {
+                context.push(
+                  '/otp-verification',
+                  extra: {
+                    'phoneNumber': phoneNumber,
+                    'username': _username,
+                    'password': _password,
+                  },
+                );
+              }
+            } catch (e) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Failed to send OTP: ${e.toString()}'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
             }
-          } catch (e) {
+          } else {
+            // If no phone number, show error
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Failed to send OTP: ${e.toString()}'),
+              const SnackBar(
+                content: Text(
+                  'Phone number not found. Please contact support.',
+                ),
                 backgroundColor: Colors.orange,
               ),
             );
           }
-        } else {
-          // If no phone number, show error
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Phone number not found. Please contact support.'),
-              backgroundColor: Colors.orange,
-            ),
-          );
         }
       }
     }
   }
-}
+
   // Get user's phone number from your user data
   Future<String?> _getUserPhoneNumber() async {
     try {
-      // Replace this with your actual method to get user phone number
-      // This could be from your auth provider, API call, or stored data
-      
-      // For now, return a sample phone number
-      // You should replace this with actual phone number retrieval logic
-      final mobile= await StorageUtil.getMobileNumber();
-      return mobile; // Sample phone number
-      
+ final authState = ref.read(authProvider);
+    print('Auth state: ${authState?.user}');
+    print('Mobile from auth: ${authState?.user?.mobileNumber}');
+    
+    if (authState?.user?.mobileNumber != null && 
+        authState!.user!.mobileNumber!.isNotEmpty) {
+      return authState.user!.mobileNumber;
+    }
+
       // Example of how you might get it from your auth state:
       // final authState = ref.read(authProvider);
       // return authState?.user?.phoneNumber;
-      
+
       // Or from an API call:
       // final userData = await FirebaseApiService.getUserData(_username);
       // return userData['phoneNumber'];
-      
     } catch (e) {
       print('Error getting phone number: $e');
       return null;
@@ -204,9 +210,9 @@ void _onLogin() async {
     try {
       // Since you don't have SMS gateway yet, this is just a placeholder
       // Replace this with your actual SMS service integration
-      
+
       print('Sending OTP to: $phoneNumber');
-      
+
       // Example of how you might integrate with an SMS service:
       /*
       await FirebaseApiService.sendOTP({
@@ -214,15 +220,25 @@ void _onLogin() async {
         'username': _username,
       });
       */
-      
+
       // For now, just simulate a delay
       await Future.delayed(const Duration(seconds: 1));
       print('OTP simulation sent successfully');
-      
     } catch (e) {
       print('Error sending OTP: $e');
       throw e;
     }
+  }
+
+  @override
+  void dispose() {
+    // Clear any pending authentication data when leaving login screen
+    // This ensures that if user closes app before completing OTP,
+    // they won't be auto-logged in
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(authProvider.notifier).clearPendingUser();
+    });
+    super.dispose();
   }
 
   @override

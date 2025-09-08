@@ -29,6 +29,8 @@ class AuthNotifier extends StateNotifier<AuthState?> {
   final AuthRepository authRepository;
   bool isLoading = false;
 
+  dynamic _pendingUser;
+
   AuthNotifier(this.authRepository)
       : super(AuthState(user: null, isLoading: false));
 
@@ -43,8 +45,9 @@ class AuthNotifier extends StateNotifier<AuthState?> {
       }
 
       final user = await authRepository.login(username, password);
-      await StorageUtil.saveUserData(
-          user.userName, user.userLevel, user.salesCode, user.marketingCode, user.mobileNumber ?? "");
+       _pendingUser = user;
+      // await StorageUtil.saveUserData(
+      //     user.userName, user.userLevel, user.salesCode, user.marketingCode, user.mobileNumber ?? "");
       state = AuthState(user: user, isLoading: false);
     } catch (e) {
       print('Login failed: $e');
@@ -55,6 +58,32 @@ class AuthNotifier extends StateNotifier<AuthState?> {
       state = AuthState(user: null, isLoading: false, error: errorMessage);
     } finally {
       isLoading = false;
+    }
+  }
+   Future<void> completeLoginAfterOTP() async {
+    try {
+      if (_pendingUser != null) {
+        // Now save the user data to storage after successful OTP verification
+        await StorageUtil.saveUserData(
+          _pendingUser.userName, 
+          _pendingUser.userLevel, 
+          _pendingUser.salesCode, 
+          _pendingUser.marketingCode, 
+          _pendingUser.mobileNumber ?? ""
+        );
+        
+        // Update state to fully authenticated
+        state = AuthState(user: _pendingUser, isLoading: false);
+        _pendingUser = null; // Clear pending data
+        
+        print('Login completed successfully after OTP verification');
+      } else {
+        throw Exception('No pending user data found');
+      }
+    } catch (e) {
+      print('Error completing login: $e');
+      state = AuthState(user: null, isLoading: false, error: 'Login completion failed');
+      _pendingUser = null;
     }
   }
 void clearError() {
@@ -69,5 +98,9 @@ void clearError() {
   Future<void> logout() async {
     await StorageUtil.clearUserData();
     state = AuthState(user: null, isLoading: false,error: null);
+  }
+   void clearPendingUser() {
+    _pendingUser = null;
+    state = AuthState(user: null, isLoading: false);
   }
 }

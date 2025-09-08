@@ -7,6 +7,7 @@ import 'package:ballys_reservation_app/main.dart';
 import 'package:ballys_reservation_app/models/gift/special_gift_request.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/screens/auth/login_screen.dart';
+import 'package:ballys_reservation_app/screens/auth/otpVerification_screen.dart';
 import 'package:ballys_reservation_app/screens/birthday_screen.dart';
 import 'package:ballys_reservation_app/screens/daily_walking_guests/daily_walking_guests%20_screen.dart';
 import 'package:ballys_reservation_app/screens/chat_screen.dart';
@@ -59,6 +60,29 @@ class AppNavigation {
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
                   return FadeTransition(opacity: animation, child: child);
+                },
+          );
+        },
+      ),
+      GoRoute(
+        path: '/otp-verification',
+        pageBuilder: (context, state) {
+          final Map<String, dynamic> extra = state.extra as Map<String, dynamic>;
+          return CustomTransitionPage(
+            child: OTPVerificationScreen(
+              phoneNumber: extra['phoneNumber'] as String,
+              username: extra['username'] as String,
+              password: extra['password'] as String,
+            ),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+                  return SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(1.0, 0.0),
+                      end: Offset.zero,
+                    ).animate(CurveTween(curve: Curves.easeInOut).animate(animation)),
+                    child: FadeTransition(opacity: animation, child: child),
+                  );
                 },
           );
         },

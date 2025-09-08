@@ -44,18 +44,30 @@ class AuthNotifier extends StateNotifier<AuthState?> {
 
       final user = await authRepository.login(username, password);
       await StorageUtil.saveUserData(
-          user.userName, user.userLevel, user.salesCode, user.marketingCode);
+          user.userName, user.userLevel, user.salesCode, user.marketingCode, user.mobileNumber ?? "");
       state = AuthState(user: user, isLoading: false);
     } catch (e) {
       print('Login failed: $e');
-      state = AuthState(user: null, isLoading: false);
+        String errorMessage = e.toString();
+      if (errorMessage.startsWith('Exception: ')) {
+        errorMessage = errorMessage.substring(11); // Remove "Exception: " prefix
+      }
+      state = AuthState(user: null, isLoading: false, error: errorMessage);
     } finally {
       isLoading = false;
     }
   }
-
+void clearError() {
+    if (state?.error != null) {
+      state = AuthState(
+        user: state?.user,
+        isLoading: state?.isLoading ?? false,
+        error: null,
+      );
+    }
+  }
   Future<void> logout() async {
     await StorageUtil.clearUserData();
-    state = AuthState(user: null, isLoading: false);
+    state = AuthState(user: null, isLoading: false,error: null);
   }
 }

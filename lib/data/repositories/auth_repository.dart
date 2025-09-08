@@ -93,6 +93,7 @@ class AuthRepository {
           userLevel: tableData['User_Level'].toString(),
           salesCode: tableData['Sales_Code'].toString(),
           marketingCode: tableData['Marketing_Code'].toString(),
+          mobileNumber: tableData['Mobile'].toString(),
         );
       } else if (tableData['LoginID'] != null) {
         throw Exception('Login failed: login id not found ');

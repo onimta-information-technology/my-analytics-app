@@ -4,12 +4,14 @@ class User {
   final String salesCode;
   final String marketingCode;
   final String? loginId;
+  final String? mobileNumber;
 
   User(
       {required this.userName,
       required this.userLevel,
       required this.salesCode,
       required this.marketingCode,
+      this.mobileNumber,
        this.loginId});
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -18,6 +20,7 @@ class User {
       userLevel: json['User_Level'],
       salesCode: json['Sales_Code'],
       marketingCode: json['Marketing_Code'],
+      mobileNumber: json['Mobile'],
       loginId: json['LoginID']?.toString(),
     );
   }

@@ -74,7 +74,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
           'Authorization': 'Bearer $token',
         },
         body: jsonEncode({
-          "senderFirstName": "Sterling",
+          "senderFirstName": "Anushka",
           "recipientFirstName": "BM15125",
           "message": messageText,
           "title": "New Message from $_currentUserName",

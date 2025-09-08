@@ -1,14 +1,11 @@
 import 'package:ballys_reservation_app/core/constants.dart';
-import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/providers/auth_provider.dart';
 import 'package:ballys_reservation_app/providers/guests_provider.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -22,7 +19,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   var _username = "";
   var _password = "";
   bool _showPassword = false;
-  // String _appVersion = "Loading...";
   PackageInfo _packageInfo = PackageInfo(
     appName: 'Unknown',
     packageName: 'Unknown',
@@ -44,105 +40,191 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _fetchAppVersion() async {
     final packageInfo = await PackageInfo.fromPlatform();
     setState(() {
-      // _appVersion = "${packageInfo.version}+${packageInfo.buildNumber}";
       _packageInfo = packageInfo;
     });
   }
 
+  // void _onLogin() async {
+  //   FocusScope.of(context).unfocus();
+  //   if (_formKey.currentState!.validate()) {
+  //     _formKey.currentState!.save();
+
+  //     print('Attempting login for username: $_username');
+
+  //     // First, validate username and password
+  //     await ref
+  //         .read(authProvider.notifier)
+  //         .authenticateAndLogin(_username, _password);
+
+  //     final authState = ref.read(authProvider);
+
+  //     if (authState != null && authState.user != null) {
+  //       print('Login credentials validated successfully');
+        
+  //       // If credentials are valid, get phone number and navigate to OTP screen
+  //       String? phoneNumber = await _getUserPhoneNumber();
+        
+  //       if (phoneNumber != null && phoneNumber.isNotEmpty) {
+  //         print('Phone number retrieved: $phoneNumber');
+          
+  //         // Send OTP (simulate for now since no SMS gateway)
+  //         await _sendOTP(phoneNumber);
+          
+  //         // Navigate to OTP verification screen
+  //         if (mounted) {
+  //           context.push('/otp-verification', extra: {
+  //             'phoneNumber': phoneNumber,
+  //             'username': _username,
+  //             'password': _password,
+  //           });
+  //         }
+  //       } else {
+  //         // If no phone number, show error
+  //         ScaffoldMessenger.of(context).showSnackBar(
+  //           const SnackBar(
+  //             content: Text('Phone number not found. Please contact support.'),
+  //           ),
+  //         );
+  //       }
+  //     } else {
+  //       print('Login failed - invalid credentials');
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(
+  //           content: Text('Login failed. Please check your credentials.'),
+  //         ),
+  //       );
+  //     }
+  //   }
+  // }
 void _onLogin() async {
   FocusScope.of(context).unfocus();
   if (_formKey.currentState!.validate()) {
     _formKey.currentState!.save();
 
+    print('Attempting login for username: $_username');
+
+    // Clear any previous errors
+    ref.read(authProvider.notifier).clearError();
+
+    // Attempt authentication and login
     await ref
         .read(authProvider.notifier)
         .authenticateAndLogin(_username, _password);
 
     final authState = ref.read(authProvider);
 
-    if (authState != null && authState.user != null) {
-      final name = await StorageUtil.getUserName();
-      final prefs = await SharedPreferences.getInstance();
-   
-      // Try to get FCM token with retry mechanism
-      String? fcmtoken = await _getFCMTokenWithRetry();
-      print('FCM Token: $fcmtoken');
-      
-      if (fcmtoken != null) {
-        await prefs.setString('FCMToken', fcmtoken);
-        
-        // Sync token with server
-        if (name != null) {
-          await _syncTokenWithServer(name, fcmtoken);
-        }
-      } else {
-        print('FCM Token is null - will retry on token refresh');
-        // Set up token refresh listener for when token becomes available
-        _setupTokenRefreshListener(name);
+    if (authState != null) {
+      // Check if there's an error and display it
+      if (authState.error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authState.error!),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        );
+        return; // Don't proceed further if there's an error
       }
 
-      // Navigate to home on successful login
-      context.go('/home');
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Login failed. Please check your credentials.'),
-        ),
-      );
+      // If no error and user is authenticated, proceed with OTP flow
+      if (authState.user != null) {
+        print('Login credentials validated successfully');
+        
+        // If credentials are valid, get phone number and navigate to OTP screen
+        String? phoneNumber = await _getUserPhoneNumber();
+        
+        if (phoneNumber != null && phoneNumber.isNotEmpty) {
+          print('Phone number retrieved: $phoneNumber');
+          
+          // Send OTP (simulate for now since no SMS gateway)
+          try {
+            await _sendOTP(phoneNumber);
+            
+            // Navigate to OTP verification screen
+            if (mounted) {
+              context.push('/otp-verification', extra: {
+                'phoneNumber': phoneNumber,
+                'username': _username,
+                'password': _password,
+              });
+            }
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to send OTP: ${e.toString()}'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        } else {
+          // If no phone number, show error
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Phone number not found. Please contact support.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
     }
   }
 }
-
-
-Future<String?> _getFCMTokenWithRetry({int maxRetries = 3}) async {
-  for (int i = 0; i < maxRetries; i++) {
+  // Get user's phone number from your user data
+  Future<String?> _getUserPhoneNumber() async {
     try {
-      String? token = await FirebaseMessaging.instance.getToken();
-      if (token != null) return token;
+      // Replace this with your actual method to get user phone number
+      // This could be from your auth provider, API call, or stored data
       
-      // Wait before retry
-      await Future.delayed(Duration(seconds: 1 + i));
+      // For now, return a sample phone number
+      // You should replace this with actual phone number retrieval logic
+      final mobile= await StorageUtil.getMobileNumber();
+      return mobile; // Sample phone number
+      
+      // Example of how you might get it from your auth state:
+      // final authState = ref.read(authProvider);
+      // return authState?.user?.phoneNumber;
+      
+      // Or from an API call:
+      // final userData = await FirebaseApiService.getUserData(_username);
+      // return userData['phoneNumber'];
+      
     } catch (e) {
-      print('FCM Token fetch attempt ${i + 1} failed: $e');
-      if (i == maxRetries - 1) return null;
-      await Future.delayed(Duration(seconds: 1 + i));
+      print('Error getting phone number: $e');
+      return null;
     }
   }
-  return null;
-}
 
-// Setup listener for token refresh
-void _setupTokenRefreshListener(String? name) {
-  FirebaseMessaging.instance.onTokenRefresh.listen((String token) async {
-    print('FCM Token refreshed: $token');
-    
-    // Save the new token
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('FCMToken', token);
-    
-    // Sync with server
-    if (name != null) {
-      await _syncTokenWithServer(name, token);
+  // Send OTP to user's phone (simulate for now)
+  Future<void> _sendOTP(String phoneNumber) async {
+    try {
+      // Since you don't have SMS gateway yet, this is just a placeholder
+      // Replace this with your actual SMS service integration
+      
+      print('Sending OTP to: $phoneNumber');
+      
+      // Example of how you might integrate with an SMS service:
+      /*
+      await FirebaseApiService.sendOTP({
+        'phoneNumber': phoneNumber,
+        'username': _username,
+      });
+      */
+      
+      // For now, just simulate a delay
+      await Future.delayed(const Duration(seconds: 1));
+      print('OTP simulation sent successfully');
+      
+    } catch (e) {
+      print('Error sending OTP: $e');
+      throw e;
     }
-  }).onError((err) {
-    print('FCM Token refresh error: $err');
-  });
-}
-
-// Separate method for server sync
-Future<void> _syncTokenWithServer(String name, String token) async {
-  try {
-    var result = await FirebaseApiService.syncFmcToken(name, token);
-    
-    if (result['success'] == true) {
-      print('FCM Token sent to server successfully: ${result['data']}');
-    } else {
-      print('Failed to send FCM Token: ${result['error']}');
-    }
-  } catch (e) {
-    print('Error syncing FCM token with server: $e');
   }
-}
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

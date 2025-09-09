@@ -30,6 +30,10 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
   List<GuestSearchResponse> guests = [];
 
   final TextEditingController _memberIdController = TextEditingController();
+  String _selectedPrefix = "BM"; // Default prefix
+
+  // List of available prefixes
+  final List<String> _prefixes = ["BM", "BL", "BN"];
 
   List<Guest> originalMembers = [];
   List<Guest> inactiveMembers = [];
@@ -98,9 +102,11 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
 
     String searchTerm = "";
 
-    searchTerm = _memberIdController.text;
+    // Combine prefix with the typed number
+    String fullMemberId = "$_selectedPrefix ${_memberIdController.text}";
+    searchTerm = fullMemberId;
 
-    if (searchTerm.length < 3) return;
+    if (_memberIdController.text.length < 1) return;
 
     setState(() {
       _isLoading = true;
@@ -141,14 +147,86 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
     "SILVER": "assets/images/ratings/SILVER.png",
   };
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildMemberIdInput() {
     final FocusNode _memberIdFocusNode = FocusNode();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _memberIdFocusNode.unfocus();
-    });
+    return Row(
+      children: [
+        // Prefix Dropdown
+        Container(
+          height: 56, // Match TextFormField height
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(4),
+              bottomLeft: Radius.circular(4),
+            ),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedPrefix,
+              items: _prefixes.map((String prefix) {
+                return DropdownMenuItem<String>(
+                  value: prefix,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                    child: Text(
+                      prefix,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                if (newValue != null) {
+                  setState(() {
+                    _selectedPrefix = newValue;
+                  });
+                }
+              },
+              icon: const Icon(Icons.arrow_drop_down),
+              iconSize: 24,
+              elevation: 8,
+              style: const TextStyle(color: Colors.black),
+              dropdownColor: Colors.white,
+            ),
+          ),
+        ),
+        // Member ID Input Field
+        Expanded(
+          child: TextFormField(
+            keyboardType: const TextInputType.numberWithOptions(),
+            autofocus: false,
+            focusNode: _memberIdFocusNode,
+            controller: _memberIdController,
+            decoration: InputDecoration(
+              labelText: "Member ID",
+              //hintText: "001, 003, 0002...",
+              border: const OutlineInputBorder(
+                borderRadius: BorderRadius.only(
+                  topRight: Radius.circular(4),
+                  bottomRight: Radius.circular(4),
+                ),
+              ),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.search),
+                onPressed: () {
+                  FocusScope.of(context).requestFocus(FocusNode());
+                  _openMemberSearchBottomSheet(8002);
+                },
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Members'),
@@ -166,24 +244,8 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                     padding: const EdgeInsets.all(8.0),
                     child: Column(
                       children: [
-                        TextFormField(
-                          keyboardType: const TextInputType.numberWithOptions(),
-                          autofocus: false,
-                          focusNode: _memberIdFocusNode,
-                          controller: _memberIdController,
-                          decoration: InputDecoration(
-                            labelText: "Member ID",
-                            border: const OutlineInputBorder(),
-                            suffixIcon: IconButton(
-                              icon: const Icon(Icons.search),
-                              onPressed: () {
-                                FocusScope.of(context)
-                                    .requestFocus(FocusNode());
-                                _openMemberSearchBottomSheet(8002);
-                              },
-                            ),
-                          ),
-                        ),
+                        _buildMemberIdInput(),
+                        const SizedBox(height: 8),
                         SizedBox(
                           height: MediaQuery.of(context).size.height - 220,
                           child: ListView.builder(
@@ -199,13 +261,14 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                                           mid: guest.mid,
                                           memberName: guest.mName,
                                           country: "",
-                                          lastVisitDate: "1990-01-01",
+                                          lastVisitDate: guest.lvd.toString(),
                                           age: 0,
                                           gRating: "",
                                           mGroup: "",
-                                          gName: "",
+                                          gName: guest.gName ?? "",
                                         ),
                                       );
+                                      print("Guest selected: ${guest.gName}");
                                   context.push("/home/profile");
                                 },
                                 child: Card(
@@ -257,7 +320,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                 ),
               ),
             ),
-               const Watermark(),
+          const Watermark(),
         ],
       ),
     );

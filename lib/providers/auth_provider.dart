@@ -1,6 +1,7 @@
 import 'package:ballys_reservation_app/models/auth_state.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/services/api_service.dart';
 import '../utils/storage_util.dart';
@@ -32,7 +33,30 @@ class AuthNotifier extends StateNotifier<AuthState?> {
   dynamic _pendingUser;
 
   AuthNotifier(this.authRepository)
-      : super(AuthState(user: null, isLoading: false));
+      : super(AuthState(user: null, isLoading: false)){
+         _checkAppVersion();
+      }
+Future<void> _checkAppVersion() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      final currentVersion = packageInfo.version;
+
+      final savedVersion = await StorageUtil.getAppVersion();
+
+      if (savedVersion == null || savedVersion != currentVersion) {
+        // App is either newly installed OR updated
+        await StorageUtil.clearUserData();
+        await StorageUtil.saveAppVersion(currentVersion);
+
+        // Reset auth state
+        state = AuthState(user: null, isLoading: false, error: null);
+
+        print('App version changed. Cleared old data.');
+      }
+    } catch (e) {
+      print('Version check failed: $e');
+    }
+  }
 
   Future<void> authenticateAndLogin(String username, String password) async {
     isLoading = true;
@@ -60,6 +84,7 @@ class AuthNotifier extends StateNotifier<AuthState?> {
       isLoading = false;
     }
   }
+  
    Future<void> completeLoginAfterOTP() async {
     try {
       if (_pendingUser != null) {
@@ -95,6 +120,7 @@ void clearError() {
       );
     }
   }
+  
   Future<void> logout() async {
     await StorageUtil.clearUserData();
     state = AuthState(user: null, isLoading: false,error: null);

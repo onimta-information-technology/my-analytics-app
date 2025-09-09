@@ -75,7 +75,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
         },
         body: jsonEncode({
           "senderFirstName": "Anushka",
-          "recipientFirstName": "BM15125",
+          "recipientFirstName": widget.contact.firstName,
           "message": messageText,
           "title": "New Message from $_currentUserName",
           "body": messageText,

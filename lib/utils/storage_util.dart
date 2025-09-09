@@ -1,6 +1,10 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class StorageUtil {
+  static const _storage = FlutterSecureStorage();
+  static const _keyAppVersion = 'app_version';
+
   static Future<void> saveUserData(
       String userName, String userLevel, String salesCode, String marketingCode, String mobileNumber) async {
     final prefs = await SharedPreferences.getInstance();
@@ -46,5 +50,12 @@ class StorageUtil {
    static Future<String?> getMarketingCode() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('marketingCode');
+  }
+  static Future<void> saveAppVersion(String version) async {
+    await _storage.write(key: _keyAppVersion, value: version);
+  }
+
+  static Future<String?> getAppVersion() async {
+    return await _storage.read(key: _keyAppVersion);
   }
 }

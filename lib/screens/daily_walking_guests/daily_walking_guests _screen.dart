@@ -258,9 +258,10 @@ class _DailyWalkingGuestScreenState
                                         color: Constants.kPrimaryColor
                                             .withAlpha(50),
                                         padding: const EdgeInsets.all(8.0),
-                                        child: const Text(
+                                        child:  Text(
                                           "Image",
-                                          style: TextStyle(color: Colors.black),
+                                          style: TextStyle(color: Colors.black, fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,),
                                         ),
                                       ),
                                       Padding(

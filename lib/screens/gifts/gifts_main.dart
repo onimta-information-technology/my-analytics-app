@@ -20,6 +20,83 @@ class _GiftsMainScreenState extends ConsumerState<GiftsMainScreen> {
   void initState() {
     super.initState();
   }
+ void _showSpecialGiftDialog() {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text(
+          'Special Gifts',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Text(
+          'Please select the type of special gift:',
+          style: TextStyle(fontSize: 16),
+        ),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    context.go('/gifts/special-gift-requests');
+                  },
+                  style: TextButton.styleFrom(
+                    backgroundColor: const Color(0xFF4CAF50),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text('OTP Gift'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Normal Gift feature coming soon!'),
+                      ),
+                    );
+                  },
+                  style: TextButton.styleFrom(
+                    backgroundColor: const Color(0xFF2196F3),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text('Gift'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.grey[600],
+            ),
+            child: const Text('Cancel'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -83,9 +160,10 @@ class _GiftsMainScreenState extends ConsumerState<GiftsMainScreen> {
                 // SizedBox(width: 16),
                 Expanded(
                   child: GestureDetector(
-                    onTap: () {
-                      context.go('/gifts/special-gift-requests');
-                    },
+                    // onTap: () {
+                    //   context.go('/gifts/special-gift-requests');
+                    // },
+                      onTap: _showSpecialGiftDialog, 
                     child: Card(
                       child: Container(
                         decoration: BoxDecoration(

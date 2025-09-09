@@ -11,7 +11,9 @@ class AuthRepository {
   AuthRepository(this.apiService, this.storage);
 
   Future<String> authenticate() async {
+    
     try {
+       await storage.delete(key: 'access_token');
       final response = await apiService.post('Login', {
         "UserName": "BaLlY\$#Crm619",
         "PassWord": "cRm_0987_@bL",
@@ -29,7 +31,8 @@ class AuthRepository {
       }
     } catch (e) {
       print('Authentication failed with error: $e');
-      rethrow;
+      await storage.deleteAll();
+      return "";
     }
   }
 

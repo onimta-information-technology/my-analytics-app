@@ -236,12 +236,13 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
+                insetPadding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
               title: const Text('Filter'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(
-                    mainAxisSize: MainAxisSize.min,
+                   // mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(

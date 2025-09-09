@@ -16,12 +16,12 @@ import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/providers/trip_information_provider.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
-  
   const ProfileScreen({super.key});
 
   @override
@@ -258,6 +258,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                         ),
                       ),
                       const SizedBox(height: 5),
+                      Center(
+                        child: Text(
+                          "M P - ${guest.gName}",
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Color.fromARGB(255, 158, 0, 148),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 5),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -277,6 +289,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                           ),
                         ],
                       ),
+
                       if (GoRouter.of(
                                 context,
                               ).routerDelegate.currentConfiguration.fullPath ==
@@ -468,6 +481,107 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                 context,
                               ).routerDelegate.currentConfiguration.fullPath ==
                               '/gifts')
+                        // Card(
+                        //   elevation: 5,
+                        //   shape: RoundedRectangleBorder(
+                        //     borderRadius: BorderRadius.circular(12),
+                        //   ),
+                        //   child: Container(
+                        //     color: Colors.green[10],
+                        //     padding: const EdgeInsets.all(16.0),
+                        //     child: Column(
+                        //       crossAxisAlignment: CrossAxisAlignment.start,
+                        //       children: [
+                        //         const Text(
+                        //           "Send the Gift via Whatsapp",
+                        //           style: TextStyle(
+                        //             fontSize: 18,
+                        //             fontWeight: FontWeight.bold,
+                        //           ),
+                        //         ),
+                        //         const SizedBox(height: 10),
+                        //         TextField(
+                        //           controller: _whatsappNumberController,
+                        //           keyboardType: TextInputType.number,
+                        //           decoration: InputDecoration(
+                        //             border: OutlineInputBorder(
+                        //               borderRadius: BorderRadius.circular(12),
+                        //               borderSide: const BorderSide(
+                        //                 color: Colors.green,
+                        //                 width: 2.0,
+                        //               ),
+                        //             ),
+                        //             enabledBorder: OutlineInputBorder(
+                        //               borderRadius: BorderRadius.circular(12),
+                        //               borderSide: const BorderSide(
+                        //                 color: Colors.green,
+                        //                 width: 2.0,
+                        //               ),
+                        //             ),
+                        //             focusedBorder: OutlineInputBorder(
+                        //               borderRadius: BorderRadius.circular(12),
+                        //               borderSide: const BorderSide(
+                        //                 color: Colors.green,
+                        //                 width: 2.0,
+                        //               ),
+                        //             ),
+                        //             hintText: "Enter the whatsapp number",
+                        //           ),
+                        //         ),
+                        //         const SizedBox(height: 10),
+                        //         const Text(
+                        //           "Note: Please enter the whatsapp number with the country code Eg:- 94712345678, 97712333456780",
+                        //           style: TextStyle(
+                        //             fontSize: 14,
+                        //             color: Colors.grey,
+                        //           ),
+                        //         ),
+                        //         const SizedBox(height: 20),
+                        //         SizedBox(
+                        //           width: double.infinity,
+                        //           child: ElevatedButton.icon(
+                        //             onPressed: () {
+                        //               ref
+                        //                   .read(birthdayProvider.notifier)
+                        //                   .sendWhatsappMessage(
+                        //                     mname: guest.memberName,
+                        //                     whatsappNumber:
+                        //                         _whatsappNumberController.text,
+                        //                     gift: guest.gift!,
+                        //                   );
+                        //             },
+                        //             icon: Image.asset(
+                        //               'assets/images/others/whatsapp.png',
+                        //               width: 24,
+                        //               height: 24,
+                        //               color: Colors.white,
+                        //             ),
+                        //             label: const Text(
+                        //               "Send the gift",
+                        //               style: TextStyle(
+                        //                 fontSize: 16,
+                        //                 fontWeight: FontWeight.bold,
+                        //                 color: Colors.white,
+                        //               ),
+                        //             ),
+                        //             style: ElevatedButton.styleFrom(
+                        //               backgroundColor: Colors.green,
+                        //               padding: const EdgeInsets.symmetric(
+                        //                 vertical: 16,
+                        //                 horizontal: 20,
+                        //               ),
+                        //               shape: RoundedRectangleBorder(
+                        //                 borderRadius: BorderRadius.circular(12),
+                        //               ),
+                        //             ),
+                        //           ),
+                        //         ),
+                        //       ],
+                        //     ),
+                        //   ),
+                        // ),
+                        // Updated WhatsApp section in ProfileScreen
+                        // Replace the existing WhatsApp Card section with this:
                         Card(
                           elevation: 5,
                           shape: RoundedRectangleBorder(
@@ -480,7 +594,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
-                                  "Send the Gift via Whatsapp",
+                                  "Send the Gift via WhatsApp",
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
@@ -489,7 +603,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                 const SizedBox(height: 10),
                                 TextField(
                                   controller: _whatsappNumberController,
-                                  keyboardType: TextInputType.number,
+                                  keyboardType: TextInputType.phone,
                                   decoration: InputDecoration(
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(12),
@@ -512,12 +626,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                         width: 2.0,
                                       ),
                                     ),
-                                    hintText: "Enter the whatsapp number",
+                                    hintText:
+                                        "Enter WhatsApp number with country code",
+                                    //prefixText: "+",
+                                    helperText: "e.g., 94712345678",
                                   ),
                                 ),
                                 const SizedBox(height: 10),
                                 const Text(
-                                  "Note: Please enter the whatsapp number with the country code Eg:- 94712345678, 97712333456780",
+                                  "Note: Please enter the WhatsApp number with the country code\n"
+                                  "Examples: 94712345678, 971234567890",
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: Colors.grey,
@@ -527,15 +645,99 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                 SizedBox(
                                   width: double.infinity,
                                   child: ElevatedButton.icon(
-                                    onPressed: () {
-                                      ref
-                                          .read(birthdayProvider.notifier)
-                                          .sendWhatsappMessage(
-                                            mname: guest.memberName,
-                                            whatsappNumber:
-                                                _whatsappNumberController.text,
-                                            gift: guest.gift!,
+                                    onPressed: () async {
+                                      final phoneNumber =
+                                          _whatsappNumberController.text.trim();
+
+                                      // Basic validation
+                                      if (phoneNumber.isEmpty) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Please enter a WhatsApp number',
+                                            ),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                        return;
+                                      }
+
+                                      // Check if phone number is valid (at least 10 digits)
+                                      String cleanNumber = phoneNumber
+                                          .replaceAll(RegExp(r'[^\d]'), '');
+                                      if (cleanNumber.length < 10) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Please enter a valid phone number',
+                                            ),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                        return;
+                                      }
+
+                                      try {
+                                        // Show loading
+                                        EasyLoading.show(
+                                          status: 'Sending gift...',
+                                        );
+
+                                        // Send WhatsApp message
+                                        final result = await ref
+                                            .read(birthdayProvider.notifier)
+                                            .sendWhatsappMessage(
+                                              mname: guest.memberName,
+                                              whatsappNumber: phoneNumber,
+                                              gift: guest.gift!,
+                                            );
+
+                                        // Hide loading
+                                        EasyLoading.dismiss();
+
+                                        if (result == "Success") {
+                                          // Clear the text field on success
+                                          _whatsappNumberController.clear();
+
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Gift sent successfully via WhatsApp!',
+                                              ),
+                                              backgroundColor: Colors.green,
+                                            ),
                                           );
+                                        } else {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Failed to send gift: $result',
+                                              ),
+                                              backgroundColor: Colors.orange,
+                                            ),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        // Hide loading
+                                        EasyLoading.dismiss();
+
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Error: $e'),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
                                     },
                                     icon: Image.asset(
                                       'assets/images/others/whatsapp.png',
@@ -544,7 +746,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                       color: Colors.white,
                                     ),
                                     label: const Text(
-                                      "Send the gift",
+                                      "Send the Gift",
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,

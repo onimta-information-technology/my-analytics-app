@@ -270,7 +270,7 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                                     age: birthday.age,
                                     gRating: birthday.gRating,
                                     mGroup: "",
-                                    gName: "",
+                                    gName: birthday.gName,
                                     gift: birthday.gift));
                             context.push('/home/profile');
                           },

@@ -12,13 +12,12 @@ class SelectedGuestNotifier extends StateNotifier<Guest?> {
   void setSelectedGuest(Guest guest) {
     state = guest;
   }
-  void setSelectedGuestfilterdate(){
-    
-  }
-    void updateMemberInfo(String mid, String mName) {
+
+  void setSelectedGuestfilterdate() {}
+  void updateMemberInfo(String mid, String mName) {
     state = Guest(
       mid: mid,
-      memberName: mName ,
+      memberName: mName,
       country: "",
       lastVisitDate: "1990-01-01",
       age: 0,
@@ -27,6 +26,7 @@ class SelectedGuestNotifier extends StateNotifier<Guest?> {
       gName: "",
     );
   }
+
 
   Future<void> getGuestImage(int iid, String text1) async {
     try {
@@ -50,8 +50,9 @@ class SelectedGuestNotifier extends StateNotifier<Guest?> {
 //   }).toList();
 // }
 
-final flutterSecureStorageProvider =
-    Provider((ref) => const FlutterSecureStorage());
+final flutterSecureStorageProvider = Provider(
+  (ref) => const FlutterSecureStorage(),
+);
 
 final apiServiceProvider = Provider((ref) {
   final storage = ref.read(flutterSecureStorageProvider);
@@ -65,6 +66,6 @@ final guestRepositoryProvider = Provider((ref) {
 
 final selectedGuestProvider =
     StateNotifierProvider<SelectedGuestNotifier, Guest?>((ref) {
-  final guestRepository = ref.read(guestRepositoryProvider);
-  return SelectedGuestNotifier(guestRepository);
-});
+      final guestRepository = ref.read(guestRepositoryProvider);
+      return SelectedGuestNotifier(guestRepository);
+    });

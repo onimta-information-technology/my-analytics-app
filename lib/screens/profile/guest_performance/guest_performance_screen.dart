@@ -46,39 +46,36 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
   final ValueNotifier<DateTime?> endDateNotifier = ValueNotifier<DateTime?>(
     null,
   );
-  
+
   @override
-void initState() {
-  super.initState();
-  _getGuestImage();
+  void initState() {
+    super.initState();
+    _getGuestImage();
 
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    final extras = GoRouterState.of(context).extra as Map<String, dynamic>?;
-    if (extras != null) {
-      if (extras['startDateNotifier'] != null) {
-        startDateNotifier.value = DateTime.parse(extras['startDateNotifier']);
-        _dateFrom = startDateNotifier.value;
-        ref.read(dateFilterProvider.notifier).setDateFrom(_dateFrom!);
-      }
-      if (extras['endDateNotifier'] != null) {
-        endDateNotifier.value = DateTime.parse(extras['endDateNotifier']);
-        _dateTo = endDateNotifier.value;
-        ref.read(dateFilterProvider.notifier).setDateTo(_dateTo!);
-      }
-          setState(() {
-      selectedMenu = 2;
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final extras = GoRouterState.of(context).extra as Map<String, dynamic>?;
+      if (extras != null) {
+        if (extras['startDateNotifier'] != null) {
+          startDateNotifier.value = DateTime.parse(extras['startDateNotifier']);
+          _dateFrom = startDateNotifier.value;
+          ref.read(dateFilterProvider.notifier).setDateFrom(_dateFrom!);
+        }
+        if (extras['endDateNotifier'] != null) {
+          endDateNotifier.value = DateTime.parse(extras['endDateNotifier']);
+          _dateTo = endDateNotifier.value;
+          ref.read(dateFilterProvider.notifier).setDateTo(_dateTo!);
+        }
+        setState(() {
+          selectedMenu = 2;
+        });
         _performAction();
-    }
+      }
 
-    // force Trip History tab (menu = 2)
+      // force Trip History tab (menu = 2)
 
-
-    // auto-run search
-
-  });
-}
-
+      // auto-run search
+    });
+  }
 
   int selectedMenu = 1;
 
@@ -538,6 +535,18 @@ void initState() {
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
                                     fontSize: 17,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              Center(
+                                child: Text(
+                                  "M P - ${guest.gName}",
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    color: Color.fromARGB(255, 158, 0, 148),
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),

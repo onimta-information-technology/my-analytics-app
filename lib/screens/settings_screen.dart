@@ -2,7 +2,8 @@ import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart'
- hide AppMode;
+    hide AppMode;
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -15,10 +16,31 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final String _selectedFontWeight = 'Normal';
+  bool _canShowOverallData = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkUserPermissions();
+  }
+
+  Future<void> _checkUserPermissions() async {
+    final salesCode = await StorageUtil.getSalesCode();
+
+    // Set the sales code in the provider
+    if (salesCode != null) {
+      ref.read(appmodeSettingsProvider.notifier).setSalesCode(salesCode);
+    }
+
+    setState(() {
+      _canShowOverallData = salesCode == 'AD001';
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final double selectedFontSize = ref.watch(fontSettingsProvider).fontSize;
+    final appModeNotifier = ref.read(appmodeSettingsProvider.notifier);
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: Stack(
@@ -28,19 +50,45 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('App Mode', style: TextStyle(fontSize: 16.0)),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildAppModeButton(AppMode.myData, 'Show My Data'),
-                    _buildAppModeButton(
-                      AppMode.overallData,
-                      'Show Overall Data',
+                if (_canShowOverallData) ...[
+                  const Text('App Mode', style: TextStyle(fontSize: 16.0)),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildAppModeButton(AppMode.myData, 'Show My Data'),
+                      _buildAppModeButton(
+                        AppMode.overallData,
+                        'Show Overall Data',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 40),
+                ] else ...[
+                  // For regular users, only show My Data option (non-interactive)
+                  const Text('App Mode', style: TextStyle(fontSize: 16.0)),
+                  const SizedBox(height: 20),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 16,
                     ),
-                  ],
-                ),
-
+                    decoration: BoxDecoration(
+                      color: Constants.kSecondaryColor,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'Show My Data',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                ],
                 const Text(
                   'Font Size Settings',
                   style: TextStyle(fontSize: 16.0),

@@ -1,6 +1,7 @@
 
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
+import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 
 class InactiveMembersRepository {
@@ -10,7 +11,7 @@ class InactiveMembersRepository {
 
   Future<List<Guest>> getInactiveMembers(String text1, String text2) async {
     final salesCode = await StorageUtil.getSalesCode();
-
+    final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -41,6 +42,12 @@ class InactiveMembersRepository {
           "Para_Lenth": 100,
           "Para_Name": "@Text3",
           "Para_Type": "varchar"
+        },{
+          "Para_Data": deviceId,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text30",
+          "Para_Type": "varchar",
         },
       ],
       "SpName": "sp_CRM_Common_API",

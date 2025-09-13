@@ -1,6 +1,7 @@
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
+import 'package:ballys_reservation_app/utils/device_id.dart';
 
 class GuestRepository {
   final ApiService apiService;
@@ -8,6 +9,8 @@ class GuestRepository {
   GuestRepository(this.apiService);
 
   Future<List<Guest>> getGuestData(int iid, String text1) async {
+    final deviceId = await DeviceId.get();
+     print('Device ID guestdate used: $deviceId');
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -24,6 +27,13 @@ class GuestRepository {
           "Para_Lenth": 100,
           "Para_Name": "@Text1",
           "Para_Type": "varchar"
+        },
+           {
+          "Para_Data": deviceId,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text30",
+          "Para_Type": "varchar",
         },
       ],
       "SpName": "sp_CRM_Common_API",
@@ -55,22 +65,22 @@ class GuestRepository {
         }
       }
 
-      if (table1Data is List && table1Data.isNotEmpty) {
-        for (var table2 in table1Data) {
-          guestList.add(
-            Guest(
-              mid: '',
-              memberName: '',
-              country: '',
-              lastVisitDate: '',
-              age: 0,
-              gRating: '',
-              mGroup: table2['GCode'] + '0' ?? '',
-              gName: table2['GName'] ?? '',
-            ),
-          );
-        }
-      }
+      // if (table1Data is List && table1Data.isNotEmpty) {
+      //   for (var table2 in table1Data) {
+      //     guestList.add(
+      //       Guest(
+      //         mid: '',
+      //         memberName: '',
+      //         country: '',
+      //         lastVisitDate: '',
+      //         age: 0,
+      //         gRating: '',
+      //         mGroup: table2['GCode'] + '0' ?? '',
+      //         gName: table2['GName'] ?? '',
+      //       ),
+      //     );
+      //   }
+      // }
 
       if (guestList.isNotEmpty) {
         return guestList;
@@ -84,6 +94,7 @@ class GuestRepository {
   }
 
   Future<String?> fetchGuestImage(int iid, String text1) async {
+      final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -100,6 +111,13 @@ class GuestRepository {
           "Para_Lenth": 100,
           "Para_Name": "@Text1",
           "Para_Type": "varchar"
+        },
+         {
+          "Para_Data": deviceId,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text30",
+          "Para_Type": "varchar",
         },
       ],
       "SpName": "sp_CRM_Common_API",
@@ -122,6 +140,7 @@ class GuestRepository {
   }
 
   Future<List<GuestSearchResponse>> searchGuest(int iid, String text1) async {
+      final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -138,6 +157,13 @@ class GuestRepository {
           "Para_Lenth": 100,
           "Para_Name": "@Text1",
           "Para_Type": "varchar"
+        },
+        {
+          "Para_Data": deviceId,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text30",
+          "Para_Type": "varchar",
         },
       ],
       "SpName": "sp_CRM_Common_API",

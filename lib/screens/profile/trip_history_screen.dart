@@ -250,7 +250,19 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 5),
+                                 const SizedBox(height: 5),
+                              Center(
+                                child: Text(
+                                  "M P - ${guest.gName}",
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    color: Color.fromARGB(255, 158, 0, 148),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 5),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [

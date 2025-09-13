@@ -233,42 +233,87 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
               ),
             ],
           ),
+          // actions: [
+          //   TextButton(
+          //     onPressed: () => Navigator.of(context).pop(false),
+          //     style: TextButton.styleFrom(
+          //       padding: const EdgeInsets.symmetric(
+          //         horizontal: 20,
+          //         vertical: 12,
+          //       ),
+          //     ),
+          //     child: Text(
+          //       'Deny',
+          //       style: TextStyle(
+          //         color: Colors.grey[600],
+          //         fontWeight: FontWeight.w500,
+          //       ),
+          //     ),
+          //   ),
+          //   ElevatedButton(
+          //     onPressed: () => Navigator.of(context).pop(true),
+          //     style: ElevatedButton.styleFrom(
+          //       backgroundColor: Colors.orange,
+          //       foregroundColor: Colors.white,
+          //       padding: const EdgeInsets.symmetric(
+          //         horizontal: 20,
+          //         vertical: 12,
+          //       ),
+          //       shape: RoundedRectangleBorder(
+          //         borderRadius: BorderRadius.circular(8),
+          //       ),
+          //     ),
+          //     child: const Text(
+          //       'Allow',
+          //       style: TextStyle(fontWeight: FontWeight.w600),
+          //     ),
+          //   ),
+          // ],
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
-              ),
-              child: Text(
-                'No, I\'ll enter manually',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text(
-                'Yes, auto-fill',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
+  Row(
+    mainAxisAlignment: MainAxisAlignment.end,
+    children: [
+      ElevatedButton(
+        onPressed: () => Navigator.of(context).pop(false),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.red, // Red button
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 12,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+        child: const Text(
+          'Deny',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ),
+      const SizedBox(width: 12), // space between buttons
+      ElevatedButton(
+        onPressed: () => Navigator.of(context).pop(true),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.green, // Green button
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 12,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+        child: const Text(
+          'Allow',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ),
+    ],
+  ),
+],
+
         );
       },
     );

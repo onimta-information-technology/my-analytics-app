@@ -29,11 +29,20 @@ class ExGift {
 
   factory ExGift.fromJson(Map<String, dynamic> json) {
     return ExGift(
-      giftType: json['GiftType'],
-      amount: json['Amount'],
+      giftType:json['GiftType'],
+      amount: _parseToInt(json['Amount']),
       remark:  json['Remarks'],
       trDate: json['TrDate'],
     );
+  }
+  static int _parseToInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is String) {
+      return int.tryParse(value) ?? 0;
+    }
+    if (value is double) return value.toInt();
+    return 0;
   }
   Map<String, dynamic> toJson() {
     return {'GiftType': giftType, 'Amount': amount, 'Remarks': remark, 'TrDate': trDate};

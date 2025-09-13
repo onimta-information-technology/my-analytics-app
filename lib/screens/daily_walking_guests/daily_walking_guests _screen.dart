@@ -255,9 +255,11 @@ class _DailyWalkingGuestScreenState
                                     children: [
                                       Container(
                                         width: double.infinity,
+                                         height: 180,
                                         color: Constants.kPrimaryColor
                                             .withAlpha(50),
                                         padding: const EdgeInsets.all(8.0),
+                                        alignment: Alignment.centerLeft,
                                         child:  Text(
                                           "Image",
                                           style: TextStyle(color: Colors.black, fontSize: fontSettings.fontSize,
@@ -365,10 +367,13 @@ class _DailyWalkingGuestScreenState
     bool isMemberId = false,
     DailyWalkingGuest? guest,
   }) {
+     bool isMemberName = label == "Member Name";
     return TableRow(
       children: [
         Container(
           width: double.infinity,
+          //height: 66,
+          height: isMemberName ? 90 : null, 
           color: Constants.kPrimaryColor.withAlpha(50),
           padding: const EdgeInsets.all(8.0),
           child: Text(

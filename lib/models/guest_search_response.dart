@@ -9,6 +9,7 @@ class GuestSearchResponse {
   final String memImage2;
   DateTime? lvd;
   final String? gName;
+  final String? gRating;
 
   GuestSearchResponse({
     required this.mid,
@@ -17,6 +18,7 @@ class GuestSearchResponse {
     required this.memImage2,
     this.lvd,
     this.gName,
+    this.gRating,
   });
 
   factory GuestSearchResponse.fromJson(Map<String, dynamic> json) {
@@ -27,6 +29,7 @@ class GuestSearchResponse {
       memImage2: json["MemImage2"] ?? '',
       lvd: DateTime.parse(json['LVD']),
       gName: json["GName"],
+      gRating: json["G_Rating"],
     );
   }
 
@@ -38,6 +41,7 @@ class GuestSearchResponse {
       "MemImage2": memImage2,
       "LVD": lvd?.toIso8601String(),
       "GName": gName,
+      "G_Rating": gRating,
     };
   }
 

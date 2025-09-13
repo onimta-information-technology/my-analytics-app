@@ -4,6 +4,7 @@ import 'package:ballys_reservation_app/models/reservation/airport_cost_response.
 import 'package:ballys_reservation_app/models/reservation/hotel_response.dart';
 import 'package:ballys_reservation_app/models/reservation/room_category_response.dart';
 import 'package:ballys_reservation_app/models/reservation/room_type_response.dart';
+import 'package:ballys_reservation_app/utils/device_id.dart';
 
 class AirportRepository {
   final ApiService apiService;
@@ -11,6 +12,7 @@ class AirportRepository {
   AirportRepository(this.apiService);
 
   Future<List<Airport>> getAllAirports() async {
+     final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -20,6 +22,13 @@ class AirportRepository {
           "Para_Lenth": 1,
           "Para_Name": "@Iid",
           "Para_Type": "int"
+        },
+        {
+          "Para_Data": deviceId,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text30",
+          "Para_Type": "varchar",
         },
       ],
       "SpName": "sp_CRM_Common_API",
@@ -53,6 +62,7 @@ class AirportRepository {
   }
 
   Future<List<HotelResponse>> getAllHotels() async {
+     final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -62,6 +72,13 @@ class AirportRepository {
           "Para_Lenth": 1,
           "Para_Name": "@Iid",
           "Para_Type": "int"
+        },
+        {
+          "Para_Data": deviceId,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text30",
+          "Para_Type": "varchar",
         },
       ],
       "SpName": "sp_CRM_Common_API",
@@ -92,6 +109,7 @@ class AirportRepository {
 
   Future<List<RoomCategoryResponse>> getSelectedHotelRoomCategories(
       double hotelId) async {
+         final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -108,6 +126,13 @@ class AirportRepository {
           "Para_Lenth": 100,
           "Para_Name": "@Text1",
           "Para_Type": "varchar"
+        },
+        {
+          "Para_Data": deviceId,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text30",
+          "Para_Type": "varchar",
         },
       ],
       "SpName": "sp_CRM_Common_API",
@@ -138,6 +163,7 @@ class AirportRepository {
 
   Future<List<RoomTypeResponse>> getSelectedHotelCategoryRoomTypes(
       double hotelId, int categoryId) async {
+         final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -161,6 +187,13 @@ class AirportRepository {
           "Para_Lenth": 100,
           "Para_Name": "@Text2",
           "Para_Type": "varchar"
+        },
+        {
+          "Para_Data": deviceId,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text30",
+          "Para_Type": "varchar",
         },
       ],
       "SpName": "sp_CRM_Common_API",
@@ -192,6 +225,7 @@ class AirportRepository {
       {required String departureFrom,
       required String departureTo,
       required String returnTo}) async {
+         final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -222,7 +256,13 @@ class AirportRepository {
           "Para_Lenth": 100,
           "Para_Name": "@Text3",
           "Para_Type": "varchar"
-        }
+        },{
+          "Para_Data": deviceId,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text30",
+          "Para_Type": "varchar",
+        },
       ],
       "SpName": "sp_CRM_Common_API",
       "con": "1"

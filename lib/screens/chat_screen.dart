@@ -240,6 +240,7 @@ class _ChatScreenState extends State<ChatScreen>
   bool _isLoading = false;
   String? _errorMessage;
   String? _currentUserName;
+  String? _selectedContactId; // For tracking long-pressed contact
 
   @override
   void initState() {
@@ -310,6 +311,117 @@ class _ChatScreenState extends State<ChatScreen>
       print('Error creating chat: $e');
       return null;
     }
+  }
+
+  // New method to delete chat
+  Future<bool> _deleteChat(String chatId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('Token') ?? '';
+
+      final response = await http.delete(
+        Uri.parse(
+          'https://ballysnotifications.onimtaitsl.com/api/chats/$chatId',
+        ),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print('Delete chat response status: ${response.statusCode}');
+      print('Delete chat response body: ${response.body}');
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Error deleting chat: $e');
+      return false;
+    }
+  }
+
+  void _showDeleteConfirmation(ChatContact contact) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Chat'),
+          content: Text('Are you sure you want to delete the chat with ${contact.name}?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                setState(() {
+                  _selectedContactId = null; // Clear selection
+                });
+              },
+            ),
+            TextButton(
+              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                
+                // Show loading
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Row(
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        SizedBox(width: 16),
+                        Text('Deleting chat...'),
+                      ],
+                    ),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+
+                // Delete chat
+                final success = await _deleteChat(contact.chatUuid);
+                
+                // Hide loading
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                
+                if (success) {
+                  // Remove from local list
+                  setState(() {
+                    _contacts.removeWhere((c) => c.chatUuid == contact.chatUuid);
+                    _filteredContacts.removeWhere((c) => c.chatUuid == contact.chatUuid);
+                    _selectedContactId = null;
+                  });
+                  
+                  // Update cache
+                  await _saveChats();
+                  
+                  // Show success message
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Chat deleted successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else {
+                  // Show error message
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Failed to delete chat'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+                
+                setState(() {
+                  _selectedContactId = null; // Clear selection
+                });
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _fetchChatsFromApi() async {
@@ -475,104 +587,22 @@ class _ChatScreenState extends State<ChatScreen>
     final bool hasLastMessage =
         contact.lastMessage.isNotEmpty &&
         contact.lastMessage != 'No messages yet';
+    final bool isSelected = _selectedContactId == contact.id;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      elevation: 0,
-      color: Colors.transparent,
-      child: ListTile(
-        leading: Stack(
-          children: [
-            CircleAvatar(
-              backgroundColor: contact.avatarColor,
-              radius: 25,
-              child: Text(
-                contact.initials,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            if (contact.isOnline)
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: Colors.green,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                ),
-              ),
-          ],
-        ),
-        title: Text(
-          contact.name,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (hasLastMessage) ...[
-              Text(
-                contact.lastMessage,
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
-                  fontWeight: contact.unreadCount > 0
-                      ? FontWeight.w500
-                      : FontWeight.normal,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (contact.lastMessageSender != null)
-                Text(
-                  'by ${contact.lastMessageSender}',
-                  style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                ),
-            ] else
-              Text(
-                'No messages yet',
-                style: TextStyle(color: Colors.grey[600], fontSize: 14),
-              ),
-          ],
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              contact.time,
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
-            ),
-            if (contact.unreadCount > 0)
-              Container(
-                margin: const EdgeInsets.only(top: 4),
-                padding: const EdgeInsets.all(6),
-                decoration: const BoxDecoration(
-                  color: Colors.green,
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  '${contact.unreadCount}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            if (hasLastMessage && contact.unreadCount == 0)
-              const Icon(Icons.done_all, color: Colors.grey, size: 16),
-          ],
-        ),
+      elevation: isSelected ? 4 : 0,
+      color: isSelected ? Colors.red.withOpacity(0.1) : Colors.transparent,
+      child: InkWell(
         onTap: () async {
+          if (isSelected) {
+            // If selected, clear selection
+            setState(() {
+              _selectedContactId = null;
+            });
+            return;
+          }
+
           // Create chat before navigating to IndividualChatScreen
           final chatId = await _createChat(
             contact.firstName.isNotEmpty ? contact.firstName : contact.name,
@@ -605,6 +635,127 @@ class _ChatScreenState extends State<ChatScreen>
             ),
           );
         },
+        onLongPress: () {
+          setState(() {
+            _selectedContactId = contact.id;
+          });
+          
+          // Provide haptic feedback
+          // HapticFeedback.lightImpact(); // Uncomment if you want haptic feedback
+        },
+        child: ListTile(
+          leading: Stack(
+            children: [
+              CircleAvatar(
+                backgroundColor: contact.avatarColor,
+                radius: 25,
+                child: Text(
+                  contact.initials,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              if (contact.isOnline)
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          title: Text(
+            contact.name,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (hasLastMessage) ...[
+                Text(
+                  contact.lastMessage,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                    fontWeight: contact.unreadCount > 0
+                        ? FontWeight.w500
+                        : FontWeight.normal,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (contact.lastMessageSender != null)
+                  Text(
+                    'by ${contact.lastMessageSender}',
+                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                  ),
+              ] else
+                Text(
+                  'No messages yet',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                ),
+            ],
+          ),
+          trailing: isSelected
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () => _showDeleteConfirmation(contact),
+                      tooltip: 'Delete chat',
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.grey),
+                      onPressed: () {
+                        setState(() {
+                          _selectedContactId = null;
+                        });
+                      },
+                      tooltip: 'Cancel',
+                    ),
+                  ],
+                )
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      contact.time,
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                    ),
+                    if (contact.unreadCount > 0)
+                      Container(
+                        margin: const EdgeInsets.only(top: 4),
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '${contact.unreadCount}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    if (hasLastMessage && contact.unreadCount == 0)
+                      const Icon(Icons.done_all, color: Colors.grey, size: 16),
+                  ],
+                ),
+        ),
       ),
     );
   }
@@ -676,11 +827,21 @@ class _ChatScreenState extends State<ChatScreen>
 
     return RefreshIndicator(
       onRefresh: _fetchChatsFromApi,
-      child: ListView.builder(
-        itemCount: contacts.length,
-        itemBuilder: (context, index) {
-          return _buildContactCard(contacts[index]);
+      child: GestureDetector(
+        onTap: () {
+          // Clear selection when tapping outside
+          if (_selectedContactId != null) {
+            setState(() {
+              _selectedContactId = null;
+            });
+          }
         },
+        child: ListView.builder(
+          itemCount: contacts.length,
+          itemBuilder: (context, index) {
+            return _buildContactCard(contacts[index]);
+          },
+        ),
       ),
     );
   }
@@ -692,9 +853,11 @@ class _ChatScreenState extends State<ChatScreen>
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("Chats"),
+            Text(_selectedContactId != null ? "Select action" : "Chats"),
             Text(
-              "${_contacts.length} conversations",
+              _selectedContactId != null 
+                  ? "1 selected"
+                  : "${_contacts.length} conversations",
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.normal,
@@ -702,58 +865,82 @@ class _ChatScreenState extends State<ChatScreen>
             ),
           ],
         ),
-        backgroundColor: Colors.green,
+        backgroundColor: _selectedContactId != null ? Colors.red : Colors.green,
         foregroundColor: Colors.white,
-        actions: [
-          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.menu), onPressed: () {}),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchChatsFromApi,
-          ),
-          IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(100),
-          child: Container(
-            color: Colors.white,
-            child: Column(
-              children: [
-                // Search bar
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: TextField(
-                    onChanged: _filterContacts,
-                    decoration: InputDecoration(
-                      hintText: "Search chats...",
-                      prefixIcon: const Icon(Icons.search),
-                      filled: true,
-                      fillColor: Colors.grey.shade200,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(25),
-                        borderSide: BorderSide.none,
+        leading: _selectedContactId != null
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () {
+                  setState(() {
+                    _selectedContactId = null;
+                  });
+                },
+              )
+            : null,
+        actions: _selectedContactId != null
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed: () {
+                    final contact = _contacts.firstWhere(
+                      (c) => c.id == _selectedContactId,
+                    );
+                    _showDeleteConfirmation(contact);
+                  },
+                ),
+              ]
+            : [
+                IconButton(icon: const Icon(Icons.search), onPressed: () {}),
+                IconButton(icon: const Icon(Icons.menu), onPressed: () {}),
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: _fetchChatsFromApi,
+                ),
+                IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
+              ],
+        bottom: _selectedContactId == null
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(100),
+                child: Container(
+                  color: Colors.white,
+                  child: Column(
+                    children: [
+                      // Search bar
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: TextField(
+                          onChanged: _filterContacts,
+                          decoration: InputDecoration(
+                            hintText: "Search chats...",
+                            prefixIcon: const Icon(Icons.search),
+                            filled: true,
+                            fillColor: Colors.grey.shade200,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(25),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      // Tabs
+                      TabBar(
+                        controller: _tabController,
+                        indicatorColor: Colors.green,
+                        labelColor: Colors.green,
+                        unselectedLabelColor: Colors.black54,
+                        tabs: const [
+                          Tab(text: "All"),
+                          Tab(text: "Unread"),
+                          Tab(text: "Groups"),
+                          Tab(text: "Favorites"),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                // Tabs
-                TabBar(
-                  controller: _tabController,
-                  indicatorColor: Colors.green,
-                  labelColor: Colors.green,
-                  unselectedLabelColor: Colors.black54,
-                  tabs: const [
-                    Tab(text: "All"),
-                    Tab(text: "Unread"),
-                    Tab(text: "Groups"),
-                    Tab(text: "Favorites"),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
+              )
+            : null,
       ),
       body: Stack(
         children: [
@@ -784,203 +971,205 @@ class _ChatScreenState extends State<ChatScreen>
             ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.green,
-        onPressed: () async {
-          // Fetch all users when opening the modal
-          await _fetchAllUsersForNewChat();
+      floatingActionButton: _selectedContactId == null
+          ? FloatingActionButton(
+              backgroundColor: Colors.green,
+              onPressed: () async {
+                // Fetch all users when opening the modal
+                await _fetchAllUsersForNewChat();
 
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            builder: (context) {
-              return Container(
-                padding: const EdgeInsets.all(16),
-                height: MediaQuery.of(context).size.height * 0.8,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TextField(
-                      decoration: InputDecoration(
-                        hintText: "Search contacts...",
-                        prefixIcon: const Icon(Icons.search),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                        ),
-                      ),
-                      onChanged: (query) {
-                        // Implement local search in modal if needed
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      "Start New Chat",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Expanded(
-                      child: _allUsers.isEmpty
-                          ? const Center(child: Text('No contacts available'))
-                          : ListView.builder(
-                              itemCount: _allUsers.length,
-                              itemBuilder: (context, index) {
-                                final contact = _allUsers[index];
-                                return ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor: contact.avatarColor,
-                                    child: Text(
-                                      contact.initials,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                  title: Text(contact.name),
-                                  subtitle: Text(
-                                    contact.isOnline ? "Online" : "Offline",
-                                  ),
-  // Alternative approach: Use inline loading instead of modal dialog
-onTap: () async {
-  // Store the navigator for safe navigation
-  final navigator = Navigator.of(context);
-  final scaffoldMessenger = ScaffoldMessenger.of(context);
-
-  // Close the bottom sheet first
-  navigator.pop();
-
-  // Show inline loading message instead of modal
-  scaffoldMessenger.showSnackBar(
-    const SnackBar(
-      content: Row(
-        children: [
-          SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-            ),
-          ),
-          SizedBox(width: 16),
-          Text('Creating chat...'),
-        ],
-      ),
-      duration: Duration(seconds: 30), // Long duration
-      backgroundColor: Colors.blue,
-    ),
-  );
-
-  try {
-    // Create chat
-    final chatId = await _createChat(
-      contact.firstName.isNotEmpty
-          ? contact.firstName
-          : contact.name,
-    );
-
-    // Remove loading message
-    scaffoldMessenger.hideCurrentSnackBar();
-
-    // Create contact with chatId
-    final contactWithChatId = ChatContact(
-      id: contact.id,
-      chatUuid: chatId ?? contact.chatUuid ?? '',
-      name: contact.name,
-      firstName: contact.firstName.isNotEmpty
-          ? contact.firstName
-          : contact.name,
-      lastMessage: contact.lastMessage,
-      time: contact.time,
-      isOnline: contact.isOnline,
-      avatarColor: contact.avatarColor,
-      initials: contact.initials,
-      unreadCount: contact.unreadCount,
-      lastMessageTime: contact.lastMessageTime,
-      lastMessageSender: contact.lastMessageSender,
-      participants: contact.participants,
-      createdAt: contact.createdAt,
-    );
-
-    // Navigate to IndividualChatScreen
-    await navigator.push(
-      MaterialPageRoute(
-        builder: (context) => IndividualChatScreen(
-          contact: contactWithChatId,
-        ),
-      ),
-    );
-
-    // Refresh chats after returning from IndividualChatScreen
-    _fetchChatsFromApi();
-    
-  } catch (e) {
-    // Remove loading message and show error
-    scaffoldMessenger.hideCurrentSnackBar();
-    
-    print('Error in contact tap: $e');
-    
-    // Show error message
-    scaffoldMessenger.showSnackBar(
-      SnackBar(
-        content: Text('Error creating chat: $e'),
-        backgroundColor: Colors.orange,
-      ),
-    );
-    
-    // Navigate anyway with existing contact data
-    final contactWithChatId = ChatContact(
-      id: contact.id,
-      chatUuid: contact.chatUuid,
-      name: contact.name,
-      firstName: contact.firstName.isNotEmpty
-          ? contact.firstName
-          : contact.name,
-      lastMessage: contact.lastMessage,
-      time: contact.time,
-      isOnline: contact.isOnline,
-      avatarColor: contact.avatarColor,
-      initials: contact.initials,
-      unreadCount: contact.unreadCount,
-      lastMessageTime: contact.lastMessageTime,
-      lastMessageSender: contact.lastMessageSender,
-      participants: contact.participants,
-      createdAt: contact.createdAt,
-    );
-
-    await navigator.push(
-      MaterialPageRoute(
-        builder: (context) => IndividualChatScreen(
-          contact: contactWithChatId,
-        ),
-      ),
-    );
-  }
-},
-                                );
-                              },
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  builder: (context) {
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      height: MediaQuery.of(context).size.height * 0.8,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          TextField(
+                            decoration: InputDecoration(
+                              hintText: "Search contacts...",
+                              prefixIcon: const Icon(Icons.search),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
                             ),
-                    ),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text("Close"),
-                    ),
-                  ],
-                ),
-              );
-            },
-          );
-        },
-        child: const Icon(Icons.chat, color: Colors.white),
-      ),
+                            onChanged: (query) {
+                              // Implement local search in modal if needed
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            "Start New Chat",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Expanded(
+                            child: _allUsers.isEmpty
+                                ? const Center(child: Text('No contacts available'))
+                                : ListView.builder(
+                                    itemCount: _allUsers.length,
+                                    itemBuilder: (context, index) {
+                                      final contact = _allUsers[index];
+                                      return ListTile(
+                                        leading: CircleAvatar(
+                                          backgroundColor: contact.avatarColor,
+                                          child: Text(
+                                            contact.initials,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                        title: Text(contact.name),
+                                        subtitle: Text(
+                                          contact.isOnline ? "Online" : "Offline",
+                                        ),
+                                        // Alternative approach: Use inline loading instead of modal dialog
+                                        onTap: () async {
+                                          // Store the navigator for safe navigation
+                                          final navigator = Navigator.of(context);
+                                          final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+                                          // Close the bottom sheet first
+                                          navigator.pop();
+
+                                          // Show inline loading message instead of modal
+                                          scaffoldMessenger.showSnackBar(
+                                            const SnackBar(
+                                              content: Row(
+                                                children: [
+                                                  SizedBox(
+                                                    width: 20,
+                                                    height: 20,
+                                                    child: CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                                    ),
+                                                  ),
+                                                  SizedBox(width: 16),
+                                                  Text('Creating chat...'),
+                                                ],
+                                              ),
+                                              duration: Duration(seconds: 30), // Long duration
+                                              backgroundColor: Colors.blue,
+                                            ),
+                                          );
+
+                                          try {
+                                            // Create chat
+                                            final chatId = await _createChat(
+                                              contact.firstName.isNotEmpty
+                                                  ? contact.firstName
+                                                  : contact.name,
+                                            );
+
+                                            // Remove loading message
+                                            scaffoldMessenger.hideCurrentSnackBar();
+
+                                            // Create contact with chatId
+                                            final contactWithChatId = ChatContact(
+                                              id: contact.id,
+                                              chatUuid: chatId ?? contact.chatUuid ?? '',
+                                              name: contact.name,
+                                              firstName: contact.firstName.isNotEmpty
+                                                  ? contact.firstName
+                                                  : contact.name,
+                                              lastMessage: contact.lastMessage,
+                                              time: contact.time,
+                                              isOnline: contact.isOnline,
+                                              avatarColor: contact.avatarColor,
+                                              initials: contact.initials,
+                                              unreadCount: contact.unreadCount,
+                                              lastMessageTime: contact.lastMessageTime,
+                                              lastMessageSender: contact.lastMessageSender,
+                                              participants: contact.participants,
+                                              createdAt: contact.createdAt,
+                                            );
+
+                                            // Navigate to IndividualChatScreen
+                                            await navigator.push(
+                                              MaterialPageRoute(
+                                                builder: (context) => IndividualChatScreen(
+                                                  contact: contactWithChatId,
+                                                ),
+                                              ),
+                                            );
+
+                                            // Refresh chats after returning from IndividualChatScreen
+                                            _fetchChatsFromApi();
+                                            
+                                          } catch (e) {
+                                            // Remove loading message and show error
+                                            scaffoldMessenger.hideCurrentSnackBar();
+                                            
+                                            print('Error in contact tap: $e');
+                                            
+                                            // Show error message
+                                            scaffoldMessenger.showSnackBar(
+                                              SnackBar(
+                                                content: Text('Error creating chat: $e'),
+                                                backgroundColor: Colors.orange,
+                                              ),
+                                            );
+                                            
+                                            // Navigate anyway with existing contact data
+                                            final contactWithChatId = ChatContact(
+                                              id: contact.id,
+                                              chatUuid: contact.chatUuid,
+                                              name: contact.name,
+                                              firstName: contact.firstName.isNotEmpty
+                                                  ? contact.firstName
+                                                  : contact.name,
+                                              lastMessage: contact.lastMessage,
+                                              time: contact.time,
+                                              isOnline: contact.isOnline,
+                                              avatarColor: contact.avatarColor,
+                                              initials: contact.initials,
+                                              unreadCount: contact.unreadCount,
+                                              lastMessageTime: contact.lastMessageTime,
+                                              lastMessageSender: contact.lastMessageSender,
+                                              participants: contact.participants,
+                                              createdAt: contact.createdAt,
+                                            );
+
+                                            await navigator.push(
+                                              MaterialPageRoute(
+                                                builder: (context) => IndividualChatScreen(
+                                                  contact: contactWithChatId,
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        },
+                                      );
+                                    },
+                                  ),
+                          ),
+                          ElevatedButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text("Close"),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+              child: const Icon(Icons.chat, color: Colors.white),
+            )
+          : null, // Hide FAB when contact is selected
     );
   }
 }

@@ -7,6 +7,7 @@ import 'package:ballys_reservation_app/models/member/loyalty_summary.dart';
 import 'package:ballys_reservation_app/models/member/member_main_profile.dart';
 import 'package:ballys_reservation_app/models/member/member_summary.dart';
 import 'package:ballys_reservation_app/models/member/trip_history.dart';
+import 'package:ballys_reservation_app/utils/device_id.dart';
 
 class MemberProfileRepository {
   final ApiService apiService;
@@ -16,6 +17,7 @@ class MemberProfileRepository {
   Future<List<MemberMainProfile>> getMemberMainProfileDetails(
     String text1,
   ) async {
+     final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -31,6 +33,12 @@ class MemberProfileRepository {
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text1",
+          "Para_Type": "varchar",
+        },{
+          "Para_Data": deviceId,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text30",
           "Para_Type": "varchar",
         },
       ],
@@ -241,6 +249,7 @@ class MemberProfileRepository {
     required String dateFrom,
     required String dateTo,
   }) async {
+     final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -270,6 +279,12 @@ class MemberProfileRepository {
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text3",
+          "Para_Type": "varchar",
+        },{
+          "Para_Data": deviceId,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text30",
           "Para_Type": "varchar",
         },
       ],

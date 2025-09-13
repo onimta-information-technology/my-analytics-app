@@ -21,11 +21,11 @@ class MemberSearchNotifier extends StateNotifier<Guest> {
       mid: mid,
       memberName: mName ,
       country: "",
-      lastVisitDate: "1990-01-01",
+      lastVisitDate: state.lastVisitDate,
       age: 0,
-      gRating: "",
+      gRating: state.gRating,
       mGroup: "",
-      gName: "",
+      gName: state.gName,
     );
   }
 

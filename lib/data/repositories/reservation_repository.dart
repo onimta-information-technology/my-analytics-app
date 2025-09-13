@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/reservation.dart';
 import 'package:ballys_reservation_app/models/reservation/new_reservation.dart';
+import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:intl/intl.dart';
 
@@ -22,6 +23,7 @@ class ReservationRepository {
   }
 
   Future<Map<String, List<Reservation>>> getReservations() async {
+     final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -31,7 +33,13 @@ class ReservationRepository {
           "Para_Lenth": 1,
           "Para_Name": "@Iid",
           "Para_Type": "int"
-        }
+        },{
+          "Para_Data": deviceId,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text30",
+          "Para_Type": "varchar",
+        },
       ],
       "SpName": "sp_CRM_Common_API",
       "con": "1"
@@ -75,7 +83,7 @@ class ReservationRepository {
   Future<Reservation?> saveReservation(NewReservation newReservation) async {
     final salesCode = await StorageUtil.getSalesCode();
     final userName = await StorageUtil.getUserName();
-
+     final deviceId = await DeviceId.get();
     final requestBody = {
       "HasReturnData": "T",
       "Parameters": [
@@ -164,6 +172,12 @@ class ReservationRepository {
           "Para_Lenth": 100,
           "Para_Name": "@Text11",
           "Para_Type": "varchar"
+        },{
+          "Para_Data": deviceId,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text30",
+          "Para_Type": "varchar",
         },
       ],
       "SpName": "sp_CRM_Common_API",
@@ -198,7 +212,7 @@ class ReservationRepository {
   Future<Reservation?> updateReservation(NewReservation newReservation) async {
     final salesCode = await StorageUtil.getSalesCode();
     final userName = await StorageUtil.getUserName();
-
+    final deviceId = await DeviceId.get();
     final requestBody = {
       "HasReturnData": "T",
       "Parameters": [
@@ -294,6 +308,12 @@ class ReservationRepository {
           "Para_Lenth": 100,
           "Para_Name": "@Text12",
           "Para_Type": "varchar"
+        },{
+          "Para_Data": deviceId,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text30",
+          "Para_Type": "varchar",
         },
       ],
       "SpName": "sp_CRM_Common_API",

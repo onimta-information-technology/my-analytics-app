@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
+import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
 import 'package:ballys_reservation_app/providers/auth_provider.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -35,6 +36,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
   String? _actualOTP;
   bool _isSendingOTP = false;
   String? _appSignature;
+  
   //String? code; // This will be set by SMS auto-fill
   final List<TextEditingController> _otpControllers = List.generate(
     5,
@@ -85,61 +87,52 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
     try {
       print('🔧 Setting up SMS auto-fill...');
 
-      // Step 1: Get app signature
       _appSignature = await SmsAutoFill().getAppSignature;
-      print('📱 App Signature: $_appSignature');
+      print(' App Signature: $_appSignature');
 
-      // Step 2: Request SMS permission - this triggers the dialog
       try {
         String? phoneHint = await SmsAutoFill().hint;
-        print('📞 Phone hint: $phoneHint');
+        print(' Phone hint: $phoneHint');
       } catch (e) {
-        print('⚠️ Phone hint failed: $e');
+        print(' Phone hint failed: $e');
       }
 
-      // Step 3: Start listening for SMS
       await SmsAutoFill().listenForCode();
       print('👂 Started listening for SMS...');
 
-      // Step 4: Set up manual SMS listener as backup
       _setupManualSMSListener();
     } catch (e) {
-      print('❌ Error setting up SMS auto-fill: $e');
+      print(' Error setting up SMS auto-fill: $e');
     }
   }
 
   void _setupManualSMSListener() {
     try {
       _smsSubscription = SmsAutoFill().code.listen((String receivedCode) {
-        print('📩 Manual SMS listener received: $receivedCode');
+        print(' Manual SMS listener received: $receivedCode');
         if (receivedCode.isNotEmpty) {
           _handleReceivedSMS(receivedCode);
         }
       });
     } catch (e) {
-      print('❌ Error setting up manual SMS listener: $e');
+      print(' Error setting up manual SMS listener: $e');
     }
   }
 
   void _handleReceivedSMS(String receivedCode) {
     print('🔍 Processing received SMS: $receivedCode');
 
-    // Extract OTP using multiple patterns
     String extractedOTP = _extractOTPFromCode(receivedCode);
 
     if (extractedOTP.length == 5 && extractedOTP.isNotEmpty) {
       print('✅ Extracted OTP: $extractedOTP');
 
-      // Check if user has already granted/denied permission
       if (_autoFillPermissionGranted == null) {
-        // Store the pending SMS code and show permission dialog
         _pendingSMSCode = extractedOTP;
         _showAutoFillPermissionDialog(extractedOTP);
       } else if (_autoFillPermissionGranted == true) {
-        // Permission already granted, auto-fill immediately
         _fillOTPFields(extractedOTP);
       } else {
-        // Permission denied, just show a notification
         _showInfoMessage('OTP received. Please enter manually.');
       }
     } else {
@@ -270,50 +263,49 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
           //   ),
           // ],
           actions: [
-  Row(
-    mainAxisAlignment: MainAxisAlignment.end,
-    children: [
-      ElevatedButton(
-        onPressed: () => Navigator.of(context).pop(false),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.red, // Red button
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 12,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-        child: const Text(
-          'Deny',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
-      ),
-      const SizedBox(width: 12), // space between buttons
-      ElevatedButton(
-        onPressed: () => Navigator.of(context).pop(true),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.green, // Green button
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 12,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-        child: const Text(
-          'Allow',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
-      ),
-    ],
-  ),
-],
-
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red, // Red button
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'Deny',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const SizedBox(width: 12), // space between buttons
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green, // Green button
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'Allow',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          ],
         );
       },
     );
@@ -336,18 +328,20 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
   }
 
   void _fillOTPFields(String otp) {
+     
     // Fill the OTP fields
+
     for (int i = 0; i < 5; i++) {
       _otpControllers[i].text = otp[i];
     }
-
+  _otpFocusNodes[4].requestFocus();
     _currentOTP = otp;
     setState(() {});
 
-    // Show success message
+
     _showSuccessMessage('OTP auto-filled successfully!');
 
-    // Auto-verify after a short delay
+    
     Future.delayed(const Duration(milliseconds: 800), () {
       if (mounted && _currentOTP == otp) {
         _verifyOTP();
@@ -358,36 +352,36 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
   String _extractOTPFromCode(String receivedCode) {
     print('🔍 Extracting OTP from: $receivedCode');
 
-    // Match specifically: "Your OTP code is 12345"
+
     RegExp exactPattern = RegExp(r'Your OTP code is (\d{5})');
     Match? exactMatch = exactPattern.firstMatch(receivedCode);
     if (exactMatch != null) {
       return exactMatch.group(1) ?? '';
     }
 
-    // Fallback: any 5 digits
+ 
     RegExp fallbackPattern = RegExp(r'\b\d{5}\b');
     Match? fallbackMatch = fallbackPattern.firstMatch(receivedCode);
     if (fallbackMatch != null) {
       return fallbackMatch.group(0) ?? '';
     }
 
-    print('❌ No valid OTP pattern found');
+    print(' No valid OTP pattern found');
     return '';
   }
 
   // Auto-fill callback from CodeAutoFill mixin
   @override
   void codeUpdated() {
-    print('🔔 codeUpdated callback triggered');
-    print('📨 Received code: $code');
+    print('codeUpdated callback triggered');
+    print('Received code: $code');
 
     if (code != null && code!.isNotEmpty) {
       _handleReceivedSMS(code!);
     }
   }
 
-  // Send OTP via SMS gateway
+
   // Send OTP via SMS gateway
   Future<bool> _sendOTPSMS(String phoneNumber, String otp) async {
     try {
@@ -538,39 +532,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
     }
   }
 
-  // Future<void> _verifyOTP() async {
-  //   if (_currentOTP.length != 5) {
-  //     _showErrorMessage('Please enter complete OTP');
-  //     return;
-  //   }
 
-  //   if (_isVerifying) return; // Prevent multiple verification attempts
-
-  //   setState(() {
-  //     _isVerifying = true;
-  //   });
-
-  //   try {
-  //     print('🔍 Verifying OTP: $_currentOTP against $_actualOTP');
-
-  //     bool isValid = await _simulateOTPVerification(_currentOTP);
-
-  //     if (isValid) {
-  //       _showSuccessMessage('OTP verified successfully!');
-  //       await _completeLoginProcess();
-  //     } else {
-  //       _showErrorMessage('Invalid OTP. Please try again.');
-  //       _clearOTPFields();
-  //     }
-  //   } catch (e) {
-  //     _showErrorMessage('Verification failed. Please try again.');
-  //     print('❌ OTP verification error: $e');
-  //   } finally {
-  //     setState(() {
-  //       _isVerifying = false;
-  //     });
-  //   }
-  // }
   Future<void> _verifyOTP() async {
     if (_currentOTP.length != 5) {
       _showErrorMessage('Please enter complete OTP');
@@ -614,49 +576,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
     return otp == _actualOTP;
   }
 
-  // Future<void> _completeLoginProcess() async {
-  //   try {
-  //     print('🚀 Starting complete login process...');
 
-  //     await ref
-  //         .read(authProvider.notifier)
-  //         .authenticateAndLogin(widget.username, widget.password);
-
-  //     final authState = ref.read(authProvider);
-
-  //     if (authState != null && authState.user != null) {
-  //       print('✅ Authentication successful, processing FCM token...');
-
-  //       final name = await StorageUtil.getUserName();
-  //       final prefs = await SharedPreferences.getInstance();
-
-  //       String? fcmtoken = await _getFCMTokenWithRetry();
-  //       print('🔥 FCM Token after OTP verification: $fcmtoken');
-
-  //       if (fcmtoken != null) {
-  //         await prefs.setString('FCMToken', fcmtoken);
-  //         print('💾 FCM Token saved to preferences');
-
-  //         if (name != null) {
-  //           await _syncTokenWithServer(name, fcmtoken);
-  //         }
-  //       } else {
-  //         print('⚠️ FCM Token is null - will retry on token refresh');
-  //         _setupTokenRefreshListener(name);
-  //       }
-
-  //       if (mounted) {
-  //         print('🏠 Navigating to home screen...');
-  //         context.go('/home');
-  //       }
-  //     } else {
-  //       throw Exception('Authentication failed after OTP verification');
-  //     }
-  //   } catch (e) {
-  //     print('❌ Error in complete login process: $e');
-  //     _showErrorMessage('Login completion failed. Please try again.');
-  //   }
-  // }
   Future<void> _completeLoginProcess() async {
     try {
       print('🚀 Starting complete login process...');
@@ -668,6 +588,14 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
 
       if (authState != null && authState.user != null) {
         print('✅ Login completed successfully, processing FCM token...');
+
+        final salesCode = await StorageUtil.getSalesCode();
+
+        if (salesCode != null) {
+          // Set the sales code in the app mode provider
+          ref.read(appmodeSettingsProvider.notifier).setSalesCode(salesCode);
+          print('Sales code set in app mode provider: $salesCode');
+        }
 
         final name = await StorageUtil.getUserName();
         final prefs = await SharedPreferences.getInstance();

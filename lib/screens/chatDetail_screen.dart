@@ -134,7 +134,9 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
         // Show error to user
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Failed to delete message from server. Please try again.'),
+            content: Text(
+              'Failed to delete message from server. Please try again.',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -145,7 +147,9 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
       // Show error to user
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Error deleting message. Please check your connection.'),
+          content: Text(
+            'Error deleting message. Please check your connection.',
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -154,7 +158,10 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
   }
 
   // Method to send message with API call
-  Future<String?> _sendMessageWithApi(String messageText, String localMessageId) async {
+  Future<String?> _sendMessageWithApi(
+    String messageText,
+    String localMessageId,
+  ) async {
     if (_currentUserName == null) {
       print('Current user name is null');
       return null;
@@ -190,10 +197,12 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
         if (responseData['success'] == true && responseData['data'] != null) {
           final messageId = responseData['data']['messageId'];
           final chatId = responseData['data']['chatId'];
-          
+
           // Update the local message with API IDs
           setState(() {
-            final messageIndex = _messages.indexWhere((msg) => msg.id == localMessageId);
+            final messageIndex = _messages.indexWhere(
+              (msg) => msg.id == localMessageId,
+            );
             if (messageIndex != -1) {
               _messages[messageIndex] = _messages[messageIndex].copyWith(
                 apiMessageId: messageId,
@@ -202,7 +211,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
             }
           });
           _saveMessages();
-          
+
           return messageId;
         }
       } else {
@@ -306,7 +315,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
             TextButton(
               onPressed: () async {
                 Navigator.of(context).pop();
-                
+
                 // Show loading indicator
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -316,21 +325,26 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
                 );
 
                 // Find the message to get API IDs
-                final message = _messages.firstWhere((msg) => msg.id == messageId);
-                
+                final message = _messages.firstWhere(
+                  (msg) => msg.id == messageId,
+                );
+
                 // Check if message has API IDs (chatId and messageId from server)
                 if (message.apiChatId != null && message.apiMessageId != null) {
                   // Call API to delete message
-                  await _deleteMessageFromApi(message.apiChatId!, message.apiMessageId!);
+                  await _deleteMessageFromApi(
+                    message.apiChatId!,
+                    message.apiMessageId!,
+                  );
                 }
-                
+
                 // Remove from local storage regardless of API call result
                 setState(() {
                   _messages.removeWhere((message) => message.id == messageId);
                   _selectedMessageId = null;
                 });
                 _saveMessages();
-                
+
                 // Show confirmation
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -361,7 +375,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
 
   Widget _buildMessage(ChatMessage message) {
     final isSelected = _selectedMessageId == message.id;
-    
+
     return GestureDetector(
       onLongPress: () => _onMessageLongPress(message.id),
       onTap: _clearSelection,
@@ -387,7 +401,10 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
               ],
               Flexible(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: message.isMe ? Colors.green : Colors.grey[300],
                     borderRadius: BorderRadius.circular(20),
@@ -417,7 +434,11 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
                           ),
                           if (message.isMe) ...[
                             const SizedBox(width: 4),
-                            const Icon(Icons.done_all, color: Colors.white70, size: 16),
+                            const Icon(
+                              Icons.done_all,
+                              color: Colors.white70,
+                              size: 16,
+                            ),
                           ],
                         ],
                       ),
@@ -542,8 +563,8 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
           ],
         ),
         actions: [
-          IconButton(icon: const Icon(Icons.videocam), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.call), onPressed: () {}),
+          //  IconButton(icon: const Icon(Icons.videocam), onPressed: () {}),
+          // IconButton(icon: const Icon(Icons.call), onPressed: () {}),
           IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
         ],
       ),

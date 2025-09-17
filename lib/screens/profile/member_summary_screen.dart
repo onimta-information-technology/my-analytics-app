@@ -331,8 +331,16 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                     : '',
                               ),
                               readOnly: true,
+                               style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
                               decoration: InputDecoration(
                                 labelText: "Start Date",
+                                 labelStyle: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
                                 border: const OutlineInputBorder(),
                                 suffixIcon: IconButton(
                                   icon: const Icon(Icons.calendar_today),
@@ -357,8 +365,16 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                     : '',
                               ),
                               readOnly: true,
+                               style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
                               decoration: InputDecoration(
                                 labelText: "End Date",
+                                 labelStyle: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
                                 border: const OutlineInputBorder(),
                                 suffixIcon: IconButton(
                                   icon: const Icon(Icons.calendar_today),
@@ -446,6 +462,7 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                         style: TextStyle(
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
+                                          fontWeight: FontWeight.bold,
                                         ),
                                       ),
                                     ],
@@ -473,6 +490,7 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                         style: TextStyle(
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
+                                          fontWeight: FontWeight.bold,
                                         ),
                                       ),
                                     ],
@@ -497,6 +515,7 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                         style: TextStyle(
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
+                                          fontWeight: FontWeight.bold,
                                         ),
                                       ),
                                     ],

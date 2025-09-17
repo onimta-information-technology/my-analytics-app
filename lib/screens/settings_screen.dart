@@ -141,6 +141,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       child: Text(name),
     );
   }
+  
 
   Widget _buildFontWeightButton(FontWeight weight, String name) {
     return ElevatedButton(

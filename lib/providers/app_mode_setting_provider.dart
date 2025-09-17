@@ -35,38 +35,66 @@ class AppModeSettings {
 class AppModeSettingsNotifier extends StateNotifier<AppModeSettings> {
   String? _currentSalesCode;
 
-  AppModeSettingsNotifier() : super(AppModeSettings(appMode: AppMode.myData)) {
-    _loadSettings();
-  }
+  AppModeSettingsNotifier() : super(AppModeSettings(appMode: AppMode.myData));
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     
-    // Get current user's sales code from storage
-    _currentSalesCode = prefs.getString('sales_code');
-    
-    final appModeIndex = prefs.getInt('appMode_$_currentSalesCode');
-    final isFirstLogin = prefs.getBool('isFirstLogin_$_currentSalesCode') ?? true;
+    if (_currentSalesCode == null) {
+      print('Warning: Sales code not set when loading settings');
+      return;
+    }
 
-    // For AD001 users on first login, default to overallData
+    // Check if this is the first login for this user
+    final isFirstLogin = prefs.getBool('isFirstLogin_$_currentSalesCode') ?? true;
+    final savedAppModeIndex = prefs.getInt('appMode_$_currentSalesCode');
+
+    print('Loading settings for user: $_currentSalesCode');
+    print('Is first login: $isFirstLogin');
+    print('Saved app mode index: $savedAppModeIndex');
+
     if (_currentSalesCode == 'AD001' && isFirstLogin) {
+      // AD001 user logging in for the first time - set to overallData
       state = AppModeSettings(
         appMode: AppMode.overallData,
-        isFirstLogin: true,
+        isFirstLogin: false, // Mark as no longer first login
       );
-      // Mark as no longer first login
+      
+      // Save the settings immediately
+      await prefs.setInt('appMode_$_currentSalesCode', AppMode.overallData.index);
       await prefs.setBool('isFirstLogin_$_currentSalesCode', false);
-    } else {
+      
+      print('AD001 first login: Set to overallData');
+    } else if (savedAppModeIndex != null) {
+      // User has saved preferences
       state = AppModeSettings(
-        appMode: AppMode.values[appModeIndex ?? 0],
+        appMode: AppMode.values[savedAppModeIndex],
         isFirstLogin: false,
       );
+      print('Loaded saved preference: ${AppMode.values[savedAppModeIndex]}');
+    } else {
+      // Default case for other users or if no saved preference
+      state = AppModeSettings(
+        appMode: AppMode.myData,
+        isFirstLogin: false,
+      );
+      
+      // Save default setting
+      await prefs.setInt('appMode_$_currentSalesCode', AppMode.myData.index);
+      await prefs.setBool('isFirstLogin_$_currentSalesCode', false);
+      
+      print('Set default: myData');
     }
   }
 
   Future<void> _saveSettings() async {
+    if (_currentSalesCode == null) return;
+    
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('appMode_$_currentSalesCode', state.appMode.index);
+    await prefs.setBool('isFirstLogin_$_currentSalesCode', false);
+    
+    print('Saved settings: ${state.appMode} for user: $_currentSalesCode');
   }
 
   void setAppMode(AppMode mode) {
@@ -74,9 +102,12 @@ class AppModeSettingsNotifier extends StateNotifier<AppModeSettings> {
     _saveSettings();
   }
 
-  void setSalesCode(String salesCode) {
-    _currentSalesCode = salesCode;
-    _loadSettings(); // Reload settings for new user
+  void setSalesCode(String salesCode) async {
+    if (_currentSalesCode != salesCode) {
+      _currentSalesCode = salesCode;
+      print('Sales code set to: $salesCode');
+      await _loadSettings(); // Reload settings for new user
+    }
   }
 
   bool canShowOverallData() {

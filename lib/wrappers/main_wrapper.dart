@@ -24,13 +24,11 @@ class _MainScreenState extends State<MainWrapper> {
     });
     if (index == 3) {
       showModalBottomSheet(
-          context: context,
-          builder: (BuildContext context) {
-            return const SizedBox(
-              height: 200,
-              child: SettingsPopupMenu(),
-            );
-          });
+        context: context,
+        builder: (BuildContext context) {
+          return const SizedBox(height: 200, child: SettingsPopupMenu());
+        },
+      );
     } else {
       context.go(_locations[index]);
     }
@@ -38,38 +36,30 @@ class _MainScreenState extends State<MainWrapper> {
 
   @override
   Widget build(BuildContext context) {
+    final String currentLocation = GoRouterState.of(context).uri.toString();
+    final bool isChatScreen = currentLocation == "/chats";
     return Scaffold(
       body: widget.child,
-      bottomNavigationBar: BottomNavigationBar(
+      bottomNavigationBar: isChatScreen
+          ? null
+          : BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(
-              Icons.home,
-              size: 30.0,
-            ),
+            icon: Icon(Icons.home, size: 30.0),
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(
-              Icons.menu,
-              size: 30.0,
-            ),
+            icon: Icon(Icons.menu, size: 30.0),
             label: 'Menu',
           ),
           BottomNavigationBarItem(
-            icon: Icon(
-              Icons.chat,
-              size: 30.0,
-            ),
+            icon: Icon(Icons.chat, size: 30.0),
             label: 'Chat',
           ),
           BottomNavigationBarItem(
-            icon: Icon(
-              Icons.settings,
-              size: 30.0,
-            ),
+            icon: Icon(Icons.settings, size: 30.0),
             label: 'Settings',
           ),
         ],

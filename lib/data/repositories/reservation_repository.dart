@@ -23,7 +23,7 @@ class ReservationRepository {
   }
 
   Future<Map<String, List<Reservation>>> getReservations() async {
-     final deviceId = await DeviceId.get();
+    final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -32,8 +32,9 @@ class ReservationRepository {
           "Para_Direction": "Input",
           "Para_Lenth": 1,
           "Para_Name": "@Iid",
-          "Para_Type": "int"
-        },{
+          "Para_Type": "int",
+        },
+        {
           "Para_Data": deviceId,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
@@ -42,7 +43,7 @@ class ReservationRepository {
         },
       ],
       "SpName": "sp_CRM_Common_API",
-      "con": "1"
+      "con": "1",
     });
 
     if (response['CommonResult'] != null &&
@@ -83,7 +84,7 @@ class ReservationRepository {
   Future<Reservation?> saveReservation(NewReservation newReservation) async {
     final salesCode = await StorageUtil.getSalesCode();
     final userName = await StorageUtil.getUserName();
-     final deviceId = await DeviceId.get();
+    final deviceId = await DeviceId.get();
     final requestBody = {
       "HasReturnData": "T",
       "Parameters": [
@@ -92,87 +93,90 @@ class ReservationRepository {
           "Para_Direction": "Input",
           "Para_Lenth": 1,
           "Para_Name": "@Iid",
-          "Para_Type": "int"
+          "Para_Type": "int",
         },
         {
           "Para_Data": newReservation.bmNumber,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text1",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
           "Para_Data": newReservation.guestName,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text2",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
           "Para_Data": jsonEncode(newReservation.roomDetails),
           "Para_Direction": "Input",
           "Para_Lenth": 5000,
           "Para_Name": "@Text3",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
           "Para_Data": newReservation.noOfNights.toString(),
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text4",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
-          "Para_Data":
-              formatArrivalAndDepartureDate(newReservation.arrivalDate),
+          "Para_Data": formatArrivalAndDepartureDate(
+            newReservation.arrivalDate,
+          ),
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text5",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
-          "Para_Data":
-              formatArrivalAndDepartureDate(newReservation.departureDate),
+          "Para_Data": formatArrivalAndDepartureDate(
+            newReservation.departureDate,
+          ),
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text6",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
           "Para_Data": newReservation.hasAirTicketReservation,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text7",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
           "Para_Data": newReservation.remarks,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text8",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
           "Para_Data": jsonEncode(newReservation.airTicketDetails),
           "Para_Direction": "Input",
           "Para_Lenth": 5000,
           "Para_Name": "@Text9",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
           "Para_Data": salesCode,
           "Para_Direction": "Input",
           "Para_Lenth": 1000,
           "Para_Name": "@Text10",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
           "Para_Data": userName,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text11",
-          "Para_Type": "varchar"
-        },{
+          "Para_Type": "varchar",
+        },
+        {
           "Para_Data": deviceId,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
@@ -181,7 +185,7 @@ class ReservationRepository {
         },
       ],
       "SpName": "sp_CRM_Common_API",
-      "con": "1"
+      "con": "1",
     };
 
     print("################ requestBody #####################");
@@ -221,94 +225,97 @@ class ReservationRepository {
           "Para_Direction": "Input",
           "Para_Lenth": 1,
           "Para_Name": "@Iid",
-          "Para_Type": "int"
+          "Para_Type": "int",
         },
         {
           "Para_Data": newReservation.bmNumber,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text1",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
           "Para_Data": newReservation.guestName,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text2",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
           "Para_Data": jsonEncode(newReservation.roomDetails),
           "Para_Direction": "Input",
           "Para_Lenth": 5000,
           "Para_Name": "@Text3",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
           "Para_Data": newReservation.noOfNights.toString(),
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text4",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
-          "Para_Data":
-              formatArrivalAndDepartureDate(newReservation.arrivalDate),
+          "Para_Data": formatArrivalAndDepartureDate(
+            newReservation.arrivalDate,
+          ),
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text5",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
-          "Para_Data":
-              formatArrivalAndDepartureDate(newReservation.departureDate),
+          "Para_Data": formatArrivalAndDepartureDate(
+            newReservation.departureDate,
+          ),
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text6",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
           "Para_Data": newReservation.hasAirTicketReservation,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text7",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
           "Para_Data": newReservation.remarks,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text8",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
           "Para_Data": jsonEncode(newReservation.airTicketDetails),
           "Para_Direction": "Input",
           "Para_Lenth": 5000,
           "Para_Name": "@Text9",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
           "Para_Data": salesCode,
           "Para_Direction": "Input",
           "Para_Lenth": 1000,
           "Para_Name": "@Text10",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
           "Para_Data": userName,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text11",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
           "Para_Data": newReservation.reservationNo,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text12",
-          "Para_Type": "varchar"
-        },{
+          "Para_Type": "varchar",
+        },
+        {
           "Para_Data": deviceId,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
@@ -317,7 +324,7 @@ class ReservationRepository {
         },
       ],
       "SpName": "sp_CRM_Common_API",
-      "con": "1"
+      "con": "1",
     };
 
     print("################ requestBody #####################");
@@ -344,12 +351,107 @@ class ReservationRepository {
       throw Exception('Unexpected response structure');
     }
   }
+  // Add this method to your ReservationRepository class
+
+  Future<bool> approveOrRejectReservation({
+    required String memberID,
+    required String reservationNo,
+    required String currentUName,
+    required String status,
+    required String remarks,
+  }) async {
+    final deviceId = await DeviceId.get();
+
+    final requestBody = {
+      "HasReturnData": "T",
+      "Parameters": [
+        {
+          "Para_Data": 8014,
+          "Para_Direction": "Input",
+          "Para_Lenth": 1,
+          "Para_Name": "@Iid",
+          "Para_Type": "int",
+        },
+        {
+          "Para_Data": memberID,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text1",
+          "Para_Type": "varchar",
+        },
+        {
+          "Para_Data": reservationNo,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text12",
+          "Para_Type": "varchar",
+        },
+        {
+          "Para_Data": currentUName,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text13",
+          "Para_Type": "varchar",
+        },
+        {
+          "Para_Data": status,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text14",
+          "Para_Type": "varchar",
+        },
+        {
+          "Para_Data": remarks,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text15",
+          "Para_Type": "varchar",
+        },
+        {
+          "Para_Data": deviceId,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text30",
+          "Para_Type": "varchar",
+        },
+      ],
+      "SpName": "sp_CRM_Common_API",
+      "con": "1",
+    };
+
+    print("################ Approve/Reject Request #####################");
+    // print("Member ID: $memberID");
+    // print("Reservation No: $reservationNo");
+    // print("Current User: $currentUName");
+    // print("Status: $status");
+    // print("Remarks: $remarks");
+    // print("Device ID: $deviceId");
+    printLargeBody(jsonEncode(requestBody));
+    print("#####################################");
+
+    try {
+      final response = await apiService.post('CommonExecute', requestBody);
+
+      if (response['CommonResult'] != null) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (e) {
+      print('Error in approveOrRejectReservation: $e');
+      return false;
+    }
+  }
 
   void printLargeBody(String body) {
     const chunkSize = 1024;
     for (int i = 0; i < body.length; i += chunkSize) {
-      print(body.substring(
-          i, i + chunkSize > body.length ? body.length : i + chunkSize));
+      print(
+        body.substring(
+          i,
+          i + chunkSize > body.length ? body.length : i + chunkSize,
+        ),
+      );
     }
   }
 

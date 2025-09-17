@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/components/bottom_sheets/member_search-new_sheet.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
@@ -35,6 +36,8 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
   final TextEditingController _arrivalDateController = TextEditingController();
   final TextEditingController _departureDateController =
       TextEditingController();
+  final TextEditingController _memberIdNumberController =
+      TextEditingController();
 
   String? _selectedGift;
   String? _chipType;
@@ -44,7 +47,9 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _showGuestData = false;
+  bool _isMemberSelected = false;
 
+  String _selectedPrefix = "BM";
   @override
   void initState() {
     super.initState();
@@ -83,7 +88,27 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
       searchTerm = _memberNameController.text;
     }
 
-    if (searchTerm.length < 3) return;
+    if (searchTerm.length < 3) {
+      // Show modal with empty results and let user search from within modal
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        builder: (BuildContext context) {
+          return MemberNewSearchBottomSheet(
+            guests: [], // Empty list initially
+            initialSearchTerm: searchTerm,
+            searchIid: iid,
+            // onSearch: (String term, int searchIid) async {
+            //   await _performGuestSearch(term, searchIid);
+            // },
+          );
+        },
+      );
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -106,10 +131,20 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
         ),
         builder: (BuildContext context) {
-          return MemberSearchBottomSheet(guests: guests);
+          return MemberNewSearchBottomSheet(
+            guests: guests,
+            initialSearchTerm: searchTerm,
+            searchIid: iid,
+            // onSearch: (String term, int searchIid) async {
+            //   await _performGuestSearch(term, searchIid);
+            // },
+          );
         },
       );
     } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
       print("Error searching guests: $e");
     }
   }
@@ -200,6 +235,19 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
         _memberIdController.text != newReservation.mid) {
       _memberIdController.text = newReservation.mid;
       _memberNameController.text = newReservation.memberName;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {
+          _isMemberSelected = true;
+        });
+      });
+    }
+    if (newReservation.mid == "" && _isMemberSelected) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {
+          _isMemberSelected = false;
+        });
+      });
     }
 
     return Scaffold(
@@ -238,6 +286,10 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                             fontWeight: fontSettings.fontWeight,
                           ),
                           border: const OutlineInputBorder(),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12.0,
+                            vertical: -5.0,
+                          ),
                           suffixIcon: const Icon(Icons.calendar_today),
                         ),
                         onTap: () =>
@@ -255,6 +307,10 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                             fontWeight: fontSettings.fontWeight,
                           ),
                           border: const OutlineInputBorder(),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12.0,
+                            vertical: -5.0,
+                          ),
                           suffixIcon: const Icon(Icons.calendar_today),
                         ),
                         onTap: () => _pickDateTime(context, _toDateController),
@@ -267,7 +323,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                               keyboardType:
                                   const TextInputType.numberWithOptions(),
                               autofocus: false,
-                              controller: _memberIdController,
+                              controller: _memberIdNumberController,
                               style: _inputTextStyle(fontSettings),
                               decoration: InputDecoration(
                                 labelText: "Member ID",
@@ -276,50 +332,97 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                   fontWeight: fontSettings.fontWeight,
                                 ),
                                 border: const OutlineInputBorder(),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12.0,
+                                  vertical: -5.0,
+                                ),
+                                prefixIcon: Padding(
+                                  padding: const EdgeInsets.only(
+                                    left: 12,
+                                    right: 4,
+                                  ),
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      value: _selectedPrefix,
+                                      style: TextStyle(
+                                        fontSize: fontSettings.fontSize,
+                                        fontWeight: fontSettings.fontWeight,
+                                        color: Colors.black,
+                                      ),
+                                      items: ["BM", "BL", "BN"].map((prefix) {
+                                        return DropdownMenuItem(
+                                          value: prefix,
+                                          child: Text(
+                                            prefix,
+                                            style: TextStyle(
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                      onChanged: (value) {
+                                        setState(() {
+                                          _selectedPrefix = value!;
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ),
                                 suffixIcon: IconButton(
                                   icon: const Icon(Icons.search),
                                   onPressed: () {
                                     FocusScope.of(context).unfocus();
+                                    _memberIdController.text =
+                                        '$_selectedPrefix${_memberIdNumberController.text}';
                                     _openMemberSearchBottomSheet(8002);
                                   },
                                 ),
                               ),
+
                               onChanged: (value) {
                                 _memberNameController.text = '';
                                 ref
                                     .read(memberSearchProvider.notifier)
                                     .resetState();
+                                setState(() {
+                                  _isMemberSelected = false;
+                                });
                               },
                             ),
                           ),
                           const SizedBox(width: 16.0),
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              context.push('/home/profile');
-                            },
-                            icon: const Icon(Icons.person),
-                            label: Text(
-                              "Guest Details",
-                              style: TextStyle(
-                                fontSize: fontSettings.fontSize,
-                                fontWeight: fontSettings.fontWeight,
-                              ),
-                            ),
+                          ElevatedButton(
+                            onPressed: _isMemberSelected
+                                ? () {
+                                    // Only navigate when member is selected
+                                    context.push('/home/profile');
+                                  }
+                                : null, // Disable button when no member selected
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color.fromARGB(
-                                255,
-                                70,
-                                70,
-                                70,
-                              ),
-                              foregroundColor: Colors.white,
+                              backgroundColor: _isMemberSelected
+                                  ? const Color.fromARGB(255, 70, 70, 70)
+                                  : Colors
+                                        .grey
+                                        .shade300, // Different color when disabled
+                              foregroundColor: _isMemberSelected
+                                  ? Colors.white
+                                  : Colors.grey.shade600,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               padding: const EdgeInsets.symmetric(
                                 vertical: 16,
-                                horizontal: 20,
+                                horizontal: 14,
                               ),
+                            ),
+                            child: Icon(
+                              Icons.person_search,
+                              size: 25,
+                              color: _isMemberSelected
+                                  ? Colors.white
+                                  : Colors.grey.shade600,
                             ),
                           ),
                         ],
@@ -336,6 +439,10 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                             fontWeight: fontSettings.fontWeight,
                           ),
                           border: const OutlineInputBorder(),
+                           contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12.0,
+                        vertical: -5.0,
+                      ),
                           suffixIcon: IconButton(
                             icon: const Icon(Icons.search),
                             onPressed: () {
@@ -347,6 +454,9 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                         onChanged: (value) {
                           _memberIdController.text = '';
                           ref.read(memberSearchProvider.notifier).resetState();
+                          setState(() {
+                            _isMemberSelected = false;
+                          });
                         },
                       ),
                       const SizedBox(height: 16.0),
@@ -590,10 +700,14 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                               decoration: InputDecoration(
                                 labelText: "Arrival Date *",
                                 labelStyle: TextStyle(
-                                  fontSize: fontSettings.fontSize-2,
+                                  fontSize: fontSettings.fontSize - 2,
                                   fontWeight: fontSettings.fontWeight,
                                 ),
                                 border: const OutlineInputBorder(),
+                                 contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12.0,
+                        vertical: -5.0,
+                      ),
                                 suffixIcon: const Icon(Icons.calendar_today),
                               ),
                               validator: (v) => v == null || v.isEmpty
@@ -612,10 +726,14 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                               decoration: InputDecoration(
                                 labelText: "Departure Date *",
                                 labelStyle: TextStyle(
-                                  fontSize: fontSettings.fontSize-2,
+                                  fontSize: fontSettings.fontSize - 2,
                                   fontWeight: fontSettings.fontWeight,
                                 ),
                                 border: const OutlineInputBorder(),
+                                 contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12.0,
+                        vertical: -5.0,
+                      ),
                                 suffixIcon: const Icon(Icons.calendar_today),
                               ),
                               validator: (v) => v == null || v.isEmpty
@@ -676,6 +794,10 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                   ),
 
                                   border: const OutlineInputBorder(),
+                                   contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12.0,
+                        vertical: -5.0,
+                      ),
                                 ),
                                 validator: (v) => v == null || v.isEmpty
                                     ? "Gift required"
@@ -694,16 +816,26 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                 fontWeight: fontSettings.fontWeight,
                               ),
                               border: const OutlineInputBorder(),
+                               contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12.0,
+                        vertical: -5.0,
+                      ),
                             ),
                             value: _chipType,
                             items: const [
                               DropdownMenuItem(
                                 value: "OTP Chips",
-                                child: Text("OTP Chips",style: TextStyle(color: Colors.black)),
+                                child: Text(
+                                  "OTP Chips",
+                                  style: TextStyle(color: Colors.black),
+                                ),
                               ),
                               DropdownMenuItem(
                                 value: "NC Chips",
-                                child: Text("NC Chips",style: TextStyle(color: Colors.black), ),
+                                child: Text(
+                                  "NC Chips",
+                                  style: TextStyle(color: Colors.black),
+                                ),
                               ),
                             ],
                             onChanged: (value) {
@@ -728,6 +860,10 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                 fontWeight: fontSettings.fontWeight,
                               ),
                               border: const OutlineInputBorder(),
+                               contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12.0,
+                        vertical: -5.0,
+                      ),
                             ),
                             keyboardType: TextInputType.number,
                             inputFormatters: <TextInputFormatter>[
@@ -807,26 +943,36 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                   // print(ok);
 
                                   if (!mounted) return;
-if (ok) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text("Gift request sent successfully"),
-    ),
-  );
-  
-  // Reset providers
-  ref.read(memberSearchProvider.notifier).resetState();
-  ref.read(newReservationProvider.notifier).resetState();
-  
-  // Navigate back and return success result
-  Navigator.of(context).pop(true); // Pass true to indicate success
-} else {
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text("Failed to send gift request"),
-    ),
-  );
-}
+                                  if (ok) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          "Gift request sent successfully",
+                                        ),
+                                      ),
+                                    );
+
+                                    // Reset providers
+                                    ref
+                                        .read(memberSearchProvider.notifier)
+                                        .resetState();
+                                    ref
+                                        .read(newReservationProvider.notifier)
+                                        .resetState();
+
+                                    // Navigate back and return success result
+                                    Navigator.of(context).pop(
+                                      true,
+                                    ); // Pass true to indicate success
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          "Failed to send gift request",
+                                        ),
+                                      ),
+                                    );
+                                  }
                                 }
                               : null,
 

@@ -4,6 +4,7 @@ import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/gift/special_gift_request.dart';
+import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/member_search_provider.dart';
@@ -298,6 +299,10 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             fontWeight: fontSettings.fontWeight,
                           ),
                           border: const OutlineInputBorder(),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12.0,
+                            vertical: -5.0,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 16.0),
@@ -312,6 +317,10 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             fontWeight: fontSettings.fontWeight,
                           ),
                           border: const OutlineInputBorder(),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12.0,
+                            vertical: -5.0,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 16.0),
@@ -332,6 +341,10 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                   fontWeight: fontSettings.fontWeight,
                                 ),
                                 border: const OutlineInputBorder(),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12.0,
+                                  vertical: -5.0,
+                                ),
                                 // suffixIcon: IconButton(
                                 //   icon: const Icon(Icons.search),
                                 //   onPressed: () {
@@ -349,57 +362,164 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             ),
                           ),
                           const SizedBox(width: 16.0),
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              final memberId = _memberIdController.text.trim();
-                              final memberName = _memberNameController.text
-                                  .trim();
+                          //     ElevatedButton.icon(
+                          //       onPressed: () {
+                          //         final memberId = _memberIdController.text.trim();
+                          //         final memberName = _memberNameController.text
+                          //             .trim();
 
-                              if (memberId.isEmpty && memberName.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      "Please enter Member ID or Name",
-                                    ),
-                                  ),
-                                );
-                                return;
-                              }
+                          //         if (memberId.isEmpty && memberName.isEmpty) {
+                          //           ScaffoldMessenger.of(context).showSnackBar(
+                          //             const SnackBar(
+                          //               content: Text(
+                          //                 "Please enter Member ID or Name",
+                          //               ),
+                          //             ),
+                          //           );
+                          //           return;
+                          //         }
 
-                              ref
-                                  .read(selectedGuestProvider.notifier)
-                                  .updateMemberInfo(memberId, memberName);
+                          //         ref
+                          //             .read(selectedGuestProvider.notifier)
+                          //             .updateMemberInfo(memberId, memberName);
 
-                              print(memberId);
-                              context.push('/home/profile');
-                            },
-                            icon: const Icon(Icons.person),
-                            label: Text(
-                              "Guest Details",
-                              style: TextStyle(
-                                fontSize: fontSettings.fontSize,
-                                fontWeight: fontSettings.fontWeight,
-                              ),
-                            ),
+                          //         print(memberId);
+                          //         context.push('/home/profile');
+                          //       },
+                          //       icon: const Icon(Icons.person),
+                          //       label: Text(
+                          //         "Guest Details",
+                          //         style: TextStyle(
+                          //           fontSize: fontSettings.fontSize,
+                          //           fontWeight: fontSettings.fontWeight,
+                          //         ),
+                          //       ),
+                          //       style: ElevatedButton.styleFrom(
+                          //         backgroundColor: const Color.fromARGB(
+                          //           255,
+                          //           70,
+                          //           70,
+                          //           70,
+                          //         ),
+                          //         foregroundColor: Colors.white,
+                          //         shape: RoundedRectangleBorder(
+                          //           borderRadius: BorderRadius.circular(12),
+                          //         ),
+                          //         padding: const EdgeInsets.symmetric(
+                          //           vertical: 16,
+                          //           horizontal: 20,
+                          //         ),
+                          //       ),
+                          //     ),
+                          //   ],
+                          // ),
+                          ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color.fromARGB(
-                                255,
-                                70,
-                                70,
-                                70,
-                              ),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                              backgroundColor: Colors.black, // Black background
+                              foregroundColor: Colors.white, // White text/icon
                               padding: const EdgeInsets.symmetric(
-                                vertical: 16,
-                                horizontal: 20,
+                                horizontal: 16,
+                                vertical: 14,
                               ),
                             ),
+                            onPressed: _isLoading
+                                ? null
+                                : () async {
+                                    try {
+                                      setState(() {
+                                        _isLoading = true;
+                                      });
+
+                                      GuestRepository guestRepository =
+                                          GuestRepository(
+                                            ApiService(
+                                              const FlutterSecureStorage(),
+                                            ),
+                                          );
+
+                                      // Search for guest by MID
+                                      List<GuestSearchResponse> guests =
+                                          await guestRepository.searchGuest(
+                                            9021,
+                                            _memberIdController.text,
+                                          );
+
+                                      setState(() {
+                                        _isLoading = false;
+                                      });
+
+                                      if (guests.isNotEmpty) {
+                                        final guestResponse = guests.first;
+                                        ref
+                                            .read(
+                                              selectedGuestProvider.notifier,
+                                            )
+                                            .setSelectedGuest(
+                                              Guest(
+                                                mid:
+                                                    guestResponse.mid ??
+                                                    _memberIdController.text,
+                                                memberName:
+                                                    guestResponse.mName ??
+                                                    _memberNameController.text,
+                                                country: "",
+                                                lastVisitDate:
+                                                    guestResponse.lvd
+                                                        ?.toString() ??
+                                                    "",
+                                                gift: "",
+                                                age: 0,
+                                                gRating:
+                                                    guestResponse.gRating ?? "",
+                                                mGroup: "",
+                                                gName:
+                                                    guestResponse.gName ?? "",
+                                              ),
+                                            );
+                                        context.push('/home/profile');
+                                      } else {
+                                        // fallback guest
+                                        ref
+                                            .read(
+                                              selectedGuestProvider.notifier,
+                                            )
+                                            .setSelectedGuest(
+                                              Guest(
+                                                mid: _memberIdController.text,
+                                                memberName:
+                                                    _memberNameController.text,
+                                                country: "",
+                                                lastVisitDate: "1990-01-01",
+                                                gift: "",
+                                                age: 0,
+                                                gRating: "",
+                                                mGroup: "",
+                                                gName: "",
+                                              ),
+                                            );
+                                        context.push('/home/profile');
+                                      }
+                                    } catch (e) {
+                                      setState(() {
+                                        _isLoading = false;
+                                      });
+                                      print("Error searching guest: $e");
+                                    }
+                                  },
+                            child: _isLoading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(Icons.person_search, size: 25),
                           ),
                         ],
                       ),
+
                       const SizedBox(height: 16.0),
                       TextFormField(
                         autofocus: false,
@@ -413,6 +533,10 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             fontWeight: fontSettings.fontWeight,
                           ),
                           border: const OutlineInputBorder(),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12.0,
+                            vertical: -5.0,
+                          ),
                           // suffixIcon: IconButton(
                           //   icon: const Icon(Icons.search),
                           //   onPressed: () {
@@ -476,142 +600,6 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
 
                       const SizedBox(height: 16.0),
 
-                      // if (_showGuestData) ...[
-                      //   const SizedBox(height: 20),
-                      //   Align(
-                      //     alignment: Alignment.center,
-                      //     child: Text(
-                      //       "Guest Gift Data",
-                      //       style: TextStyle(
-                      //         fontSize: fontSettings.fontSize,
-                      //         fontWeight: fontSettings.fontWeight,
-                      //       ),
-                      //     ),
-                      //   ),
-                      //   const SizedBox(height: 10),
-                      //   Builder(
-                      //     builder: (context) {
-                      //       final giftState = ref.watch(giftProvider);
-                      //       if (giftState.guestGiftData.isEmpty) {
-                      //         return Text(
-                      //           "No guest gift data found",
-                      //           style: TextStyle(
-                      //             fontSize: fontSettings.fontSize,
-                      //             fontWeight: fontSettings.fontWeight,
-                      //           ),
-                      //         );
-                      //       }
-                      //       final data = giftState.guestGiftData.first;
-
-                      //       final rows = [
-                      //         {"Field": "Drop (Est)", "Value": data.guestDrop},
-                      //         {
-                      //           "Field": "Cash Out (Est)",
-                      //           "Value": data.tmpCashout,
-                      //         },
-                      //         {"Field": "Result (Est)", "Value": data.res},
-                      //         {
-                      //           "Field": "Actual Drop (Est)",
-                      //           "Value": data.actD,
-                      //         },
-                      //         {
-                      //           "Field": "Coupons (Est)",
-                      //           "Value": data.guestCoupon,
-                      //         },
-                      //         {
-                      //           "Field": "Commission Paid (Est)",
-                      //           "Value": data.tmpCommpaid,
-                      //         },
-                      //         {"Field": "Points (Est)", "Value": data.tmpPoint},
-                      //         {
-                      //           "Field": "Flush Coupon (Est)",
-                      //           "Value": data.flushCoupon,
-                      //         },
-                      //         {
-                      //           "Field": "Total Coupon (Est)",
-                      //           "Value": data.guestCoupon + data.flushCoupon,
-                      //         },
-                      //         {
-                      //           "Field": "Flush Actual Drop (Est)",
-                      //           "Value": data.flushActDrop,
-                      //         },
-                      //         {
-                      //           "Field": "Avg Bet (Est)",
-                      //           "Value": data.tmpAvgBet,
-                      //         },
-                      //       ];
-
-                      //       return Container(
-                      //         margin: const EdgeInsets.only(top: 10),
-                      //         decoration: BoxDecoration(
-                      //           border: Border.all(color: Colors.grey.shade400),
-                      //           borderRadius: BorderRadius.circular(6),
-                      //         ),
-                      //         child: DataTable(
-                      //           headingRowColor: WidgetStateProperty.all(
-                      //             Colors.amber.shade100,
-                      //           ),
-                      //           border: TableBorder.all(
-                      //             color: Colors.grey.shade300,
-                      //           ),
-                      //           columns: [
-                      //             DataColumn(
-                      //               label: Text(
-                      //                 "Field",
-                      //                 style: TextStyle(
-                      //                   fontSize: fontSettings.fontSize,
-                      //                   fontWeight: fontSettings.fontWeight,
-                      //                 ),
-                      //               ),
-                      //             ),
-                      //             DataColumn(
-                      //               label: Text(
-                      //                 "Value",
-                      //                 style: TextStyle(
-                      //                   fontSize: fontSettings.fontSize,
-                      //                   fontWeight: fontSettings.fontWeight,
-                      //                 ),
-                      //               ),
-                      //             ),
-                      //           ],
-                      //           rows: rows.map((row) {
-                      //             return DataRow(
-                      //               cells: [
-                      //                 DataCell(
-                      //                   Align(
-                      //                     alignment: Alignment.centerLeft,
-                      //                     child: Text(
-                      //                       row["Field"].toString(),
-                      //                       style: TextStyle(
-                      //                         fontSize: fontSettings.fontSize,
-                      //                         fontWeight:
-                      //                             fontSettings.fontWeight,
-                      //                       ),
-                      //                     ),
-                      //                   ),
-                      //                 ),
-                      //                 DataCell(
-                      //                   Align(
-                      //                     alignment: Alignment.centerRight,
-                      //                     child: Text(
-                      //                       formatNumber(row["Value"]),
-
-                      //                       style: TextStyle(
-                      //                         fontSize: fontSettings.fontSize,
-                      //                         fontWeight:
-                      //                             fontSettings.fontWeight,
-                      //                       ),
-                      //                     ),
-                      //                   ),
-                      //                 ),
-                      //               ],
-                      //             );
-                      //           }).toList(),
-                      //         ),
-                      //       );
-                      //     },
-                      //   ),
-                      // ],
                       // Replace the _showGuestData block with this:
                       const SizedBox(height: 10),
                       Align(
@@ -628,22 +616,6 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                       Builder(
                         builder: (context) {
                           final giftState = ref.watch(giftProvider);
-
-                          // If empty, create a default empty data object
-                          // final data = giftState.guestGiftData.isNotEmpty
-                          //     ? giftState.guestGiftData.first as SpecialGiftRequest
-                          //     : SpecialGiftRequest(
-                          //         mdrop: 0,
-                          //         cashout: 0,
-                          //         res: 0,
-                          //         actDrop: 0,
-                          //         mCoupon: 0,
-                          //         paidComm: 0,
-                          //         gPoints: 0,
-                          //         flushCoupon: 0,
-                          //         flushActDrop: 0,
-                          //         avebet: 0,
-                          //       );
 
                           final rows = [
                             {"Field": "Drop (Est)", "Value": drop},
@@ -671,7 +643,6 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                           return Container(
                             margin: const EdgeInsets.only(top: 5),
                             decoration: BoxDecoration(
-                              
                               border: Border.all(color: Colors.grey.shade400),
                               borderRadius: BorderRadius.circular(6),
                             ),
@@ -753,6 +724,10 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                   fontWeight: fontSettings.fontWeight,
                                 ),
                                 border: const OutlineInputBorder(),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12.0,
+                                  vertical: -5.0,
+                                ),
                               ),
                             ),
                           ),
@@ -769,6 +744,10 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                   fontWeight: fontSettings.fontWeight,
                                 ),
                                 border: const OutlineInputBorder(),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12.0,
+                                  vertical: -5.0,
+                                ),
                               ),
                             ),
                           ),
@@ -794,6 +773,10 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8.0),
                               ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12.0,
+                                vertical: -5.0,
+                              ),
                             ),
                             style: _inputTextStyle(fontSettings),
                           ),
@@ -810,6 +793,10 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                 fontWeight: fontSettings.fontWeight,
                               ),
                               border: const OutlineInputBorder(),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12.0,
+                                vertical: -5.0,
+                              ),
                             ),
 
                             inputFormatters: <TextInputFormatter>[],
@@ -850,6 +837,10 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                 fontWeight: fontSettings.fontWeight,
                               ),
                               border: const OutlineInputBorder(),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12.0,
+                                vertical: -5.0,
+                              ),
                             ),
                             keyboardType: TextInputType.number,
                             inputFormatters: <TextInputFormatter>[

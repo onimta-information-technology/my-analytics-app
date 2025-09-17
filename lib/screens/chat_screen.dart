@@ -3,6 +3,7 @@ import 'package:ballys_reservation_app/screens/chatDetail_screen.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -890,8 +891,10 @@ class _ChatScreenState extends State<ChatScreen>
                 ),
               ]
             : [
-                IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-                IconButton(icon: const Icon(Icons.menu), onPressed: () {}),
+                // IconButton(icon: const Icon(Icons.search), onPressed: () {}),
+                IconButton(icon: const Icon(Icons.menu), onPressed: () {
+                 context.push('/menu');
+                }),
                 IconButton(
                   icon: const Icon(Icons.refresh),
                   onPressed: _fetchChatsFromApi,

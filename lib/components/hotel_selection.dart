@@ -394,10 +394,11 @@ class _HotelAndRoomSelectionBottomSheetState
         selectedRoomCategoryName == null ||
         sRoomTypeName == null ||
         sMealPlanName == null ||
-        numberOfNights == null) {
+        numberOfNights == null ||
+        selectedDateRange == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text("Please select hotel, category and room type.")),
+            content: Text("Please select Date range ,hotel, category and room type.")),
       );
       return;
     }

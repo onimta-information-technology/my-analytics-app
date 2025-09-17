@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:ballys_reservation_app/components/bottom_sheets/member_search-new_sheet.dart';
 import 'package:ballys_reservation_app/components/bottom_sheets/member_search_by_mid_bottom_sheet.dart';
 import 'package:ballys_reservation_app/components/flight_card.dart';
+import 'package:ballys_reservation_app/components/guest_details_card.dart';
 import 'package:ballys_reservation_app/components/hotel_selection.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
@@ -99,6 +100,15 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
   Future<void> _loadGuestDataInEditMode() async {
     if (!_isEditMode || _memberIdController.text.isEmpty) return;
 
+    // Check if guest data is already loaded in the provider
+    final currentSelectedGuest = ref.read(selectedGuestProvider);
+    if (currentSelectedGuest != null &&
+        currentSelectedGuest.mid == _memberIdController.text) {
+      // Guest data is already loaded, no need to fetch again
+      print("Guest data already loaded for MID: ${_memberIdController.text}");
+      return;
+    }
+
     try {
       setState(() {
         _isLoading = true;
@@ -129,8 +139,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                 gRating: guestResponse.gRating ?? "",
                 mGroup: "",
                 gName: guestResponse.gName ?? "",
-                memImage2:
-                    guestResponse.memImage2, // Add this line to get the image
+                memImage2: guestResponse.memImage2,
               ),
             );
       }
@@ -160,8 +169,35 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
     _departureDateController.text = dateFormat.format(
       selectedReservation.depDate,
     );
-    _airTicketRequisition =
-        selectedReservation.airticketReservationStatus == "T" ? "Yes" : "No";
+    // _airTicketRequisition =
+    //     selectedReservation.airticketReservationStatus == "T" ? "Yes" : "No";
+    print(
+      "DEBUG - airticketReservationStatus from DB: '${selectedReservation.airticketReservationStatus}'",
+    );
+    print(
+      "DEBUG - Type: ${selectedReservation.airticketReservationStatus.runtimeType}",
+    );
+
+    bool hasAirTickets = false;
+
+    if (selectedReservation.airticketReservationStatus != null) {
+      String status = selectedReservation.airticketReservationStatus
+          .toString()
+          .toUpperCase()
+          .trim();
+
+      // Check for various possible "Yes" values
+      hasAirTickets =
+          status == "T" ||
+          status == "TRUE" ||
+          status == "YES" ||
+          status == "Y" ||
+          status == "1";
+    }
+
+    _airTicketRequisition = hasAirTickets ? "Yes" : "No";
+    print("DEBUG - Final _airTicketRequisition value: $_airTicketRequisition");
+
     _remarksController.text = selectedReservation.remarks;
   }
 
@@ -172,15 +208,6 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
       await ref.read(hotelsProvider.notifier).getAllHotels();
     }
   }
-
-  final Map<String, String> ratingImageMap = {
-    "CLASSIC": "assets/images/ratings/CLASSIC.png",
-    "DIAMOND": "assets/images/ratings/DIAMOND.png",
-    "GOLD": "assets/images/ratings/GOLD.png",
-    "INFINITY": "assets/images/ratings/INFINITY.png",
-    "PLATINUM": "assets/images/ratings/PLATINUM.png",
-    "SILVER": "assets/images/ratings/SILVER.png",
-  };
 
   String getGuestAndRoomCounts(List<HotelDescip> hotels) {
     final totalGuests = hotels.fold<int>(
@@ -425,6 +452,111 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
     }
   }
 
+  bool _validateUpdateFields() {
+    setState(() {
+      _hotelError = null;
+      _airTicketError = null;
+      hasError = false;
+    });
+
+    // Only validate business logic, not required fields
+
+    // 1. Date validation - departure should be after arrival
+    if (_arrivalDate != null && _departureDate != null) {
+      if (_departureDate!.isBefore(_arrivalDate!) ||
+          _departureDate!.isAtSameMomentAs(_arrivalDate!)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Departure date must be after arrival date'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        hasError = true;
+      }
+    }
+
+    // 2. Hotel and flight selection validation
+    final selectedHotels = ref.watch(selectedHotelProvider);
+    final selectedFlights = ref.watch(selectedFlightProvider);
+
+    // At least one hotel or flight must be selected (business rule)
+    if (selectedHotels.isEmpty && selectedFlights.isEmpty) {
+      setState(() {
+        _hotelError = "Please select at least one hotel or flight";
+      });
+      hasError = true;
+    }
+
+    // 3. Air ticket consistency validation
+    if (_airTicketRequisition == "Yes" && selectedFlights.isEmpty) {
+      setState(() {
+        _airTicketError =
+            "Please select at least one flight when air ticket requisition is 'Yes'";
+      });
+      hasError = true;
+    }
+
+    // 4. Hotel booking dates validation
+    // if (selectedHotels.isNotEmpty &&
+    //     _arrivalDate != null &&
+    //     _departureDate != null) {
+    //   for (var hotel in selectedHotels) {
+    //     if (hotel.noOfNights != null && hotel.noOfNights! > 0) {
+    //       int calculatedNights = _departureDate!
+    //           .difference(_arrivalDate!)
+    //           .inDays;
+    //       if (calculatedNights != hotel.noOfNights) {
+    //         setState(() {
+    //           _hotelError =
+    //               "Hotel nights (${hotel.noOfNights}) don't match date range ($calculatedNights nights)";
+    //         });
+    //         hasError = true;
+    //         break;
+    //       }
+    //     }
+    //   }
+    // }
+
+    // 5. Flight dates validation
+    if (selectedFlights.isNotEmpty &&
+        _arrivalDate != null &&
+        _departureDate != null) {
+      for (var flight in selectedFlights) {
+        // Check if flight dates are within the reservation period
+        if (flight.departureDate != null) {
+          DateTime flightDate = DateTime.parse(flight.departureDate.toString());
+          if (flightDate.isBefore(_arrivalDate!) ||
+              flightDate.isAfter(_departureDate!)) {
+            setState(() {
+              _airTicketError =
+                  "Flight dates must be within the reservation period";
+            });
+            hasError = true;
+            break;
+          }
+        }
+      }
+    }
+
+    // 6. Guest count consistency validation
+    // if (selectedHotels.isNotEmpty && selectedFlights.isNotEmpty) {
+    //   int hotelGuests = selectedHotels.fold<int>(0, (sum, hotel) => sum + (hotel.guestCount ?? 0));
+    //   int flightGuests = selectedFlights.fold<int>(0, (sum, flight) => sum + flight.guestCount);
+
+    //   if (hotelGuests != flightGuests) {
+    //     ScaffoldMessenger.of(context).showSnackBar(
+    //       SnackBar(
+    //         content: Text('Guest count mismatch: Hotels ($hotelGuests) vs Flights ($flightGuests)'),
+    //         backgroundColor: Colors.orange,
+    //       ),
+    //     );
+    //     // This could be a warning rather than blocking error
+    //   }
+    // }
+
+    return !hasError;
+  }
+
   Future<void> _selectArrivalDate(BuildContext context) async {
     final DateTime? selectedArrivalDate = await showDatePicker(
       context: context,
@@ -463,111 +595,31 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
     }
   }
 
-  Widget _buildPlaceholderAvatar() {
-    return Container(
-      color: Colors.grey.shade300,
-      child: Icon(Icons.person, size: 40, color: Colors.grey.shade600),
-    );
-  }
-
-  Color _getRatingColor(String rating) {
-    switch (rating.toLowerCase()) {
-      case 'vip':
-      case 'platinum':
-        return Colors.purple.shade600;
-      case 'gold':
-        return Colors.amber.shade600;
-      case 'silver':
-        return Colors.grey.shade600;
-      case 'bronze':
-        return Colors.brown.shade600;
-      case 'premium':
-        return Colors.blue.shade600;
-      default:
-        return Colors.green.shade600;
-    }
-  }
-
-  void _showFullScreenImage(BuildContext context) {
-    final selectedGuest = ref.read(selectedGuestProvider);
-
-    if (selectedGuest?.memImage2 == null || selectedGuest!.memImage2!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No image available'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-
-    showDialog(
-      context: context,
-      barrierColor: Colors.black87,
-      builder: (BuildContext context) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          child: Stack(
-            children: [
-              // Full screen image
-              Center(
-                child: Container(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height * 0.8,
-                    maxWidth: MediaQuery.of(context).size.width * 0.9,
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.memory(
-                      base64Decode(selectedGuest.memImage2!),
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          height: 200,
-                          width: 200,
-                          color: Colors.grey.shade300,
-                          child: const Icon(
-                            Icons.error,
-                            size: 50,
-                            color: Colors.red,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ),
-
-              // Close button
-              Positioned(
-                top: 40,
-                right: 20,
-                child: GestureDetector(
-                  onTap: () => Navigator.of(context).pop(),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: const BoxDecoration(
-                      color: Colors.black54,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.close,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  // Widget _buildPlaceholderAvatar() {
+  //   return Container(
+  //     color: Colors.grey.shade300,
+  //     child: Icon(Icons.person, size: 40, color: Colors.grey.shade600),
+  //   );
+  // }
 
   void _confirmReservation() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
+    // if (!_formKey.currentState!.validate()) {
+    //   return;
+    // }
+    if (_isEditMode) {
+      if (!_validateUpdateFields()) {
+        return;
+      }
+    } else {
+      // For new reservations, use the existing form validation
+      if (!_formKey.currentState!.validate()) {
+        return;
+      }
+
+      // Plus the business logic validation
+      if (!_validateUpdateFields()) {
+        return;
+      }
     }
     final selectedHotels = ref.watch(selectedHotelProvider);
     final selectedFlights = ref.watch(selectedFlightProvider);
@@ -640,7 +692,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
       });
 
       print(response);
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(true);
     } catch (e) {
       print("Error saving reservation: $e");
       setState(() {
@@ -837,7 +889,20 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                             onPressed: _isEditMode
                                 ? () async {
                                     try {
-                                      // Set loading state
+                                      // Check if guest data is already available
+                                      final currentSelectedGuest = ref.read(
+                                        selectedGuestProvider,
+                                      );
+
+                                      if (currentSelectedGuest != null &&
+                                          currentSelectedGuest.mid ==
+                                              _memberIdController.text) {
+                                        // Guest data already loaded, navigate directly
+                                        context.push('/home/profile');
+                                        return;
+                                      }
+
+                                      // Set loading state only if we need to fetch data
                                       setState(() {
                                         _isLoading = true;
                                       });
@@ -887,6 +952,8 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                                                 mGroup: "",
                                                 gName:
                                                     guestResponse.gName ?? "",
+                                                memImage2:
+                                                    guestResponse.memImage2,
                                               ),
                                             );
 
@@ -1024,216 +1091,16 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                             : null,
                       ),
 
-                      if ((_isEditMode &&
-                              _memberIdController.text.isNotEmpty &&
-                              _memberNameController.text.isNotEmpty) ||
-                          (newReservation.bmNumber != null &&
-                              newReservation.guestName != null))
-                        Column(
-                          children: [
-                            const SizedBox(height: 16.0),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(1.0),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade50,
-                                borderRadius: BorderRadius.circular(12.0),
-                                border: Border.all(color: Colors.grey.shade300),
-                              ),
-                              child: Column(
-                                children: [
-                                  // First Row - Profile Picture and Guest Name
-                                  Row(
-                                    children: [
-                                      // Member Photo - Clickable
-                                      GestureDetector(
-                                        onTap: () {
-                                          _showFullScreenImage(context);
-                                        },
-                                        child: Container(
-                                          width: 80,
-                                          height: 80,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            border: Border.all(
-                                              color: Colors.grey.shade400,
-                                              width: 2,
-                                            ),
-                                          ),
-                                          child: ClipOval(
-                                            child: Consumer(
-                                              builder: (context, ref, child) {
-                                                final selectedGuest = ref.watch(
-                                                  selectedGuestProvider,
-                                                );
-
-                                                if (selectedGuest?.memImage2 !=
-                                                        null &&
-                                                    selectedGuest!
-                                                        .memImage2!
-                                                        .isNotEmpty) {
-                                                  try {
-                                                    return Image.memory(
-                                                      base64Decode(
-                                                        selectedGuest
-                                                            .memImage2!,
-                                                      ),
-                                                      fit: BoxFit.cover,
-                                                      errorBuilder:
-                                                          (
-                                                            context,
-                                                            error,
-                                                            stackTrace,
-                                                          ) {
-                                                            return _buildPlaceholderAvatar();
-                                                          },
-                                                    );
-                                                  } catch (e) {
-                                                    return _buildPlaceholderAvatar();
-                                                  }
-                                                }
-                                                return _buildPlaceholderAvatar();
-                                              },
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-
-                                      const SizedBox(width: 12),
-
-                                      // Guest Name (M P) - Show gName or fallback to member name
-                                      Expanded(
-                                        child: Consumer(
-                                          builder: (context, ref, child) {
-                                            final selectedGuest = ref.watch(
-                                              selectedGuestProvider,
-                                            );
-
-                                            return Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                // Show gName if available, otherwise show member name
-                                                if (selectedGuest?.gName !=
-                                                        null &&
-                                                    selectedGuest!
-                                                        .gName!
-                                                        .isNotEmpty)
-                                                  Text(
-                                                    "M P: ${selectedGuest.gName!}",
-                                                    style: TextStyle(
-                                                      fontSize:
-                                                          fontSettings
-                                                              .fontSize *
-                                                          0.9,
-                                                      fontWeight: fontSettings
-                                                          .fontWeight,
-                                                      color:
-                                                          Colors.blue.shade700,
-                                                    ),
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    maxLines: 2,
-                                                  )
-                                                else if (_memberNameController
-                                                    .text
-                                                    .isNotEmpty)
-                                                  Text(
-                                                    "M P: ${_memberNameController.text}",
-                                                    style: TextStyle(
-                                                      fontSize:
-                                                          fontSettings
-                                                              .fontSize *
-                                                          0.9,
-                                                      fontWeight: fontSettings
-                                                          .fontWeight,
-                                                      color:
-                                                          Colors.blue.shade700,
-                                                    ),
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    maxLines: 2,
-                                                  ),
-                                              ],
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  // Second Row - Rating Image (Right aligned)
-                                  Row(
-                                    children: [
-                                      const Spacer(),
-                                      Consumer(
-                                        builder: (context, ref, child) {
-                                          final selectedGuest = ref.watch(
-                                            selectedGuestProvider,
-                                          );
-
-                                          if (selectedGuest?.gRating != null &&
-                                              selectedGuest!
-                                                  .gRating!
-                                                  .isNotEmpty &&
-                                              ratingImageMap.containsKey(
-                                                selectedGuest.gRating!
-                                                    .toUpperCase(),
-                                              )) {
-                                            return Container(
-                                              width: 80,
-                                              height: 30,
-                                              decoration: BoxDecoration(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                border: Border.all(
-                                                  color: Colors.grey.shade300,
-                                                  width: 1,
-                                                ),
-                                              ),
-                                              child: ClipRRect(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                child: Image.asset(
-                                                  ratingImageMap[selectedGuest
-                                                      .gRating!
-                                                      .toUpperCase()]!,
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder:
-                                                      (
-                                                        context,
-                                                        error,
-                                                        stackTrace,
-                                                      ) {
-                                                        return Container(
-                                                          color: Colors
-                                                              .grey
-                                                              .shade200,
-                                                          child: Icon(
-                                                            Icons.star,
-                                                            color:
-                                                                _getRatingColor(
-                                                                  selectedGuest
-                                                                      .gRating!,
-                                                                ),
-                                                            size: 10,
-                                                          ),
-                                                        );
-                                                      },
-                                                ),
-                                              ),
-                                            );
-                                          }
-                                          return const SizedBox.shrink();
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                      GuestDisplayCard(
+                        memberIdText: _memberIdController.text,
+                        memberNameText: _memberNameController.text,
+                        showCard:
+                            (_isEditMode &&
+                                _memberIdController.text.isNotEmpty &&
+                                _memberNameController.text.isNotEmpty) ||
+                            (newReservation.bmNumber != null &&
+                                newReservation.guestName != null),
+                      ),
                       const SizedBox(height: 10.0),
                       ValueListenableBuilder<String>(
                         valueListenable: hotelRoomNotifier,
@@ -1331,6 +1198,12 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                                 return SizedBox(
                                   width: double.infinity,
                                   child: Card(
+                                    color: const Color.fromARGB(
+                                      255,
+                                      228,
+                                      224,
+                                      224,
+                                    ),
                                     margin: const EdgeInsets.symmetric(
                                       horizontal: 3,
                                       vertical: 8,

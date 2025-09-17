@@ -71,21 +71,22 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
         title: const Text('Reservations'),
         actions: [
           IconButton(
-            icon: const Icon(
-              Icons.refresh,
-              size: 30,
-            ),
+            icon: const Icon(Icons.refresh, size: 30),
             onPressed: () async {
               await _loadReservationData();
             },
           ),
           IconButton(
-            icon: const Icon(
-              Icons.add_rounded,
-              size: 35,
-            ),
-            onPressed: () {
-              context.go('/reservations/new-reservation');
+            icon: const Icon(Icons.add_rounded, size: 35),
+            onPressed: () async {
+              //context.go('/reservations/new-reservation');
+              final result = await context.push(
+                '/reservations/new-reservation',
+              );
+              if (result == true) {
+                // Refresh reservation data
+                await _loadReservationData();
+              }
             },
           ),
         ],
@@ -94,17 +95,25 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
           indicatorColor: Colors.pink,
           tabs: [
             _buildTab(
-                'Pending', reservations['Pending']?.length ?? 0, Colors.orange),
-            _buildTab('Approved', reservations['Approved']?.length ?? 0,
-                Colors.green),
+              'Pending',
+              reservations['Pending']?.length ?? 0,
+              Colors.orange,
+            ),
             _buildTab(
-                'Rejected', reservations['Rejected']?.length ?? 0, Colors.red),
+              'Approved',
+              reservations['Approved']?.length ?? 0,
+              Colors.green,
+            ),
+            _buildTab(
+              'Rejected',
+              reservations['Rejected']?.length ?? 0,
+              Colors.red,
+            ),
           ],
         ),
       ),
       body: Stack(
         children: [
-        
           TabBarView(
             controller: _tabController,
             children: [
@@ -122,12 +131,13 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
                 child: const Center(
                   child: RefreshProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(
-                        Constants.kSecondaryColor),
+                      Constants.kSecondaryColor,
+                    ),
                   ),
                 ),
               ),
             ),
-              const Watermark(),
+          const Watermark(),
         ],
       ),
     );
@@ -205,7 +215,9 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
                     const SizedBox(height: 4),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: _getStatusColor(reservation.requestStatus),
                         borderRadius: BorderRadius.circular(12),
@@ -231,13 +243,27 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
                     ),
                   ],
                 ),
-                onTap: () {
+                // onTap: () {
+                //   ref
+                //       .read(selectedReservationProvider.notifier)
+                //       .setSelectedReservation(reservation);
+                //   context.go(
+                //     "/reservations/reservation-view",
+                //   );
+                // },
+                onTap: () async {
                   ref
                       .read(selectedReservationProvider.notifier)
                       .setSelectedReservation(reservation);
-                  context.go(
+
+                  final result = await context.push(
                     "/reservations/reservation-view",
                   );
+
+                  if (result == true) {
+                    // refresh reservations after returning
+                    await _loadReservationData();
+                  }
                 },
               ),
             ),
@@ -267,7 +293,6 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
                 ),
               ),
             ),
-               
           ],
         );
       },

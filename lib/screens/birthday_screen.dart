@@ -217,7 +217,7 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                     Text(
                       'Last visit on - ${DateFormat('dd MMM yyyy').format(birthday.lvd)}',
                       style: TextStyle(
-                        color: Colors.grey,
+                        color: const Color.fromARGB(255, 3, 3, 3),
                         fontSize: fontSettings.fontSize,
                         fontWeight: fontSettings.fontWeight,
                       ),

@@ -9,18 +9,10 @@ class ReservationNotifier
   final ReservationRepository reservationRepository;
 
   ReservationNotifier(this.reservationRepository)
-      : super({
-          'Pending': [],
-          'Approved': [],
-          'Rejected': [],
-        });
+    : super({'Pending': [], 'Approved': [], 'Rejected': []});
 
   Future<void> getReservationData() async {
-    state = {
-      'Pending': [],
-      'Approved': [],
-      'Rejected': [],
-    };
+    state = {'Pending': [], 'Approved': [], 'Rejected': []};
 
     final reservations = await reservationRepository.getReservations();
 
@@ -32,10 +24,46 @@ class ReservationNotifier
     // List<Reservation> updatedPendingList = [...state['Pending'] ?? [], newReservation];
     // state = {...state, 'Pending': updatedPendingList};
   }
+  // Add this method to your ReservationNotifier class
+
+  Future<bool> approveOrRejectReservation({
+    required String memberID,
+    required String reservationNo,
+    required String currentUName,
+    required String status,
+    required String remarks,
+  }) async {
+    try {
+      // print("Provider: Calling approveOrRejectReservation with:");
+      // print("Member ID: $memberID");
+      // print("Reservation No: $reservationNo");
+      // print("Current User: $currentUName");
+      // print("Status: $status");
+      // print("Remarks: $remarks");
+      final success = await reservationRepository.approveOrRejectReservation(
+        memberID: memberID,
+        reservationNo: reservationNo,
+        currentUName: currentUName,
+        status: status,
+        remarks: remarks,
+      );
+
+      if (success) {
+        // Refresh the reservation data after successful approve/reject
+        await getReservationData();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('Error in ReservationNotifier.approveOrRejectReservation: $e');
+      return false;
+    }
+  }
 }
 
-final flutterSecureStorageProvider =
-    Provider((ref) => const FlutterSecureStorage());
+final flutterSecureStorageProvider = Provider(
+  (ref) => const FlutterSecureStorage(),
+);
 
 final apiServiceProvider = Provider((ref) {
   final storage = ref.read(flutterSecureStorageProvider);
@@ -48,8 +76,9 @@ final reservationRepositoryProvider = Provider((ref) {
 });
 
 final reservationProvider =
-    StateNotifierProvider<ReservationNotifier, Map<String, List<Reservation>>>(
-        (ref) {
-  final reservationRepository = ref.read(reservationRepositoryProvider);
-  return ReservationNotifier(reservationRepository);
-});
+    StateNotifierProvider<ReservationNotifier, Map<String, List<Reservation>>>((
+      ref,
+    ) {
+      final reservationRepository = ref.read(reservationRepositoryProvider);
+      return ReservationNotifier(reservationRepository);
+    });

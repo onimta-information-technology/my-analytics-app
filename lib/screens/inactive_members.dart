@@ -2,8 +2,10 @@ import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/inactive_members_repository.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
+import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -28,12 +30,34 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> {
   List<Guest> originalMembers = [];
   List<Guest> inactiveMembers = [];
 
+@override
+  void initState() {
+    super.initState();
+    // ADD THIS BLOCK
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeAppMode();
+    });
+  }
+  Future<void> _initializeAppMode() async {
+    try {
+      final salesCode = await StorageUtil.getSalesCode();
+      if (salesCode != null) {
+        ref.read(appmodeSettingsProvider.notifier).setSalesCode(salesCode);
+      }
+    } catch (e) {
+      print('Error initializing app mode: $e');
+    }
+  }
+
   void _applyFilter() async {
     setState(() {
       _isLoading = true;
     });
+    final appMode = ref.read(appmodeSettingsProvider).appMode;
+    final salesCode = await StorageUtil.getSalesCode();
+
     final inactiveMembers_ = await widget.inactiveMembersRepository
-        .getInactiveMembers(selectedDateOption, selectedBuyInOption);
+        .getInactiveMembers(selectedDateOption, selectedBuyInOption, appMode,salesCode!);
 
     setState(() {
       originalMembers = inactiveMembers_;
@@ -54,6 +78,11 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> {
   @override
   Widget build(BuildContext context) {
     final fontSettings = ref.watch(fontSettingsProvider);
+    ref.listen<AppModeSettings>(appmodeSettingsProvider, (prev, next) {
+      if (prev?.appMode != next.appMode) {
+        _applyFilter(); 
+      }
+    });
     return Scaffold(
       appBar: AppBar(
         title: const Text('Inactive Members'),

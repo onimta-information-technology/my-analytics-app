@@ -260,7 +260,7 @@ class _SpecialGiftRequestScreenState
                           Text(
                             _formatDate(gift.insertDate),
                             style: TextStyle(
-                              color: Colors.grey[700],
+                              color: const Color.fromARGB(255, 2, 2, 2),
                               fontSize: fontSettings.fontSize - 1,
                             ),
                           ),

@@ -8,6 +8,7 @@ class StorageUtil {
   static Future<void> saveUserData(
       String userName, String userLevel, String salesCode, String marketingCode, String mobileNumber) async {
     final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
     await prefs.setString('userName', userName);
     await prefs.setString('userLevel', userLevel);
     await prefs.setString('salesCode', salesCode);
@@ -58,4 +59,9 @@ class StorageUtil {
   static Future<String?> getAppVersion() async {
     return await _storage.read(key: _keyAppVersion);
   }
+  static Future<bool> hasUserData() async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.containsKey('userName') || prefs.containsKey('userLevel');
+}
+
 }

@@ -922,7 +922,7 @@ class _AirTicketsSelectionScreenState
                                         vertical: 16),
                                   ),
                                   child: const Text(
-                                    "Update Hotel",
+                                    "Update Air Ticket",
                                     style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold),

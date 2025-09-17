@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/components/marketing_performance.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
@@ -9,6 +10,7 @@ import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 // 🔹 Provider for guest counts
 final guestCountsProvider = StateProvider<Map<String, int?>>(
@@ -29,10 +31,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
     _loadUserName();
-   WidgetsBinding.instance.addPostFrameCallback((_) {
-    _loadGuestData(); // now runs after provider finishes async load
-  });
-}
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeAppMode();
+      _loadGuestData();
+    });
+  }
+
+  final String currentDate = DateFormat(
+    'EEEE, MMM d, yyyy',
+  ).format(DateTime.now());
+
+  Future<void> _initializeAppMode() async {
+    try {
+      final salesCode = await StorageUtil.getSalesCode();
+      if (salesCode != null) {
+        ref.read(appmodeSettingsProvider.notifier).setSalesCode(salesCode);
+      }
+    } catch (e) {
+      print('Error initializing app mode: $e');
+    }
+  }
+
   _loadUserName() async {
     final name = await StorageUtil.getUserName();
     setState(() {
@@ -149,9 +168,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          userName != null ? 'Welcome, $userName' : 'Loading...',
+          userName != null ? 'Welcome, $userName ' : 'Loading...',
           style: const TextStyle(fontSize: 16),
         ),
+
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, size: 30),
@@ -175,29 +195,61 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       body: Stack(
         children: [
-          Padding(
+           SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+
+         child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                Consumer(
-            builder: (context, ref, _) {
-              final appMode = ref.watch(appmodeSettingsProvider).appMode;
-              String heading = appMode == AppMode.myData
-                  ? "MY PERFORMANCE"
-                  : "OVERALL PERFORMANCE";
-
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: Text(
-                  heading,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                // Replace the existing date display section with this:
+                Card(
+                  elevation: 2,
+                  margin: const EdgeInsets.symmetric(vertical: 8.0),
+                 // color: const Color.fromARGB(255, 99, 110, 109),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.calendar_today,
+                          size: 20,
+                          color: Colors.blue,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          currentDate,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              );
-            },
-          ),
+                const SizedBox(height: 6),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final appMode = ref.watch(appmodeSettingsProvider).appMode;
+                    String heading = appMode == AppMode.myData
+                        ? "MY PERFORMANCE"
+                        : "OVERALL PERFORMANCE";
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Text(
+                        heading,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    );
+                  },
+                ),
                 // 🔹 Today & Yesterday row
                 Row(
                   children: [
@@ -305,9 +357,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                const MarketingPerformanceWidget(),
               ],
             ),
           ),
+            ),
           const Watermark(),
         ],
       ),

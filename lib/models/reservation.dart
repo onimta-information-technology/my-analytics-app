@@ -143,6 +143,8 @@ class Reservation {
       'G_Rating': gRating,
     };
   }
+
+  // copyWith({required String status}) {}
 }
 
 void printLargeBody(String body) {

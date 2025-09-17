@@ -32,10 +32,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void initState() {
     super.initState();
     _fetchAppVersion();
+ 
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(guestsProvider.notifier).resetData();
     });
   }
+
+
 
   Future<void> _fetchAppVersion() async {
     final packageInfo = await PackageInfo.fromPlatform();
@@ -183,14 +187,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   // Get user's phone number from your user data
   Future<String?> _getUserPhoneNumber() async {
     try {
- final authState = ref.read(authProvider);
-    print('Auth state: ${authState?.user}');
-    print('Mobile from auth: ${authState?.user?.mobileNumber}');
-    
-    if (authState?.user?.mobileNumber != null && 
-        authState!.user!.mobileNumber!.isNotEmpty) {
-      return authState.user!.mobileNumber;
-    }
+      final authState = ref.read(authProvider);
+      print('Auth state: ${authState?.user}');
+      print('Mobile from auth: ${authState?.user?.mobileNumber}');
+
+      if (authState?.user?.mobileNumber != null &&
+          authState!.user!.mobileNumber!.isNotEmpty) {
+        return authState.user!.mobileNumber;
+      }
 
       // Example of how you might get it from your auth state:
       // final authState = ref.read(authProvider);

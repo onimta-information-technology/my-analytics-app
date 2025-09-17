@@ -91,10 +91,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     });
   }
 
-  String formatDate(String dateString) {
+  // String formatDate(String dateString) {
+  //   final date = DateTime.parse(dateString);
+  //   return DateFormat('dd MMM yyyy').format(date);
+  // }
+  
+String formatDate(String dateString) {
+
+  if (dateString == "1990-01-01" || dateString.isEmpty) {
+    return "N/A";
+  }
+
+  try {
     final date = DateTime.parse(dateString);
     return DateFormat('dd MMM yyyy').format(date);
+  } catch (e) {
+    return "N/A"; 
   }
+}
 
   final Map<String, String> ratingImageMap = {
     "CLASSIC": "assets/images/ratings/CLASSIC.png",

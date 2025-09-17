@@ -36,27 +36,52 @@ class AuthNotifier extends StateNotifier<AuthState?> {
       : super(AuthState(user: null, isLoading: false)){
          _checkAppVersion();
       }
+
+// Future<void> _checkAppVersion() async {
+//     try {
+//       final packageInfo = await PackageInfo.fromPlatform();
+//       final currentVersion = packageInfo.version;
+
+//       final savedVersion = await StorageUtil.getAppVersion();
+
+//       if (savedVersion == null || savedVersion != currentVersion) {
+//         // App is either newly installed OR updated
+//         await StorageUtil.clearUserData();
+//         await StorageUtil.saveAppVersion(currentVersion);
+
+//         // Reset auth state
+//         state = AuthState(user: null, isLoading: false, error: null);
+
+//         print('App version changed. Cleared old data.');
+//       }
+//     } catch (e) {
+//       print('Version check failed: $e');
+//     }
+//   }
+
 Future<void> _checkAppVersion() async {
-    try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      final currentVersion = packageInfo.version;
+  try {
+    final packageInfo = await PackageInfo.fromPlatform();
+    final currentVersion = packageInfo.version;
 
-      final savedVersion = await StorageUtil.getAppVersion();
+    final savedVersion = await StorageUtil.getAppVersion();
+    final hasUser = await StorageUtil.hasUserData();
 
-      if (savedVersion == null || savedVersion != currentVersion) {
-        // App is either newly installed OR updated
-        await StorageUtil.clearUserData();
-        await StorageUtil.saveAppVersion(currentVersion);
+   
+    if (savedVersion == null || savedVersion != currentVersion || !hasUser) {
+      await authRepository.storage.deleteAll(); 
+      await StorageUtil.clearUserData();      
+      await StorageUtil.saveAppVersion(currentVersion);
 
-        // Reset auth state
-        state = AuthState(user: null, isLoading: false, error: null);
-
-        print('App version changed. Cleared old data.');
-      }
-    } catch (e) {
-      print('Version check failed: $e');
+      state = AuthState(user: null, isLoading: false, error: null);
+      print('Reinstall/version change detected. Cleared old data.');
     }
+  } catch (e) {
+    print('Version/reinstall check failed: $e');
   }
+}
+
+
 
   Future<void> authenticateAndLogin(String username, String password) async {
     isLoading = true;
@@ -88,6 +113,7 @@ Future<void> _checkAppVersion() async {
    Future<void> completeLoginAfterOTP() async {
     try {
       if (_pendingUser != null) {
+        await StorageUtil.clearUserData(); 
         // Now save the user data to storage after successful OTP verification
         await StorageUtil.saveUserData(
           _pendingUser.userName, 

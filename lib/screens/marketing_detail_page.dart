@@ -164,6 +164,7 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
                                   ),
                                 ),
                                 color: Colors.blue,
+                                fontSettings: fontSettings,
                               ),
                               const SizedBox(height: 12),
                               _buildSummaryItem(
@@ -175,6 +176,7 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
                                   ),
                                 ),
                                 color: Colors.purple,
+                                fontSettings: fontSettings,
                               ),
                               const SizedBox(height: 12),
                               _buildSummaryItem(
@@ -185,6 +187,7 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
                                 color: _getAmountColor(
                                   widget.winSpecificMember.toDouble(),
                                 ),
+                                fontSettings: fontSettings,
                               ),
                             ],
                           ),
@@ -235,12 +238,15 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
           ),
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Text(
-              'Detail',
-              style: TextStyle(
-                fontSize: fontSettings.fontSize,
-                fontWeight: fontSettings.fontWeight,
-              ),
+            // child: Center(
+              child: Text(
+                'Detail',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize + 1,
+                  fontWeight: FontWeight.w900,
+                ),
+            //  ),
             ),
           ),
         ],
@@ -375,6 +381,7 @@ Widget _buildSummaryItem({
   required String title,
   required String value,
   required Color color,
+  required fontSettings,
 }) {
   return Container(
     width: double.infinity,
@@ -388,13 +395,17 @@ Widget _buildSummaryItem({
       children: [
         Text(
           title,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            fontSize: fontSettings.fontSize + 4, // 👈 dynamic font size
+            fontWeight: FontWeight.bold, // 👈 dynamic weight
+            // color: Colors.black,
+          ),
         ),
         const SizedBox(height: 6),
         Text(
           value,
           style: TextStyle(
-            fontSize: 18,
+            fontSize: fontSettings.fontSize + 2,
             fontWeight: FontWeight.bold,
             color: color,
           ),

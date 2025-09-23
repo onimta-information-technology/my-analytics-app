@@ -11,6 +11,7 @@ class Birthday {
   final DateTime lvd;
   final String gift;
   final String? gName;
+  final String? mobile;
 
   Birthday({
     required this.mid,
@@ -25,6 +26,7 @@ class Birthday {
     required this.lvd,
     required this.gift,
     this.gName,
+    this.mobile,
   });
 
   factory Birthday.fromJson(Map<String, dynamic> json) {
@@ -41,6 +43,7 @@ class Birthday {
       lvd: DateTime.parse(json['LVD']),
       gift: json['GIFT'],
       gName: json['GName'],
+      mobile: json['Mobile'],
     );
   }
 
@@ -58,6 +61,7 @@ class Birthday {
       'LVD': lvd.toIso8601String(),
       'GIFT': gift,
       'GName': gName,
+      'Mobile': mobile,
     };
   }
 }

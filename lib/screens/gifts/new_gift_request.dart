@@ -1,4 +1,5 @@
 import 'package:ballys_reservation_app/components/bottom_sheets/member_search-new_sheet.dart';
+import 'package:ballys_reservation_app/components/special_gift_pdf.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
@@ -101,9 +102,9 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
             guests: [], // Empty list initially
             initialSearchTerm: searchTerm,
             searchIid: iid,
-            // onSearch: (String term, int searchIid) async {
-            //   await _performGuestSearch(term, searchIid);
-            // },
+            onSearch: (String term, int searchIid) async {
+              await _performGuestSearch(term, searchIid);
+            },
           );
         },
       );
@@ -135,9 +136,9 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
             guests: guests,
             initialSearchTerm: searchTerm,
             searchIid: iid,
-            // onSearch: (String term, int searchIid) async {
-            //   await _performGuestSearch(term, searchIid);
-            // },
+            onSearch: (String term, int searchIid) async {
+              await _performGuestSearch(term, searchIid);
+            },
           );
         },
       );
@@ -146,6 +147,80 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
         _isLoading = false;
       });
       print("Error searching guests: $e");
+    }
+  }
+
+  Future<void> _performGuestSearch(String searchTerm, int iid) async {
+    if (searchTerm.length < 3) return;
+
+    GuestRepository guestRepository = GuestRepository(
+      ApiService(const FlutterSecureStorage()),
+    );
+
+    try {
+      List<GuestSearchResponse> guests = await guestRepository.searchGuest(
+        iid,
+        searchTerm,
+      );
+
+      // Close current modal
+      Navigator.of(context).pop();
+
+      // Open new modal with updated results
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        builder: (BuildContext context) {
+          return MemberNewSearchBottomSheet(
+            guests: guests,
+            initialSearchTerm: searchTerm,
+            searchIid: iid,
+            onSearch: (String term, int searchIid) async {
+              await _performGuestSearch(term, searchIid);
+            },
+          );
+        },
+      );
+    } catch (e) {
+      print("Error searching guests: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error searching guests: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _updateMemberIdFields(String fullMemberId) {
+    if (fullMemberId.isNotEmpty) {
+      // Extract prefix and number from full member ID
+      String prefix = '';
+      String numberPart = '';
+
+      if (fullMemberId.startsWith('BM')) {
+        prefix = 'BM';
+        numberPart = fullMemberId.substring(2);
+      } else if (fullMemberId.startsWith('BL')) {
+        prefix = 'BL';
+        numberPart = fullMemberId.substring(2);
+      } else if (fullMemberId.startsWith('BN')) {
+        prefix = 'BN';
+        numberPart = fullMemberId.substring(2);
+      } else {
+        // If no recognized prefix, treat as BM by default
+        prefix = 'BM';
+        numberPart = fullMemberId;
+      }
+
+      setState(() {
+        _selectedPrefix = prefix;
+        _memberIdNumberController.text = numberPart;
+        _memberIdController.text = fullMemberId;
+      });
     }
   }
 
@@ -235,7 +310,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
         _memberIdController.text != newReservation.mid) {
       _memberIdController.text = newReservation.mid;
       _memberNameController.text = newReservation.memberName;
-
+      _updateMemberIdFields(newReservation.mid);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         setState(() {
           _isMemberSelected = true;
@@ -383,6 +458,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
 
                               onChanged: (value) {
                                 _memberNameController.text = '';
+
                                 ref
                                     .read(memberSearchProvider.notifier)
                                     .resetState();
@@ -439,10 +515,10 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                             fontWeight: fontSettings.fontWeight,
                           ),
                           border: const OutlineInputBorder(),
-                           contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12.0,
-                        vertical: -5.0,
-                      ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12.0,
+                            vertical: -5.0,
+                          ),
                           suffixIcon: IconButton(
                             icon: const Icon(Icons.search),
                             onPressed: () {
@@ -704,10 +780,10 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                   fontWeight: fontSettings.fontWeight,
                                 ),
                                 border: const OutlineInputBorder(),
-                                 contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12.0,
-                        vertical: -5.0,
-                      ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12.0,
+                                  vertical: -5.0,
+                                ),
                                 suffixIcon: const Icon(Icons.calendar_today),
                               ),
                               validator: (v) => v == null || v.isEmpty
@@ -730,10 +806,10 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                   fontWeight: fontSettings.fontWeight,
                                 ),
                                 border: const OutlineInputBorder(),
-                                 contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12.0,
-                        vertical: -5.0,
-                      ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12.0,
+                                  vertical: -5.0,
+                                ),
                                 suffixIcon: const Icon(Icons.calendar_today),
                               ),
                               validator: (v) => v == null || v.isEmpty
@@ -794,10 +870,10 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                   ),
 
                                   border: const OutlineInputBorder(),
-                                   contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12.0,
-                        vertical: -5.0,
-                      ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12.0,
+                                    vertical: -5.0,
+                                  ),
                                 ),
                                 validator: (v) => v == null || v.isEmpty
                                     ? "Gift required"
@@ -816,10 +892,10 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                 fontWeight: fontSettings.fontWeight,
                               ),
                               border: const OutlineInputBorder(),
-                               contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12.0,
-                        vertical: -5.0,
-                      ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12.0,
+                                vertical: -5.0,
+                              ),
                             ),
                             value: _chipType,
                             items: const [
@@ -860,10 +936,10 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                 fontWeight: fontSettings.fontWeight,
                               ),
                               border: const OutlineInputBorder(),
-                               contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12.0,
-                        vertical: -5.0,
-                      ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12.0,
+                                vertical: -5.0,
+                              ),
                             ),
                             keyboardType: TextInputType.number,
                             inputFormatters: <TextInputFormatter>[
@@ -914,64 +990,255 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                   }
 
                                   setState(() => _isLoading = true);
+                                  try {
+                                    final ok = await ref
+                                        .read(giftProvider.notifier)
+                                        .sendSpecialGiftFromUI(
+                                          mid: _memberIdController.text.trim(),
+                                          memberName: _memberNameController.text
+                                              .trim(),
+                                          fromDateTime: _fromDateController.text
+                                              .trim(),
+                                          toDateTime: _toDateController.text
+                                              .trim(),
+                                          arrivalDate: _arrivalDateController
+                                              .text
+                                              .trim(),
+                                          departureDate:
+                                              _departureDateController.text
+                                                  .trim(),
+                                          giftForCode:
+                                              _selectedGift ?? "SPECIAL GIFT",
+                                          chipTypeUI: _chipType ?? "OTP Chips",
+                                          amountUI: _amountController.text,
+                                          remarks: _remarks,
+                                          userName: userName ?? "",
+                                        );
 
-                                  final ok = await ref
-                                      .read(giftProvider.notifier)
-                                      .sendSpecialGiftFromUI(
-                                        mid: _memberIdController.text.trim(),
-                                        memberName: _memberNameController.text
-                                            .trim(),
-                                        fromDateTime: _fromDateController.text
-                                            .trim(),
-                                        toDateTime: _toDateController.text
-                                            .trim(),
-                                        arrivalDate: _arrivalDateController.text
-                                            .trim(),
-                                        departureDate: _departureDateController
-                                            .text
-                                            .trim(),
-                                        giftForCode:
-                                            _selectedGift ?? "SPECIAL GIFT",
-                                        chipTypeUI: _chipType ?? "OTP Chips",
-                                        amountUI: _amountController.text,
-                                        remarks: _remarks,
-                                        userName: userName ?? "",
+                                    setState(() => _isLoading = false);
+
+                                    // print(ok);
+
+                                    if (!mounted) return;
+                                    if (ok) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            "Gift request sent successfully",
+                                          ),
+                                        ),
+                                      );
+                                      final giftState = ref.read(giftProvider);
+                                      Map<String, dynamic> guestDataMap = {};
+
+                                      if (giftState.guestGiftData.isNotEmpty) {
+                                        final data =
+                                            giftState.guestGiftData.first;
+                                        guestDataMap = {
+                                          'guestDrop': data.guestDrop,
+                                          'tmpCashout': data.tmpCashout,
+                                          'res': data.res,
+                                          'actD': data.actD,
+                                          'guestCoupon': data.guestCoupon,
+                                          'tmpCommpaid': data.tmpCommpaid,
+                                          'tmpPoint': data.tmpPoint,
+                                          'flushCoupon': data.flushCoupon,
+                                          'flushActDrop': data.flushActDrop,
+                                          'tmpAvgBet': data.tmpAvgBet,
+                                        };
+                                      }
+
+                                      final shareOption = await showDialog<String>(
+                                        context: context,
+                                        builder: (BuildContext context) {
+                                          return AlertDialog(
+                                            title: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.share,
+                                                  color: Colors.blue,
+                                                ),
+                                                SizedBox(width: 8),
+                                                Text('Share Gift Request'),
+                                              ],
+                                            ),
+                                            content: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'Choose how to share the PDF document:',
+                                                ),
+                                                SizedBox(height: 16),
+                                                Container(
+                                                  padding: EdgeInsets.all(12),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.green.shade50,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                    border: Border.all(
+                                                      color:
+                                                          Colors.green.shade200,
+                                                    ),
+                                                  ),
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Row(
+                                                        children: [
+                                                          Icon(
+                                                            Icons.check_circle,
+                                                            color: Colors.green,
+                                                            size: 16,
+                                                          ),
+                                                          SizedBox(width: 4),
+                                                          Text(
+                                                            'RECOMMENDED',
+                                                            style: TextStyle(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                              color: Colors
+                                                                  .green
+                                                                  .shade700,
+                                                              fontSize: 12,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      SizedBox(height: 4),
+                                                      Text(
+                                                        'Share with Apps - PDF automatically attached',
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.of(
+                                                  context,
+                                                ).pop('cancel'),
+                                                child: const Text('Cancel'),
+                                              ),
+                                              ElevatedButton.icon(
+                                                onPressed: () => Navigator.of(
+                                                  context,
+                                                ).pop('system'),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Colors.blue,
+                                                  foregroundColor: Colors.white,
+                                                ),
+                                                icon: Icon(Icons.share),
+                                                label: const Text(
+                                                  'Share with Apps',
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        },
                                       );
 
-                                  setState(() => _isLoading = false);
+                                      if (shareOption == 'system') {
+                                        try {
+                                          // Use the direct share method - this is the BEST approach
+                                          await DirectWhatsAppPdfService.shareDirectlyToWhatsApp(
+                                            memberName: _memberNameController
+                                                .text
+                                                .trim(),
+                                            memberId: _memberIdController.text
+                                                .trim(),
+                                            fromDateTime: _fromDateController
+                                                .text
+                                                .trim(),
+                                            toDateTime: _toDateController.text
+                                                .trim(),
+                                            arrivalDate: _arrivalDateController
+                                                .text
+                                                .trim(),
+                                            departureDate:
+                                                _departureDateController.text
+                                                    .trim(),
+                                            giftFor:
+                                                _selectedGift ?? "SPECIAL GIFT",
+                                            chipType: _chipType ?? "OTP Chips",
+                                            amount: _amountController.text,
+                                            remarks: _remarks,
+                                            userName: userName ?? "",
+                                            guestData: guestDataMap,
+                                          );
 
-                                  // print(ok);
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  "PDF ready! Select WhatsApp from the share options.",
+                                                ),
+                                                duration: Duration(seconds: 3),
+                                              ),
+                                            );
+                                          }
+                                        } catch (e) {
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  "Error sharing PDF: $e",
+                                                ),
+                                                backgroundColor: Colors.red,
+                                                duration: Duration(seconds: 4),
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      }
+                                      // Reset providers
+                                      ref
+                                          .read(memberSearchProvider.notifier)
+                                          .resetState();
+                                      ref
+                                          .read(newReservationProvider.notifier)
+                                          .resetState();
 
-                                  if (!mounted) return;
-                                  if (ok) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          "Gift request sent successfully",
+                                      // Navigate back and return success result
+                                      Navigator.of(context).pop(
+                                        true,
+                                      ); // Pass true to indicate success
+                                    } else {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            "Failed to send gift request",
+                                          ),
                                         ),
-                                      ),
-                                    );
-
-                                    // Reset providers
-                                    ref
-                                        .read(memberSearchProvider.notifier)
-                                        .resetState();
-                                    ref
-                                        .read(newReservationProvider.notifier)
-                                        .resetState();
-
-                                    // Navigate back and return success result
-                                    Navigator.of(context).pop(
-                                      true,
-                                    ); // Pass true to indicate success
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          "Failed to send gift request",
+                                      );
+                                    }
+                                  } catch (e) {
+                                    setState(() => _isLoading = false);
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text("Error: $e"),
+                                          backgroundColor: Colors.red,
                                         ),
-                                      ),
-                                    );
+                                      );
+                                    }
                                   }
                                 }
                               : null,

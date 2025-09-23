@@ -12,6 +12,35 @@ class SelectedGuestNotifier extends StateNotifier<Guest?> {
 
   void setSelectedGuest(Guest guest) {
     state = guest;
+    print(guest?.gName);
+  }
+
+  Future<void> setSelectedGuestWithId(String memberId) async {
+    // Set initial partial data
+    state = Guest(
+      mid: memberId,
+      memberName: "",
+      country: "",
+      lastVisitDate: "1990-01-01",
+      age: 0,
+      gRating: "",
+      mGroup: "",
+      gName: "",
+    );
+
+    // Fetch complete data
+    try {
+      final completeGuestList = await guestRepository.getGuestData(
+        9021,
+        memberId,
+      );
+      if (completeGuestList.isNotEmpty) {
+        state = completeGuestList.first;
+      }
+    } catch (e) {
+      print('Error fetching complete guest data: $e');
+    }
+    print(state?.memberName);
   }
 
   void setSelectedGuestfilterdate() {}
@@ -20,17 +49,15 @@ class SelectedGuestNotifier extends StateNotifier<Guest?> {
       mid: mid,
       memberName: mName,
       country: "",
-       lastVisitDate: "1990-01-01",
+      lastVisitDate: "1990-01-01",
       age: 0,
       gRating: "",
       mGroup: "",
       gName: state?.gName ?? "",
       memImage2: state?.memImage2 ?? "",
     );
-    print( state?.lastVisitDate);
+    print(state?.lastVisitDate);
   }
-   
-
 
   Future<void> getGuestImage(int iid, String text1) async {
     try {

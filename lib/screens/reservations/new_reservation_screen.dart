@@ -97,6 +97,35 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
     super.dispose();
   }
 
+  void _updateMemberIdFields(String fullMemberId) {
+    if (fullMemberId.isNotEmpty) {
+      // Extract prefix and number from full member ID
+      String prefix = '';
+      String numberPart = '';
+
+      if (fullMemberId.startsWith('BM')) {
+        prefix = 'BM';
+        numberPart = fullMemberId.substring(2);
+      } else if (fullMemberId.startsWith('BL')) {
+        prefix = 'BL';
+        numberPart = fullMemberId.substring(2);
+      } else if (fullMemberId.startsWith('BN')) {
+        prefix = 'BN';
+        numberPart = fullMemberId.substring(2);
+      } else {
+        // If no recognized prefix, treat as BM by default
+        prefix = 'BM';
+        numberPart = fullMemberId;
+      }
+
+      setState(() {
+        _selectedPrefix = prefix;
+        _memberIdNumberController.text = numberPart;
+        _memberIdController.text = fullMemberId;
+      });
+    }
+  }
+
   Future<void> _loadGuestDataInEditMode() async {
     if (!_isEditMode || _memberIdController.text.isEmpty) return;
 
@@ -332,6 +361,15 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
   //     print("Error searching guests: $e");
   //   }
   // }
+  bool _canChangeAirTicketToNo() {
+    // In edit mode, if there are existing flights, don't allow changing to "No"
+    if (_isEditMode) {
+      final selectedFlights = ref.watch(selectedFlightProvider);
+      return selectedFlights.isEmpty;
+    }
+    return true; // Allow any change in new reservation mode
+  }
+
   Future<void> _openMemberSearchBottomSheet(int iid) async {
     GuestRepository guestRepository = GuestRepository(
       ApiService(const FlutterSecureStorage()),
@@ -553,6 +591,16 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
     //     // This could be a warning rather than blocking error
     //   }
     // }
+    if (_isEditMode && _airTicketRequisition == "No") {
+      final selectedFlights = ref.watch(selectedFlightProvider);
+      if (selectedFlights.isNotEmpty) {
+        setState(() {
+          _airTicketError =
+              "Cannot set to 'No' when flights are already booked. Please remove flights first.";
+        });
+        hasError = true;
+      }
+    }
 
     return !hasError;
   }
@@ -713,6 +761,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
         _memberIdController.text != newReservation.bmNumber) {
       _memberIdController.text = newReservation.bmNumber!;
       _memberNameController.text = newReservation.guestName!;
+      _updateMemberIdFields(newReservation.bmNumber!);
     }
     final fontSettings = ref.watch(fontSettingsProvider);
 
@@ -1428,17 +1477,22 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                           Radio<String>(
                             value: "No",
                             groupValue: _airTicketRequisition,
-                            onChanged: (value) {
-                              setState(() {
-                                _airTicketRequisition = value!;
-                              });
-                            },
+                            onChanged: _canChangeAirTicketToNo()
+                                ? (value) {
+                                    setState(() {
+                                      _airTicketRequisition = value!;
+                                    });
+                                  }
+                                : null,
                           ),
                           Text(
                             "No",
                             style: TextStyle(
                               fontSize: fontSettings.fontSize,
                               fontWeight: fontSettings.fontWeight,
+                              color: _canChangeAirTicketToNo()
+                                  ? Colors.black
+                                  : Colors.grey,
                             ),
                           ),
                         ],

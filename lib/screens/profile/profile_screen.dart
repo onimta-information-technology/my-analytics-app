@@ -36,6 +36,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   void initState() {
     super.initState();
     _getGuestImage();
+    final guest = ref.read(selectedGuestProvider);
+    if (guest?.mobile != null && guest!.mobile!.isNotEmpty) {
+      _whatsappNumberController.text = guest.mobile!;
+    }
     if (GoRouter.of(context).routerDelegate.currentConfiguration.fullPath ==
         '/members') {
       _getMemberMainProfileDetails();
@@ -95,20 +99,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   //   final date = DateTime.parse(dateString);
   //   return DateFormat('dd MMM yyyy').format(date);
   // }
-  
-String formatDate(String dateString) {
 
-  if (dateString == "1990-01-01" || dateString.isEmpty) {
-    return "N/A";
-  }
+  String formatDate(String dateString) {
+    if (dateString == "1990-01-01" || dateString.isEmpty) {
+      return "N/A";
+    }
 
-  try {
-    final date = DateTime.parse(dateString);
-    return DateFormat('dd MMM yyyy').format(date);
-  } catch (e) {
-    return "N/A"; 
+    try {
+      final date = DateTime.parse(dateString);
+      return DateFormat('dd MMM yyyy').format(date);
+    } catch (e) {
+      return "N/A";
+    }
   }
-}
 
   final Map<String, String> ratingImageMap = {
     "CLASSIC": "assets/images/ratings/CLASSIC.png",
@@ -679,21 +682,21 @@ String formatDate(String dateString) {
                                       }
 
                                       // Check if phone number is valid (at least 10 digits)
-                                      String cleanNumber = phoneNumber
-                                          .replaceAll(RegExp(r'[^\d]'), '');
-                                      if (cleanNumber.length < 10) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Please enter a valid phone number',
-                                            ),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
-                                        return;
-                                      }
+                                      // String cleanNumber = phoneNumber
+                                      //     .replaceAll(RegExp(r'[^\d]'), '');
+                                      // if (cleanNumber.length < 10) {
+                                      //   ScaffoldMessenger.of(
+                                      //     context,
+                                      //   ).showSnackBar(
+                                      //     const SnackBar(
+                                      //       content: Text(
+                                      //         'Please enter a valid phone number',
+                                      //       ),
+                                      //       backgroundColor: Colors.red,
+                                      //     ),
+                                      //   );
+                                      //   return;
+                                      // }
 
                                       try {
                                         // Show loading
@@ -715,7 +718,7 @@ String formatDate(String dateString) {
 
                                         if (result == "Success") {
                                           // Clear the text field on success
-                                          _whatsappNumberController.clear();
+                                          // _whatsappNumberController.clear();
 
                                           ScaffoldMessenger.of(
                                             context,

@@ -1,4 +1,4 @@
-package com.example.ballys_reservation
+package com.app.ballys_reservation
 
 import io.flutter.embedding.android.FlutterActivity
 

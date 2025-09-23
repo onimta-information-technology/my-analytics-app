@@ -218,7 +218,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
               TextField(
                 controller: remarksController,
                 decoration: const InputDecoration(
-                  labelText: 'Remarks',
+                  // labelText: 'Remarks',
                   border: OutlineInputBorder(),
                   hintText: 'Enter your remarks here...',
                 ),
@@ -405,6 +405,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
           "Reservation - ${selectedReservation != null ? selectedReservation.reservNo : ''}",
           style: const TextStyle(fontSize: 18),
         ),
+        
         actions: [
           PopScope(
             onPopInvokedWithResult: (bool didPop, dynamic result) {
@@ -416,28 +417,17 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
             },
             child: Padding(
               padding: const EdgeInsets.only(right: 8.0),
+            
               // child: IconButton(
-              //   onPressed: () {
-              //     // Ensure guest data is loaded before navigation
-              //     if (_memberIdController.text.isNotEmpty &&
-              //         !_guestDataLoaded) {
-              //       _loadGuestDataForView().then((_) {
-              //         context.go("/reservations/new-reservation");
-              //       });
-              //     } else {
-              //       context.go("/reservations/new-reservation");
-              //     }
-              //   },
-              //   icon: const Icon(Icons.mode_edit_outline_sharp),
-              // ),
-              child: IconButton(
+                 child: (selectedReservation?.requestStatus == 'Pending')
+          ? IconButton(
                 onPressed: () async {
                   Future<void> navigateToEditReservation() async {
                     final result = await context.push(
                       "/reservations/new-reservation",
                     );
                     if (result == true) {
-                      // Pop back to ReservationScreen and trigger refresh
+    
                       if (mounted) {
                         Navigator.of(context).pop(true);
                       }
@@ -454,7 +444,8 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                   }
                 },
                 icon: const Icon(Icons.mode_edit_outline_sharp),
-              ),
+              )
+              : const SizedBox.shrink(), 
             ),
           ),
         ],

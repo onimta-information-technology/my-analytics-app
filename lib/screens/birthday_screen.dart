@@ -25,7 +25,7 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
   List<Birthday> _recentBirthdays = [];
   bool _showRecentUpcoming = true;
   bool _isLoading = false;
-
+  bool _isRefreshing = false;
   @override
   void initState() {
     super.initState();
@@ -43,8 +43,9 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
       setState(() {
         _isLoading = true;
       });
-      final birthdays =
-          await ref.read(birthdayProvider.notifier).getBirthdays();
+      final birthdays = await ref
+          .read(birthdayProvider.notifier)
+          .getBirthdays();
       setState(() {
         _isLoading = false;
         _recentBirthdays = birthdays['recentUpcoming']!;
@@ -52,6 +53,27 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
     } else {
       setState(() {
         _recentBirthdays = birthdayData['recentUpcoming']!;
+      });
+    }
+  }
+
+  Future<void> _refreshBirthdays() async {
+    setState(() {
+      _isRefreshing = true;
+    });
+
+    try {
+      final birthdays = await ref
+          .read(birthdayProvider.notifier)
+          .getBirthdays();
+      setState(() {
+        _recentBirthdays = _showRecentUpcoming
+            ? birthdays['recentUpcoming']!
+            : birthdays['recentPast']!;
+      });
+    } finally {
+      setState(() {
+        _isRefreshing = false;
       });
     }
   }
@@ -84,32 +106,32 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Birthdays',
-          style: TextStyle(fontSize: 20.0),
-        ),
+        title: const Text('Birthdays', style: TextStyle(fontSize: 20.0)),
+        actions: [
+          IconButton(
+            icon: _isRefreshing
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.0,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Color.fromARGB(255, 114, 6, 100),
+                      ),
+                    ),
+                  )
+                : const Icon(Icons.refresh, size: 30),
+            onPressed: _isRefreshing ? null : _refreshBirthdays,
+          ),
+        ],
+
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Constants.kPrimaryColor,
           tabs: const [
-            Tab(
-              child: Text(
-                'Past',
-                style: TextStyle(fontSize: 16.0),
-              ),
-            ),
-            Tab(
-              child: Text(
-                'Recent',
-                style: TextStyle(fontSize: 16.0),
-              ),
-            ),
-            Tab(
-              child: Text(
-                'Upcoming',
-                style: TextStyle(fontSize: 16.0),
-              ),
-            ),
+            Tab(child: Text('Past', style: TextStyle(fontSize: 16.0))),
+            Tab(child: Text('Recent', style: TextStyle(fontSize: 16.0))),
+            Tab(child: Text('Upcoming', style: TextStyle(fontSize: 16.0))),
           ],
         ),
       ),
@@ -147,8 +169,10 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                     heroTag: 'recentPast',
                     child: Transform.rotate(
                       angle: -135 * 3.1415926535897932 / 180,
-                      child: const Icon(Icons.arrow_back_sharp,
-                          color: Colors.white),
+                      child: const Icon(
+                        Icons.arrow_back_sharp,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ],
@@ -163,12 +187,13 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                 child: const Center(
                   child: RefreshProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(
-                        Constants.kSecondaryColor),
+                      Constants.kSecondaryColor,
+                    ),
                   ),
                 ),
               ),
             ),
-             const Watermark(),
+          const Watermark(),
         ],
       ),
     );
@@ -242,7 +267,9 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8.0, vertical: 4.0),
+                            horizontal: 8.0,
+                            vertical: 4.0,
+                          ),
                           decoration: BoxDecoration(
                             color: birthday.age <= 0
                                 ? Colors.green
@@ -250,7 +277,13 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                             borderRadius: BorderRadius.circular(4.0),
                           ),
                           child: Text(
-                            '${birthday.age.abs()} ${birthday.age == -1 ? 'Day from now' : birthday.age <= 0 ? 'Days from now' : birthday.age == 1 ? 'Day ago' : 'Days ago'}',
+                            '${birthday.age.abs()} ${birthday.age == -1
+                                ? 'Day from now'
+                                : birthday.age <= 0
+                                ? 'Days from now'
+                                : birthday.age == 1
+                                ? 'Day ago'
+                                : 'Days ago'}',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: fontSettings.fontSize,
@@ -262,7 +295,8 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                           onPressed: () {
                             ref
                                 .read(selectedGuestProvider.notifier)
-                                .setSelectedGuest(Guest(
+                                .setSelectedGuest(
+                                  Guest(
                                     mid: birthday.mid,
                                     memberName: birthday.mname,
                                     country: birthday.country,
@@ -271,22 +305,28 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                                     gRating: birthday.gRating,
                                     mGroup: "",
                                     gName: birthday.gName,
-                                    gift: birthday.gift));
+                                    gift: birthday.gift,
+                                    mobile: birthday.mobile,
+                                  ),
+                                );
                             context.push('/home/profile');
                           },
-                          icon: Icon(Icons.card_giftcard,
-                              color: birthday.age < 0
-                                  ? Colors.green
-                                  : Constants.kSecondaryColor),
+                          icon: Icon(
+                            Icons.card_giftcard,
+                            color: birthday.age < 0
+                                ? Colors.green
+                                : Constants.kSecondaryColor,
+                          ),
                           label: const Text('Request a gift'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: birthday.age < 0
                                 ? Colors.green
                                 : Constants.kSecondaryColor,
                             side: BorderSide(
-                                color: birthday.age < 0
-                                    ? Colors.green
-                                    : Constants.kSecondaryColor),
+                              color: birthday.age < 0
+                                  ? Colors.green
+                                  : Constants.kSecondaryColor,
+                            ),
                           ),
                         ),
                       ],

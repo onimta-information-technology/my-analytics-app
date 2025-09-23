@@ -10,7 +10,7 @@ class GuestRepository {
 
   Future<List<Guest>> getGuestData(int iid, String text1) async {
     final deviceId = await DeviceId.get();
-     print('Device ID guestdate used: $deviceId');
+    print('Device ID guestdate used: $deviceId');
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -19,16 +19,16 @@ class GuestRepository {
           "Para_Direction": "Input",
           "Para_Lenth": 1,
           "Para_Name": "@Iid",
-          "Para_Type": "int"
+          "Para_Type": "int",
         },
         {
           "Para_Data": text1,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text1",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
-           {
+        {
           "Para_Data": deviceId,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
@@ -37,7 +37,7 @@ class GuestRepository {
         },
       ],
       "SpName": "sp_CRM_Common_API",
-      "con": "1"
+      "con": "1",
     });
 
     if (response['CommonResult'] != null &&
@@ -50,10 +50,11 @@ class GuestRepository {
 
       if (tableData.length > 0) {
         for (var table in tableData) {
+          // print('MNANE value: ${table['MName']}');
           guestList.add(
             Guest(
               mid: table['MID'] ?? '',
-              memberName: table['MNANE'] ?? '',
+              memberName: table['MName'] ?? '',
               country: table['COUNTRY'] ?? '',
               lastVisitDate: table['LVD'] ?? '',
               age: table['AGE'] ?? '',
@@ -86,7 +87,8 @@ class GuestRepository {
         return guestList;
       } else {
         throw Exception(
-            'Login failed: Invalid credentials or LoginStatus is not True');
+          'Login failed: Invalid credentials or LoginStatus is not True',
+        );
       }
     } else {
       throw Exception('Login failed: unexpected response structure');
@@ -94,7 +96,7 @@ class GuestRepository {
   }
 
   Future<String?> fetchGuestImage(int iid, String text1) async {
-      final deviceId = await DeviceId.get();
+    final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -103,16 +105,16 @@ class GuestRepository {
           "Para_Direction": "Input",
           "Para_Lenth": 1,
           "Para_Name": "@Iid",
-          "Para_Type": "int"
+          "Para_Type": "int",
         },
         {
           "Para_Data": text1,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text1",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
-         {
+        {
           "Para_Data": deviceId,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
@@ -121,7 +123,7 @@ class GuestRepository {
         },
       ],
       "SpName": "sp_CRM_Common_API",
-      "con": "1"
+      "con": "1",
     });
 
     if (response['CommonResult'] != null &&
@@ -133,14 +135,15 @@ class GuestRepository {
         return tableData['MemImage2'];
       } else {
         throw Exception(
-            'Login failed: Invalid credentials or LoginStatus is not True');
+          'Login failed: Invalid credentials or LoginStatus is not True',
+        );
       }
     }
     return null;
   }
 
   Future<List<GuestSearchResponse>> searchGuest(int iid, String text1) async {
-      final deviceId = await DeviceId.get();
+    final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -149,14 +152,14 @@ class GuestRepository {
           "Para_Direction": "Input",
           "Para_Lenth": 1,
           "Para_Name": "@Iid",
-          "Para_Type": "int"
+          "Para_Type": "int",
         },
         {
           "Para_Data": text1,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text1",
-          "Para_Type": "varchar"
+          "Para_Type": "varchar",
         },
         {
           "Para_Data": deviceId,
@@ -167,7 +170,7 @@ class GuestRepository {
         },
       ],
       "SpName": "sp_CRM_Common_API",
-      "con": "1"
+      "con": "1",
     });
 
     if (response['CommonResult'] != null &&
@@ -187,10 +190,12 @@ class GuestRepository {
         return guestSearchResults;
       } else {
         throw Exception(
-            'Failed guests searching: Invalid credentials or LoginStatus is not True');
+          'Failed guests searching: Invalid credentials or LoginStatus is not True',
+        );
       }
     }
     throw Exception(
-        'Failed guests searching: Invalid credentials or LoginStatus is not True');
+      'Failed guests searching: Invalid credentials or LoginStatus is not True',
+    );
   }
 }

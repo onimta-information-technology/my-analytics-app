@@ -10,6 +10,7 @@ class Guest {
   String? memImage2;
   String? gift;
   double? mDrop;
+  String? mobile;
 
   Guest({
     required this.mid,
@@ -23,24 +24,21 @@ class Guest {
     this.memImage2,
     this.gift,
     this.mDrop,
+    this.mobile,
   });
 
-  Guest.withGift({
-    required this.mid,
-    required this.memberName,
-  })  : country = '',
-        lastVisitDate = '1970-01-01',
-        age = 0,
-        gRating = null,
-        mGroup = null,
-        gName = null,
-        memImage2 = null,
-        gift = null,
-        mDrop = null;
+  Guest.withGift({required this.mid, required this.memberName})
+    : country = '',
+      lastVisitDate = '1970-01-01',
+      age = 0,
+      gRating = null,
+      mGroup = null,
+      gName = null,
+      memImage2 = null,
+      gift = null,
+      mDrop = null;
 
-  Guest copyWith({
-    String? memImage2,
-  }) {
+  Guest copyWith({String? memImage2}) {
     return Guest(
       mid: mid,
       memberName: memberName,
@@ -53,13 +51,14 @@ class Guest {
       memImage2: memImage2 ?? this.memImage2,
       gift: gift ?? gift,
       mDrop: mDrop ?? mDrop,
+      mobile: mobile ?? mobile,
     );
   }
 
   factory Guest.fromJson(Map<String, dynamic> json) {
     return Guest(
       mid: json['MID'],
-      memberName: json['MNANE'],
+      memberName: json['MName'],
       country: json['COUNTRY'],
       lastVisitDate: json['LVD'],
       age: json['AGE'],

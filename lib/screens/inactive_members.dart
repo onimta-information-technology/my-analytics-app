@@ -14,8 +14,10 @@ import 'package:intl/intl.dart';
 class InactiveMembersScreen extends ConsumerStatefulWidget {
   final InactiveMembersRepository inactiveMembersRepository;
 
-  const InactiveMembersScreen(
-      {super.key, required this.inactiveMembersRepository});
+  const InactiveMembersScreen({
+    super.key,
+    required this.inactiveMembersRepository,
+  });
 
   @override
   ConsumerState<InactiveMembersScreen> createState() =>
@@ -30,7 +32,7 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> {
   List<Guest> originalMembers = [];
   List<Guest> inactiveMembers = [];
 
-@override
+  @override
   void initState() {
     super.initState();
     // ADD THIS BLOCK
@@ -38,6 +40,7 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> {
       _initializeAppMode();
     });
   }
+
   Future<void> _initializeAppMode() async {
     try {
       final salesCode = await StorageUtil.getSalesCode();
@@ -57,7 +60,18 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> {
     final salesCode = await StorageUtil.getSalesCode();
 
     final inactiveMembers_ = await widget.inactiveMembersRepository
-        .getInactiveMembers(selectedDateOption, selectedBuyInOption, appMode,salesCode!);
+        .getInactiveMembers(
+          selectedDateOption,
+          selectedBuyInOption,
+          appMode,
+          salesCode!,
+        );
+    print('inactiveMembers_: $inactiveMembers_');
+    print('originalMembers: $originalMembers');
+    print('selectedDateOption: $selectedDateOption');
+    print('selectedBuyInOption: $selectedBuyInOption');
+    print('appMode: $appMode');
+    print('salesCode: $salesCode');
 
     setState(() {
       originalMembers = inactiveMembers_;
@@ -80,13 +94,11 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> {
     final fontSettings = ref.watch(fontSettingsProvider);
     ref.listen<AppModeSettings>(appmodeSettingsProvider, (prev, next) {
       if (prev?.appMode != next.appMode) {
-        _applyFilter(); 
+        _applyFilter();
       }
     });
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Inactive Members'),
-      ),
+      appBar: AppBar(title: const Text('Inactive Members')),
       body: Stack(
         children: [
           Column(
@@ -100,12 +112,12 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> {
                         inactiveMembers = List<Guest>.from(originalMembers);
                       } else {
                         inactiveMembers = originalMembers.where((guest) {
-                          return guest.memberName
-                                  .toLowerCase()
-                                  .contains(value.toLowerCase()) ||
-                              guest.mid
-                                  .toLowerCase()
-                                  .contains(value.toLowerCase());
+                          return guest.memberName.toLowerCase().contains(
+                                value.toLowerCase(),
+                              ) ||
+                              guest.mid.toLowerCase().contains(
+                                value.toLowerCase(),
+                              );
                         }).toList();
                       }
                     });
@@ -125,15 +137,15 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> {
               ),
               Expanded(
                 child: inactiveMembers.isEmpty
-                    ? const Center(
-                        child: Text("No inactive members available"),
-                      )
+                    ? const Center(child: Text("No inactive members available"))
                     : Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: ListView.builder(
                           itemCount: inactiveMembers.length,
                           itemBuilder: (context, index) {
                             final guest = inactiveMembers[index];
+                            print(guest.gName);
+
                             return Stack(
                               children: [
                                 InkWell(
@@ -148,17 +160,19 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> {
                                   },
                                   child: Card(
                                     margin: const EdgeInsets.symmetric(
-                                        vertical: 5.0),
+                                      vertical: 5.0,
+                                    ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12.0),
                                     ),
                                     elevation: 2,
                                     child: Padding(
                                       padding: const EdgeInsets.only(
-                                          left: 16.0,
-                                          right: 16.0,
-                                          top: 28.0,
-                                          bottom: 16.0),
+                                        left: 16.0,
+                                        right: 16.0,
+                                        top: 28.0,
+                                        bottom: 16.0,
+                                      ),
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
@@ -211,8 +225,8 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> {
                                     child: SizedBox(
                                       width: 80,
                                       height: 26,
-                                      child: ratingImageMap[guest.gRating] !=
-                                              null
+                                      child:
+                                          ratingImageMap[guest.gRating] != null
                                           ? Hero(
                                               tag: "rating-image-${guest.mid}",
                                               child: Image.asset(
@@ -247,12 +261,13 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> {
                 child: const Center(
                   child: RefreshProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(
-                        Constants.kSecondaryColor),
+                      Constants.kSecondaryColor,
+                    ),
                   ),
                 ),
               ),
             ),
-            const Watermark(), 
+          const Watermark(),
         ],
       ),
     );
@@ -265,13 +280,16 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-                insetPadding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 20.0,
+                vertical: 24.0,
+              ),
               title: const Text('Filter'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(
-                   // mainAxisSize: MainAxisSize.min,
+                    // mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
@@ -283,41 +301,45 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> {
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                             RadioListTile(
-                                title: const Text('1'),
-                                value: '1',
-                                groupValue: selectedDateOption,
-                                onChanged: (value) {
-                                  setState(() {
-                                    selectedDateOption = value!;
-                                  });
-                                }),
+                              title: const Text('1'),
+                              value: '1',
+                              groupValue: selectedDateOption,
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedDateOption = value!;
+                                });
+                              },
+                            ),
                             RadioListTile(
-                                title: const Text('03'),
-                                value: '2',
-                                groupValue: selectedDateOption,
-                                onChanged: (value) {
-                                  setState(() {
-                                    selectedDateOption = value!;
-                                  });
-                                }),
+                              title: const Text('03'),
+                              value: '2',
+                              groupValue: selectedDateOption,
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedDateOption = value!;
+                                });
+                              },
+                            ),
                             RadioListTile(
-                                title: const Text('06'),
-                                value: '3',
-                                groupValue: selectedDateOption,
-                                onChanged: (value) {
-                                  setState(() {
-                                    selectedDateOption = value!;
-                                  });
-                                }),
+                              title: const Text('06'),
+                              value: '3',
+                              groupValue: selectedDateOption,
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedDateOption = value!;
+                                });
+                              },
+                            ),
                             RadioListTile(
-                                title: const Text('12'),
-                                value: '4',
-                                groupValue: selectedDateOption,
-                                onChanged: (value) {
-                                  setState(() {
-                                    selectedDateOption = value!;
-                                  });
-                                }),
+                              title: const Text('12'),
+                              value: '4',
+                              groupValue: selectedDateOption,
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedDateOption = value!;
+                                });
+                              },
+                            ),
                           ],
                         ),
                       ),
@@ -330,59 +352,65 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> {
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                             RadioListTile(
-                                title: const Text('1M'),
-                                value: '1',
-                                groupValue: selectedBuyInOption,
-                                onChanged: (value) {
-                                  setState(() {
-                                    selectedBuyInOption = value!;
-                                  });
-                                }),
+                              title: const Text('1M'),
+                              value: '1',
+                              groupValue: selectedBuyInOption,
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedBuyInOption = value!;
+                                });
+                              },
+                            ),
                             RadioListTile(
-                                title: const Text('2.5M'),
-                                value: '2',
-                                groupValue: selectedBuyInOption,
-                                onChanged: (value) {
-                                  setState(() {
-                                    selectedBuyInOption = value!;
-                                  });
-                                }),
+                              title: const Text('2.5M'),
+                              value: '2',
+                              groupValue: selectedBuyInOption,
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedBuyInOption = value!;
+                                });
+                              },
+                            ),
                             RadioListTile(
-                                title: const Text('5M'),
-                                value: '3',
-                                groupValue: selectedBuyInOption,
-                                onChanged: (value) {
-                                  setState(() {
-                                    selectedBuyInOption = value!;
-                                  });
-                                }),
+                              title: const Text('5M'),
+                              value: '3',
+                              groupValue: selectedBuyInOption,
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedBuyInOption = value!;
+                                });
+                              },
+                            ),
                             RadioListTile(
-                                title: const Text('10M'),
-                                value: '4',
-                                groupValue: selectedBuyInOption,
-                                onChanged: (value) {
-                                  setState(() {
-                                    selectedBuyInOption = value!;
-                                  });
-                                }),
+                              title: const Text('10M'),
+                              value: '4',
+                              groupValue: selectedBuyInOption,
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedBuyInOption = value!;
+                                });
+                              },
+                            ),
                             RadioListTile(
-                                title: const Text('20M'),
-                                value: '5',
-                                groupValue: selectedBuyInOption,
-                                onChanged: (value) {
-                                  setState(() {
-                                    selectedBuyInOption = value!;
-                                  });
-                                }),
+                              title: const Text('20M'),
+                              value: '5',
+                              groupValue: selectedBuyInOption,
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedBuyInOption = value!;
+                                });
+                              },
+                            ),
                             RadioListTile(
-                                title: const Text('100M'),
-                                value: '6',
-                                groupValue: selectedBuyInOption,
-                                onChanged: (value) {
-                                  setState(() {
-                                    selectedBuyInOption = value!;
-                                  });
-                                }),
+                              title: const Text('100M'),
+                              value: '6',
+                              groupValue: selectedBuyInOption,
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedBuyInOption = value!;
+                                });
+                              },
+                            ),
                           ],
                         ),
                       ),
@@ -392,20 +420,22 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> {
               ),
               actions: [
                 TextButton(
-                    onPressed: () {
-                      setState(() {
-                        selectedDateOption = "1";
-                        selectedBuyInOption = "1";
-                      });
-                      Navigator.of(context).pop();
-                    },
-                    child: const Text('Cancel')),
+                  onPressed: () {
+                    setState(() {
+                      selectedDateOption = "1";
+                      selectedBuyInOption = "1";
+                    });
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Cancel'),
+                ),
                 ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      _applyFilter();
-                    },
-                    child: const Text('Apply Filter')),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    _applyFilter();
+                  },
+                  child: const Text('Apply Filter'),
+                ),
               ],
             );
           },

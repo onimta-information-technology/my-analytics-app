@@ -1,21 +1,40 @@
 {
   "project_info": {
-    "project_number": "97263077137",
-    "project_id": "my-analytics-ad905",
-    "storage_bucket": "my-analytics-ad905.firebasestorage.app"
+    "project_number": "852986384912",
+    "project_id": "premirerewardsb",
+    "storage_bucket": "premirerewardsb.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:97263077137:android:9fbe3503d37533318c6eb0",
+        "mobilesdk_app_id": "1:852986384912:android:9401d27cf888dd77157095",
         "android_client_info": {
-          "package_name": "com.example.ballys_reservation"
+          "package_name": "com.app.ballys_reservation"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCatJFlRni4CXXM1BZoInE6JrQFtjV7jHQ"
+          "current_key": "AIzaSyAKvl3vBQb3_b1zVwO6WBjYOaDRYiTdZLQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:852986384912:android:b3dfb27974722349157095",
+        "android_client_info": {
+          "package_name": "com.premier_rewards"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAKvl3vBQb3_b1zVwO6WBjYOaDRYiTdZLQ"
         }
       ],
       "services": {

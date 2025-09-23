@@ -101,7 +101,6 @@ class _DailyWalkingGuestScreenState
       safeDateFrom = today;
     }
 
-
     final selectedGuest = Guest(
       mid: guest.mId,
       memberName: guest.mname,
@@ -116,7 +115,7 @@ class _DailyWalkingGuestScreenState
       mDrop: null,
     );
 
-  ref.read(selectedGuestProvider.notifier).setSelectedGuest(selectedGuest);
+    ref.read(selectedGuestProvider.notifier).setSelectedGuest(selectedGuest);
 
     // ref
     //     .read(tripHistoryProvider.notifier)
@@ -126,12 +125,10 @@ class _DailyWalkingGuestScreenState
     //       playerId: guest.mId,
     //     );
 
-    context.push('/home/profile/guest-performance',extra: {
-           
-            'startDateNotifier': yesterday,
-            'endDateNotifier': safeDateFrom,
-          },);
-  
+    context.push(
+      '/home/profile/guest-performance',
+      extra: {'startDateNotifier': yesterday, 'endDateNotifier': safeDateFrom},
+    );
   }
 
   @override
@@ -255,15 +252,18 @@ class _DailyWalkingGuestScreenState
                                     children: [
                                       Container(
                                         width: double.infinity,
-                                         height: 180,
+                                        height: 180,
                                         color: Constants.kPrimaryColor
                                             .withAlpha(50),
                                         padding: const EdgeInsets.all(8.0),
                                         alignment: Alignment.centerLeft,
-                                        child:  Text(
+                                        child: Text(
                                           "Image",
-                                          style: TextStyle(color: Colors.black, fontSize: fontSettings.fontSize,
-                                            fontWeight: fontSettings.fontWeight,),
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
                                         ),
                                       ),
                                       Padding(
@@ -367,13 +367,13 @@ class _DailyWalkingGuestScreenState
     bool isMemberId = false,
     DailyWalkingGuest? guest,
   }) {
-     bool isMemberName = label == "Member Name";
+    bool isMemberName = label == "Member Name";
     return TableRow(
       children: [
         Container(
           width: double.infinity,
           //height: 66,
-          height: isMemberName ? 90 : null, 
+          height: isMemberName ? 90 : null,
           color: Constants.kPrimaryColor.withAlpha(50),
           padding: const EdgeInsets.all(8.0),
           child: Text(

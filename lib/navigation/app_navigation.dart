@@ -380,23 +380,23 @@ class AppNavigation {
               // ),
             ],
           ),
-          GoRoute(
-            path: '/chats',
-            pageBuilder: (context, state) => CustomTransitionPage(
-              fullscreenDialog: true,
-              key: state.pageKey,
-              child: const ChatScreen(),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(
-                      opacity: CurveTween(
-                        curve: Curves.easeInOutCirc,
-                      ).animate(animation),
-                      child: child,
-                    );
-                  },
-            ),
-          ),
+          // GoRoute(
+          //   path: '/chats',
+          //   pageBuilder: (context, state) => CustomTransitionPage(
+          //     fullscreenDialog: true,
+          //     key: state.pageKey,
+          //     child: const ChatScreen(),
+          //     transitionsBuilder:
+          //         (context, animation, secondaryAnimation, child) {
+          //           return FadeTransition(
+          //             opacity: CurveTween(
+          //               curve: Curves.easeInOutCirc,
+          //             ).animate(animation),
+          //             child: child,
+          //           );
+          //         },
+          //   ),
+          // ),
           GoRoute(
             path: '/support',
             pageBuilder: (context, state) => CustomTransitionPage(
@@ -694,8 +694,37 @@ class AppNavigation {
           ),
         ],
       ),
-      GoRoute(path: '/menu', builder: (context, state) => const MenuScreen()),
-
+      // GoRoute(path: '/menu', builder: (context, state) => const MenuScreen()),
+GoRoute(
+  path: '/menu', 
+  pageBuilder: (context, state) => CustomTransitionPage(
+    fullscreenDialog: true,
+    key: state.pageKey,
+    child: const MenuScreen(),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return FadeTransition(
+        opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+        child: child,
+      );
+    },
+  ),
+  routes: [
+    GoRoute(
+      path: 'chats',
+      pageBuilder: (context, state) => CustomTransitionPage(
+        fullscreenDialog: false,
+        key: state.pageKey,
+        child: const ChatScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+            child: child,
+          );
+        },
+      ),
+    ),
+  ],
+),
       // GoRoute(
       //   path: '/menu',
       //   pageBuilder: (context, state) => CustomTransitionPage(

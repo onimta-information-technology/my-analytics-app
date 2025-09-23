@@ -16,7 +16,12 @@ class MainWrapper extends StatefulWidget {
 class _MainScreenState extends State<MainWrapper> {
   int _selectedIndex = 0;
 
-  final List<String> _locations = ['/home', '/menu', '/chats', '/settings'];
+  final List<String> _locations = [
+    '/home',
+    '/menu',
+    '/menu/chats',
+    '/settings',
+  ];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -43,27 +48,27 @@ class _MainScreenState extends State<MainWrapper> {
       bottomNavigationBar: isChatScreen
           ? null
           : BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home, size: 30.0),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.menu, size: 30.0),
-            label: 'Menu',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat, size: 30.0),
-            label: 'Chat',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings, size: 30.0),
-            label: 'Settings',
-          ),
-        ],
-      ),
+              currentIndex: _selectedIndex,
+              onTap: _onItemTapped,
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.home, size: 30.0),
+                  label: 'Home',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.menu, size: 30.0),
+                  label: 'Menu',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.chat, size: 30.0),
+                  label: 'Chat',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.settings, size: 30.0),
+                  label: 'Settings',
+                ),
+              ],
+            ),
     );
   }
 }

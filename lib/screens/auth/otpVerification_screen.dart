@@ -829,10 +829,14 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       _currentOTP = _otpControllers.map((c) => c.text).join();
     });
 
-    // Auto-verify if complete
-    if (_currentOTP.length == 5 && !_currentOTP.contains('')) {
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted && _currentOTP.length == 5) _verifyOTP();
+    // AUTO-TRIGGER for paste/multi-input
+    if (_currentOTP.length == 5 && !_isVerifying) {
+      print('🔄 Paste/Multi-input complete: $_currentOTP');
+      Future.delayed(const Duration(milliseconds: 800), () {
+        if (mounted && _currentOTP.length == 5 && !_isVerifying) {
+          print('✨ Auto-triggering verification for paste input');
+          _verifyOTP();
+        }
       });
     }
   }
@@ -878,7 +882,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
                     height: 150,
                   ),
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: 20),
                 const Text(
                   'Verify Your Phone',
                   style: TextStyle(
@@ -887,12 +891,12 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
                     color: Color(0xFF333333),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 10),
                 Text(
                   'We\'ve sent a verification code to',
                   style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 Text(
                   _formatPhoneNumber(widget.phoneNumber),
                   style: const TextStyle(
@@ -901,7 +905,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
                     color: Color(0xFF333333),
                   ),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 20),
 
                 // OTP Input Fields
                 Row(
@@ -962,8 +966,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
                             // Became empty (likely backspace) → go to previous
                             if (index > 0) {
                               _otpFocusNodes[index - 1].requestFocus();
-                              // Optional: also clear previous to emulate "delete previous"
-                              // _setDigit(index - 1, '');
                             }
                           }
 
@@ -973,16 +975,20 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
                                 .join();
                           });
 
-                          if (_currentOTP.length == 5 &&
-                              !_currentOTP.contains('')) {
-                            Future.delayed(
-                              const Duration(milliseconds: 300),
-                              () {
-                                if (mounted && _currentOTP.length == 5) {
-                                  _verifyOTP();
-                                }
-                              },
-                            );
+                          if (_currentOTP.length == 5 && !_isVerifying) {
+                            print('🔄 Manual OTP entry complete: $_currentOTP');
+                            print('🔍 Will auto-trigger verification...');
+
+                            Future.delayed(const Duration(milliseconds: 800), () {
+                              if (mounted &&
+                                  _currentOTP.length == 5 &&
+                                  !_isVerifying) {
+                                print(
+                                  '✨ Auto-triggering verification for manual entry',
+                                );
+                                _verifyOTP();
+                              }
+                            });
                           }
                         },
                         onTap: () {
@@ -996,7 +1002,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
                   }),
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 10),
 
                 // Auto-fill status indicator
                 Container(
@@ -1079,7 +1085,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
                     ],
                   ),
 
-                const SizedBox(height: 40),
+                const SizedBox(height: 30),
 
                 // Verify Button
                 SizedBox(

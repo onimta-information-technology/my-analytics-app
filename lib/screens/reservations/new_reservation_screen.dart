@@ -763,251 +763,289 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
     }
     final fontSettings = ref.watch(fontSettingsProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: !_isEditMode ? Colors.white : Colors.green,
-        foregroundColor: !_isEditMode ? Colors.black : Colors.white,
-        title: Text(
-          !_isEditMode ? "New Reservation" : "Update Reservation",
-          style: TextStyle(
-            fontSize: 18 * (fontSettings.fontSize / 16),
-            fontWeight: fontSettings.fontWeight,
+    return GestureDetector(
+      onTap: () {
+        FocusScope.of(context).unfocus();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: !_isEditMode ? Colors.white : Colors.green,
+          foregroundColor: !_isEditMode ? Colors.black : Colors.white,
+          title: Text(
+            !_isEditMode ? "New Reservation" : "Update Reservation",
+            style: TextStyle(
+              fontSize: 18 * (fontSettings.fontSize / 16),
+              fontWeight: fontSettings.fontWeight,
+            ),
           ),
         ),
-      ),
-      body: Form(
-        key: _formKey,
-        child: PopScope(
-          onPopInvokedWithResult: (bool didPop, dynamic result) {
-            // if (didPop) return;
-            ref.read(newReservationProvider.notifier).resetState();
-            ref.read(memberSearchProvider.notifier).resetState();
-            ref
-                .read(selectedReservationProvider.notifier)
-                .clearSelectedReservation();
-            ref.read(selectedHotelProvider.notifier).setHotels([]);
-            ref.read(selectedFlightProvider.notifier).setFlights([]);
-          },
-          child: Stack(
-            children: [
-              SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      if (_isEditMode) ...[
-                        TextFormField(
-                          autofocus: false,
-                          readOnly: true,
-                          controller: _reservationNoController,
-                          style: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: fontSettings.fontWeight,
-                          ),
-                          decoration: InputDecoration(
-                            labelText: "Reservation No",
-                            labelStyle: TextStyle(
+        body: Form(
+          key: _formKey,
+          child: PopScope(
+            onPopInvokedWithResult: (bool didPop, dynamic result) {
+              // if (didPop) return;
+              ref.read(newReservationProvider.notifier).resetState();
+              ref.read(memberSearchProvider.notifier).resetState();
+              ref
+                  .read(selectedReservationProvider.notifier)
+                  .clearSelectedReservation();
+              ref.read(selectedHotelProvider.notifier).setHotels([]);
+              ref.read(selectedFlightProvider.notifier).setFlights([]);
+            },
+            child: Stack(
+              children: [
+                SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        if (_isEditMode) ...[
+                          TextFormField(
+                            autofocus: false,
+                            readOnly: true,
+                            controller: _reservationNoController,
+                            style: TextStyle(
                               fontSize: fontSettings.fontSize,
                               fontWeight: fontSettings.fontWeight,
                             ),
-                            border: const OutlineInputBorder(),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12.0,
-                              vertical: -5.0,
+                            decoration: InputDecoration(
+                              labelText: "Reservation No",
+                              labelStyle: TextStyle(
+                                fontSize: fontSettings.fontSize,
+                                fontWeight: fontSettings.fontWeight,
+                              ),
+                              border: const OutlineInputBorder(),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12.0,
+                                vertical: -5.0,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 10.0),
-                      ],
-                      if (newReservation.bmNumber != null)
-                        const SizedBox(height: 16.0),
+                          const SizedBox(height: 10.0),
+                        ],
+                        if (newReservation.bmNumber != null)
+                          const SizedBox(height: 16.0),
 
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _isEditMode
-                                ? TextFormField(
-                                    controller: _memberIdController,
-                                    readOnly: true,
-                                    style: TextStyle(
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                    decoration: InputDecoration(
-                                      labelText: "MID *",
-                                      labelStyle: TextStyle(
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _isEditMode
+                                  ? TextFormField(
+                                      controller: _memberIdController,
+                                      readOnly: true,
+                                      style: TextStyle(
                                         fontSize: fontSettings.fontSize,
                                         fontWeight: fontSettings.fontWeight,
                                       ),
-                                      border: const OutlineInputBorder(),
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12.0,
-                                            vertical: -5.0,
-                                          ),
-                                    ),
-                                  )
-                                : TextFormField(
-                                    controller: _memberIdNumberController,
-                                    keyboardType: TextInputType.number,
-                                    style: TextStyle(
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                    decoration: InputDecoration(
-                                      labelText: "MID *",
-                                      labelStyle: TextStyle(
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
-                                      ),
-                                      border: const OutlineInputBorder(),
-                                      // isDense: true,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12.0,
-                                            vertical: -5.0,
-                                          ),
-                                      prefixIcon: Padding(
-                                        padding: const EdgeInsets.only(
-                                          left: 12,
-                                          right: 4,
+                                      decoration: InputDecoration(
+                                        labelText: "MID *",
+                                        labelStyle: TextStyle(
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
                                         ),
-                                        child: DropdownButtonHideUnderline(
-                                          child: DropdownButton<String>(
-                                            value: _selectedPrefix,
-                                            style: TextStyle(
-                                              fontSize: fontSettings.fontSize,
-                                              fontWeight:
-                                                  fontSettings.fontWeight,
-                                              color: Colors.black,
+                                        border: const OutlineInputBorder(),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 12.0,
+                                              vertical: -5.0,
                                             ),
-                                            items: ["BM", "BL", "BN"].map((
-                                              prefix,
-                                            ) {
-                                              return DropdownMenuItem(
-                                                value: prefix,
-                                                child: Text(
-                                                  prefix,
-                                                  style: TextStyle(
-                                                    fontSize:
-                                                        fontSettings.fontSize,
-                                                    fontWeight:
-                                                        fontSettings.fontWeight,
+                                      ),
+                                    )
+                                  : TextFormField(
+                                      controller: _memberIdNumberController,
+                                      keyboardType: TextInputType.number,
+                                      style: TextStyle(
+                                        fontSize: fontSettings.fontSize,
+                                        fontWeight: fontSettings.fontWeight,
+                                      ),
+                                      decoration: InputDecoration(
+                                        labelText: "MID *",
+                                        labelStyle: TextStyle(
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
+                                        border: const OutlineInputBorder(),
+                                        // isDense: true,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 12.0,
+                                              vertical: -5.0,
+                                            ),
+                                        prefixIcon: Padding(
+                                          padding: const EdgeInsets.only(
+                                            left: 12,
+                                            right: 4,
+                                          ),
+                                          child: DropdownButtonHideUnderline(
+                                            child: DropdownButton<String>(
+                                              value: _selectedPrefix,
+                                              style: TextStyle(
+                                                fontSize: fontSettings.fontSize,
+                                                fontWeight:
+                                                    fontSettings.fontWeight,
+                                                color: Colors.black,
+                                              ),
+                                              items: ["BM", "BL", "BN"].map((
+                                                prefix,
+                                              ) {
+                                                return DropdownMenuItem(
+                                                  value: prefix,
+                                                  child: Text(
+                                                    prefix,
+                                                    style: TextStyle(
+                                                      fontSize:
+                                                          fontSettings.fontSize,
+                                                      fontWeight: fontSettings
+                                                          .fontWeight,
+                                                    ),
                                                   ),
-                                                ),
-                                              );
-                                            }).toList(),
-                                            onChanged: (value) {
-                                              setState(() {
-                                                _selectedPrefix = value!;
-                                              });
-                                            },
+                                                );
+                                              }).toList(),
+                                              onChanged: (value) {
+                                                setState(() {
+                                                  _selectedPrefix = value!;
+                                                });
+                                              },
+                                            ),
                                           ),
                                         ),
+                                        suffixIcon: IconButton(
+                                          icon: const Icon(Icons.search),
+                                          onPressed: () {
+                                            FocusScope.of(context).unfocus();
+                                            _memberIdController.text =
+                                                '$_selectedPrefix${_memberIdNumberController.text}';
+                                            _openMemberSearchBottomSheet(8002);
+                                          },
+                                        ),
                                       ),
-                                      suffixIcon: IconButton(
-                                        icon: const Icon(Icons.search),
-                                        onPressed: () {
-                                          FocusScope.of(context).unfocus();
-                                          _memberIdController.text =
-                                              '$_selectedPrefix${_memberIdNumberController.text}';
-                                          _openMemberSearchBottomSheet(8002);
-                                        },
-                                      ),
-                                    ),
-                                    validator: (value) {
-                                      if (value == null ||
-                                          value.trim().isEmpty) {
-                                        return "Member ID is required";
-                                      }
-                                      return null;
-                                    },
-                                    onChanged: (value) {
-                                      _memberNameController.text = '';
-                                      ref
-                                          .read(newReservationProvider.notifier)
-                                          .resetState();
-                                    },
-                                  ),
-                          ),
-                          const SizedBox(width: 10.0),
-
-                          ElevatedButton(
-                            onPressed: _isEditMode
-                                ? () async {
-                                    try {
-                                      // Check if guest data is already available
-                                      final currentSelectedGuest = ref.read(
-                                        selectedGuestProvider,
-                                      );
-
-                                      if (currentSelectedGuest != null &&
-                                          currentSelectedGuest.mid ==
-                                              _memberIdController.text) {
-                                        // Guest data already loaded, navigate directly
-                                        context.push('/home/profile');
-                                        return;
-                                      }
-
-                                      // Set loading state only if we need to fetch data
-                                      setState(() {
-                                        _isLoading = true;
-                                      });
-
-                                      GuestRepository guestRepository =
-                                          GuestRepository(
-                                            ApiService(
-                                              const FlutterSecureStorage(),
-                                            ),
-                                          );
-
-                                      // Search for guest by MID to get full guest information
-                                      List<GuestSearchResponse>
-                                      guests = await guestRepository.searchGuest(
-                                        9021, // Using 9021 as the search type for MID lookup
-                                        _memberIdController.text,
-                                      );
-
-                                      setState(() {
-                                        _isLoading = false;
-                                      });
-
-                                      if (guests.isNotEmpty) {
-                                        // Set the selected guest with the retrieved information
-                                        final guestResponse = guests.first;
+                                      validator: (value) {
+                                        if (value == null ||
+                                            value.trim().isEmpty) {
+                                          return "Member ID is required";
+                                        }
+                                        return null;
+                                      },
+                                      onChanged: (value) {
+                                        _memberNameController.text = '';
                                         ref
                                             .read(
-                                              selectedGuestProvider.notifier,
+                                              newReservationProvider.notifier,
                                             )
-                                            .setSelectedGuest(
-                                              Guest(
-                                                mid:
-                                                    guestResponse.mid ??
-                                                    _memberIdController.text,
-                                                memberName:
-                                                    guestResponse.mName ??
-                                                    _memberNameController.text,
-                                                country: "",
-                                                lastVisitDate:
-                                                    guestResponse.lvd
-                                                        .toString() ??
-                                                    "",
-                                                gift: "",
-                                                age: 0,
-                                                gRating:
-                                                    guestResponse.gRating ?? "",
-                                                mGroup: "",
-                                                gName:
-                                                    guestResponse.gName ?? "",
-                                                memImage2:
-                                                    guestResponse.memImage2,
+                                            .resetState();
+                                      },
+                                    ),
+                            ),
+                            const SizedBox(width: 10.0),
+
+                            ElevatedButton(
+                              onPressed: _isEditMode
+                                  ? () async {
+                                      try {
+                                        // Check if guest data is already available
+                                        final currentSelectedGuest = ref.read(
+                                          selectedGuestProvider,
+                                        );
+
+                                        if (currentSelectedGuest != null &&
+                                            currentSelectedGuest.mid ==
+                                                _memberIdController.text) {
+                                          // Guest data already loaded, navigate directly
+                                          context.push('/home/profile');
+                                          return;
+                                        }
+
+                                        // Set loading state only if we need to fetch data
+                                        setState(() {
+                                          _isLoading = true;
+                                        });
+
+                                        GuestRepository guestRepository =
+                                            GuestRepository(
+                                              ApiService(
+                                                const FlutterSecureStorage(),
                                               ),
                                             );
 
-                                        // Navigate to profile
-                                        context.push('/home/profile');
-                                      } else {
-                                        // If no guest found, create a basic guest object with available info
+                                        // Search for guest by MID to get full guest information
+                                        List<GuestSearchResponse>
+                                        guests = await guestRepository.searchGuest(
+                                          9021, // Using 9021 as the search type for MID lookup
+                                          _memberIdController.text,
+                                        );
+
+                                        setState(() {
+                                          _isLoading = false;
+                                        });
+
+                                        if (guests.isNotEmpty) {
+                                          // Set the selected guest with the retrieved information
+                                          final guestResponse = guests.first;
+                                          ref
+                                              .read(
+                                                selectedGuestProvider.notifier,
+                                              )
+                                              .setSelectedGuest(
+                                                Guest(
+                                                  mid:
+                                                      guestResponse.mid ??
+                                                      _memberIdController.text,
+                                                  memberName:
+                                                      guestResponse.mName ??
+                                                      _memberNameController
+                                                          .text,
+                                                  country: "",
+                                                  lastVisitDate:
+                                                      guestResponse.lvd
+                                                          .toString() ??
+                                                      "",
+                                                  gift: "",
+                                                  age: 0,
+                                                  gRating:
+                                                      guestResponse.gRating ??
+                                                      "",
+                                                  mGroup: "",
+                                                  gName:
+                                                      guestResponse.gName ?? "",
+                                                  memImage2:
+                                                      guestResponse.memImage2,
+                                                ),
+                                              );
+
+                                          // Navigate to profile
+                                          context.push('/home/profile');
+                                        } else {
+                                          // If no guest found, create a basic guest object with available info
+                                          ref
+                                              .read(
+                                                selectedGuestProvider.notifier,
+                                              )
+                                              .setSelectedGuest(
+                                                Guest(
+                                                  mid: _memberIdController.text,
+                                                  memberName:
+                                                      _memberNameController
+                                                          .text,
+                                                  country: "",
+                                                  lastVisitDate: "1990-01-01",
+                                                  gift: "",
+                                                  age: 0,
+                                                  gRating: "",
+                                                  mGroup: "",
+                                                  gName: "",
+                                                ),
+                                              );
+
+                                          context.push('/home/profile');
+                                        }
+                                      } catch (e) {
+                                        setState(() {
+                                          _isLoading = false;
+                                        });
+
+                                        print("Error searching guest: $e");
+
+                                        // Still allow navigation with basic info if search fails
                                         ref
                                             .read(
                                               selectedGuestProvider.notifier,
@@ -1029,545 +1067,168 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
 
                                         context.push('/home/profile');
                                       }
-                                    } catch (e) {
-                                      setState(() {
-                                        _isLoading = false;
-                                      });
-
-                                      print("Error searching guest: $e");
-
-                                      // Still allow navigation with basic info if search fails
-                                      ref
-                                          .read(selectedGuestProvider.notifier)
-                                          .setSelectedGuest(
-                                            Guest(
-                                              mid: _memberIdController.text,
-                                              memberName:
-                                                  _memberNameController.text,
-                                              country: "",
-                                              lastVisitDate: "1990-01-01",
-                                              gift: "",
-                                              age: 0,
-                                              gRating: "",
-                                              mGroup: "",
-                                              gName: "",
-                                            ),
-                                          );
-
-                                      context.push('/home/profile');
                                     }
-                                  }
-                                : (newReservation.bmNumber == null
-                                      ? null
-                                      : () {
-                                          context.push('/home/profile');
-                                        }),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _isEditMode
-                                  ? const Color.fromARGB(255, 70, 70, 70)
                                   : (newReservation.bmNumber == null
-                                        ? Colors.grey.shade400
-                                        : const Color.fromARGB(
-                                            255,
-                                            70,
-                                            70,
-                                            70,
-                                          )),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 16,
-                                horizontal: 14,
-                              ),
-                            ),
-                            child: const Icon(Icons.person_search, size: 25),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10.0),
-                      // Member Name field - simplified for edit mode
-                      TextFormField(
-                        autofocus: false,
-                        controller: _memberNameController,
-                        readOnly: _isEditMode, // Make read-only in edit mode
-                        style: TextStyle(
-                          fontSize: fontSettings.fontSize,
-                          fontWeight: fontSettings.fontWeight,
-                        ),
-                        decoration: InputDecoration(
-                          labelText: "Member Name *",
-                          labelStyle: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: fontSettings.fontWeight,
-                          ),
-                          border: const OutlineInputBorder(),
-                          //isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12.0,
-                            vertical: -5.0,
-                          ),
-
-                          // Only show search icon when NOT in edit mode
-                          suffixIcon: !_isEditMode
-                              ? IconButton(
-                                  icon: const Icon(Icons.search),
-                                  onPressed: () {
-                                    FocusScope.of(
-                                      context,
-                                    ).requestFocus(FocusNode());
-                                    _openMemberSearchBottomSheet(8003);
-                                  },
-                                )
-                              : null,
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return "Member Name is required";
-                          }
-                          return null;
-                        },
-                        onChanged: !_isEditMode
-                            ? (value) {
-                                _memberIdController.text = '';
-                                ref
-                                    .read(newReservationProvider.notifier)
-                                    .resetState();
-                              }
-                            : null,
-                      ),
-
-                      GuestDisplayCard(
-                        memberIdText: _memberIdController.text,
-                        memberNameText: _memberNameController.text,
-                        showCard:
-                            (_isEditMode &&
-                                _memberIdController.text.isNotEmpty &&
-                                _memberNameController.text.isNotEmpty) ||
-                            (newReservation.bmNumber != null &&
-                                newReservation.guestName != null),
-                      ),
-                      const SizedBox(height: 10.0),
-                      ValueListenableBuilder<String>(
-                        valueListenable: hotelRoomNotifier,
-                        builder: (context, value, child) {
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              TextFormField(
-                                controller: TextEditingController(text: value),
-                                readOnly: true,
-                                style: TextStyle(
-                                  fontSize: fontSettings.fontSize,
-                                  fontWeight: fontSettings.fontWeight,
-                                ),
-                                decoration: InputDecoration(
-                                  labelText: "Select Hotels & Rooms",
-                                  labelStyle: TextStyle(
-                                    fontSize: fontSettings.fontSize,
-                                    fontWeight: fontSettings.fontWeight,
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: _hotelError != null
-                                          ? Colors.red
-                                          : Colors.grey,
-                                    ),
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 12.0,
-                                    vertical: -5.0,
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: _hotelError != null
-                                          ? Colors.red
-                                          : Colors.grey,
-                                    ),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: _hotelError != null
-                                          ? Colors.red
+                                        ? null
+                                        : () {
+                                            context.push('/home/profile');
+                                          }),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _isEditMode
+                                    ? const Color.fromARGB(255, 70, 70, 70)
+                                    : (newReservation.bmNumber == null
+                                          ? Colors.grey.shade400
                                           : const Color.fromARGB(
                                               255,
-                                              103,
-                                              4,
-                                              125,
-                                            ),
-                                    ),
-                                  ),
-                                  suffixIcon: IconButton(
-                                    icon: const Icon(Icons.arrow_drop_down),
-                                    onPressed: () =>
-                                        _openHotelAndRoomSelectorBottomSheet(
-                                          context,
-                                        ),
-                                  ),
+                                              70,
+                                              70,
+                                              70,
+                                            )),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                  horizontal: 14,
                                 ),
                               ),
-                              // Error message for hotel selection
-                              if (_hotelError != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(
-                                    left: 12.0,
-                                    top: 4.0,
-                                  ),
-                                  child: Text(
-                                    _hotelError!,
-                                    style: TextStyle(
-                                      color: Colors.red,
-                                      fontSize: fontSettings.fontSize * 0.75,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 10.0),
-                      selectedHotels.isEmpty
-                          ? Center(
-                              heightFactor: 3.0,
-                              child: Text(
-                                'No hotels selected.',
-                                style: TextStyle(
-                                  fontSize: fontSettings.fontSize,
-                                  color: Colors.grey.shade500,
-                                  fontWeight: fontSettings.fontWeight,
-                                ),
-                              ),
-                            )
-                          : Column(
-                              children: selectedHotels.map((hotel) {
-                                return SizedBox(
-                                  width: double.infinity,
-                                  child: Card(
-                                    color: const Color.fromARGB(
-                                      255,
-                                      228,
-                                      224,
-                                      224,
-                                    ),
-                                    margin: const EdgeInsets.symmetric(
-                                      horizontal: 3,
-                                      vertical: 8,
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(12.0),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            hotel.hotelName!,
-                                            style: TextStyle(
-                                              fontSize:
-                                                  fontSettings.fontSize * 1.125,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          RichText(
-                                            text: TextSpan(
-                                              children: [
-                                                TextSpan(
-                                                  text: "Category: ",
-                                                  style: TextStyle(
-                                                    fontSize:
-                                                        fontSettings.fontSize,
-                                                    color: Colors.black,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                                TextSpan(
-                                                  text: hotel.roomCategoryName,
-                                                  style: TextStyle(
-                                                    fontSize:
-                                                        fontSettings.fontSize,
-                                                    color: Colors.black,
-                                                    fontWeight:
-                                                        fontSettings.fontWeight,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          const SizedBox(height: 5),
-                                          RichText(
-                                            text: TextSpan(
-                                              children: [
-                                                TextSpan(
-                                                  text: "Room Type: ",
-                                                  style: TextStyle(
-                                                    fontSize:
-                                                        fontSettings.fontSize,
-                                                    color: Colors.black,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                                TextSpan(
-                                                  text: hotel.roomTypeName,
-                                                  style: TextStyle(
-                                                    fontSize:
-                                                        fontSettings.fontSize,
-                                                    color: Colors.black,
-                                                    fontWeight:
-                                                        fontSettings.fontWeight,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Text(
-                                                "Guests: ${hotel.guestCount}",
-                                                style: TextStyle(
-                                                  fontSize:
-                                                      fontSettings.fontSize *
-                                                      0.875,
-                                                  fontWeight:
-                                                      fontSettings.fontWeight,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 20),
-                                              Text(
-                                                "Nights: ${hotel.noOfNights}",
-                                                style: TextStyle(
-                                                  fontSize:
-                                                      fontSettings.fontSize *
-                                                      0.875,
-                                                  fontWeight:
-                                                      fontSettings.fontWeight,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 20),
-                                              Text(
-                                                "Rooms: ${hotel.roomCount}",
-                                                style: TextStyle(
-                                                  fontSize:
-                                                      fontSettings.fontSize *
-                                                      0.875,
-                                                  fontWeight:
-                                                      fontSettings.fontWeight,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            "Estimated Cost: ${hotel.selectedCost}",
-                                            style: TextStyle(
-                                              fontSize: fontSettings.fontSize,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
+                              child: const Icon(Icons.person_search, size: 25),
                             ),
-                      const SizedBox(height: 10.0),
-                      TextFormField(
-                        controller: _arrivalDateController,
-                        readOnly: true,
-                        style: TextStyle(
-                          fontSize: fontSettings.fontSize,
-                          fontWeight: fontSettings.fontWeight,
+                          ],
                         ),
-                        decoration: InputDecoration(
-                          labelText: "Arrival Date *",
-                          labelStyle: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: fontSettings.fontWeight,
-                          ),
-                          border: const OutlineInputBorder(),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12.0,
-                            vertical: -5.0,
-                          ),
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.calendar_today),
-                            onPressed: () => _selectArrivalDate(context),
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return "Arrival Date is required";
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 10),
-                      TextFormField(
-                        controller: _departureDateController,
-                        readOnly: true,
-                        style: TextStyle(
-                          fontSize: fontSettings.fontSize,
-                          fontWeight: fontSettings.fontWeight,
-                        ),
-                        decoration: InputDecoration(
-                          labelText: "Departure Date *",
-                          labelStyle: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: fontSettings.fontWeight,
-                          ),
-                          border: const OutlineInputBorder(),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12.0,
-                            vertical: -5.0,
-                          ),
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.calendar_today),
-                            onPressed: () => _selectDepartureDate(context),
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return "Departure Date is required";
-                          }
-                          if (_arrivalDate != null &&
-                              _departureDate != null &&
-                              _departureDate!.isBefore(_arrivalDate!)) {
-                            return "Departure must be after Arrival";
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 10),
-                      Align(
-                        alignment: Alignment.topLeft,
-                        child: Text(
-                          "Air Ticket Requisition",
+                        const SizedBox(height: 10.0),
+                        // Member Name field - simplified for edit mode
+                        TextFormField(
+                          autofocus: false,
+                          controller: _memberNameController,
+                          readOnly: _isEditMode, // Make read-only in edit mode
                           style: TextStyle(
                             fontSize: fontSettings.fontSize,
                             fontWeight: fontSettings.fontWeight,
                           ),
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          Radio<String>(
-                            value: "Yes",
-                            groupValue: _airTicketRequisition,
-                            onChanged: (value) {
-                              setState(() {
-                                _airTicketRequisition = value!;
-                              });
-                            },
-                          ),
-                          Text(
-                            "Yes",
-                            style: TextStyle(
+                          decoration: InputDecoration(
+                            labelText: "Member Name *",
+                            labelStyle: TextStyle(
                               fontSize: fontSettings.fontSize,
                               fontWeight: fontSettings.fontWeight,
                             ),
-                          ),
-                          Radio<String>(
-                            value: "No",
-                            groupValue: _airTicketRequisition,
-                            onChanged: _canChangeAirTicketToNo()
-                                ? (value) {
-                                    setState(() {
-                                      _airTicketRequisition = value!;
-                                    });
-                                  }
+                            border: const OutlineInputBorder(),
+                            //isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12.0,
+                              vertical: -5.0,
+                            ),
+
+                            // Only show search icon when NOT in edit mode
+                            suffixIcon: !_isEditMode
+                                ? IconButton(
+                                    icon: const Icon(Icons.search),
+                                    onPressed: () {
+                                      FocusScope.of(
+                                        context,
+                                      ).requestFocus(FocusNode());
+                                      _openMemberSearchBottomSheet(8003);
+                                    },
+                                  )
                                 : null,
                           ),
-                          Text(
-                            "No",
-                            style: TextStyle(
-                              fontSize: fontSettings.fontSize,
-                              fontWeight: fontSettings.fontWeight,
-                              color: _canChangeAirTicketToNo()
-                                  ? Colors.black
-                                  : Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (_airTicketRequisition == "Yes")
-                        Column(
-                          children: [
-                            const SizedBox(height: 10.0),
-                            Column(
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return "Member Name is required";
+                            }
+                            return null;
+                          },
+                          onChanged: !_isEditMode
+                              ? (value) {
+                                  _memberIdController.text = '';
+                                  ref
+                                      .read(newReservationProvider.notifier)
+                                      .resetState();
+                                }
+                              : null,
+                        ),
+
+                        GuestDisplayCard(
+                          memberIdText: _memberIdController.text,
+                          memberNameText: _memberNameController.text,
+                          showCard:
+                              (_isEditMode &&
+                                  _memberIdController.text.isNotEmpty &&
+                                  _memberNameController.text.isNotEmpty) ||
+                              (newReservation.bmNumber != null &&
+                                  newReservation.guestName != null),
+                        ),
+                        const SizedBox(height: 10.0),
+                        ValueListenableBuilder<String>(
+                          valueListenable: hotelRoomNotifier,
+                          builder: (context, value, child) {
+                            return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                ValueListenableBuilder<String>(
-                                  valueListenable: airTicketsNotifier,
-                                  builder: (context, value, child) {
-                                    return TextFormField(
-                                      controller: TextEditingController(
-                                        text: value,
+                                TextFormField(
+                                  controller: TextEditingController(
+                                    text: value,
+                                  ),
+                                  readOnly: true,
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize,
+                                    fontWeight: fontSettings.fontWeight,
+                                  ),
+                                  decoration: InputDecoration(
+                                    labelText: "Select Hotels & Rooms",
+                                    labelStyle: TextStyle(
+                                      fontSize: fontSettings.fontSize,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: _hotelError != null
+                                            ? Colors.red
+                                            : Colors.grey,
                                       ),
-                                      readOnly: true,
-                                      style: TextStyle(
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 12.0,
+                                      vertical: -5.0,
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: _hotelError != null
+                                            ? Colors.red
+                                            : Colors.grey,
                                       ),
-                                      decoration: InputDecoration(
-                                        labelText: "Select Air Tickets",
-                                        labelStyle: TextStyle(
-                                          fontSize: fontSettings.fontSize,
-                                          fontWeight: fontSettings.fontWeight,
-                                        ),
-                                        border: OutlineInputBorder(
-                                          borderSide: BorderSide(
-                                            color: _airTicketError != null
-                                                ? Colors.red
-                                                : Colors.grey,
-                                          ),
-                                        ),
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 12.0,
-                                              vertical: -5.0,
-                                            ),
-                                        enabledBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(
-                                            color: _airTicketError != null
-                                                ? Colors.red
-                                                : Colors.grey,
-                                          ),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(
-                                            color: _airTicketError != null
-                                                ? Colors.red
-                                                : Colors.blue,
-                                          ),
-                                        ),
-                                        suffixIcon: IconButton(
-                                          icon: const Icon(
-                                            Icons.arrow_drop_down,
-                                          ),
-                                          onPressed: () =>
-                                              _openAirTicketsSelectorScreen(
-                                                context,
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: _hotelError != null
+                                            ? Colors.red
+                                            : const Color.fromARGB(
+                                                255,
+                                                103,
+                                                4,
+                                                125,
                                               ),
-                                        ),
                                       ),
-                                    );
-                                  },
+                                    ),
+                                    suffixIcon: IconButton(
+                                      icon: const Icon(Icons.arrow_drop_down),
+                                      onPressed: () =>
+                                          _openHotelAndRoomSelectorBottomSheet(
+                                            context,
+                                          ),
+                                    ),
+                                  ),
                                 ),
-                                // Error message for air ticket selection
-                                if (_airTicketError != null)
+                                // Error message for hotel selection
+                                if (_hotelError != null)
                                   Padding(
                                     padding: const EdgeInsets.only(
                                       left: 12.0,
                                       top: 4.0,
                                     ),
                                     child: Text(
-                                      _airTicketError!,
+                                      _hotelError!,
                                       style: TextStyle(
                                         color: Colors.red,
                                         fontSize: fontSettings.fontSize * 0.75,
@@ -1576,126 +1237,485 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                                     ),
                                   ),
                               ],
-                            ),
-                          ],
+                            );
+                          },
                         ),
-                      if (_airTicketRequisition == "Yes")
-                        Column(
-                          children: [
-                            const SizedBox(height: 16.0),
-                            selectedFlights.isEmpty
-                                ? Center(
-                                    heightFactor: 6.0,
-                                    child: Text(
-                                      'No air tickets available.',
-                                      style: TextStyle(
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                        const SizedBox(height: 10.0),
+                        selectedHotels.isEmpty
+                            ? Center(
+                                heightFactor: 3.0,
+                                child: Text(
+                                  'No hotels selected.',
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize,
+                                    color: Colors.grey.shade500,
+                                    fontWeight: fontSettings.fontWeight,
+                                  ),
+                                ),
+                              )
+                            : Column(
+                                children: selectedHotels.map((hotel) {
+                                  return SizedBox(
+                                    width: double.infinity,
+                                    child: Card(
+                                      color: const Color.fromARGB(
+                                        255,
+                                        228,
+                                        224,
+                                        224,
+                                      ),
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 3,
+                                        vertical: 8,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(12.0),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              hotel.hotelName!,
+                                              style: TextStyle(
+                                                fontSize:
+                                                    fontSettings.fontSize *
+                                                    1.125,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            RichText(
+                                              text: TextSpan(
+                                                children: [
+                                                  TextSpan(
+                                                    text: "Category: ",
+                                                    style: TextStyle(
+                                                      fontSize:
+                                                          fontSettings.fontSize,
+                                                      color: Colors.black,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                  TextSpan(
+                                                    text:
+                                                        hotel.roomCategoryName,
+                                                    style: TextStyle(
+                                                      fontSize:
+                                                          fontSettings.fontSize,
+                                                      color: Colors.black,
+                                                      fontWeight: fontSettings
+                                                          .fontWeight,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const SizedBox(height: 5),
+                                            RichText(
+                                              text: TextSpan(
+                                                children: [
+                                                  TextSpan(
+                                                    text: "Room Type: ",
+                                                    style: TextStyle(
+                                                      fontSize:
+                                                          fontSettings.fontSize,
+                                                      color: Colors.black,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                  TextSpan(
+                                                    text: hotel.roomTypeName,
+                                                    style: TextStyle(
+                                                      fontSize:
+                                                          fontSettings.fontSize,
+                                                      color: Colors.black,
+                                                      fontWeight: fontSettings
+                                                          .fontWeight,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                Text(
+                                                  "Guests: ${hotel.guestCount}",
+                                                  style: TextStyle(
+                                                    fontSize:
+                                                        fontSettings.fontSize *
+                                                        0.875,
+                                                    fontWeight:
+                                                        fontSettings.fontWeight,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 20),
+                                                Text(
+                                                  "Nights: ${hotel.noOfNights}",
+                                                  style: TextStyle(
+                                                    fontSize:
+                                                        fontSettings.fontSize *
+                                                        0.875,
+                                                    fontWeight:
+                                                        fontSettings.fontWeight,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 20),
+                                                Text(
+                                                  "Rooms: ${hotel.roomCount}",
+                                                  style: TextStyle(
+                                                    fontSize:
+                                                        fontSettings.fontSize *
+                                                        0.875,
+                                                    fontWeight:
+                                                        fontSettings.fontWeight,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              "Estimated Cost: ${hotel.selectedCost}",
+                                              style: TextStyle(
+                                                fontSize: fontSettings.fontSize,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
-                                  )
-                                : SizedBox(
-                                    child: Column(
-                                      children: selectedFlights.map((flight) {
-                                        final index = selectedFlights.indexOf(
-                                          flight,
-                                        );
-                                        return FlightCard(
-                                          flight: flight,
-                                          index: index,
-                                          showDelete: false,
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ),
+                                  );
+                                }).toList(),
+                              ),
+                        const SizedBox(height: 10.0),
+                        TextFormField(
+                          controller: _arrivalDateController,
+                          readOnly: true,
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: fontSettings.fontWeight,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: "Arrival Date *",
+                            labelStyle: TextStyle(
+                              fontSize: fontSettings.fontSize,
+                              fontWeight: fontSettings.fontWeight,
+                            ),
+                            border: const OutlineInputBorder(),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12.0,
+                              vertical: -5.0,
+                            ),
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.calendar_today),
+                              onPressed: () => _selectArrivalDate(context),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return "Arrival Date is required";
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                        TextFormField(
+                          controller: _departureDateController,
+                          readOnly: true,
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: fontSettings.fontWeight,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: "Departure Date *",
+                            labelStyle: TextStyle(
+                              fontSize: fontSettings.fontSize,
+                              fontWeight: fontSettings.fontWeight,
+                            ),
+                            border: const OutlineInputBorder(),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12.0,
+                              vertical: -5.0,
+                            ),
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.calendar_today),
+                              onPressed: () => _selectDepartureDate(context),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return "Departure Date is required";
+                            }
+                            if (_arrivalDate != null &&
+                                _departureDate != null &&
+                                _departureDate!.isBefore(_arrivalDate!)) {
+                              return "Departure must be after Arrival";
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                        Align(
+                          alignment: Alignment.topLeft,
+                          child: Text(
+                            "Air Ticket Requisition",
+                            style: TextStyle(
+                              fontSize: fontSettings.fontSize,
+                              fontWeight: fontSettings.fontWeight,
+                            ),
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            Radio<String>(
+                              value: "Yes",
+                              groupValue: _airTicketRequisition,
+                              onChanged: (value) {
+                                setState(() {
+                                  _airTicketRequisition = value!;
+                                });
+                              },
+                            ),
+                            Text(
+                              "Yes",
+                              style: TextStyle(
+                                fontSize: fontSettings.fontSize,
+                                fontWeight: fontSettings.fontWeight,
+                              ),
+                            ),
+                            Radio<String>(
+                              value: "No",
+                              groupValue: _airTicketRequisition,
+                              onChanged: _canChangeAirTicketToNo()
+                                  ? (value) {
+                                      setState(() {
+                                        _airTicketRequisition = value!;
+                                      });
+                                    }
+                                  : null,
+                            ),
+                            Text(
+                              "No",
+                              style: TextStyle(
+                                fontSize: fontSettings.fontSize,
+                                fontWeight: fontSettings.fontWeight,
+                                color: _canChangeAirTicketToNo()
+                                    ? Colors.black
+                                    : Colors.grey,
+                              ),
+                            ),
                           ],
                         ),
-                      const SizedBox(height: 10.0),
-                      TextFormField(
-                        controller: _remarksController,
-                        style: TextStyle(
-                          fontSize: fontSettings.fontSize,
-                          fontWeight: fontSettings.fontWeight,
-                        ),
-                        decoration: InputDecoration(
-                          alignLabelWithHint: true,
-                          labelText: "Remarks",
-                          labelStyle: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: fontSettings.fontWeight,
-                          ),
-
-                          hintText: "Enter additional details...",
-                          hintStyle: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: fontSettings.fontWeight,
-                            color: Colors.grey,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8.0),
-                          ),
-                        ),
-                        maxLines: 5,
-                        keyboardType: TextInputType.multiline,
-                        onChanged: (value) {
-                          print("Textarea content: $value");
-                        },
-                      ),
-                      const SizedBox(height: 10.0),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _confirmReservation,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: !_isEditMode
-                                ? Constants.kSecondaryColor
-                                : Colors.green,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 16,
-                              horizontal: 20,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
+                        if (_airTicketRequisition == "Yes")
+                          Column(
                             children: [
-                              const Icon(Icons.done, size: 20),
-                              const SizedBox(width: 10),
-                              Text(
-                                !_isEditMode
-                                    ? "Confirm Reservation"
-                                    : "Update Reservation",
-                                style: TextStyle(
-                                  fontSize: fontSettings.fontSize,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              const SizedBox(height: 10.0),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  ValueListenableBuilder<String>(
+                                    valueListenable: airTicketsNotifier,
+                                    builder: (context, value, child) {
+                                      return TextFormField(
+                                        controller: TextEditingController(
+                                          text: value,
+                                        ),
+                                        readOnly: true,
+                                        style: TextStyle(
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
+                                        decoration: InputDecoration(
+                                          labelText: "Select Air Tickets",
+                                          labelStyle: TextStyle(
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                          border: OutlineInputBorder(
+                                            borderSide: BorderSide(
+                                              color: _airTicketError != null
+                                                  ? Colors.red
+                                                  : Colors.grey,
+                                            ),
+                                          ),
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 12.0,
+                                                vertical: -5.0,
+                                              ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderSide: BorderSide(
+                                              color: _airTicketError != null
+                                                  ? Colors.red
+                                                  : Colors.grey,
+                                            ),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderSide: BorderSide(
+                                              color: _airTicketError != null
+                                                  ? Colors.red
+                                                  : Colors.blue,
+                                            ),
+                                          ),
+                                          suffixIcon: IconButton(
+                                            icon: const Icon(
+                                              Icons.arrow_drop_down,
+                                            ),
+                                            onPressed: () =>
+                                                _openAirTicketsSelectorScreen(
+                                                  context,
+                                                ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  // Error message for air ticket selection
+                                  if (_airTicketError != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        left: 12.0,
+                                        top: 4.0,
+                                      ),
+                                      child: Text(
+                                        _airTicketError!,
+                                        style: TextStyle(
+                                          color: Colors.red,
+                                          fontSize:
+                                              fontSettings.fontSize * 0.75,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                             ],
                           ),
+                        if (_airTicketRequisition == "Yes")
+                          Column(
+                            children: [
+                              const SizedBox(height: 16.0),
+                              selectedFlights.isEmpty
+                                  ? Center(
+                                      heightFactor: 6.0,
+                                      child: Text(
+                                        'No air tickets available.',
+                                        style: TextStyle(
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
+                                      ),
+                                    )
+                                  : SizedBox(
+                                      child: Column(
+                                        children: selectedFlights.map((flight) {
+                                          final index = selectedFlights.indexOf(
+                                            flight,
+                                          );
+                                          return FlightCard(
+                                            flight: flight,
+                                            index: index,
+                                            showDelete: false,
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ),
+                            ],
+                          ),
+                        const SizedBox(height: 10.0),
+                        TextFormField(
+                          controller: _remarksController,
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: fontSettings.fontWeight,
+                          ),
+                          decoration: InputDecoration(
+                            alignLabelWithHint: true,
+                            labelText: "Remarks",
+                            labelStyle: TextStyle(
+                              fontSize: fontSettings.fontSize,
+                              fontWeight: fontSettings.fontWeight,
+                            ),
+
+                            hintText: "Enter additional details...",
+                            hintStyle: TextStyle(
+                              fontSize: fontSettings.fontSize,
+                              fontWeight: fontSettings.fontWeight,
+                              color: Colors.grey,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8.0),
+                            ),
+                          ),
+                          maxLines: 5,
+                          keyboardType: TextInputType.multiline,
+                          onChanged: (value) {
+                            print("Textarea content: $value");
+                          },
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (_isLoading)
-                Container(
-                  decoration: const BoxDecoration(
-                    color: Color.fromARGB(135, 117, 115, 115),
-                  ),
-                  child: const Center(
-                    child: RefreshProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Constants.kSecondaryColor,
-                      ),
+                        const SizedBox(height: 10.0),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _confirmReservation,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: !_isEditMode
+                                  ? Constants.kSecondaryColor
+                                  : Colors.green,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                                horizontal: 20,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.done, size: 20),
+                                const SizedBox(width: 10),
+                                Text(
+                                  !_isEditMode
+                                      ? "Confirm Reservation"
+                                      : "Update Reservation",
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              const Watermark(),
-            ],
+                if (_isLoading)
+                  Container(
+                    decoration: const BoxDecoration(
+                      color: Color.fromARGB(135, 117, 115, 115),
+                    ),
+                    child: const Center(
+                      child: RefreshProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Constants.kSecondaryColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                const Watermark(),
+              ],
+            ),
           ),
         ),
       ),

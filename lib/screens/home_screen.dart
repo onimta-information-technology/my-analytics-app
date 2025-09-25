@@ -190,6 +190,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     required String label,
     required Color color,
   }) {
+    final formatter = NumberFormat.decimalPattern();
     return SizedBox(
       height: 150, // fixed height
       child: Card(
@@ -210,7 +211,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         ),
                       )
                     : Text(
-                        count.toString(),
+                        formatter.format(count),
+                        // count.toString(),
                         style: const TextStyle(
                           fontSize: 40.0,
                           fontWeight: FontWeight.bold,
@@ -267,6 +269,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ),
         actions: [
           IconButton(
+            padding: const EdgeInsets.all(10.0),
             icon: const Icon(Icons.refresh, size: 30),
             onPressed:
                 _manualRefresh, // 🔹 Only refresh when user explicitly taps
@@ -284,9 +287,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   // Date display section
                   Card(
                     elevation: 2,
-                    margin: const EdgeInsets.symmetric(vertical: 8.0),
+                    margin: const EdgeInsets.symmetric(vertical: 1.0),
                     child: Padding(
-                      padding: const EdgeInsets.all(12.0),
+                      padding: const EdgeInsets.all(8.0),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.start,
                         children: [
@@ -295,7 +298,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             size: 20,
                             color: Colors.blue,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 4),
                           Text(
                             currentDate,
                             style: const TextStyle(
@@ -308,7 +311,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(height: 6),
+                 // const SizedBox(height: 1),
 
                   // Performance heading with loading indicator
                   Consumer(
@@ -453,7 +456,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   const MarketingPerformanceWidget(),
                 ],
               ),

@@ -97,178 +97,192 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> {
         _applyFilter();
       }
     });
-    return Scaffold(
-      appBar: AppBar(title: const Text('Inactive Members')),
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: TextField(
-                  onChanged: (value) {
-                    setState(() {
-                      if (value.isEmpty) {
-                        inactiveMembers = List<Guest>.from(originalMembers);
-                      } else {
-                        inactiveMembers = originalMembers.where((guest) {
-                          return guest.memberName.toLowerCase().contains(
-                                value.toLowerCase(),
-                              ) ||
-                              guest.mid.toLowerCase().contains(
-                                value.toLowerCase(),
-                              );
-                        }).toList();
-                      }
-                    });
-                  },
-                  decoration: InputDecoration(
-                    hintText: 'Search',
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.filter_list),
-                      onPressed: () => _showFilterDialog(context),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
+    return GestureDetector(
+      onTap: () {
+        FocusScope.of(context).unfocus();
+      },
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Inactive Members')),
+        body: Stack(
+          children: [
+            Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: TextField(
+                    onChanged: (value) {
+                      setState(() {
+                        if (value.isEmpty) {
+                          inactiveMembers = List<Guest>.from(originalMembers);
+                        } else {
+                          inactiveMembers = originalMembers.where((guest) {
+                            return guest.memberName.toLowerCase().contains(
+                                  value.toLowerCase(),
+                                ) ||
+                                guest.mid.toLowerCase().contains(
+                                  value.toLowerCase(),
+                                );
+                          }).toList();
+                        }
+                      });
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Search',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.filter_list),
+                        onPressed: () => _showFilterDialog(context),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: inactiveMembers.isEmpty
-                    ? const Center(child: Text("No inactive members available"))
-                    : Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: ListView.builder(
-                          itemCount: inactiveMembers.length,
-                          itemBuilder: (context, index) {
-                            final guest = inactiveMembers[index];
-                            print(guest.gName);
+                Expanded(
+                  child: inactiveMembers.isEmpty
+                      ? const Center(
+                          child: Text("No inactive members available"),
+                        )
+                      : Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: ListView.builder(
+                            itemCount: inactiveMembers.length,
+                            itemBuilder: (context, index) {
+                              final guest = inactiveMembers[index];
+                              print(guest.gName);
 
-                            return Stack(
-                              children: [
-                                InkWell(
-                                  key: ValueKey(guest.mid),
-                                  splashColor: Colors.transparent,
-                                  highlightColor: Colors.transparent,
-                                  onTap: () {
-                                    ref
-                                        .read(selectedGuestProvider.notifier)
-                                        .setSelectedGuest(guest);
-                                    context.push('/home/profile');
-                                  },
-                                  child: Card(
-                                    margin: const EdgeInsets.symmetric(
-                                      vertical: 5.0,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12.0),
-                                    ),
-                                    elevation: 2,
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(
-                                        left: 16.0,
-                                        right: 16.0,
-                                        top: 28.0,
-                                        bottom: 16.0,
+                              return Stack(
+                                children: [
+                                  InkWell(
+                                    key: ValueKey(guest.mid),
+                                    splashColor: Colors.transparent,
+                                    highlightColor: Colors.transparent,
+                                    onTap: () {
+                                      ref
+                                          .read(selectedGuestProvider.notifier)
+                                          .setSelectedGuest(guest);
+                                      context.push('/home/profile');
+                                    },
+                                    child: Card(
+                                      margin: const EdgeInsets.symmetric(
+                                        vertical: 5.0,
                                       ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  "${guest.mid} - ${guest.memberName}",
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(
+                                          12.0,
+                                        ),
+                                      ),
+                                      elevation: 2,
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(
+                                          left: 16.0,
+                                          right: 16.0,
+                                          top: 28.0,
+                                          bottom: 16.0,
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    "${guest.mid} - ${guest.memberName}",
+                                                    style: TextStyle(
+                                                      fontSize:
+                                                          fontSettings.fontSize,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Row(
+                                              children: [
+                                                const Icon(
+                                                  Icons.calendar_today,
+                                                  color: Colors.grey,
+                                                  size: 18,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  'Last visit on ${DateFormat('dd MMM yyyy').format(DateTime.parse(guest.lastVisitDate))}',
                                                   style: TextStyle(
                                                     fontSize:
                                                         fontSettings.fontSize,
-                                                    fontWeight: FontWeight.bold,
+                                                    fontWeight:
+                                                        fontSettings.fontWeight,
+                                                    color: Colors.grey[600],
                                                   ),
                                                 ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Row(
-                                            children: [
-                                              const Icon(
-                                                Icons.calendar_today,
-                                                color: Colors.grey,
-                                                size: 18,
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                'Last visit on ${DateFormat('dd MMM yyyy').format(DateTime.parse(guest.lastVisitDate))}',
-                                                style: TextStyle(
-                                                  fontSize:
-                                                      fontSettings.fontSize,
-                                                  fontWeight:
-                                                      fontSettings.fontWeight,
-                                                  color: Colors.grey[600],
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
+                                              ],
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                                Positioned(
-                                  top: 6,
-                                  right: -2,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(0),
-                                    child: SizedBox(
-                                      width: 80,
-                                      height: 26,
-                                      child:
-                                          ratingImageMap[guest.gRating] != null
-                                          ? Hero(
-                                              tag: "rating-image-${guest.mid}",
-                                              child: Image.asset(
-                                                ratingImageMap[guest.gRating]!,
-                                                fit: BoxFit.contain,
+                                  Positioned(
+                                    top: 6,
+                                    right: -2,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(0),
+                                      child: SizedBox(
+                                        width: 80,
+                                        height: 26,
+                                        child:
+                                            ratingImageMap[guest.gRating] !=
+                                                null
+                                            ? Hero(
+                                                tag:
+                                                    "rating-image-${guest.mid}",
+                                                child: Image.asset(
+                                                  ratingImageMap[guest
+                                                      .gRating]!,
+                                                  fit: BoxFit.contain,
+                                                ),
+                                              )
+                                            : Hero(
+                                                tag:
+                                                    "rating-image-${guest.mid}",
+                                                child: Image.asset(
+                                                  "assets/images/ratings/CLASSIC.png",
+                                                  fit: BoxFit.contain,
+                                                ),
                                               ),
-                                            )
-                                          : Hero(
-                                              tag: "rating-image-${guest.mid}",
-                                              child: Image.asset(
-                                                "assets/images/ratings/CLASSIC.png",
-                                                fit: BoxFit.contain,
-                                              ),
-                                            ),
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
-                            );
-                          },
+                                ],
+                              );
+                            },
+                          ),
                         ),
-                      ),
-              ),
-            ],
-          ),
-          if (_isLoading)
-            Positioned.fill(
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Color.fromARGB(135, 117, 115, 115),
                 ),
-                child: const Center(
-                  child: RefreshProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Constants.kSecondaryColor,
+              ],
+            ),
+            if (_isLoading)
+              Positioned.fill(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Color.fromARGB(135, 117, 115, 115),
+                  ),
+                  child: const Center(
+                    child: RefreshProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Constants.kSecondaryColor,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          const Watermark(),
-        ],
+            const Watermark(),
+          ],
+        ),
       ),
     );
   }

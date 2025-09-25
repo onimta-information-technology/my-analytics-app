@@ -208,39 +208,45 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(title),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Please enter remarks for this action:'),
-              const SizedBox(height: 16),
-              TextField(
-                controller: remarksController,
-                decoration: const InputDecoration(
-                  // labelText: 'Remarks',
-                  border: OutlineInputBorder(),
-                  hintText: 'Enter your remarks here...',
+        return GestureDetector(
+          onTap: () {
+            FocusScope.of(context).unfocus();
+          },
+
+          child: AlertDialog(
+            title: Text(title),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Please enter remarks for this action:'),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: remarksController,
+                  decoration: const InputDecoration(
+                    // labelText: 'Remarks',
+                    border: OutlineInputBorder(),
+                    hintText: 'Enter your remarks here...',
+                  ),
+                  maxLines: 3,
+                  textInputAction: TextInputAction.done,
                 ),
-                maxLines: 3,
-                textInputAction: TextInputAction.done,
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Cancel
+                },
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop(remarksController.text);
+                },
+                child: const Text('Confirm'),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Cancel
-              },
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop(remarksController.text);
-              },
-              child: const Text('Confirm'),
-            ),
-          ],
         );
       },
     );

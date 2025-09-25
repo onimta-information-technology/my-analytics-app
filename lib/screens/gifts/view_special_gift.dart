@@ -598,7 +598,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                         ],
                       ),
 
-                      const SizedBox(height: 16.0),
+                      // const SizedBox(height: 16.0),
 
                       // Replace the _showGuestData block with this:
                       const SizedBox(height: 10),
@@ -647,6 +647,9 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: DataTable(
+                              dataRowMinHeight:
+                                  48,
+                              dataRowMaxHeight: 56,
                               headingRowColor: WidgetStateProperty.all(
                                 Colors.amber.shade100,
                               ),
@@ -681,6 +684,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                         alignment: Alignment.centerLeft,
                                         child: Text(
                                           row["Field"].toString(),
+
                                           style: TextStyle(
                                             fontSize: fontSettings.fontSize,
                                             fontWeight: fontSettings.fontWeight,

@@ -228,105 +228,111 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Members')),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            child: Column(
-              children: [
-                Padding(
-                  padding: EdgeInsets.only(
-                    bottom: MediaQuery.of(context).viewInsets.bottom,
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Column(
-                      children: [
-                        _buildMemberIdInput(),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          height: MediaQuery.of(context).size.height - 220,
-                          child: ListView.builder(
-                            itemCount: guests.length,
-                            itemBuilder: (context, index) {
-                              return InkWell(
-                                onTap: () {
-                                  final guest = guests[index];
-                                  ref
-                                      .read(selectedGuestProvider.notifier)
-                                      .setSelectedGuest(
-                                        Guest(
-                                          mid: guest.mid,
-                                          memberName: guest.mName,
-                                          country: "",
-                                          lastVisitDate: guest.lvd.toString(),
-                                          age: 0,
-                                          gRating: "",
-                                          mGroup: "",
-                                          gName: guest.gName ?? "",
+    return GestureDetector(
+      onTap: () {
+        FocusScope.of(context).unfocus();
+      },
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Members')),
+        body: Stack(
+          children: [
+            SingleChildScrollView(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(context).viewInsets.bottom,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        children: [
+                          _buildMemberIdInput(),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height - 220,
+                            child: ListView.builder(
+                              itemCount: guests.length,
+                              itemBuilder: (context, index) {
+                                return InkWell(
+                                  onTap: () {
+                                    final guest = guests[index];
+                                    ref
+                                        .read(selectedGuestProvider.notifier)
+                                        .setSelectedGuest(
+                                          Guest(
+                                            mid: guest.mid,
+                                            memberName: guest.mName,
+                                            country: "",
+                                            lastVisitDate: guest.lvd.toString(),
+                                            age: 0,
+                                            gRating: "",
+                                            mGroup: "",
+                                            gName: guest.gName ?? "",
+                                          ),
+                                        );
+                                    print("Guest selected: ${guest.gName}");
+                                    context.push("/home/profile");
+                                  },
+                                  child: Card(
+                                    margin: const EdgeInsets.symmetric(
+                                      vertical: 2.0,
+                                      horizontal: 2.0,
+                                    ),
+                                    elevation: 4.0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8.0),
+                                    ),
+                                    child: ListTile(
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            vertical: 5.0,
+                                            horizontal: 8.0,
+                                          ),
+                                      leading: CircleAvatar(
+                                        backgroundImage: MemoryImage(
+                                          base64Decode(guests[index].memImage2),
                                         ),
-                                      );
-                                  print("Guest selected: ${guest.gName}");
-                                  context.push("/home/profile");
-                                },
-                                child: Card(
-                                  margin: const EdgeInsets.symmetric(
-                                    vertical: 2.0,
-                                    horizontal: 2.0,
-                                  ),
-                                  elevation: 4.0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8.0),
-                                  ),
-                                  child: ListTile(
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      vertical: 5.0,
-                                      horizontal: 8.0,
-                                    ),
-                                    leading: CircleAvatar(
-                                      backgroundImage: MemoryImage(
-                                        base64Decode(guests[index].memImage2),
+                                        radius: 24.0,
                                       ),
-                                      radius: 24.0,
-                                    ),
-                                    title: Text(
-                                      guests[index].mid,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
+                                      title: Text(
+                                        guests[index].mid,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
+                                      subtitle: Text(guests[index].mName),
                                     ),
-                                    subtitle: Text(guests[index].mName),
                                   ),
-                                ),
-                              );
-                            },
+                                );
+                              },
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          if (_isLoading)
-            Positioned.fill(
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Color.fromARGB(135, 117, 115, 115),
-                ),
-                child: const Center(
-                  child: RefreshProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Constants.kSecondaryColor,
+            if (_isLoading)
+              Positioned.fill(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Color.fromARGB(135, 117, 115, 115),
+                  ),
+                  child: const Center(
+                    child: RefreshProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Constants.kSecondaryColor,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          const Watermark(),
-        ],
+            const Watermark(),
+          ],
+        ),
       ),
     );
   }

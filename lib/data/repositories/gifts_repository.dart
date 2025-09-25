@@ -333,7 +333,7 @@ class GiftsRepository {
 
   // GiftsRepository.dart
 
-  Future<bool> insertSpecialGiftRequest({
+Future<Map<String, dynamic>?> insertSpecialGiftRequest({
     required String mid,
     required String memberName,
     required String fromDateTime,
@@ -575,14 +575,18 @@ class GiftsRepository {
         "con": "1",
       };
 
-      final resp = await apiService.post('CommonExecute', payload);
+   final resp = await apiService.post('CommonExecute', payload);
 
-      return resp['strRturnRes'];
-    } catch (e) {
-      print('insertSpecialGiftRequest error: $e');
-      return false;
-    }
+    // Print the full response for debugging
+    print('insertSpecialGiftRequest full response: $resp');
+
+    // Return the full response instead of just the boolean
+    return resp;
+  } catch (e) {
+    print('insertSpecialGiftRequest error: $e');
+    return null;
   }
+}
 
   Future<bool> approvedSPecialgiftRequest({
     required double reqid,

@@ -106,31 +106,67 @@ class GiftNotifier extends StateNotifier<GiftState> {
         ? state.guestGiftData.first
         : null;
 
-    return await giftRepository.insertSpecialGiftRequest(
-      mid: mid,
-      memberName: memberName,
-      fromDateTime: fromDateTime,
-      toDateTime: toDateTime,
-      arrivalDate: arrivalDate,
-      departureDate: departureDate,
-      giftForCode: (giftForCode.isEmpty) ? "SPECIAL GIFT" : giftForCode,
-      chipTypeCode: mapChip(chipTypeUI),
-      amount: cleanAmount(amountUI),
-      remarks: remarks,
-      guestDrop: data?.guestDrop,
-      tmpCashout: data?.tmpCashout,
-      res: data?.res,
-      actD: data?.actD,
-      tmpAvgBet: data?.tmpAvgBet,
-      guestCoupon: data?.guestCoupon,
-      flushCoupon: data?.flushCoupon,
-      flushActDrop: data?.flushActDrop,
-      tmpPoint: data?.tmpPoint,
-      tmphh: data?.tmphh,
-      tmpCommpaid: data?.tmpCommpaid,
-      grt: data?.grt,
-      userName: userName,
-    );
+    try {
+      // Call the repository method and get the full response
+      final apiResponse = await giftRepository.insertSpecialGiftRequest(
+        mid: mid,
+        memberName: memberName,
+        fromDateTime: fromDateTime,
+        toDateTime: toDateTime,
+        arrivalDate: arrivalDate,
+        departureDate: departureDate,
+        giftForCode: (giftForCode.isEmpty) ? "SPECIAL GIFT" : giftForCode,
+        chipTypeCode: mapChip(chipTypeUI),
+        amount: cleanAmount(amountUI),
+        remarks: remarks,
+        guestDrop: data?.guestDrop,
+        tmpCashout: data?.tmpCashout,
+        res: data?.res,
+        actD: data?.actD,
+        tmpAvgBet: data?.tmpAvgBet,
+        guestCoupon: data?.guestCoupon,
+        flushCoupon: data?.flushCoupon,
+        flushActDrop: data?.flushActDrop,
+        tmpPoint: data?.tmpPoint,
+        tmphh: data?.tmphh,
+        tmpCommpaid: data?.tmpCommpaid,
+        grt: data?.grt,
+        userName: userName,
+      );
+
+      // Extract Return_Serial from the response and update state
+      String? returnSerial;
+      if (apiResponse != null && 
+          apiResponse.containsKey('CommonResult') &&
+          apiResponse['CommonResult'] is Map<String, dynamic> &&
+          apiResponse['CommonResult']['Table'] is List &&
+          (apiResponse['CommonResult']['Table'] as List).isNotEmpty) {
+        
+        final firstTableEntry = (apiResponse['CommonResult']['Table'] as List)[0];
+        if (firstTableEntry is Map<String, dynamic> && 
+            firstTableEntry.containsKey('Return_Serial')) {
+          returnSerial = firstTableEntry['Return_Serial'].toString();
+        }
+      }
+
+      // Update the state with the API response and return serial
+      state = state.copyWith(
+        lastApiResponse: apiResponse,
+        lastReturnSerial: returnSerial,
+      );
+
+      // Return true if the API call was successful
+      return apiResponse?['strRturnRes'] == true;
+      
+    } catch (e) {
+      print('Error in sendSpecialGiftFromUI: $e');
+      // Clear the response data on error
+      state = state.copyWith(
+        lastApiResponse: null,
+        lastReturnSerial: null,
+      );
+      return false;
+    }
   }
 
   Future<void> getprvGift(String text1) async {
@@ -171,6 +207,14 @@ class GiftNotifier extends StateNotifier<GiftState> {
   void resetData() {
     state = GiftState();
   }
+
+  // Method to clear the last API response data
+  void clearLastApiResponse() {
+    state = state.copyWith(
+      lastApiResponse: null,
+      lastReturnSerial: null,
+    );
+  }
 }
 
 final flutterSecureStorageProvider = Provider(
@@ -199,6 +243,9 @@ class GiftState {
   final List<GestGiftData> guestGiftData;
   final List<GiftType> giftForList;
   final List<PrevGift> prvgiftList;
+  final Map<String, dynamic>? lastApiResponse; // Store the full API response
+  final String? lastReturnSerial; // Store the extracted Return_Serial
+
   GiftState({
     this.pendinggift = const [],
     this.approvedgift = const [],
@@ -206,6 +253,8 @@ class GiftState {
     this.guestGiftData = const [],
     this.giftForList = const [],
     this.prvgiftList = const [],
+    this.lastApiResponse,
+    this.lastReturnSerial,
   });
 
   GiftState copyWith({
@@ -215,6 +264,8 @@ class GiftState {
     List<GestGiftData>? guestGiftData,
     List<GiftType>? giftForList,
     List<PrevGift>? prvgiftList,
+    Map<String, dynamic>? lastApiResponse,
+    String? lastReturnSerial,
   }) {
     return GiftState(
       pendinggift: pendinggift ?? this.pendinggift,
@@ -223,6 +274,8 @@ class GiftState {
       guestGiftData: guestGiftData ?? this.guestGiftData,
       giftForList: giftForList ?? this.giftForList,
       prvgiftList: prvgiftList ?? this.prvgiftList,
+      lastApiResponse: lastApiResponse ?? this.lastApiResponse,
+      lastReturnSerial: lastReturnSerial ?? this.lastReturnSerial,
     );
   }
 }

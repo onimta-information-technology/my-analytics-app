@@ -136,743 +136,761 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
     final String? imagePath = ratingImageMap[guest.gRating];
 
-    return Scaffold(
-      appBar: AppBar(title: const Text("Guest Profile")),
-      body: Stack(
-        children: [
-          // 🔹 Watermark Layer
-          PopScope(
-            onPopInvokedWithResult: (bool didPop, dynamic result) {
-              ref.read(dateFilterProvider.notifier).resetDates();
-              ref.read(tripHistoryProvider.notifier).reset();
-              ref.read(airlineHistoryProvider.notifier).reset();
-              ref.read(loyaltySummaryProvider.notifier).reset();
-              ref.read(hotelHistoryProvider.notifier).reset();
-              ref.read(fAndBHistoryProvider.notifier).reset();
-              ref.read(gamesSummaryProvider.notifier).reset();
-              ref.read(memberSummaryProvider.notifier).reset();
-              ref.read(mainProfileDetailsProvider.notifier).reset();
-            },
-            child: SingleChildScrollView(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 20.0,
-                    horizontal: 15.0,
-                  ),
-                  child: Column(
-                    // mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.max,
-                    children: [
-                      Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Container(
-                            width: 200,
-                            height: 200,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  spreadRadius: 3,
-                                  blurRadius: 5,
-                                  offset: const Offset(0, 5),
-                                ),
-                              ],
-                            ),
-                            child: GestureDetector(
-                              onTap: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (BuildContext context) {
-                                    return Dialog(
-                                      backgroundColor: Colors.transparent,
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Hero(
-                                            tag: "guest-image",
-                                            child: guest.memImage2 != null
-                                                ? Image.memory(
-                                                    base64Decode(
-                                                      guest.memImage2!,
+    return GestureDetector(
+      onTap: () {
+        FocusScope.of(context).unfocus();
+      },
+
+      child: Scaffold(
+        appBar: AppBar(title: const Text("Guest Profile")),
+        body: Stack(
+          children: [
+            // 🔹 Watermark Layer
+            PopScope(
+              onPopInvokedWithResult: (bool didPop, dynamic result) {
+                ref.read(dateFilterProvider.notifier).resetDates();
+                ref.read(tripHistoryProvider.notifier).reset();
+                ref.read(airlineHistoryProvider.notifier).reset();
+                ref.read(loyaltySummaryProvider.notifier).reset();
+                ref.read(hotelHistoryProvider.notifier).reset();
+                ref.read(fAndBHistoryProvider.notifier).reset();
+                ref.read(gamesSummaryProvider.notifier).reset();
+                ref.read(memberSummaryProvider.notifier).reset();
+                ref.read(mainProfileDetailsProvider.notifier).reset();
+              },
+              child: SingleChildScrollView(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 20.0,
+                      horizontal: 15.0,
+                    ),
+                    child: Column(
+                      // mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.max,
+                      children: [
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Container(
+                              width: 200,
+                              height: 200,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    spreadRadius: 3,
+                                    blurRadius: 5,
+                                    offset: const Offset(0, 5),
+                                  ),
+                                ],
+                              ),
+                              child: GestureDetector(
+                                onTap: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (BuildContext context) {
+                                      return Dialog(
+                                        backgroundColor: Colors.transparent,
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Hero(
+                                              tag: "guest-image",
+                                              child: guest.memImage2 != null
+                                                  ? Image.memory(
+                                                      base64Decode(
+                                                        guest.memImage2!,
+                                                      ),
+                                                      fit: BoxFit.contain,
+                                                    )
+                                                  : Image.asset(
+                                                      'assets/images/placeholder_image.jpg',
+                                                      fit: BoxFit.contain,
                                                     ),
-                                                    fit: BoxFit.contain,
-                                                  )
-                                                : Image.asset(
-                                                    'assets/images/placeholder_image.jpg',
-                                                    fit: BoxFit.contain,
-                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                                child: Hero(
+                                  tag: "guest-image",
+                                  child: CircleAvatar(
+                                    radius: 70,
+                                    backgroundImage: guest.memImage2 != null
+                                        ? MemoryImage(
+                                            base64Decode(guest.memImage2!),
+                                          )
+                                        : const AssetImage(
+                                            'assets/images/placeholder_image.jpg',
+                                          ),
+                                    backgroundColor: Colors.grey[200],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 0,
+                              left: -70,
+                              child: Card(
+                                elevation: 5,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(0),
+                                  child: SizedBox(
+                                    width: 120,
+                                    height: 50,
+                                    child: imagePath != null
+                                        ? Hero(
+                                            tag: "rating-image-${guest.mid}",
+                                            child: Image.asset(
+                                              imagePath,
+                                              fit: BoxFit.contain,
+                                            ),
+                                          )
+                                        : Hero(
+                                            tag: "rating-image-${guest.mid}",
+                                            child: Image.asset(
+                                              "assets/images/ratings/CLASSIC.png",
+                                              fit: BoxFit.contain,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        Center(
+                          child: Text(
+                            "${guest.mid} -  ${guest.memberName}",
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Center(
+                          child: Text(
+                            "M P - ${guest.gName}",
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Color.fromARGB(255, 158, 0, 148),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.calendar_today,
+                              size: 20,
+                              color: Colors.grey,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              "Last Visit on -  ${formatDate(guest.lastVisitDate)}",
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.normal,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        if (GoRouter.of(context)
+                                    .routerDelegate
+                                    .currentConfiguration
+                                    .fullPath ==
+                                '/birthdays' ||
+                            GoRouter.of(context)
+                                    .routerDelegate
+                                    .currentConfiguration
+                                    .fullPath ==
+                                '/gifts')
+                          const SizedBox(height: 20),
+                        if (GoRouter.of(context)
+                                    .routerDelegate
+                                    .currentConfiguration
+                                    .fullPath ==
+                                '/birthdays' ||
+                            GoRouter.of(context)
+                                    .routerDelegate
+                                    .currentConfiguration
+                                    .fullPath ==
+                                '/gifts')
+                          AnimatedBuilder(
+                            animation: _animation,
+                            builder: (context, child) {
+                              return ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    gradient: SweepGradient(
+                                      colors: const [
+                                        Colors.purple,
+                                        Colors.blue,
+                                        Colors.green,
+                                        Colors.yellow,
+                                        Colors.orange,
+                                        Colors.red,
+                                        Colors.purple,
+                                      ],
+                                      stops: const [
+                                        0.0,
+                                        0.16,
+                                        0.33,
+                                        0.5,
+                                        0.66,
+                                        0.83,
+                                        1.0,
+                                      ],
+                                      transform: GradientRotation(
+                                        _animation.value * 6.28,
+                                      ),
+                                    ),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Container(
+                                      color: Colors.white,
+                                      padding: const EdgeInsets.all(8),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Image.asset(
+                                            'assets/images/others/gift.png',
+                                            width: 50,
+                                            height: 50,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            "${guest.gift}",
+                                            textAlign: TextAlign.center,
+                                            style: const TextStyle(
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                         ],
                                       ),
-                                    );
-                                  },
-                                );
-                              },
-                              child: Hero(
-                                tag: "guest-image",
-                                child: CircleAvatar(
-                                  radius: 70,
-                                  backgroundImage: guest.memImage2 != null
-                                      ? MemoryImage(
-                                          base64Decode(guest.memImage2!),
-                                        )
-                                      : const AssetImage(
-                                          'assets/images/placeholder_image.jpg',
-                                        ),
-                                  backgroundColor: Colors.grey[200],
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
+                              );
+                            },
                           ),
-                          Positioned(
-                            top: 0,
-                            left: -70,
-                            child: Card(
-                              elevation: 5,
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              context.push("/home/profile/guest-performance");
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Constants.kPrimaryColor,
+                              foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(0),
-                                child: SizedBox(
-                                  width: 120,
-                                  height: 50,
-                                  child: imagePath != null
-                                      ? Hero(
-                                          tag: "rating-image-${guest.mid}",
-                                          child: Image.asset(
-                                            imagePath,
-                                            fit: BoxFit.contain,
-                                          ),
-                                        )
-                                      : Hero(
-                                          tag: "rating-image-${guest.mid}",
-                                          child: Image.asset(
-                                            "assets/images/ratings/CLASSIC.png",
-                                            fit: BoxFit.contain,
-                                          ),
-                                        ),
-                                ),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                                horizontal: 20,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Center(
-                        child: Text(
-                          "${guest.mid} -  ${guest.memberName}",
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Center(
-                        child: Text(
-                          "M P - ${guest.gName}",
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Color.fromARGB(255, 158, 0, 148),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.calendar_today,
-                            size: 20,
-                            color: Colors.grey,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            "Last Visit on -  ${formatDate(guest.lastVisitDate)}",
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.normal,
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      if (GoRouter.of(
-                                context,
-                              ).routerDelegate.currentConfiguration.fullPath ==
-                              '/birthdays' ||
-                          GoRouter.of(
-                                context,
-                              ).routerDelegate.currentConfiguration.fullPath ==
-                              '/gifts')
-                        const SizedBox(height: 20),
-                      if (GoRouter.of(
-                                context,
-                              ).routerDelegate.currentConfiguration.fullPath ==
-                              '/birthdays' ||
-                          GoRouter.of(
-                                context,
-                              ).routerDelegate.currentConfiguration.fullPath ==
-                              '/gifts')
-                        AnimatedBuilder(
-                          animation: _animation,
-                          builder: (context, child) {
-                            return ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  gradient: SweepGradient(
-                                    colors: const [
-                                      Colors.purple,
-                                      Colors.blue,
-                                      Colors.green,
-                                      Colors.yellow,
-                                      Colors.orange,
-                                      Colors.red,
-                                      Colors.purple,
-                                    ],
-                                    stops: const [
-                                      0.0,
-                                      0.16,
-                                      0.33,
-                                      0.5,
-                                      0.66,
-                                      0.83,
-                                      1.0,
-                                    ],
-                                    transform: GradientRotation(
-                                      _animation.value * 6.28,
-                                    ),
-                                  ),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Container(
-                                    color: Colors.white,
-                                    padding: const EdgeInsets.all(8),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Image.asset(
-                                          'assets/images/others/gift.png',
-                                          width: 50,
-                                          height: 50,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          "${guest.gift}",
-                                          textAlign: TextAlign.center,
-                                          style: const TextStyle(
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            context.push("/home/profile/guest-performance");
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Constants.kPrimaryColor,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 16,
-                              horizontal: 20,
-                            ),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.emoji_events, size: 30),
-                              SizedBox(width: 10),
-                              Text(
-                                "Guest Performance",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            context.push("/home/profile/member-summary");
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Constants.kPrimaryColor,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 16,
-                              horizontal: 20,
-                            ),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.bar_chart, size: 30),
-                              SizedBox(width: 10),
-                              Text(
-                                "Member Summary",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            context.push("/home/profile/trip-history");
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Constants.kPrimaryColor,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 16,
-                              horizontal: 20,
-                            ),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.luggage, size: 30),
-                              SizedBox(width: 10),
-                              Text(
-                                "Trip History",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      if (GoRouter.of(
-                                context,
-                              ).routerDelegate.currentConfiguration.fullPath ==
-                              '/birthdays' ||
-                          GoRouter.of(
-                                context,
-                              ).routerDelegate.currentConfiguration.fullPath ==
-                              '/gifts')
-                        // Card(
-                        //   elevation: 5,
-                        //   shape: RoundedRectangleBorder(
-                        //     borderRadius: BorderRadius.circular(12),
-                        //   ),
-                        //   child: Container(
-                        //     color: Colors.green[10],
-                        //     padding: const EdgeInsets.all(16.0),
-                        //     child: Column(
-                        //       crossAxisAlignment: CrossAxisAlignment.start,
-                        //       children: [
-                        //         const Text(
-                        //           "Send the Gift via Whatsapp",
-                        //           style: TextStyle(
-                        //             fontSize: 18,
-                        //             fontWeight: FontWeight.bold,
-                        //           ),
-                        //         ),
-                        //         const SizedBox(height: 10),
-                        //         TextField(
-                        //           controller: _whatsappNumberController,
-                        //           keyboardType: TextInputType.number,
-                        //           decoration: InputDecoration(
-                        //             border: OutlineInputBorder(
-                        //               borderRadius: BorderRadius.circular(12),
-                        //               borderSide: const BorderSide(
-                        //                 color: Colors.green,
-                        //                 width: 2.0,
-                        //               ),
-                        //             ),
-                        //             enabledBorder: OutlineInputBorder(
-                        //               borderRadius: BorderRadius.circular(12),
-                        //               borderSide: const BorderSide(
-                        //                 color: Colors.green,
-                        //                 width: 2.0,
-                        //               ),
-                        //             ),
-                        //             focusedBorder: OutlineInputBorder(
-                        //               borderRadius: BorderRadius.circular(12),
-                        //               borderSide: const BorderSide(
-                        //                 color: Colors.green,
-                        //                 width: 2.0,
-                        //               ),
-                        //             ),
-                        //             hintText: "Enter the whatsapp number",
-                        //           ),
-                        //         ),
-                        //         const SizedBox(height: 10),
-                        //         const Text(
-                        //           "Note: Please enter the whatsapp number with the country code Eg:- 94712345678, 97712333456780",
-                        //           style: TextStyle(
-                        //             fontSize: 14,
-                        //             color: Colors.grey,
-                        //           ),
-                        //         ),
-                        //         const SizedBox(height: 20),
-                        //         SizedBox(
-                        //           width: double.infinity,
-                        //           child: ElevatedButton.icon(
-                        //             onPressed: () {
-                        //               ref
-                        //                   .read(birthdayProvider.notifier)
-                        //                   .sendWhatsappMessage(
-                        //                     mname: guest.memberName,
-                        //                     whatsappNumber:
-                        //                         _whatsappNumberController.text,
-                        //                     gift: guest.gift!,
-                        //                   );
-                        //             },
-                        //             icon: Image.asset(
-                        //               'assets/images/others/whatsapp.png',
-                        //               width: 24,
-                        //               height: 24,
-                        //               color: Colors.white,
-                        //             ),
-                        //             label: const Text(
-                        //               "Send the gift",
-                        //               style: TextStyle(
-                        //                 fontSize: 16,
-                        //                 fontWeight: FontWeight.bold,
-                        //                 color: Colors.white,
-                        //               ),
-                        //             ),
-                        //             style: ElevatedButton.styleFrom(
-                        //               backgroundColor: Colors.green,
-                        //               padding: const EdgeInsets.symmetric(
-                        //                 vertical: 16,
-                        //                 horizontal: 20,
-                        //               ),
-                        //               shape: RoundedRectangleBorder(
-                        //                 borderRadius: BorderRadius.circular(12),
-                        //               ),
-                        //             ),
-                        //           ),
-                        //         ),
-                        //       ],
-                        //     ),
-                        //   ),
-                        // ),
-                        // Updated WhatsApp section in ProfileScreen
-                        // Replace the existing WhatsApp Card section with this:
-                        Card(
-                          elevation: 5,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Container(
-                            color: Colors.green[10],
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Text(
-                                  "Send the Gift via WhatsApp",
+                                Icon(Icons.emoji_events, size: 30),
+                                SizedBox(width: 10),
+                                Text(
+                                  "Guest Performance",
                                   style: TextStyle(
-                                    fontSize: 18,
+                                    fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                const SizedBox(height: 10),
-                                TextField(
-                                  controller: _whatsappNumberController,
-                                  keyboardType: TextInputType.phone,
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: const BorderSide(
-                                        color: Colors.green,
-                                        width: 2.0,
-                                      ),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: const BorderSide(
-                                        color: Colors.green,
-                                        width: 2.0,
-                                      ),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: const BorderSide(
-                                        color: Colors.green,
-                                        width: 2.0,
-                                      ),
-                                    ),
-                                    hintText:
-                                        "Enter WhatsApp number with country code",
-                                    //prefixText: "+",
-                                    helperText: "e.g., 94712345678",
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                const Text(
-                                  "Note: Please enter the WhatsApp number with the country code\n"
-                                  "Examples: 94712345678, 971234567890",
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              context.push("/home/profile/member-summary");
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Constants.kPrimaryColor,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                                horizontal: 20,
+                              ),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.bar_chart, size: 30),
+                                SizedBox(width: 10),
+                                Text(
+                                  "Member Summary",
                                   style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                const SizedBox(height: 20),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton.icon(
-                                    onPressed: () async {
-                                      final phoneNumber =
-                                          _whatsappNumberController.text.trim();
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              context.push("/home/profile/trip-history");
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Constants.kPrimaryColor,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                                horizontal: 20,
+                              ),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.luggage, size: 30),
+                                SizedBox(width: 10),
+                                Text(
+                                  "Trip History",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (GoRouter.of(context)
+                                    .routerDelegate
+                                    .currentConfiguration
+                                    .fullPath ==
+                                '/birthdays' ||
+                            GoRouter.of(context)
+                                    .routerDelegate
+                                    .currentConfiguration
+                                    .fullPath ==
+                                '/gifts')
+                          // Card(
+                          //   elevation: 5,
+                          //   shape: RoundedRectangleBorder(
+                          //     borderRadius: BorderRadius.circular(12),
+                          //   ),
+                          //   child: Container(
+                          //     color: Colors.green[10],
+                          //     padding: const EdgeInsets.all(16.0),
+                          //     child: Column(
+                          //       crossAxisAlignment: CrossAxisAlignment.start,
+                          //       children: [
+                          //         const Text(
+                          //           "Send the Gift via Whatsapp",
+                          //           style: TextStyle(
+                          //             fontSize: 18,
+                          //             fontWeight: FontWeight.bold,
+                          //           ),
+                          //         ),
+                          //         const SizedBox(height: 10),
+                          //         TextField(
+                          //           controller: _whatsappNumberController,
+                          //           keyboardType: TextInputType.number,
+                          //           decoration: InputDecoration(
+                          //             border: OutlineInputBorder(
+                          //               borderRadius: BorderRadius.circular(12),
+                          //               borderSide: const BorderSide(
+                          //                 color: Colors.green,
+                          //                 width: 2.0,
+                          //               ),
+                          //             ),
+                          //             enabledBorder: OutlineInputBorder(
+                          //               borderRadius: BorderRadius.circular(12),
+                          //               borderSide: const BorderSide(
+                          //                 color: Colors.green,
+                          //                 width: 2.0,
+                          //               ),
+                          //             ),
+                          //             focusedBorder: OutlineInputBorder(
+                          //               borderRadius: BorderRadius.circular(12),
+                          //               borderSide: const BorderSide(
+                          //                 color: Colors.green,
+                          //                 width: 2.0,
+                          //               ),
+                          //             ),
+                          //             hintText: "Enter the whatsapp number",
+                          //           ),
+                          //         ),
+                          //         const SizedBox(height: 10),
+                          //         const Text(
+                          //           "Note: Please enter the whatsapp number with the country code Eg:- 94712345678, 97712333456780",
+                          //           style: TextStyle(
+                          //             fontSize: 14,
+                          //             color: Colors.grey,
+                          //           ),
+                          //         ),
+                          //         const SizedBox(height: 20),
+                          //         SizedBox(
+                          //           width: double.infinity,
+                          //           child: ElevatedButton.icon(
+                          //             onPressed: () {
+                          //               ref
+                          //                   .read(birthdayProvider.notifier)
+                          //                   .sendWhatsappMessage(
+                          //                     mname: guest.memberName,
+                          //                     whatsappNumber:
+                          //                         _whatsappNumberController.text,
+                          //                     gift: guest.gift!,
+                          //                   );
+                          //             },
+                          //             icon: Image.asset(
+                          //               'assets/images/others/whatsapp.png',
+                          //               width: 24,
+                          //               height: 24,
+                          //               color: Colors.white,
+                          //             ),
+                          //             label: const Text(
+                          //               "Send the gift",
+                          //               style: TextStyle(
+                          //                 fontSize: 16,
+                          //                 fontWeight: FontWeight.bold,
+                          //                 color: Colors.white,
+                          //               ),
+                          //             ),
+                          //             style: ElevatedButton.styleFrom(
+                          //               backgroundColor: Colors.green,
+                          //               padding: const EdgeInsets.symmetric(
+                          //                 vertical: 16,
+                          //                 horizontal: 20,
+                          //               ),
+                          //               shape: RoundedRectangleBorder(
+                          //                 borderRadius: BorderRadius.circular(12),
+                          //               ),
+                          //             ),
+                          //           ),
+                          //         ),
+                          //       ],
+                          //     ),
+                          //   ),
+                          // ),
+                          // Updated WhatsApp section in ProfileScreen
+                          // Replace the existing WhatsApp Card section with this:
+                          Card(
+                            elevation: 5,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Container(
+                              color: Colors.green[10],
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    "Send the Gift via WhatsApp",
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  TextField(
+                                    controller: _whatsappNumberController,
+                                    keyboardType: TextInputType.phone,
+                                    decoration: InputDecoration(
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(
+                                          color: Colors.green,
+                                          width: 2.0,
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(
+                                          color: Colors.green,
+                                          width: 2.0,
+                                        ),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(
+                                          color: Colors.green,
+                                          width: 2.0,
+                                        ),
+                                      ),
+                                      hintText:
+                                          "Enter WhatsApp number with country code",
+                                      //prefixText: "+",
+                                      helperText: "e.g., 94712345678",
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  const Text(
+                                    "Note: Please enter the WhatsApp number with the country code\n"
+                                    "Examples: 94712345678, 971234567890",
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton.icon(
+                                      onPressed: () async {
+                                        final phoneNumber =
+                                            _whatsappNumberController.text
+                                                .trim();
 
-                                      // Basic validation
-                                      if (phoneNumber.isEmpty) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Please enter a WhatsApp number',
-                                            ),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
-                                        return;
-                                      }
-
-                                      // Check if phone number is valid (at least 10 digits)
-                                      // String cleanNumber = phoneNumber
-                                      //     .replaceAll(RegExp(r'[^\d]'), '');
-                                      // if (cleanNumber.length < 10) {
-                                      //   ScaffoldMessenger.of(
-                                      //     context,
-                                      //   ).showSnackBar(
-                                      //     const SnackBar(
-                                      //       content: Text(
-                                      //         'Please enter a valid phone number',
-                                      //       ),
-                                      //       backgroundColor: Colors.red,
-                                      //     ),
-                                      //   );
-                                      //   return;
-                                      // }
-
-                                      try {
-                                        // Show loading
-                                        EasyLoading.show(
-                                          status: 'Sending gift...',
-                                        );
-
-                                        // Send WhatsApp message
-                                        final result = await ref
-                                            .read(birthdayProvider.notifier)
-                                            .sendWhatsappMessage(
-                                              mname: guest.memberName,
-                                              whatsappNumber: phoneNumber,
-                                              gift: guest.gift!,
-                                            );
-
-                                        // Hide loading
-                                        EasyLoading.dismiss();
-
-                                        if (result == "Success") {
-                                          // Clear the text field on success
-                                          // _whatsappNumberController.clear();
-
+                                        // Basic validation
+                                        if (phoneNumber.isEmpty) {
                                           ScaffoldMessenger.of(
                                             context,
                                           ).showSnackBar(
                                             const SnackBar(
                                               content: Text(
-                                                'Gift sent successfully via WhatsApp!',
+                                                'Please enter a WhatsApp number',
                                               ),
-                                              backgroundColor: Colors.green,
+                                              backgroundColor: Colors.red,
                                             ),
                                           );
-                                        } else {
+                                          return;
+                                        }
+
+                                        // Check if phone number is valid (at least 10 digits)
+                                        // String cleanNumber = phoneNumber
+                                        //     .replaceAll(RegExp(r'[^\d]'), '');
+                                        // if (cleanNumber.length < 10) {
+                                        //   ScaffoldMessenger.of(
+                                        //     context,
+                                        //   ).showSnackBar(
+                                        //     const SnackBar(
+                                        //       content: Text(
+                                        //         'Please enter a valid phone number',
+                                        //       ),
+                                        //       backgroundColor: Colors.red,
+                                        //     ),
+                                        //   );
+                                        //   return;
+                                        // }
+
+                                        try {
+                                          // Show loading
+                                          EasyLoading.show(
+                                            status: 'Sending gift...',
+                                          );
+
+                                          // Send WhatsApp message
+                                          final result = await ref
+                                              .read(birthdayProvider.notifier)
+                                              .sendWhatsappMessage(
+                                                mname: guest.memberName,
+                                                whatsappNumber: phoneNumber,
+                                                gift: guest.gift!,
+                                              );
+
+                                          // Hide loading
+                                          EasyLoading.dismiss();
+
+                                          if (result == "Success") {
+                                            // Clear the text field on success
+                                            // _whatsappNumberController.clear();
+
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Gift sent successfully via WhatsApp!',
+                                                ),
+                                                backgroundColor: Colors.green,
+                                              ),
+                                            );
+                                          } else {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'Failed to send gift: $result',
+                                                ),
+                                                backgroundColor: Colors.orange,
+                                              ),
+                                            );
+                                          }
+                                        } catch (e) {
+                                          // Hide loading
+                                          EasyLoading.dismiss();
+
                                           ScaffoldMessenger.of(
                                             context,
                                           ).showSnackBar(
                                             SnackBar(
-                                              content: Text(
-                                                'Failed to send gift: $result',
-                                              ),
-                                              backgroundColor: Colors.orange,
+                                              content: Text('Error: $e'),
+                                              backgroundColor: Colors.red,
                                             ),
                                           );
                                         }
-                                      } catch (e) {
-                                        // Hide loading
-                                        EasyLoading.dismiss();
-
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text('Error: $e'),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
-                                      }
-                                    },
-                                    icon: Image.asset(
-                                      'assets/images/others/whatsapp.png',
-                                      width: 24,
-                                      height: 24,
-                                      color: Colors.white,
-                                    ),
-                                    label: const Text(
-                                      "Send the Gift",
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
+                                      },
+                                      icon: Image.asset(
+                                        'assets/images/others/whatsapp.png',
+                                        width: 24,
+                                        height: 24,
                                         color: Colors.white,
                                       ),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.green,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 16,
-                                        horizontal: 20,
+                                      label: const Text(
+                                        "Send the Gift",
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
                                       ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                          horizontal: 20,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      if (GoRouter.of(
-                            context,
-                          ).routerDelegate.currentConfiguration.fullPath ==
-                          '/members')
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16.0),
-                          child: Container(
-                            // color: Colors.white,
-                            child: _isLoading
-                                ? const Center(
-                                    child: RefreshProgressIndicator(
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        Constants.kSecondaryColor,
+                        if (GoRouter.of(
+                              context,
+                            ).routerDelegate.currentConfiguration.fullPath ==
+                            '/members')
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16.0),
+                            child: Container(
+                              // color: Colors.white,
+                              child: _isLoading
+                                  ? const Center(
+                                      child: RefreshProgressIndicator(
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Constants.kSecondaryColor,
+                                            ),
                                       ),
-                                    ),
-                                  )
-                                : Table(
-                                    border: TableBorder.all(),
-                                    columnWidths: const {
-                                      0: FractionColumnWidth(0.5),
-                                      1: FractionColumnWidth(0.5),
-                                    },
-                                    children: [
-                                      ...guestProfileDetails
-                                          .map((entry) {
-                                            return [
-                                              TableRow(
-                                                decoration: BoxDecoration(
-                                                  color: Constants.kPrimaryColor
-                                                      .withAlpha(50),
-                                                ),
-                                                children: [
-                                                  Padding(
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                          8.0,
-                                                        ),
-                                                    child: Text(
-                                                      entry.details['Name']!,
-                                                      style: TextStyle(
-                                                        color: Colors.black,
-                                                        fontSize: fontSettings
-                                                            .fontSize,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                    ),
+                                    )
+                                  : Table(
+                                      border: TableBorder.all(),
+                                      columnWidths: const {
+                                        0: FractionColumnWidth(0.5),
+                                        1: FractionColumnWidth(0.5),
+                                      },
+                                      children: [
+                                        ...guestProfileDetails
+                                            .map((entry) {
+                                              return [
+                                                TableRow(
+                                                  decoration: BoxDecoration(
+                                                    color: Constants
+                                                        .kPrimaryColor
+                                                        .withAlpha(50),
                                                   ),
-                                                  Container(
-                                                    color: Colors.white,
-                                                    child: Padding(
+                                                  children: [
+                                                    Padding(
                                                       padding:
                                                           const EdgeInsets.all(
                                                             8.0,
                                                           ),
                                                       child: Text(
-                                                        entry
-                                                            .details['Detail']!,
-                                                        textAlign:
-                                                            TextAlign.end,
+                                                        entry.details['Name']!,
                                                         style: TextStyle(
                                                           color: Colors.black,
                                                           fontSize: fontSettings
                                                               .fontSize,
                                                           fontWeight:
-                                                              fontSettings
-                                                                  .fontWeight,
+                                                              FontWeight.bold,
                                                         ),
                                                       ),
                                                     ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ];
-                                          })
-                                          .expand((x) => x),
-                                    ],
-                                  ),
+                                                    Container(
+                                                      color: Colors.white,
+                                                      child: Padding(
+                                                        padding:
+                                                            const EdgeInsets.all(
+                                                              8.0,
+                                                            ),
+                                                        child: Text(
+                                                          entry
+                                                              .details['Detail']!,
+                                                          textAlign:
+                                                              TextAlign.end,
+                                                          style: TextStyle(
+                                                            color: Colors.black,
+                                                            fontSize:
+                                                                fontSettings
+                                                                    .fontSize,
+                                                            fontWeight:
+                                                                fontSettings
+                                                                    .fontWeight,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ];
+                                            })
+                                            .expand((x) => x),
+                                      ],
+                                    ),
+                            ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          const Watermark(),
-        ],
+            const Watermark(),
+          ],
+        ),
       ),
     );
   }

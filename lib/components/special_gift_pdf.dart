@@ -20,6 +20,7 @@ class DirectWhatsAppPdfService {
     required String remarks,
     required String userName,
     required Map<String, dynamic> guestData,
+    required String returnSerial,
   }) async {
     try {
       // Generate PDF
@@ -36,12 +37,13 @@ class DirectWhatsAppPdfService {
         remarks: remarks,
         userName: userName,
         guestData: guestData,
+        returnSerial: returnSerial,
       );
 
       // Save PDF to temporary directory
       final output = await getTemporaryDirectory();
       final fileName =
-          'GiftRequest_${memberName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+          'GiftRequest_${memberId}_${returnSerial.toString()}_${DateTime.now()}.pdf';
       final file = File('${output.path}/$fileName');
       await file.writeAsBytes(await pdf.save());
 
@@ -86,6 +88,7 @@ class DirectWhatsAppPdfService {
     required String remarks,
     required String userName,
     required Map<String, dynamic> guestData,
+    required String returnSerial,
   }) async {
     try {
       // Generate PDF
@@ -102,6 +105,7 @@ class DirectWhatsAppPdfService {
         remarks: remarks,
         userName: userName,
         guestData: guestData,
+        returnSerial: returnSerial,
       );
 
       // Save to Downloads directory (Android) or Documents (iOS)
@@ -121,11 +125,12 @@ class DirectWhatsAppPdfService {
       }
 
       final fileName =
-          'GiftRequest_${memberName.replaceAll(' ', '_')}_${DateTime.now().day}${DateTime.now().month}${DateTime.now().year}.pdf';
+          'GiftRequest_${memberId}_${returnSerial.toString()}_${DateTime.now()}.pdf';
       final file = File('${saveDirectory.path}/$fileName');
       await file.writeAsBytes(await pdf.save());
-
-      return fileName; // Return just the filename for user reference
+      print(fileName);
+      return fileName;
+      // Return just the filename for user reference
     } catch (e) {
       print('Error saving PDF: $e');
       rethrow;
@@ -145,6 +150,7 @@ class DirectWhatsAppPdfService {
     required String remarks,
     required String userName,
     required Map<String, dynamic> guestData,
+    required String returnSerial,
   }) async {
     final pdf = pw.Document();
 
@@ -280,7 +286,7 @@ class DirectWhatsAppPdfService {
                         ],
                       ),
                     ),
-                    pw.SizedBox(height: 20),
+                    pw.SizedBox(height: 10),
                   ],
 
                   pw.Spacer(),
@@ -333,11 +339,11 @@ class DirectWhatsAppPdfService {
       child: pw.Transform.rotate(
         angle: -0.7,
         child: pw.Opacity(
-          opacity: 0.2,
+          opacity: 0.3,
           child: pw.GridView(
             crossAxisCount: 4,
-            mainAxisSpacing: 50,
-            crossAxisSpacing: 30,
+            mainAxisSpacing: 30,
+            crossAxisSpacing: 20,
             children: List.generate(
               30,
               (index) => pw.Center(

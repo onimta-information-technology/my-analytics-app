@@ -858,418 +858,448 @@ class _ChatScreenState extends State<ChatScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(_selectedContactId != null ? "Select action" : "Chats"),
-            Text(
-              _selectedContactId != null
-                  ? "1 selected"
-                  : "${_contacts.length} conversations",
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.normal,
+    return GestureDetector(
+      onTap: () {
+        FocusScope.of(context).unfocus();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(_selectedContactId != null ? "Select action" : "Chats"),
+              Text(
+                _selectedContactId != null
+                    ? "1 selected"
+                    : "${_contacts.length} conversations",
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.normal,
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
 
-        backgroundColor: _selectedContactId != null ? Colors.red : Colors.green,
-        foregroundColor: Colors.white,
-        leading: _selectedContactId != null
-            ? IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () {
-                  setState(() {
-                    _selectedContactId = null;
-                  });
-                },
-              )
-            : null,
-        actions: _selectedContactId != null
-            ? [
-                IconButton(
-                  icon: const Icon(Icons.delete),
+          backgroundColor: _selectedContactId != null
+              ? Colors.red
+              : Colors.green,
+          foregroundColor: Colors.white,
+          leading: _selectedContactId != null
+              ? IconButton(
+                  icon: const Icon(Icons.close),
                   onPressed: () {
-                    final contact = _contacts.firstWhere(
-                      (c) => c.id == _selectedContactId,
-                    );
-                    _showDeleteConfirmation(contact);
+                    setState(() {
+                      _selectedContactId = null;
+                    });
                   },
-                ),
-              ]
-            : [
-                // IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-                IconButton(
-                  icon: const Icon(Icons.menu),
-                  onPressed: () {
-                    context.push('/menu');
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed: _fetchChatsFromApi,
-                ),
-                IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
-              ],
-        bottom: _selectedContactId == null
-            ? PreferredSize(
-                preferredSize: const Size.fromHeight(100),
-                child: Container(
-                  color: Colors.white,
-                  child: Column(
-                    children: [
-                      // Search bar
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: TextField(
-                          onChanged: _filterContacts,
-                          decoration: InputDecoration(
-                            hintText: "Search chats...",
-                            prefixIcon: const Icon(Icons.search),
-                            filled: true,
-                            fillColor: Colors.grey.shade200,
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: 0,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(25),
-                              borderSide: BorderSide.none,
+                )
+              : null,
+          actions: _selectedContactId != null
+              ? [
+                  IconButton(
+                    icon: const Icon(Icons.delete),
+                    onPressed: () {
+                      final contact = _contacts.firstWhere(
+                        (c) => c.id == _selectedContactId,
+                      );
+                      _showDeleteConfirmation(contact);
+                    },
+                  ),
+                ]
+              : [
+                  // IconButton(icon: const Icon(Icons.search), onPressed: () {}),
+                  IconButton(
+                    icon: const Icon(Icons.menu),
+                    onPressed: () {
+                      context.push('/menu');
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: _fetchChatsFromApi,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.more_vert),
+                    onPressed: () {},
+                  ),
+                ],
+          bottom: _selectedContactId == null
+              ? PreferredSize(
+                  preferredSize: const Size.fromHeight(100),
+                  child: Container(
+                    color: Colors.white,
+                    child: Column(
+                      children: [
+                        // Search bar
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: TextField(
+                            onChanged: _filterContacts,
+                            decoration: InputDecoration(
+                              hintText: "Search chats...",
+                              prefixIcon: const Icon(Icons.search),
+                              filled: true,
+                              fillColor: Colors.grey.shade200,
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 0,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(25),
+                                borderSide: BorderSide.none,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      // Tabs
-                      TabBar(
-                        controller: _tabController,
-                        indicatorColor: Colors.green,
-                        labelColor: Colors.green,
-                        unselectedLabelColor: Colors.black54,
-                        tabs: const [
-                          Tab(text: "All"),
-                          Tab(text: "Unread"),
-                          Tab(text: "Groups"),
-                          Tab(text: "Favorites"),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              )
-            : null,
-      ),
-      body: Stack(
-        children: [
-          TabBarView(
-            controller: _tabController,
-            children: [
-              _buildChatList(0),
-              _buildChatList(1),
-              _buildChatList(2),
-              _buildChatList(3),
-            ],
-          ),
-          const Watermark(),
-          if (_errorMessage != null && _contacts.isNotEmpty)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                color: Colors.orange.withOpacity(0.9),
-                child: Text(
-                  'Warning: ${_errorMessage!}',
-                  style: const TextStyle(color: Colors.white, fontSize: 12),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-        ],
-      ),
-      floatingActionButton: _selectedContactId == null
-          ? // Replace the FloatingActionButton's onPressed method with this:
-            FloatingActionButton(
-              backgroundColor: Colors.green,
-              onPressed: () async {
-                // Fetch all users when opening the modal
-                await _fetchAllUsersForNewChat();
-
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(20),
+                        // Tabs
+                        TabBar(
+                          controller: _tabController,
+                          indicatorColor: Colors.green,
+                          labelColor: Colors.green,
+                          unselectedLabelColor: Colors.black54,
+                          tabs: const [
+                            Tab(text: "All"),
+                            Tab(text: "Unread"),
+                            Tab(text: "Groups"),
+                            Tab(text: "Favorites"),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  builder: (context) {
-                    return StatefulBuilder(
-                      builder: (BuildContext context, StateSetter setModalState) {
-                        return Container(
-                          padding: const EdgeInsets.all(16),
-                          height: MediaQuery.of(context).size.height * 0.8,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              TextField(
-                                decoration: InputDecoration(
-                                  hintText: "Search contacts...",
-                                  prefixIcon: const Icon(Icons.search),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                  ),
-                                ),
-                                onChanged: (query) {
-                                  setModalState(() {
-                                    if (query.isEmpty) {
-                                      _filteredUsers = List.from(_allUsers);
-                                    } else {
-                                      _filteredUsers = _allUsers
-                                          .where(
-                                            (user) =>
-                                                user.name
-                                                    .toLowerCase()
-                                                    .contains(
-                                                      query.toLowerCase(),
-                                                    ) ||
-                                                user.firstName
-                                                    .toLowerCase()
-                                                    .contains(
-                                                      query.toLowerCase(),
-                                                    ),
-                                          )
-                                          .toList();
-                                    }
-                                  });
-                                },
-                              ),
-                              const SizedBox(height: 16),
-                              const Text(
-                                "Start New Chat",
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              Expanded(
-                                child: _allUsers.isEmpty
-                                    ? const Center(
-                                        child: Text('No contacts available'),
-                                      )
-                                    : ListView.builder(
-                                        itemCount: _filteredUsers.length,
-                                        itemBuilder: (context, index) {
-                                          final contact = _filteredUsers[index];
-                                          return ListTile(
-                                            leading: CircleAvatar(
-                                              backgroundColor:
-                                                  contact.avatarColor,
-                                              child: Text(
-                                                contact.initials,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                            ),
-                                            title: Text(contact.name),
-                                            subtitle: Text(
-                                              contact.isOnline
-                                                  ? "Online"
-                                                  : "Offline",
-                                            ),
-                                            onTap: () async {
-                                              // Store the navigator for safe navigation
-                                              final navigator = Navigator.of(
-                                                context,
-                                              );
-                                              final scaffoldMessenger =
-                                                  ScaffoldMessenger.of(context);
+                )
+              : null,
+        ),
+        body: Stack(
+          children: [
+            TabBarView(
+              controller: _tabController,
+              children: [
+                _buildChatList(0),
+                _buildChatList(1),
+                _buildChatList(2),
+                _buildChatList(3),
+              ],
+            ),
+            const Watermark(),
+            if (_errorMessage != null && _contacts.isNotEmpty)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  color: Colors.orange.withOpacity(0.9),
+                  child: Text(
+                    'Warning: ${_errorMessage!}',
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        floatingActionButton: _selectedContactId == null
+            ? // Replace the FloatingActionButton's onPressed method with this:
+              FloatingActionButton(
+                backgroundColor: Colors.green,
+                onPressed: () async {
+                  // Fetch all users when opening the modal
+                  await _fetchAllUsersForNewChat();
 
-                                              // Close the bottom sheet first
-                                              navigator.pop();
-
-                                              // Show inline loading message instead of modal
-                                              scaffoldMessenger.showSnackBar(
-                                                const SnackBar(
-                                                  content: Row(
-                                                    children: [
-                                                      SizedBox(
-                                                        width: 20,
-                                                        height: 20,
-                                                        child: CircularProgressIndicator(
-                                                          strokeWidth: 2,
-                                                          valueColor:
-                                                              AlwaysStoppedAnimation<
-                                                                Color
-                                                              >(Colors.white),
-                                                        ),
-                                                      ),
-                                                      SizedBox(width: 16),
-                                                      Text('Creating chat...'),
-                                                    ],
-                                                  ),
-                                                  duration: Duration(
-                                                    seconds: 30,
-                                                  ),
-                                                  backgroundColor: Colors.blue,
-                                                ),
-                                              );
-
-                                              try {
-                                                // Create chat
-                                                final chatId =
-                                                    await _createChat(
-                                                      contact
-                                                              .firstName
-                                                              .isNotEmpty
-                                                          ? contact.firstName
-                                                          : contact.name,
-                                                    );
-
-                                                // Remove loading message
-                                                scaffoldMessenger
-                                                    .hideCurrentSnackBar();
-
-                                                // Create contact with chatId
-                                                final contactWithChatId =
-                                                    ChatContact(
-                                                      id: contact.id,
-                                                      chatUuid:
-                                                          chatId ??
-                                                          contact.chatUuid ??
-                                                          '',
-                                                      name: contact.name,
-                                                      firstName:
-                                                          contact
-                                                              .firstName
-                                                              .isNotEmpty
-                                                          ? contact.firstName
-                                                          : contact.name,
-                                                      lastMessage:
-                                                          contact.lastMessage,
-                                                      time: contact.time,
-                                                      isOnline:
-                                                          contact.isOnline,
-                                                      avatarColor:
-                                                          contact.avatarColor,
-                                                      initials:
-                                                          contact.initials,
-                                                      unreadCount:
-                                                          contact.unreadCount,
-                                                      lastMessageTime: contact
-                                                          .lastMessageTime,
-                                                      lastMessageSender: contact
-                                                          .lastMessageSender,
-                                                      participants:
-                                                          contact.participants,
-                                                      createdAt:
-                                                          contact.createdAt,
-                                                    );
-
-                                                // Navigate to IndividualChatScreen
-                                                await navigator.push(
-                                                  MaterialPageRoute(
-                                                    builder: (context) =>
-                                                        IndividualChatScreen(
-                                                          contact:
-                                                              contactWithChatId,
-                                                        ),
-                                                  ),
-                                                );
-
-                                                // Refresh chats after returning from IndividualChatScreen
-                                                _fetchChatsFromApi();
-                                              } catch (e) {
-                                                // Remove loading message and show error
-                                                scaffoldMessenger
-                                                    .hideCurrentSnackBar();
-
-                                                print(
-                                                  'Error in contact tap: $e',
-                                                );
-
-                                                // Show error message
-                                                scaffoldMessenger.showSnackBar(
-                                                  SnackBar(
-                                                    content: Text(
-                                                      'Error creating chat: $e',
-                                                    ),
-                                                    backgroundColor:
-                                                        Colors.orange,
-                                                  ),
-                                                );
-
-                                                // Navigate anyway with existing contact data
-                                                final contactWithChatId =
-                                                    ChatContact(
-                                                      id: contact.id,
-                                                      chatUuid:
-                                                          contact.chatUuid,
-                                                      name: contact.name,
-                                                      firstName:
-                                                          contact
-                                                              .firstName
-                                                              .isNotEmpty
-                                                          ? contact.firstName
-                                                          : contact.name,
-                                                      lastMessage:
-                                                          contact.lastMessage,
-                                                      time: contact.time,
-                                                      isOnline:
-                                                          contact.isOnline,
-                                                      avatarColor:
-                                                          contact.avatarColor,
-                                                      initials:
-                                                          contact.initials,
-                                                      unreadCount:
-                                                          contact.unreadCount,
-                                                      lastMessageTime: contact
-                                                          .lastMessageTime,
-                                                      lastMessageSender: contact
-                                                          .lastMessageSender,
-                                                      participants:
-                                                          contact.participants,
-                                                      createdAt:
-                                                          contact.createdAt,
-                                                    );
-
-                                                await navigator.push(
-                                                  MaterialPageRoute(
-                                                    builder: (context) =>
-                                                        IndividualChatScreen(
-                                                          contact:
-                                                              contactWithChatId,
-                                                        ),
-                                                  ),
-                                                );
-                                              }
-                                            },
-                                          );
-                                        },
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(20),
+                      ),
+                    ),
+                    builder: (context) {
+                      return StatefulBuilder(
+                        builder: (BuildContext context, StateSetter setModalState) {
+                          return GestureDetector(
+                            onTap: () {
+                              FocusScope.of(context).unfocus();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              height: MediaQuery.of(context).size.height * 0.8,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  TextField(
+                                    decoration: InputDecoration(
+                                      hintText: "Search contacts...",
+                                      prefixIcon: const Icon(Icons.search),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                          ),
+                                    ),
+                                    onChanged: (query) {
+                                      setModalState(() {
+                                        if (query.isEmpty) {
+                                          _filteredUsers = List.from(_allUsers);
+                                        } else {
+                                          _filteredUsers = _allUsers
+                                              .where(
+                                                (user) =>
+                                                    user.name
+                                                        .toLowerCase()
+                                                        .contains(
+                                                          query.toLowerCase(),
+                                                        ) ||
+                                                    user.firstName
+                                                        .toLowerCase()
+                                                        .contains(
+                                                          query.toLowerCase(),
+                                                        ),
+                                              )
+                                              .toList();
+                                        }
+                                      });
+                                    },
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    "Start New Chat",
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Expanded(
+                                    child: _allUsers.isEmpty
+                                        ? const Center(
+                                            child: Text(
+                                              'No contacts available',
+                                            ),
+                                          )
+                                        : ListView.builder(
+                                            itemCount: _filteredUsers.length,
+                                            itemBuilder: (context, index) {
+                                              final contact =
+                                                  _filteredUsers[index];
+                                              return ListTile(
+                                                leading: CircleAvatar(
+                                                  backgroundColor:
+                                                      contact.avatarColor,
+                                                  child: Text(
+                                                    contact.initials,
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                ),
+                                                title: Text(contact.name),
+                                                subtitle: Text(
+                                                  contact.isOnline
+                                                      ? "Online"
+                                                      : "Offline",
+                                                ),
+                                                onTap: () async {
+                                                  // Store the navigator for safe navigation
+                                                  final navigator =
+                                                      Navigator.of(context);
+                                                  final scaffoldMessenger =
+                                                      ScaffoldMessenger.of(
+                                                        context,
+                                                      );
+
+                                                  // Close the bottom sheet first
+                                                  navigator.pop();
+
+                                                  // Show inline loading message instead of modal
+                                                  scaffoldMessenger.showSnackBar(
+                                                    const SnackBar(
+                                                      content: Row(
+                                                        children: [
+                                                          SizedBox(
+                                                            width: 20,
+                                                            height: 20,
+                                                            child: CircularProgressIndicator(
+                                                              strokeWidth: 2,
+                                                              valueColor:
+                                                                  AlwaysStoppedAnimation<
+                                                                    Color
+                                                                  >(
+                                                                    Colors
+                                                                        .white,
+                                                                  ),
+                                                            ),
+                                                          ),
+                                                          SizedBox(width: 16),
+                                                          Text(
+                                                            'Creating chat...',
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      duration: Duration(
+                                                        seconds: 30,
+                                                      ),
+                                                      backgroundColor:
+                                                          Colors.blue,
+                                                    ),
+                                                  );
+
+                                                  try {
+                                                    // Create chat
+                                                    final chatId =
+                                                        await _createChat(
+                                                          contact
+                                                                  .firstName
+                                                                  .isNotEmpty
+                                                              ? contact
+                                                                    .firstName
+                                                              : contact.name,
+                                                        );
+
+                                                    // Remove loading message
+                                                    scaffoldMessenger
+                                                        .hideCurrentSnackBar();
+
+                                                    // Create contact with chatId
+                                                    final contactWithChatId =
+                                                        ChatContact(
+                                                          id: contact.id,
+                                                          chatUuid:
+                                                              chatId ??
+                                                              contact
+                                                                  .chatUuid ??
+                                                              '',
+                                                          name: contact.name,
+                                                          firstName:
+                                                              contact
+                                                                  .firstName
+                                                                  .isNotEmpty
+                                                              ? contact
+                                                                    .firstName
+                                                              : contact.name,
+                                                          lastMessage: contact
+                                                              .lastMessage,
+                                                          time: contact.time,
+                                                          isOnline:
+                                                              contact.isOnline,
+                                                          avatarColor: contact
+                                                              .avatarColor,
+                                                          initials:
+                                                              contact.initials,
+                                                          unreadCount: contact
+                                                              .unreadCount,
+                                                          lastMessageTime: contact
+                                                              .lastMessageTime,
+                                                          lastMessageSender: contact
+                                                              .lastMessageSender,
+                                                          participants: contact
+                                                              .participants,
+                                                          createdAt:
+                                                              contact.createdAt,
+                                                        );
+
+                                                    // Navigate to IndividualChatScreen
+                                                    await navigator.push(
+                                                      MaterialPageRoute(
+                                                        builder: (context) =>
+                                                            IndividualChatScreen(
+                                                              contact:
+                                                                  contactWithChatId,
+                                                            ),
+                                                      ),
+                                                    );
+
+                                                    // Refresh chats after returning from IndividualChatScreen
+                                                    _fetchChatsFromApi();
+                                                  } catch (e) {
+                                                    // Remove loading message and show error
+                                                    scaffoldMessenger
+                                                        .hideCurrentSnackBar();
+
+                                                    print(
+                                                      'Error in contact tap: $e',
+                                                    );
+
+                                                    // Show error message
+                                                    scaffoldMessenger.showSnackBar(
+                                                      SnackBar(
+                                                        content: Text(
+                                                          'Error creating chat: $e',
+                                                        ),
+                                                        backgroundColor:
+                                                            Colors.orange,
+                                                      ),
+                                                    );
+
+                                                    // Navigate anyway with existing contact data
+                                                    final contactWithChatId =
+                                                        ChatContact(
+                                                          id: contact.id,
+                                                          chatUuid:
+                                                              contact.chatUuid,
+                                                          name: contact.name,
+                                                          firstName:
+                                                              contact
+                                                                  .firstName
+                                                                  .isNotEmpty
+                                                              ? contact
+                                                                    .firstName
+                                                              : contact.name,
+                                                          lastMessage: contact
+                                                              .lastMessage,
+                                                          time: contact.time,
+                                                          isOnline:
+                                                              contact.isOnline,
+                                                          avatarColor: contact
+                                                              .avatarColor,
+                                                          initials:
+                                                              contact.initials,
+                                                          unreadCount: contact
+                                                              .unreadCount,
+                                                          lastMessageTime: contact
+                                                              .lastMessageTime,
+                                                          lastMessageSender: contact
+                                                              .lastMessageSender,
+                                                          participants: contact
+                                                              .participants,
+                                                          createdAt:
+                                                              contact.createdAt,
+                                                        );
+
+                                                    await navigator.push(
+                                                      MaterialPageRoute(
+                                                        builder: (context) =>
+                                                            IndividualChatScreen(
+                                                              contact:
+                                                                  contactWithChatId,
+                                                            ),
+                                                      ),
+                                                    );
+                                                  }
+                                                },
+                                              );
+                                            },
+                                          ),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text("Close"),
+                                  ),
+                                ],
                               ),
-                              ElevatedButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text("Close"),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    );
-                  },
-                );
-              },
-              child: const Icon(Icons.chat, color: Colors.white),
-            )
-          : null, // Hide FAB when contact is selected
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  );
+                },
+                child: const Icon(Icons.chat, color: Colors.white),
+              )
+            : null, // Hide FAB when contact is selected
+      ),
     );
   }
 }

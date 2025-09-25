@@ -325,836 +325,701 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
       });
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Special Gift Request',
-          style: TextStyle(
-            fontSize: fontSettings.fontSize,
-            fontWeight: fontSettings.fontWeight,
+    return GestureDetector(
+      onTap: () {
+        // Dismiss keyboard when tapping outside of text fields
+        FocusScope.of(context).unfocus();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            'Special Gift Request',
+            style: TextStyle(
+              fontSize: fontSettings.fontSize,
+              fontWeight: fontSettings.fontWeight,
+            ),
           ),
         ),
-      ),
-      body: PopScope(
-        onPopInvokedWithResult: (bool didPop, dynamic result) {
-          ref.read(newReservationProvider.notifier).resetState();
-          ref.read(memberSearchProvider.notifier).resetState();
-        },
-        child: Stack(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: SingleChildScrollView(
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 5.0),
-                      TextFormField(
-                        controller: _fromDateController,
-                        readOnly: true,
-                        style: _inputTextStyle(fontSettings),
-                        decoration: InputDecoration(
-                          labelText: "From Date & Time",
-                          labelStyle: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: fontSettings.fontWeight,
-                          ),
-                          border: const OutlineInputBorder(),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12.0,
-                            vertical: -5.0,
-                          ),
-                          suffixIcon: const Icon(Icons.calendar_today),
-                        ),
-                        onTap: () =>
-                            _pickDateTime(context, _fromDateController),
-                      ),
-                      const SizedBox(height: 16.0),
-                      TextFormField(
-                        controller: _toDateController,
-                        readOnly: true,
-                        style: _inputTextStyle(fontSettings),
-                        decoration: InputDecoration(
-                          labelText: "To Date & Time",
-                          labelStyle: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: fontSettings.fontWeight,
-                          ),
-                          border: const OutlineInputBorder(),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12.0,
-                            vertical: -5.0,
-                          ),
-                          suffixIcon: const Icon(Icons.calendar_today),
-                        ),
-                        onTap: () => _pickDateTime(context, _toDateController),
-                      ),
-                      const SizedBox(height: 16.0),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(),
-                              autofocus: false,
-                              controller: _memberIdNumberController,
-                              style: _inputTextStyle(fontSettings),
-                              decoration: InputDecoration(
-                                labelText: "Member ID",
-                                labelStyle: TextStyle(
-                                  fontSize: fontSettings.fontSize,
-                                  fontWeight: fontSettings.fontWeight,
-                                ),
-                                border: const OutlineInputBorder(),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12.0,
-                                  vertical: -5.0,
-                                ),
-                                prefixIcon: Padding(
-                                  padding: const EdgeInsets.only(
-                                    left: 12,
-                                    right: 4,
-                                  ),
-                                  child: DropdownButtonHideUnderline(
-                                    child: DropdownButton<String>(
-                                      value: _selectedPrefix,
-                                      style: TextStyle(
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
-                                        color: Colors.black,
-                                      ),
-                                      items: ["BM", "BL", "BN"].map((prefix) {
-                                        return DropdownMenuItem(
-                                          value: prefix,
-                                          child: Text(
-                                            prefix,
-                                            style: TextStyle(
-                                              fontSize: fontSettings.fontSize,
-                                              fontWeight:
-                                                  fontSettings.fontWeight,
-                                            ),
-                                          ),
-                                        );
-                                      }).toList(),
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _selectedPrefix = value!;
-                                        });
-                                      },
-                                    ),
-                                  ),
-                                ),
-                                suffixIcon: IconButton(
-                                  icon: const Icon(Icons.search),
-                                  onPressed: () {
-                                    FocusScope.of(context).unfocus();
-                                    _memberIdController.text =
-                                        '$_selectedPrefix${_memberIdNumberController.text}';
-                                    _openMemberSearchBottomSheet(8002);
-                                  },
-                                ),
-                              ),
-
-                              onChanged: (value) {
-                                _memberNameController.text = '';
-
-                                ref
-                                    .read(memberSearchProvider.notifier)
-                                    .resetState();
-                                setState(() {
-                                  _isMemberSelected = false;
-                                });
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 16.0),
-                          ElevatedButton(
-                            onPressed: _isMemberSelected
-                                ? () {
-                                    // Only navigate when member is selected
-                                    context.push('/home/profile');
-                                  }
-                                : null, // Disable button when no member selected
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _isMemberSelected
-                                  ? const Color.fromARGB(255, 70, 70, 70)
-                                  : Colors
-                                        .grey
-                                        .shade300, // Different color when disabled
-                              foregroundColor: _isMemberSelected
-                                  ? Colors.white
-                                  : Colors.grey.shade600,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 16,
-                                horizontal: 14,
-                              ),
-                            ),
-                            child: Icon(
-                              Icons.person_search,
-                              size: 25,
-                              color: _isMemberSelected
-                                  ? Colors.white
-                                  : Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16.0),
-                      TextFormField(
-                        autofocus: false,
-                        controller: _memberNameController,
-                        style: _inputTextStyle(fontSettings),
-                        decoration: InputDecoration(
-                          labelText: "Member Name",
-                          labelStyle: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: fontSettings.fontWeight,
-                          ),
-                          border: const OutlineInputBorder(),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12.0,
-                            vertical: -5.0,
-                          ),
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.search),
-                            onPressed: () {
-                              FocusScope.of(context).requestFocus(FocusNode());
-                              _openMemberSearchBottomSheet(8003);
-                            },
-                          ),
-                        ),
-                        onChanged: (value) {
-                          _memberIdController.text = '';
-                          ref.read(memberSearchProvider.notifier).resetState();
-                          setState(() {
-                            _isMemberSelected = false;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 16.0),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () async {
-                                setState(() {
-                                  _isLoading = true;
-                                  _showGuestData = false;
-                                });
-
-                                await ref
-                                    .read(giftProvider.notifier)
-                                    .getGestgiftGift(
-                                      8886,
-                                      _fromDateController.text,
-                                      _toDateController.text,
-                                      _memberIdController.text,
-                                      _fromDateController.text,
-                                      _toDateController.text,
-                                    );
-
-                                setState(() {
-                                  _isLoading = false;
-                                  _showGuestData = true;
-                                });
-                              },
-                              icon: const Icon(Icons.person),
-                              label: Text(
-                                "Guest Data",
-                                style: TextStyle(
-                                  fontSize: fontSettings.fontSize,
-                                  fontWeight: fontSettings.fontWeight,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.orange,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                final memberId = _memberIdController.text
-                                    .trim();
-
-                                if (memberId.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Please enter a Member ID"),
-                                    ),
-                                  );
-                                  return;
-                                }
-
-                                // Navigate to PrvGift page with MID as parameter
-                                context.push(
-                                  '/gifts/special-gift-requests/prv-gifts/$memberId',
-                                );
-                              },
-                              icon: const Icon(Icons.card_giftcard),
-                              label: Text(
-                                "Prv Gift",
-                                style: TextStyle(
-                                  fontSize: fontSettings.fontSize,
-                                  fontWeight: fontSettings.fontWeight,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 16.0),
-                      if (_showGuestData) ...[
-                        const SizedBox(height: 20),
-                        Align(
-                          alignment: Alignment.center,
-                          child: Text(
-                            "Guest Gift Data",
-                            style: TextStyle(
+        body: PopScope(
+          onPopInvokedWithResult: (bool didPop, dynamic result) {
+            ref.read(newReservationProvider.notifier).resetState();
+            ref.read(memberSearchProvider.notifier).resetState();
+          },
+          child: Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: SingleChildScrollView(
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 5.0),
+                        TextFormField(
+                          controller: _fromDateController,
+                          readOnly: true,
+                          style: _inputTextStyle(fontSettings),
+                          decoration: InputDecoration(
+                            labelText: "From Date & Time",
+                            labelStyle: TextStyle(
                               fontSize: fontSettings.fontSize,
                               fontWeight: fontSettings.fontWeight,
                             ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Builder(
-                          builder: (context) {
-                            final giftState = ref.watch(giftProvider);
-                            if (giftState.guestGiftData.isEmpty) {
-                              return Text(
-                                "No guest gift data found",
-                                style: TextStyle(
-                                  fontSize: fontSettings.fontSize,
-                                  fontWeight: fontSettings.fontWeight,
-                                ),
-                              );
-                            }
-                            final data = giftState.guestGiftData.first;
-
-                            final rows = [
-                              {"Field": "Drop (Est)", "Value": data.guestDrop},
-                              {
-                                "Field": "Cash Out (Est)",
-                                "Value": data.tmpCashout,
-                              },
-                              {"Field": "Result (Est)", "Value": data.res},
-                              {
-                                "Field": "Actual Drop (Est)",
-                                "Value": data.actD,
-                              },
-                              {
-                                "Field": "Coupons (Est)",
-                                "Value": data.guestCoupon,
-                              },
-                              {
-                                "Field": "Commission Paid (Est)",
-                                "Value": data.tmpCommpaid,
-                              },
-                              {"Field": "Points (Est)", "Value": data.tmpPoint},
-                              {
-                                "Field": "Flush Coupon (Est)",
-                                "Value": data.flushCoupon,
-                              },
-                              {
-                                "Field": "Total Coupon (Est)",
-                                "Value": data.guestCoupon + data.flushCoupon,
-                              },
-                              {
-                                "Field": "Flush Actual Drop (Est)",
-                                "Value": data.flushActDrop,
-                              },
-                              {
-                                "Field": "Avg Bet (Est)",
-                                "Value": data.tmpAvgBet,
-                              },
-                            ];
-
-                            return Container(
-                              margin: const EdgeInsets.only(top: 10),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade400),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: DataTable(
-                                headingRowColor: WidgetStateProperty.all(
-                                  Colors.amber.shade100,
-                                ),
-                                border: TableBorder.all(
-                                  color: Colors.grey.shade300,
-                                ),
-                                columns: [
-                                  DataColumn(
-                                    label: Text(
-                                      "Field",
-                                      style: TextStyle(
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
-                                      ),
-                                    ),
-                                  ),
-                                  DataColumn(
-                                    label: Text(
-                                      "Value",
-                                      style: TextStyle(
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                                rows: rows.map((row) {
-                                  return DataRow(
-                                    cells: [
-                                      DataCell(
-                                        Align(
-                                          alignment: Alignment.centerLeft,
-                                          child: Text(
-                                            row["Field"].toString(),
-                                            style: TextStyle(
-                                              fontSize: fontSettings.fontSize,
-                                              fontWeight:
-                                                  fontSettings.fontWeight,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      DataCell(
-                                        Align(
-                                          alignment: Alignment.centerRight,
-                                          child: Text(
-                                            formatNumber(row["Value"]),
-
-                                            style: TextStyle(
-                                              fontSize: fontSettings.fontSize,
-                                              fontWeight:
-                                                  fontSettings.fontWeight,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                }).toList(),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                      const SizedBox(height: 16.0),
-
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _arrivalDateController,
-                              readOnly: true,
-                              style: _inputTextStyle(fontSettings),
-                              decoration: InputDecoration(
-                                labelText: "Arrival Date *",
-                                labelStyle: TextStyle(
-                                  fontSize: fontSettings.fontSize - 2,
-                                  fontWeight: fontSettings.fontWeight,
-                                ),
-                                border: const OutlineInputBorder(),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12.0,
-                                  vertical: -5.0,
-                                ),
-                                suffixIcon: const Icon(Icons.calendar_today),
-                              ),
-                              validator: (v) => v == null || v.isEmpty
-                                  ? "Arrival Date required"
-                                  : null,
-                              onTap: () =>
-                                  _pickDate(context, _arrivalDateController),
+                            border: const OutlineInputBorder(),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12.0,
+                              vertical: -5.0,
                             ),
+                            suffixIcon: const Icon(Icons.calendar_today),
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _departureDateController,
-                              readOnly: true,
-                              style: _inputTextStyle(fontSettings),
-                              decoration: InputDecoration(
-                                labelText: "Departure Date *",
-                                labelStyle: TextStyle(
-                                  fontSize: fontSettings.fontSize - 2,
-                                  fontWeight: fontSettings.fontWeight,
-                                ),
-                                border: const OutlineInputBorder(),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12.0,
-                                  vertical: -5.0,
-                                ),
-                                suffixIcon: const Icon(Icons.calendar_today),
-                              ),
-                              validator: (v) => v == null || v.isEmpty
-                                  ? "Departure Date required"
-                                  : null,
-                              onTap: () =>
-                                  _pickDate(context, _departureDateController),
+                          onTap: () =>
+                              _pickDateTime(context, _fromDateController),
+                        ),
+                        const SizedBox(height: 16.0),
+                        TextFormField(
+                          controller: _toDateController,
+                          readOnly: true,
+                          style: _inputTextStyle(fontSettings),
+                          decoration: InputDecoration(
+                            labelText: "To Date & Time",
+                            labelStyle: TextStyle(
+                              fontSize: fontSettings.fontSize,
+                              fontWeight: fontSettings.fontWeight,
                             ),
+                            border: const OutlineInputBorder(),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12.0,
+                              vertical: -5.0,
+                            ),
+                            suffixIcon: const Icon(Icons.calendar_today),
                           ),
-                        ],
-                      ),
-
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 16),
-
-                          Consumer(
-                            builder: (context, ref, child) {
-                              final giftState = ref.watch(giftProvider);
-
-                              final uniqueGiftList = {
-                                for (var gift in giftState.giftForList)
-                                  gift.code: gift,
-                              }.values.toList();
-
-                              final currentValue =
-                                  uniqueGiftList.any(
-                                    (gift) => gift.code == _selectedGift,
-                                  )
-                                  ? _selectedGift
-                                  : null;
-
-                              return DropdownButtonFormField<String>(
-                                initialValue: currentValue,
-                                items: uniqueGiftList.map((gift) {
-                                  return DropdownMenuItem<String>(
-                                    value: gift.code,
-                                    child: Text(
-                                      gift.code.replaceAll("_", ""),
-                                      style: TextStyle(
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedGift = value;
-                                  });
-                                },
+                          onTap: () =>
+                              _pickDateTime(context, _toDateController),
+                        ),
+                        const SizedBox(height: 16.0),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(),
+                                autofocus: false,
+                                controller: _memberIdNumberController,
+                                style: _inputTextStyle(fontSettings),
                                 decoration: InputDecoration(
-                                  labelText: "Gift For *",
+                                  labelText: "Member ID",
                                   labelStyle: TextStyle(
                                     fontSize: fontSettings.fontSize,
                                     fontWeight: fontSettings.fontWeight,
                                   ),
-
                                   border: const OutlineInputBorder(),
                                   contentPadding: const EdgeInsets.symmetric(
                                     horizontal: 12.0,
                                     vertical: -5.0,
                                   ),
+                                  prefixIcon: Padding(
+                                    padding: const EdgeInsets.only(
+                                      left: 12,
+                                      right: 4,
+                                    ),
+                                    child: DropdownButtonHideUnderline(
+                                      child: DropdownButton<String>(
+                                        value: _selectedPrefix,
+                                        style: TextStyle(
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                          color: Colors.black,
+                                        ),
+                                        items: ["BM", "BL", "BN"].map((prefix) {
+                                          return DropdownMenuItem(
+                                            value: prefix,
+                                            child: Text(
+                                              prefix,
+                                              style: TextStyle(
+                                                fontSize: fontSettings.fontSize,
+                                                fontWeight:
+                                                    fontSettings.fontWeight,
+                                              ),
+                                            ),
+                                          );
+                                        }).toList(),
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _selectedPrefix = value!;
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                  suffixIcon: IconButton(
+                                    icon: const Icon(Icons.search),
+                                    onPressed: () {
+                                      FocusScope.of(context).unfocus();
+                                      _memberIdController.text =
+                                          '$_selectedPrefix${_memberIdNumberController.text}';
+                                      _openMemberSearchBottomSheet(8002);
+                                    },
+                                  ),
                                 ),
-                                validator: (v) => v == null || v.isEmpty
-                                    ? "Gift required"
-                                    : null,
-                              );
-                            },
-                          ),
 
-                          const SizedBox(height: 16),
-                          DropdownButtonFormField<String>(
-                            style: _inputTextStyle(fontSettings),
-                            decoration: InputDecoration(
-                              labelText: "Chip Type *",
-                              labelStyle: TextStyle(
-                                fontSize: fontSettings.fontSize,
-                                fontWeight: fontSettings.fontWeight,
-                              ),
-                              border: const OutlineInputBorder(),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12.0,
-                                vertical: -5.0,
+                                onChanged: (value) {
+                                  _memberNameController.text = '';
+
+                                  ref
+                                      .read(memberSearchProvider.notifier)
+                                      .resetState();
+                                  setState(() {
+                                    _isMemberSelected = false;
+                                  });
+                                },
                               ),
                             ),
-                            initialValue: _chipType,
-                            items: const [
-                              DropdownMenuItem(
-                                value: "OTP Chips",
-                                child: Text(
-                                  "OTP Chips",
-                                  style: TextStyle(color: Colors.black),
+                            const SizedBox(width: 16.0),
+                            ElevatedButton(
+                              onPressed: _isMemberSelected
+                                  ? () {
+                                      // Only navigate when member is selected
+                                      context.push('/home/profile');
+                                    }
+                                  : null, // Disable button when no member selected
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _isMemberSelected
+                                    ? const Color.fromARGB(255, 70, 70, 70)
+                                    : Colors
+                                          .grey
+                                          .shade300, // Different color when disabled
+                                foregroundColor: _isMemberSelected
+                                    ? Colors.white
+                                    : Colors.grey.shade600,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                  horizontal: 14,
                                 ),
                               ),
-                              DropdownMenuItem(
-                                value: "NC Chips",
-                                child: Text(
-                                  "NC Chips",
-                                  style: TextStyle(color: Colors.black),
-                                ),
-                              ),
-                            ],
-                            onChanged: (value) {
-                              setState(() {
-                                _chipType = value;
-                              });
-                            },
-                            validator: (v) => v == null || v.isEmpty
-                                ? "Chip Type required"
-                                : null,
-                          ),
-
-                          const SizedBox(height: 16.0),
-
-                          TextFormField(
-                            controller: _amountController,
-                            style: _inputTextStylefroammount(fontSettings),
-                            decoration: InputDecoration(
-                              labelText: "Amount *",
-                              labelStyle: TextStyle(
-                                fontSize: fontSettings.fontSize,
-                                fontWeight: fontSettings.fontWeight,
-                              ),
-                              border: const OutlineInputBorder(),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12.0,
-                                vertical: -5.0,
+                              child: Icon(
+                                Icons.person_search,
+                                size: 25,
+                                color: _isMemberSelected
+                                    ? Colors.white
+                                    : Colors.grey.shade600,
                               ),
                             ),
-                            keyboardType: TextInputType.number,
-                            inputFormatters: <TextInputFormatter>[
-                              ThousandsSeparatorInputFormatter(),
-                            ],
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return "Please enter amount";
-                              }
-                              return null;
-                            },
-                          ),
-
-                          const SizedBox(height: 16),
-                        ],
-                      ),
-
-                      TextFormField(
-                        style: _inputTextStyle(fontSettings),
-                        decoration: InputDecoration(
-                          alignLabelWithHint: true,
-                          labelText: "Remarks",
-                          labelStyle: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: fontSettings.fontWeight,
-                          ),
-                          hintText: "Enter additional details...",
-                          hintStyle: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: fontSettings.fontWeight,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8.0),
-                          ),
+                          ],
                         ),
-                        maxLines: 5,
-                        keyboardType: TextInputType.multiline,
-                        onChanged: (value) => _remarks = value,
-                      ),
-                      const SizedBox(height: 16.0),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _showGuestData
-                              ? () async {
-                                  if (!_formKey.currentState!.validate()) {
+                        const SizedBox(height: 16.0),
+                        TextFormField(
+                          autofocus: false,
+                          controller: _memberNameController,
+                          style: _inputTextStyle(fontSettings),
+                          decoration: InputDecoration(
+                            labelText: "Member Name",
+                            labelStyle: TextStyle(
+                              fontSize: fontSettings.fontSize,
+                              fontWeight: fontSettings.fontWeight,
+                            ),
+                            border: const OutlineInputBorder(),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12.0,
+                              vertical: -5.0,
+                            ),
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.search),
+                              onPressed: () {
+                                FocusScope.of(
+                                  context,
+                                ).requestFocus(FocusNode());
+                                _openMemberSearchBottomSheet(8003);
+                              },
+                            ),
+                          ),
+                          onChanged: (value) {
+                            _memberIdController.text = '';
+                            ref
+                                .read(memberSearchProvider.notifier)
+                                .resetState();
+                            setState(() {
+                              _isMemberSelected = false;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16.0),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () async {
+                                  setState(() {
+                                    _isLoading = true;
+                                    _showGuestData = false;
+                                  });
+
+                                  await ref
+                                      .read(giftProvider.notifier)
+                                      .getGestgiftGift(
+                                        8886,
+                                        _fromDateController.text,
+                                        _toDateController.text,
+                                        _memberIdController.text,
+                                        _fromDateController.text,
+                                        _toDateController.text,
+                                      );
+
+                                  setState(() {
+                                    _isLoading = false;
+                                    _showGuestData = true;
+                                  });
+                                },
+                                icon: const Icon(Icons.person),
+                                label: Text(
+                                  "Guest Data",
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize,
+                                    fontWeight: fontSettings.fontWeight,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.orange,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  final memberId = _memberIdController.text
+                                      .trim();
+
+                                  if (memberId.isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          "Please enter a Member ID",
+                                        ),
+                                      ),
+                                    );
                                     return;
                                   }
 
-                                  setState(() => _isLoading = true);
-                                  try {
-                                    final ok = await ref
-                                        .read(giftProvider.notifier)
-                                        .sendSpecialGiftFromUI(
-                                          mid: _memberIdController.text.trim(),
-                                          memberName: _memberNameController.text
-                                              .trim(),
-                                          fromDateTime: _fromDateController.text
-                                              .trim(),
-                                          toDateTime: _toDateController.text
-                                              .trim(),
-                                          arrivalDate: _arrivalDateController
-                                              .text
-                                              .trim(),
-                                          departureDate:
-                                              _departureDateController.text
-                                                  .trim(),
-                                          giftForCode:
-                                              _selectedGift ?? "SPECIAL GIFT",
-                                          chipTypeUI: _chipType ?? "OTP Chips",
-                                          amountUI: _amountController.text,
-                                          remarks: _remarks,
-                                          userName: userName ?? "",
-                                        );
+                                  // Navigate to PrvGift page with MID as parameter
+                                  context.push(
+                                    '/gifts/special-gift-requests/prv-gifts/$memberId',
+                                  );
+                                },
+                                icon: const Icon(Icons.card_giftcard),
+                                label: Text(
+                                  "Prv Gift",
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize,
+                                    fontWeight: fontSettings.fontWeight,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
 
-                                    setState(() => _isLoading = false);
+                        const SizedBox(height: 10.0),
+                        if (_showGuestData) ...[
+                          // const SizedBox(height: 20),
+                          Align(
+                            alignment: Alignment.center,
+                            child: Text(
+                              "Guest Gift Data",
+                              style: TextStyle(
+                                fontSize: fontSettings.fontSize,
+                                fontWeight: fontSettings.fontWeight,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Builder(
+                            builder: (context) {
+                              final giftState = ref.watch(giftProvider);
+                              if (giftState.guestGiftData.isEmpty) {
+                                return Text(
+                                  "No guest gift data found",
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize,
+                                    fontWeight: fontSettings.fontWeight,
+                                  ),
+                                );
+                              }
+                              final data = giftState.guestGiftData.first;
 
-                                    // print(ok);
+                              final rows = [
+                                {
+                                  "Field": "Drop (Est)",
+                                  "Value": data.guestDrop,
+                                },
+                                {
+                                  "Field": "Cash Out (Est)",
+                                  "Value": data.tmpCashout,
+                                },
+                                {"Field": "Result (Est)", "Value": data.res},
+                                {
+                                  "Field": "Actual Drop (Est)",
+                                  "Value": data.actD,
+                                },
+                                {
+                                  "Field": "Coupons (Est)",
+                                  "Value": data.guestCoupon,
+                                },
+                                {
+                                  "Field": "Commission Paid (Est)",
+                                  "Value": data.tmpCommpaid,
+                                },
+                                {
+                                  "Field": "Points (Est)",
+                                  "Value": data.tmpPoint,
+                                },
+                                {
+                                  "Field": "Flush Coupon (Est)",
+                                  "Value": data.flushCoupon,
+                                },
+                                {
+                                  "Field": "Total Coupon (Est)",
+                                  "Value": data.guestCoupon + data.flushCoupon,
+                                },
+                                {
+                                  "Field": "Flush Actual Drop (Est)",
+                                  "Value": data.flushActDrop,
+                                },
+                                {
+                                  "Field": "Avg Bet (Est)",
+                                  "Value": data.tmpAvgBet,
+                                },
+                              ];
 
-                                    if (!mounted) return;
-                                    if (ok) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            "Gift request sent successfully",
+                              return Container(
+                                margin: const EdgeInsets.only(top: 10),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: Colors.grey.shade400,
+                                  ),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: DataTable(
+                                  headingRowColor: WidgetStateProperty.all(
+                                    Colors.amber.shade100,
+                                  ),
+                                  border: TableBorder.all(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                  columns: [
+                                    DataColumn(
+                                      label: Text(
+                                        "Field",
+                                        style: TextStyle(
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
+                                      ),
+                                    ),
+                                    DataColumn(
+                                      label: Text(
+                                        "Value",
+                                        style: TextStyle(
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                  rows: rows.map((row) {
+                                    return DataRow(
+                                      cells: [
+                                        DataCell(
+                                          Align(
+                                            alignment: Alignment.centerLeft,
+                                            child: Text(
+                                              row["Field"].toString(),
+                                              style: TextStyle(
+                                                fontSize: fontSettings.fontSize,
+                                                fontWeight:
+                                                    fontSettings.fontWeight,
+                                              ),
+                                            ),
                                           ),
                                         ),
-                                      );
-                                      final giftState = ref.read(giftProvider);
-                                      Map<String, dynamic> guestDataMap = {};
+                                        DataCell(
+                                          Align(
+                                            alignment: Alignment.centerRight,
+                                            child: Text(
+                                              formatNumber(row["Value"]),
 
-                                      if (giftState.guestGiftData.isNotEmpty) {
-                                        final data =
-                                            giftState.guestGiftData.first;
-                                        guestDataMap = {
-                                          'guestDrop': data.guestDrop,
-                                          'tmpCashout': data.tmpCashout,
-                                          'res': data.res,
-                                          'actD': data.actD,
-                                          'guestCoupon': data.guestCoupon,
-                                          'tmpCommpaid': data.tmpCommpaid,
-                                          'tmpPoint': data.tmpPoint,
-                                          'flushCoupon': data.flushCoupon,
-                                          'flushActDrop': data.flushActDrop,
-                                          'tmpAvgBet': data.tmpAvgBet,
-                                        };
-                                      }
-
-                                      final shareOption = await showDialog<String>(
-                                        context: context,
-                                        builder: (BuildContext context) {
-                                          return AlertDialog(
-                                            title: Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.share,
-                                                  color: Colors.blue,
-                                                ),
-                                                SizedBox(width: 8),
-                                                Text('Share Gift Request'),
-                                              ],
-                                            ),
-                                            content: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  'Choose how to share the PDF document:',
-                                                ),
-                                                SizedBox(height: 16),
-                                                Container(
-                                                  padding: EdgeInsets.all(12),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.green.shade50,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          8,
-                                                        ),
-                                                    border: Border.all(
-                                                      color:
-                                                          Colors.green.shade200,
-                                                    ),
-                                                  ),
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      Row(
-                                                        children: [
-                                                          Icon(
-                                                            Icons.check_circle,
-                                                            color: Colors.green,
-                                                            size: 16,
-                                                          ),
-                                                          SizedBox(width: 4),
-                                                          Text(
-                                                            'RECOMMENDED',
-                                                            style: TextStyle(
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold,
-                                                              color: Colors
-                                                                  .green
-                                                                  .shade700,
-                                                              fontSize: 12,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                      SizedBox(height: 4),
-                                                      Text(
-                                                        'Share with Apps - PDF automatically attached',
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () => Navigator.of(
-                                                  context,
-                                                ).pop('cancel'),
-                                                child: const Text('Cancel'),
+                                              style: TextStyle(
+                                                fontSize: fontSettings.fontSize,
+                                                fontWeight:
+                                                    fontSettings.fontWeight,
                                               ),
-                                              ElevatedButton.icon(
-                                                onPressed: () => Navigator.of(
-                                                  context,
-                                                ).pop('system'),
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: Colors.blue,
-                                                  foregroundColor: Colors.white,
-                                                ),
-                                                icon: Icon(Icons.share),
-                                                label: const Text(
-                                                  'Share with Apps',
-                                                ),
-                                              ),
-                                            ],
-                                          );
-                                        },
-                                      );
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }).toList(),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                        const SizedBox(height: 16.0),
 
-                                      if (shareOption == 'system') {
-                                        try {
-                                          // Use the direct share method - this is the BEST approach
-                                          await DirectWhatsAppPdfService.shareDirectlyToWhatsApp(
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _arrivalDateController,
+                                readOnly: true,
+                                style: _inputTextStyle(fontSettings),
+                                decoration: InputDecoration(
+                                  labelText: "Arrival Date *",
+                                  labelStyle: TextStyle(
+                                    fontSize: fontSettings.fontSize - 2,
+                                    fontWeight: fontSettings.fontWeight,
+                                  ),
+                                  border: const OutlineInputBorder(),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12.0,
+                                    vertical: -5.0,
+                                  ),
+                                  suffixIcon: const Icon(Icons.calendar_today),
+                                ),
+                                validator: (v) => v == null || v.isEmpty
+                                    ? "Arrival Date required"
+                                    : null,
+                                onTap: () =>
+                                    _pickDate(context, _arrivalDateController),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _departureDateController,
+                                readOnly: true,
+                                style: _inputTextStyle(fontSettings),
+                                decoration: InputDecoration(
+                                  labelText: "Departure Date *",
+                                  labelStyle: TextStyle(
+                                    fontSize: fontSettings.fontSize - 2,
+                                    fontWeight: fontSettings.fontWeight,
+                                  ),
+                                  border: const OutlineInputBorder(),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12.0,
+                                    vertical: -5.0,
+                                  ),
+                                  suffixIcon: const Icon(Icons.calendar_today),
+                                ),
+                                validator: (v) => v == null || v.isEmpty
+                                    ? "Departure Date required"
+                                    : null,
+                                onTap: () => _pickDate(
+                                  context,
+                                  _departureDateController,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 16),
+
+                            Consumer(
+                              builder: (context, ref, child) {
+                                final giftState = ref.watch(giftProvider);
+
+                                final uniqueGiftList = {
+                                  for (var gift in giftState.giftForList)
+                                    gift.code: gift,
+                                }.values.toList();
+
+                                final currentValue =
+                                    uniqueGiftList.any(
+                                      (gift) => gift.code == _selectedGift,
+                                    )
+                                    ? _selectedGift
+                                    : null;
+
+                                return DropdownButtonFormField<String>(
+                                  initialValue: currentValue,
+                                  items: uniqueGiftList.map((gift) {
+                                    return DropdownMenuItem<String>(
+                                      value: gift.code,
+                                      child: Text(
+                                        gift.code.replaceAll("_", ""),
+                                        style: TextStyle(
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _selectedGift = value;
+                                    });
+                                  },
+                                  decoration: InputDecoration(
+                                    labelText: "Gift For *",
+                                    labelStyle: TextStyle(
+                                      fontSize: fontSettings.fontSize,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
+
+                                    border: const OutlineInputBorder(),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 12.0,
+                                      vertical: -5.0,
+                                    ),
+                                  ),
+                                  validator: (v) => v == null || v.isEmpty
+                                      ? "Gift required"
+                                      : null,
+                                );
+                              },
+                            ),
+
+                            const SizedBox(height: 16),
+                            DropdownButtonFormField<String>(
+                              style: _inputTextStyle(fontSettings),
+                              decoration: InputDecoration(
+                                labelText: "Chip Type *",
+                                labelStyle: TextStyle(
+                                  fontSize: fontSettings.fontSize,
+                                  fontWeight: fontSettings.fontWeight,
+                                ),
+                                border: const OutlineInputBorder(),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12.0,
+                                  vertical: -5.0,
+                                ),
+                              ),
+                              initialValue: _chipType,
+                              items: const [
+                                DropdownMenuItem(
+                                  value: "OTP Chips",
+                                  child: Text(
+                                    "OTP Chips",
+                                    style: TextStyle(color: Colors.black),
+                                  ),
+                                ),
+                                DropdownMenuItem(
+                                  value: "NC Chips",
+                                  child: Text(
+                                    "NC Chips",
+                                    style: TextStyle(color: Colors.black),
+                                  ),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                setState(() {
+                                  _chipType = value;
+                                });
+                              },
+                              validator: (v) => v == null || v.isEmpty
+                                  ? "Chip Type required"
+                                  : null,
+                            ),
+
+                            const SizedBox(height: 16.0),
+
+                            TextFormField(
+                              controller: _amountController,
+                              style: _inputTextStylefroammount(fontSettings),
+                              decoration: InputDecoration(
+                                labelText: "Amount *",
+                                labelStyle: TextStyle(
+                                  fontSize: fontSettings.fontSize,
+                                  fontWeight: fontSettings.fontWeight,
+                                ),
+                                border: const OutlineInputBorder(),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12.0,
+                                  vertical: -5.0,
+                                ),
+                              ),
+                              keyboardType: TextInputType.number,
+                              inputFormatters: <TextInputFormatter>[
+                                ThousandsSeparatorInputFormatter(),
+                              ],
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return "Please enter amount";
+                                }
+                                return null;
+                              },
+                            ),
+
+                            const SizedBox(height: 16),
+                          ],
+                        ),
+
+                        TextFormField(
+                          style: _inputTextStyle(fontSettings),
+                          decoration: InputDecoration(
+                            alignLabelWithHint: true,
+                            labelText: "Remarks",
+                            labelStyle: TextStyle(
+                              fontSize: fontSettings.fontSize,
+                              fontWeight: fontSettings.fontWeight,
+                            ),
+                            hintText: "Enter additional details...",
+                            hintStyle: TextStyle(
+                              fontSize: fontSettings.fontSize,
+                              fontWeight: fontSettings.fontWeight,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8.0),
+                            ),
+                          ),
+                          maxLines: 5,
+                          keyboardType: TextInputType.multiline,
+                          onChanged: (value) => _remarks = value,
+                        ),
+                        const SizedBox(height: 16.0),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _showGuestData
+                                ? () async {
+                                    if (!_formKey.currentState!.validate()) {
+                                      return;
+                                    }
+
+                                    setState(() => _isLoading = true);
+                                    try {
+                                      final ok = await ref
+                                          .read(giftProvider.notifier)
+                                          .sendSpecialGiftFromUI(
+                                            mid: _memberIdController.text
+                                                .trim(),
                                             memberName: _memberNameController
                                                 .text
-                                                .trim(),
-                                            memberId: _memberIdController.text
                                                 .trim(),
                                             fromDateTime: _fromDateController
                                                 .text
@@ -1167,133 +1032,364 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                             departureDate:
                                                 _departureDateController.text
                                                     .trim(),
-                                            giftFor:
+                                            giftForCode:
                                                 _selectedGift ?? "SPECIAL GIFT",
-                                            chipType: _chipType ?? "OTP Chips",
-                                            amount: _amountController.text,
+                                            chipTypeUI:
+                                                _chipType ?? "OTP Chips",
+                                            amountUI: _amountController.text,
                                             remarks: _remarks,
                                             userName: userName ?? "",
-                                            guestData: guestDataMap,
                                           );
 
-                                          if (mounted) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  "PDF ready! Select WhatsApp from the share options.",
-                                                ),
-                                                duration: Duration(seconds: 3),
+                                      setState(() => _isLoading = false);
+
+                                      // print(ok);
+
+                                      if (!mounted) return;
+                                      if (ok) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              "Gift request sent successfully",
+                                            ),
+                                          ),
+                                        );
+                                        final giftState = ref.read(
+                                          giftProvider,
+                                        );
+                                        Map<String, dynamic> guestDataMap = {};
+
+                                        if (giftState
+                                            .guestGiftData
+                                            .isNotEmpty) {
+                                          final data =
+                                              giftState.guestGiftData.first;
+                                          guestDataMap = {
+                                            'guestDrop': data.guestDrop,
+                                            'tmpCashout': data.tmpCashout,
+                                            'res': data.res,
+                                            'actD': data.actD,
+                                            'guestCoupon': data.guestCoupon,
+                                            'tmpCommpaid': data.tmpCommpaid,
+                                            'tmpPoint': data.tmpPoint,
+                                            'flushCoupon': data.flushCoupon,
+                                            'flushActDrop': data.flushActDrop,
+                                            'tmpAvgBet': data.tmpAvgBet,
+                                          };
+                                        }
+
+                                        final shareOption = await showDialog<String>(
+                                          context: context,
+                                          builder: (BuildContext context) {
+                                            return AlertDialog(
+                                              title: Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.share,
+                                                    color: Colors.blue,
+                                                  ),
+                                                  SizedBox(width: 8),
+                                                  Text('Share Gift Request'),
+                                                ],
                                               ),
-                                            );
-                                          }
-                                        } catch (e) {
-                                          if (mounted) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  "Error sharing PDF: $e",
-                                                ),
-                                                backgroundColor: Colors.red,
-                                                duration: Duration(seconds: 4),
+                                              content: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    'Choose how to share the PDF document:',
+                                                  ),
+                                                  SizedBox(height: 16),
+                                                  Container(
+                                                    padding: EdgeInsets.all(12),
+                                                    decoration: BoxDecoration(
+                                                      color:
+                                                          Colors.green.shade50,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            8,
+                                                          ),
+                                                      border: Border.all(
+                                                        color: Colors
+                                                            .green
+                                                            .shade200,
+                                                      ),
+                                                    ),
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Row(
+                                                          children: [
+                                                            Icon(
+                                                              Icons
+                                                                  .check_circle,
+                                                              color:
+                                                                  Colors.green,
+                                                              size: 16,
+                                                            ),
+                                                            SizedBox(width: 4),
+                                                            Text(
+                                                              'RECOMMENDED',
+                                                              style: TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                color: Colors
+                                                                    .green
+                                                                    .shade700,
+                                                                fontSize: 12,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        SizedBox(height: 4),
+                                                        Text(
+                                                          'Share with Apps - PDF automatically attached',
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.of(
+                                                    context,
+                                                  ).pop('cancel'),
+                                                  child: const Text('Cancel'),
+                                                ),
+                                                ElevatedButton.icon(
+                                                  onPressed: () => Navigator.of(
+                                                    context,
+                                                  ).pop('system'),
+                                                  style:
+                                                      ElevatedButton.styleFrom(
+                                                        backgroundColor:
+                                                            Colors.blue,
+                                                        foregroundColor:
+                                                            Colors.white,
+                                                      ),
+                                                  icon: Icon(Icons.share),
+                                                  label: const Text(
+                                                    'Share with Apps',
+                                                  ),
+                                                ),
+                                              ],
                                             );
+                                          },
+                                        );
+
+                                        if (shareOption == 'system') {
+                                          try {
+                                            // Use the direct
+                                            final currentGiftState = ref.read(
+                                              giftProvider,
+                                            );
+                                            final returnSerial =
+                                                currentGiftState
+                                                    .lastReturnSerial;
+
+                                            // Debug print to verify we have the return serial
+                                            print(
+                                              'Return Serial for PDF: $returnSerial',
+                                            );
+                                            await DirectWhatsAppPdfService.shareDirectlyToWhatsApp(
+                                              memberName: _memberNameController
+                                                  .text
+                                                  .trim(),
+                                              memberId: _memberIdController.text
+                                                  .trim(),
+                                              fromDateTime: _fromDateController
+                                                  .text
+                                                  .trim(),
+                                              toDateTime: _toDateController.text
+                                                  .trim(),
+                                              arrivalDate:
+                                                  _arrivalDateController.text
+                                                      .trim(),
+                                              departureDate:
+                                                  _departureDateController.text
+                                                      .trim(),
+                                              giftFor:
+                                                  _selectedGift ??
+                                                  "SPECIAL GIFT",
+                                              chipType:
+                                                  _chipType ?? "OTP Chips",
+                                              amount: _amountController.text,
+                                              remarks: _remarks,
+                                              userName: userName ?? "",
+                                              guestData: guestDataMap,
+                                              returnSerial: returnSerial ?? "",
+                                            );
+
+                                            //     if (mounted) {
+                                            //       ScaffoldMessenger.of(
+                                            //         context,
+                                            //       ).showSnackBar(
+                                            //         const SnackBar(
+                                            //           content: Text(
+                                            //             "PDF ready! Select WhatsApp from the share options.",
+                                            //           ),
+                                            //           duration: Duration(seconds: 3),
+                                            //         ),
+                                            //       );
+                                            //     }
+                                            //   } catch (e) {
+                                            //     if (mounted) {
+                                            //       ScaffoldMessenger.of(
+                                            //         context,
+                                            //       ).showSnackBar(
+                                            //         SnackBar(
+                                            //           content: Text(
+                                            //             "Error sharing PDF: $e",
+                                            //           ),
+                                            //           backgroundColor: Colors.red,
+                                            //           duration: Duration(seconds: 4),
+                                            //         ),
+                                            //       );
+                                            //     }
+                                            //   }
+                                            // }
+                                            if (mounted) {
+                                              final serialInfo =
+                                                  returnSerial != null &&
+                                                      returnSerial.isNotEmpty
+                                                  ? " (Serial: $returnSerial)"
+                                                  : "";
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    "PDF ready$serialInfo! Select WhatsApp from the share options.",
+                                                  ),
+                                                  duration: Duration(
+                                                    seconds: 3,
+                                                  ),
+                                                ),
+                                              );
+                                            }
+
+                                            // Clear the API response data after using it
+                                            ref
+                                                .read(giftProvider.notifier)
+                                                .clearLastApiResponse();
+                                          } catch (e) {
+                                            if (mounted) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    "Error sharing PDF: $e",
+                                                  ),
+                                                  backgroundColor: Colors.red,
+                                                  duration: Duration(
+                                                    seconds: 4,
+                                                  ),
+                                                ),
+                                              );
+                                            }
                                           }
                                         }
-                                      }
-                                      // Reset providers
-                                      ref
-                                          .read(memberSearchProvider.notifier)
-                                          .resetState();
-                                      ref
-                                          .read(newReservationProvider.notifier)
-                                          .resetState();
+                                        // Reset providers
+                                        ref
+                                            .read(memberSearchProvider.notifier)
+                                            .resetState();
+                                        ref
+                                            .read(
+                                              newReservationProvider.notifier,
+                                            )
+                                            .resetState();
 
-                                      // Navigate back and return success result
-                                      Navigator.of(context).pop(
-                                        true,
-                                      ); // Pass true to indicate success
-                                    } else {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            "Failed to send gift request",
+                                        // Navigate back and return success result
+                                        Navigator.of(context).pop(
+                                          true,
+                                        ); // Pass true to indicate success
+                                      } else {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              "Failed to send gift request",
+                                            ),
                                           ),
-                                        ),
-                                      );
-                                    }
-                                  } catch (e) {
-                                    setState(() => _isLoading = false);
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text("Error: $e"),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
+                                        );
+                                      }
+                                    } catch (e) {
+                                      setState(() => _isLoading = false);
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text("Error: $e"),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
                                     }
                                   }
-                                }
-                              : null,
+                                : null,
 
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _showGuestData
-                                ? Constants.kSecondaryColor
-                                : Colors.grey.shade400,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 16,
-                              horizontal: 20,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.done, size: 20),
-                              const SizedBox(width: 10),
-                              Text(
-                                "Send Request",
-                                style: TextStyle(
-                                  fontSize: fontSettings.fontSize,
-                                  fontWeight: fontSettings.fontWeight,
-                                ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _showGuestData
+                                  ? Constants.kSecondaryColor
+                                  : Colors.grey.shade400,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                            ],
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                                horizontal: 20,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.done, size: 20),
+                                const SizedBox(width: 10),
+                                Text(
+                                  "Send Request",
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize,
+                                    fontWeight: fontSettings.fontWeight,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            if (_isLoading)
-              Positioned.fill(
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Color.fromARGB(135, 117, 115, 115),
-                  ),
-                  child: const Center(
-                    child: RefreshProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Constants.kSecondaryColor,
-                      ),
+                      ],
                     ),
                   ),
                 ),
               ),
-            const Watermark(),
-          ],
+              if (_isLoading)
+                Positioned.fill(
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Color.fromARGB(135, 117, 115, 115),
+                    ),
+                    child: const Center(
+                      child: RefreshProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Constants.kSecondaryColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              const Watermark(),
+            ],
+          ),
         ),
       ),
     );

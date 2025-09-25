@@ -369,22 +369,57 @@ class _MarketingPerformanceWidgetState
                 ),
 
                 // Manual refresh button
-                TextButton.icon(
-                  onPressed: marketingState.isLoading
-                      ? null
-                      : _refreshCurrentTab,
-                  icon: Icon(
-                    Icons.refresh,
-                    size: 16,
-                    color: marketingState.isLoading ? Colors.grey : Colors.blue,
+                // TextButton.icon(
+                //   onPressed: marketingState.isLoading
+                //       ? null
+                //       : _refreshCurrentTab,
+                //   icon: Icon(
+                //     Icons.refresh,
+                //     size: 16,
+                //     color: marketingState.isLoading ? Colors.grey : Colors.blue,
+                //   ),
+                //   label: Text(
+                //     "Refresh",
+                //     style: TextStyle(
+                //       fontSize: 12,
+                //       color: marketingState.isLoading
+                //           ? Colors.grey
+                //           : Colors.blue,
+                //     ),
+                //   ),
+                // ),
+                Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  label: Text(
-                    "Refresh",
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: marketingState.isLoading
-                          ? Colors.grey
-                          : Colors.blue,
+                  color: marketingState.isLoading ? Colors.grey : Colors.blue,
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      // vertical: 1,
+                    ),
+                    child: TextButton.icon(
+                      onPressed: marketingState.isLoading
+                          ? null
+                          : _refreshCurrentTab,
+                      icon: const Icon(
+                        Icons.refresh,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                      label: const Text(
+                        "Refresh",
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                          //fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero, // keep it compact
+                        foregroundColor: Colors.white,
+                      ),
                     ),
                   ),
                 ),

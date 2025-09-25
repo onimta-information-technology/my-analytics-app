@@ -1,4 +1,3 @@
-import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -239,14 +238,14 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
           Padding(
             padding: const EdgeInsets.all(8.0),
             // child: Center(
-              child: Text(
-                'Detail',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: fontSettings.fontSize + 1,
-                  fontWeight: FontWeight.w900,
-                ),
-            //  ),
+            child: Text(
+              'Detail',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: fontSettings.fontSize + 1,
+                fontWeight: FontWeight.w900,
+              ),
+              //  ),
             ),
           ),
         ],

@@ -36,7 +36,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
   String? _actualOTP;
   bool _isSendingOTP = false;
   String? _appSignature;
-  
+
   //String? code; // This will be set by SMS auto-fill
   final List<TextEditingController> _otpControllers = List.generate(
     5,
@@ -328,20 +328,17 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
   }
 
   void _fillOTPFields(String otp) {
-     
     // Fill the OTP fields
 
     for (int i = 0; i < 5; i++) {
       _otpControllers[i].text = otp[i];
     }
-  _otpFocusNodes[4].requestFocus();
+    _otpFocusNodes[4].requestFocus();
     _currentOTP = otp;
     setState(() {});
 
-
     _showSuccessMessage('OTP auto-filled successfully!');
 
-    
     Future.delayed(const Duration(milliseconds: 800), () {
       if (mounted && _currentOTP == otp) {
         _verifyOTP();
@@ -352,14 +349,12 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
   String _extractOTPFromCode(String receivedCode) {
     print('🔍 Extracting OTP from: $receivedCode');
 
-
     RegExp exactPattern = RegExp(r'Your OTP code is (\d{5})');
     Match? exactMatch = exactPattern.firstMatch(receivedCode);
     if (exactMatch != null) {
       return exactMatch.group(1) ?? '';
     }
 
- 
     RegExp fallbackPattern = RegExp(r'\b\d{5}\b');
     Match? fallbackMatch = fallbackPattern.firstMatch(receivedCode);
     if (fallbackMatch != null) {
@@ -380,7 +375,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       _handleReceivedSMS(code!);
     }
   }
-
 
   // Send OTP via SMS gateway
   Future<bool> _sendOTPSMS(String phoneNumber, String otp) async {
@@ -532,7 +526,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
     }
   }
 
-
   Future<void> _verifyOTP() async {
     if (_currentOTP.length != 5) {
       _showErrorMessage('Please enter complete OTP');
@@ -575,7 +568,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
     await Future.delayed(const Duration(seconds: 1));
     return otp == _actualOTP;
   }
-
 
   Future<void> _completeLoginProcess() async {
     try {
@@ -986,8 +978,9 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
                             Future.delayed(
                               const Duration(milliseconds: 300),
                               () {
-                                if (mounted && _currentOTP.length == 5)
+                                if (mounted && _currentOTP.length == 5) {
                                   _verifyOTP();
+                                }
                               },
                             );
                           }

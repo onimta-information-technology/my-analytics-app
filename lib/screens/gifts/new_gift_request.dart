@@ -844,7 +844,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                   : null;
 
                               return DropdownButtonFormField<String>(
-                                value: currentValue,
+                                initialValue: currentValue,
                                 items: uniqueGiftList.map((gift) {
                                   return DropdownMenuItem<String>(
                                     value: gift.code,
@@ -897,7 +897,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                 vertical: -5.0,
                               ),
                             ),
-                            value: _chipType,
+                            initialValue: _chipType,
                             items: const [
                               DropdownMenuItem(
                                 value: "OTP Chips",

@@ -321,12 +321,10 @@ class _MarketingPerformanceWidgetState
                   ),
 
                   // Performance items
-                  ...sortedData
-                      .map(
-                        (performanceWithPercentage) =>
-                            _buildPerformanceItem(performanceWithPercentage),
-                      )
-                      .toList(),
+                  ...sortedData.map(
+                    (performanceWithPercentage) =>
+                        _buildPerformanceItem(performanceWithPercentage),
+                  ),
                 ],
               ),
 

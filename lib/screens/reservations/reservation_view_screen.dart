@@ -263,13 +263,13 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
       final success = await ref
           .read(reservationProvider.notifier)
           .approveOrRejectReservation(
-            memberID: selectedReservation!.mid,
-            reservationNo: selectedReservation!.reservNo,
+            memberID: selectedReservation.mid,
+            reservationNo: selectedReservation.reservNo,
             currentUName: currentUserName ?? '',
             status: "Approved",
             remarks: remarks,
           );
-   
+
       if (success) {
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
@@ -318,8 +318,8 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
       final success = await ref
           .read(reservationProvider.notifier)
           .approveOrRejectReservation(
-            memberID: selectedReservation!.mid,
-            reservationNo: selectedReservation!.reservNo,
+            memberID: selectedReservation.mid,
+            reservationNo: selectedReservation.reservNo,
             currentUName: currentUserName ?? '',
             status: "Rejected",
             remarks: remarks,
@@ -377,20 +377,18 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
       );
       bool hasAirTickets = false;
 
-      if (selectedReservation.airticketReservationStatus != null) {
-        String status = selectedReservation.airticketReservationStatus
-            .toString()
-            .toUpperCase()
-            .trim();
+      String status = selectedReservation.airticketReservationStatus
+          .toString()
+          .toUpperCase()
+          .trim();
 
-        // Check for various possible "Yes" values
-        hasAirTickets =
-            status == "T" ||
-            status == "TRUE" ||
-            status == "YES" ||
-            status == "Y" ||
-            status == "1";
-      }
+      // Check for various possible "Yes" values
+      hasAirTickets =
+          status == "T" ||
+          status == "TRUE" ||
+          status == "YES" ||
+          status == "Y" ||
+          status == "1";
 
       _airTicketRequisition = hasAirTickets ? "Yes" : "No";
       print(
@@ -405,7 +403,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
           "Reservation - ${selectedReservation != null ? selectedReservation.reservNo : ''}",
           style: const TextStyle(fontSize: 18),
         ),
-        
+
         actions: [
           PopScope(
             onPopInvokedWithResult: (bool didPop, dynamic result) {
@@ -417,35 +415,34 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
             },
             child: Padding(
               padding: const EdgeInsets.only(right: 8.0),
-            
-              // child: IconButton(
-                 child: (selectedReservation?.requestStatus == 'Pending')
-          ? IconButton(
-                onPressed: () async {
-                  Future<void> navigateToEditReservation() async {
-                    final result = await context.push(
-                      "/reservations/new-reservation",
-                    );
-                    if (result == true) {
-    
-                      if (mounted) {
-                        Navigator.of(context).pop(true);
-                      }
-                    }
-                  }
 
-                  // Ensure guest data is loaded before navigation
-                  if (_memberIdController.text.isNotEmpty &&
-                      !_guestDataLoaded) {
-                    await _loadGuestDataForView();
-                    await navigateToEditReservation();
-                  } else {
-                    await navigateToEditReservation();
-                  }
-                },
-                icon: const Icon(Icons.mode_edit_outline_sharp),
-              )
-              : const SizedBox.shrink(), 
+              // child: IconButton(
+              child: (selectedReservation?.requestStatus == 'Pending')
+                  ? IconButton(
+                      onPressed: () async {
+                        Future<void> navigateToEditReservation() async {
+                          final result = await context.push(
+                            "/reservations/new-reservation",
+                          );
+                          if (result == true) {
+                            if (mounted) {
+                              Navigator.of(context).pop(true);
+                            }
+                          }
+                        }
+
+                        // Ensure guest data is loaded before navigation
+                        if (_memberIdController.text.isNotEmpty &&
+                            !_guestDataLoaded) {
+                          await _loadGuestDataForView();
+                          await navigateToEditReservation();
+                        } else {
+                          await navigateToEditReservation();
+                        }
+                      },
+                      icon: const Icon(Icons.mode_edit_outline_sharp),
+                    )
+                  : const SizedBox.shrink(),
             ),
           ),
         ],
@@ -830,7 +827,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                               decoration: const InputDecoration(
                                 labelText: "Select Air Tickets",
                                 border: OutlineInputBorder(),
-                                contentPadding: const EdgeInsets.symmetric(
+                                contentPadding: EdgeInsets.symmetric(
                                   horizontal: 12.0,
                                   vertical: -5.0,
                                 ),

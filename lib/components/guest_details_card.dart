@@ -13,13 +13,13 @@ class GuestDisplayCard extends ConsumerWidget {
   final VoidCallback? onImageTap;
 
   const GuestDisplayCard({
-    Key? key,
+    super.key,
     required this.memberIdText,
     required this.memberNameText,
     required this.showCard,
     this.isLoading = false, // Default to false
     this.onImageTap,
-  }) : super(key: key);
+  });
 
   // Rating image map - can be moved to constants if used elsewhere
   static const Map<String, String> ratingImageMap = {
@@ -121,7 +121,6 @@ class GuestDisplayCard extends ConsumerWidget {
               //     ),
               //   ),
               // ),
-              
               Center(
                 child: GestureDetector(
                   onTap: () =>

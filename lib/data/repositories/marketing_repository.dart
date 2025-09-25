@@ -78,24 +78,32 @@ class MarketingRepository {
 
       for (var table in tableData) {
         final performance = MarketingPerformance.fromJson(table);
-        print('Processing: ${performance.smName} (SM: ${performance.sm}, WinLost: ${performance.winLost})');
+        print(
+          'Processing: ${performance.smName} (SM: ${performance.sm}, WinLost: ${performance.winLost})',
+        );
 
         // Filter based on app mode and sales code
         if (actualSalesCode == 'AD001' && appMode == AppMode.overallData) {
           marketingPerformanceList.add(performance);
           print('✅ Added (admin access): ${performance.smName}');
         } else {
-          print('🔍 Checking filter: SM(${performance.sm}) vs SalesCode(${actualSalesCode})');
+          print(
+            '🔍 Checking filter: SM(${performance.sm}) vs SalesCode($actualSalesCode)',
+          );
           if (performance.sm.toString() == actualSalesCode) {
             marketingPerformanceList.add(performance);
             print('✅ Added (filtered): ${performance.smName}');
           } else {
-            print('❌ Filtered out: ${performance.smName} (SM: ${performance.sm} != ${actualSalesCode})');
+            print(
+              '❌ Filtered out: ${performance.smName} (SM: ${performance.sm} != $actualSalesCode)',
+            );
           }
         }
       }
 
-      print('Total marketing performance after filtering: ${marketingPerformanceList.length}');
+      print(
+        'Total marketing performance after filtering: ${marketingPerformanceList.length}',
+      );
     }
 
     // Process Table1 (Detailed Member Data)
@@ -118,12 +126,16 @@ class MarketingRepository {
             marketingDetailedList.add(detailed);
             print('✅ Added detailed (filtered): ${detailed.memId}');
           } else {
-            print('❌ Filtered out detailed: ${detailed.memId} (SM: ${detailed.sm} != ${actualSalesCode})');
+            print(
+              '❌ Filtered out detailed: ${detailed.memId} (SM: ${detailed.sm} != $actualSalesCode)',
+            );
           }
         }
       }
 
-      print('Total detailed data after filtering: ${marketingDetailedList.length}');
+      print(
+        'Total detailed data after filtering: ${marketingDetailedList.length}',
+      );
     }
 
     return MarketingApiResult(
@@ -141,15 +153,24 @@ class MarketingRepository {
   }
 
   // Updated methods to use the new combined API call
-  Future<MarketingApiResult> getTodayData(AppMode appMode, String salesCode) async {
+  Future<MarketingApiResult> getTodayData(
+    AppMode appMode,
+    String salesCode,
+  ) async {
     return await getMarketingData(8896, appMode, salesCode);
   }
 
-  Future<MarketingApiResult> getYesterdayData(AppMode appMode, String salesCode) async {
+  Future<MarketingApiResult> getYesterdayData(
+    AppMode appMode,
+    String salesCode,
+  ) async {
     return await getMarketingData(8897, appMode, salesCode);
   }
 
-  Future<MarketingApiResult> getMonthlyData(AppMode appMode, String salesCode) async {
+  Future<MarketingApiResult> getMonthlyData(
+    AppMode appMode,
+    String salesCode,
+  ) async {
     return await getMarketingData(8898, appMode, salesCode);
   }
 
@@ -163,17 +184,26 @@ class MarketingRepository {
     return result.performanceData;
   }
 
-  Future<List<MarketingPerformance>> getTodayPerformance(AppMode appMode, String salesCode) async {
+  Future<List<MarketingPerformance>> getTodayPerformance(
+    AppMode appMode,
+    String salesCode,
+  ) async {
     final result = await getTodayData(appMode, salesCode);
     return result.performanceData;
   }
 
-  Future<List<MarketingPerformance>> getYesterdayPerformance(AppMode appMode, String salesCode) async {
+  Future<List<MarketingPerformance>> getYesterdayPerformance(
+    AppMode appMode,
+    String salesCode,
+  ) async {
     final result = await getYesterdayData(appMode, salesCode);
     return result.performanceData;
   }
 
-  Future<List<MarketingPerformance>> getMonthlyPerformance(AppMode appMode, String salesCode) async {
+  Future<List<MarketingPerformance>> getMonthlyPerformance(
+    AppMode appMode,
+    String salesCode,
+  ) async {
     final result = await getMonthlyData(appMode, salesCode);
     return result.performanceData;
   }

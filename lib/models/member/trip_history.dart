@@ -25,13 +25,18 @@ class ExGift {
   final String remark;
   final String trDate;
 
-    ExGift({required this.giftType, required this.amount, required this.remark, required this.trDate});
+  ExGift({
+    required this.giftType,
+    required this.amount,
+    required this.remark,
+    required this.trDate,
+  });
 
   factory ExGift.fromJson(Map<String, dynamic> json) {
     return ExGift(
-      giftType:json['GiftType'],
+      giftType: json['GiftType'],
       amount: _parseToInt(json['Amount']),
-      remark:  json['Remarks'],
+      remark: json['Remarks'],
       trDate: json['TrDate'],
     );
   }
@@ -44,8 +49,14 @@ class ExGift {
     if (value is double) return value.toInt();
     return 0;
   }
+
   Map<String, dynamic> toJson() {
-    return {'GiftType': giftType, 'Amount': amount, 'Remarks': remark, 'TrDate': trDate};
+    return {
+      'GiftType': giftType,
+      'Amount': amount,
+      'Remarks': remark,
+      'TrDate': trDate,
+    };
   }
 }
 
@@ -123,8 +134,7 @@ class TripHistory {
       adtM: json['ADT_M'],
       ttlm: json['TTL_M'],
       attm: json['ATT_M'],
-      exGift:
-          (json['Ex_Gift'] != null && json['Ex_Gift'].toString().isNotEmpty)
+      exGift: (json['Ex_Gift'] != null && json['Ex_Gift'].toString().isNotEmpty)
           ? (jsonDecode(json['Ex_Gift']) as List)
                 .map((e) => ExGift.fromJson(e))
                 .toList()
@@ -157,8 +167,7 @@ class TripHistory {
       'TTL_M': ttlm,
       'ATT_M': attm,
       'Ex_Gift': exGift,
-          ? jsonEncode(exGift.map((e) => e.toJson()).toList())
-          : null,
+      jsonEncode(exGift.map((e) => e.toJson()).toList()): null,
     };
   }
 }

@@ -68,7 +68,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
   final TextEditingController _amountController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
-  bool _showGuestData = false;
+  final bool _showGuestData = false;
   bool _isEditable = false;
 
   @override
@@ -89,7 +89,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
       _departureDateController.text = _formatDate(g.dptDate);
       _selectedGift = g.cashierPayType ?? "";
       _chipController.text = g.chipType.replaceAll("_", " ");
-      _amountController.text = g.giftDesc?.toString() ?? "";
+      _amountController.text = g.giftDesc.toString() ?? "";
       _remarksController.text = g.giftCategory ?? "";
       drop = g.mdrop;
       cashout = g.cashout;

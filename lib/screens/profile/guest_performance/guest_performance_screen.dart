@@ -18,7 +18,6 @@ import 'package:ballys_reservation_app/screens/profile/guest_performance/games_s
 import 'package:ballys_reservation_app/screens/profile/guest_performance/hotel_reservation.dart';
 import 'package:ballys_reservation_app/screens/profile/guest_performance/loyalty_summary.dart';
 import 'package:ballys_reservation_app/screens/profile/guest_performance/trip_information.dart';
-import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';

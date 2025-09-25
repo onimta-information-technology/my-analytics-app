@@ -41,17 +41,17 @@ class _ClassSelectorState extends State<AirTicketClassSelector> {
     return DropdownButtonFormField<Map<String, dynamic>>(
       decoration: InputDecoration(
         labelText: "Class",
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.0),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
         prefixIcon: const Icon(Icons.event_seat_outlined),
       ),
-      value: _selectedClass,
+      initialValue: _selectedClass,
       items: _classes
-          .map((classItem) => DropdownMenuItem<Map<String, dynamic>>(
-                value: classItem,
-                child: Text(classItem['type']),
-              ))
+          .map(
+            (classItem) => DropdownMenuItem<Map<String, dynamic>>(
+              value: classItem,
+              child: Text(classItem['type']),
+            ),
+          )
           .toList(),
       onChanged: (value) {
         setState(() {

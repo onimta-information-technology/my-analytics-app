@@ -209,20 +209,18 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
 
     bool hasAirTickets = false;
 
-    if (selectedReservation.airticketReservationStatus != null) {
-      String status = selectedReservation.airticketReservationStatus
-          .toString()
-          .toUpperCase()
-          .trim();
+    String status = selectedReservation.airticketReservationStatus
+        .toString()
+        .toUpperCase()
+        .trim();
 
-      // Check for various possible "Yes" values
-      hasAirTickets =
-          status == "T" ||
-          status == "TRUE" ||
-          status == "YES" ||
-          status == "Y" ||
-          status == "1";
-    }
+    // Check for various possible "Yes" values
+    hasAirTickets =
+        status == "T" ||
+        status == "TRUE" ||
+        status == "YES" ||
+        status == "Y" ||
+        status == "1";
 
     _airTicketRequisition = hasAirTickets ? "Yes" : "No";
     print("DEBUG - Final _airTicketRequisition value: $_airTicketRequisition");

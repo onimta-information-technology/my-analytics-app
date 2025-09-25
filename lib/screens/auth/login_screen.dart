@@ -32,14 +32,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void initState() {
     super.initState();
     _fetchAppVersion();
- 
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(guestsProvider.notifier).resetData();
     });
   }
-
-
 
   Future<void> _fetchAppVersion() async {
     final packageInfo = await PackageInfo.fromPlatform();
@@ -207,6 +204,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       print('Error getting phone number: $e');
       return null;
     }
+    return null;
   }
 
   // Send OTP to user's phone (simulate for now)
@@ -230,7 +228,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       print('OTP simulation sent successfully');
     } catch (e) {
       print('Error sending OTP: $e');
-      throw e;
+      rethrow;
     }
   }
 

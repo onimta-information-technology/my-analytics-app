@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 
 class Watermark extends StatefulWidget {
-  const Watermark({Key? key}) : super(key: key);
+  const Watermark({super.key});
 
   @override
   _WatermarkState createState() => _WatermarkState();

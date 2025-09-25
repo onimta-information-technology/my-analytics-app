@@ -1,11 +1,8 @@
 import 'package:ballys_reservation_app/components/watermark.dart';
-import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
-import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class SalesPersonsScreen extends ConsumerStatefulWidget {
@@ -97,8 +94,12 @@ class _SalesPersonsScreenState extends ConsumerState<SalesPersonsScreen> {
                             const SizedBox(width: 10),
                             CircleAvatar(
                               radius: 18,
-                              backgroundColor: const Color.fromARGB(255, 152, 98, 6)
-                                  .withAlpha(90),
+                              backgroundColor: const Color.fromARGB(
+                                255,
+                                152,
+                                98,
+                                6,
+                              ).withAlpha(90),
                               child: Text(
                                 entry.value[0].mid == ''
                                     ? '0'

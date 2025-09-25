@@ -94,9 +94,8 @@ class _DailyWalkingGuestScreenState
     final String yesterday = DateFormat('yyyy-MM-dd').format(endOfyesterday);
 
     String safeDateFrom;
-    if (guest.dateRemark != null &&
-        RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(guest.dateRemark!)) {
-      safeDateFrom = guest.dateRemark!;
+    if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(guest.dateRemark)) {
+      safeDateFrom = guest.dateRemark;
     } else {
       safeDateFrom = today;
     }
@@ -268,9 +267,7 @@ class _DailyWalkingGuestScreenState
                                       ),
                                       Padding(
                                         padding: const EdgeInsets.all(8.0),
-                                        child:
-                                            entry.menImage2 != null &&
-                                                entry.menImage2!.isNotEmpty
+                                        child: entry.menImage2.isNotEmpty
                                             ? GestureDetector(
                                                 onTap: () {
                                                   showDialog(
@@ -281,7 +278,7 @@ class _DailyWalkingGuestScreenState
                                                           Colors.transparent,
                                                       child: Image.memory(
                                                         base64Decode(
-                                                          entry.menImage2!,
+                                                          entry.menImage2,
                                                         ),
                                                         fit: BoxFit.contain,
                                                       ),
@@ -289,9 +286,7 @@ class _DailyWalkingGuestScreenState
                                                   );
                                                 },
                                                 child: Image.memory(
-                                                  base64Decode(
-                                                    entry.menImage2!,
-                                                  ),
+                                                  base64Decode(entry.menImage2),
                                                   height: 155,
                                                   width: 80,
                                                   fit: BoxFit.cover,

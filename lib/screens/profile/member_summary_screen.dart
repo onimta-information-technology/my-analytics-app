@@ -7,7 +7,6 @@ import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/member_summary_provider.dart';
 import 'package:ballys_reservation_app/providers/profile_date_filter_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
-import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -22,13 +21,14 @@ class MemberSummaryScreen extends ConsumerStatefulWidget {
 }
 
 class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
-
   final TextEditingController _startDateController = TextEditingController();
   final TextEditingController _endDateController = TextEditingController();
-  final ValueNotifier<DateTime?> startDateNotifier =
-      ValueNotifier<DateTime?>(null);
-  final ValueNotifier<DateTime?> endDateNotifier =
-      ValueNotifier<DateTime?>(null);
+  final ValueNotifier<DateTime?> startDateNotifier = ValueNotifier<DateTime?>(
+    null,
+  );
+  final ValueNotifier<DateTime?> endDateNotifier = ValueNotifier<DateTime?>(
+    null,
+  );
 
   @override
   void initState() {
@@ -37,9 +37,7 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
     String formattedDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
     _startDateController.text = formattedDate;
     _endDateController.text = formattedDate;
-    
   }
-   
 
   bool _isLoading = false;
   DateTime? _dateFrom;
@@ -97,14 +95,17 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
         _isLoading = true;
       });
 
-      await ref.read(memberSummaryProvider.notifier).getMemberSummary(
-          playerId: guest!.mid,
-          dateFrom: startDateNotifier.value != null
-              ? DateFormat('yyyy-MM-dd').format(startDateNotifier.value!)
-              : '',
-          dateTo: endDateNotifier.value != null
-              ? DateFormat('yyyy-MM-dd').format(endDateNotifier.value!)
-              : '');
+      await ref
+          .read(memberSummaryProvider.notifier)
+          .getMemberSummary(
+            playerId: guest!.mid,
+            dateFrom: startDateNotifier.value != null
+                ? DateFormat('yyyy-MM-dd').format(startDateNotifier.value!)
+                : '',
+            dateTo: endDateNotifier.value != null
+                ? DateFormat('yyyy-MM-dd').format(endDateNotifier.value!)
+                : '',
+          );
 
       setState(() {
         _isLoading = false;
@@ -183,14 +184,14 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
     final String? imagePath = ratingImageMap[guest.gRating];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Member Summary"),
-      ),
+      appBar: AppBar(title: const Text("Member Summary")),
       body: Stack(
         children: [
           Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 10.0, horizontal: 15.0),
+            padding: const EdgeInsets.symmetric(
+              vertical: 10.0,
+              horizontal: 15.0,
+            ),
             child: SingleChildScrollView(
               child: Column(
                 children: [
@@ -200,7 +201,9 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                         elevation: 5,
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
-                              vertical: 20.0, horizontal: 5.0),
+                            vertical: 20.0,
+                            horizontal: 5.0,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             mainAxisSize: MainAxisSize.min,
@@ -225,9 +228,11 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                     radius: 70,
                                     backgroundImage: guest.memImage2 != null
                                         ? MemoryImage(
-                                            base64Decode(guest.memImage2!))
+                                            base64Decode(guest.memImage2!),
+                                          )
                                         : const AssetImage(
-                                            'assets/images/placeholder_image.jpg'),
+                                            'assets/images/placeholder_image.jpg',
+                                          ),
                                     backgroundColor: Colors.grey[200],
                                   ),
                                 ),
@@ -243,7 +248,7 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                   ),
                                 ),
                               ),
-                                const SizedBox(height: 5),
+                              const SizedBox(height: 5),
                               Center(
                                 child: Text(
                                   "M P - ${guest.gName}",
@@ -264,9 +269,7 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                     size: 16,
                                     color: Colors.grey,
                                   ),
-                                  const SizedBox(
-                                    width: 8,
-                                  ),
+                                  const SizedBox(width: 8),
                                   Text(
                                     "Last Visit on -  ${formatDate(guest.lastVisitDate)}",
                                     textAlign: TextAlign.center,
@@ -315,9 +318,7 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(
-                    height: 16.0,
-                  ),
+                  const SizedBox(height: 16.0),
                   Row(
                     children: [
                       Expanded(
@@ -331,13 +332,13 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                     : '',
                               ),
                               readOnly: true,
-                               style: const TextStyle(
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                               ),
                               decoration: InputDecoration(
                                 labelText: "Start Date",
-                                 labelStyle: const TextStyle(
+                                labelStyle: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 18,
                                 ),
@@ -365,13 +366,13 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                     : '',
                               ),
                               readOnly: true,
-                               style: const TextStyle(
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                               ),
                               decoration: InputDecoration(
                                 labelText: "End Date",
-                                 labelStyle: const TextStyle(
+                                labelStyle: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 18,
                                 ),
@@ -413,15 +414,15 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                           Text(
                             "Search",
                             style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(
-                    height: 16.0,
-                  ),
+                  const SizedBox(height: 16.0),
                   memberSummary.isEmpty
                       ? Container(
                           height: 200,
@@ -755,12 +756,13 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
               ),
               child: const Center(
                 child: RefreshProgressIndicator(
-                  valueColor:
-                      AlwaysStoppedAnimation<Color>(Constants.kSecondaryColor),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Constants.kSecondaryColor,
+                  ),
                 ),
               ),
             ),
-             const Watermark(),
+          const Watermark(),
         ],
       ),
     );

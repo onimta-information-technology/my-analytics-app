@@ -93,29 +93,29 @@ class _SpecialGiftRequestScreenState
 
     return Scaffold(
       appBar: AppBar(
-  title: const Text('Special Gift Request'),
-  actions: [
-    IconButton(
-      icon: const Icon(Icons.refresh),
-      onPressed: () async {
-        String? salesCode = await StorageUtil.getSalesCode();
-        if (salesCode != null && salesCode.isNotEmpty) {
-          _loadSpGiftData(salesCode);
-        }
-      },
-      tooltip: 'Refresh',
-    ),
-  ],
-  bottom: TabBar(
-    controller: _tabController,
-    indicatorColor: Colors.pink,
-    tabs: [
-      _buildTab('Pending', giftsp.pendinggift.length, Colors.orange),
-      _buildTab('Approved', giftsp.approvedgift.length, Colors.green),
-      _buildTab('Rejected', giftsp.rejectgift.length, Colors.red),
-    ],
-  ),
-),
+        title: const Text('Special Gift Request'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () async {
+              String? salesCode = await StorageUtil.getSalesCode();
+              if (salesCode != null && salesCode.isNotEmpty) {
+                _loadSpGiftData(salesCode);
+              }
+            },
+            tooltip: 'Refresh',
+          ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: Colors.pink,
+          tabs: [
+            _buildTab('Pending', giftsp.pendinggift.length, Colors.orange),
+            _buildTab('Approved', giftsp.approvedgift.length, Colors.green),
+            _buildTab('Rejected', giftsp.rejectgift.length, Colors.red),
+          ],
+        ),
+      ),
 
       body: Stack(
         children: [
@@ -145,14 +145,16 @@ class _SpecialGiftRequestScreenState
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-            final result = await context.push('/gifts/special-gift-requests/new-gift-request');
-         if (result == true) {
-      String? salesCode = await StorageUtil.getSalesCode();
-      if (salesCode != null && salesCode.isNotEmpty) {
-        _loadSpGiftData(salesCode);
-      }
-    }
-  },
+          final result = await context.push(
+            '/gifts/special-gift-requests/new-gift-request',
+          );
+          if (result == true) {
+            String? salesCode = await StorageUtil.getSalesCode();
+            if (salesCode != null && salesCode.isNotEmpty) {
+              _loadSpGiftData(salesCode);
+            }
+          }
+        },
         backgroundColor: Colors.red,
         shape: const CircleBorder(),
         child: const Icon(Icons.add, color: Color.fromARGB(255, 255, 255, 255)),
@@ -180,7 +182,10 @@ class _SpecialGiftRequestScreenState
     );
   }
 
-  Widget _buildGiftList(List<SpecialGiftRequest> gifts, {required bool isPending}) {
+  Widget _buildGiftList(
+    List<SpecialGiftRequest> gifts, {
+    required bool isPending,
+  }) {
     final fontSettings = ref.watch(fontSettingsProvider);
 
     if (gifts.isEmpty) {
@@ -239,7 +244,7 @@ class _SpecialGiftRequestScreenState
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            "${gift.cashierPayType.replaceAll("_", " ")}",
+                            gift.cashierPayType.replaceAll("_", " "),
                             style: TextStyle(
                               color: Colors.black,
                               fontSize: fontSettings.fontSize,

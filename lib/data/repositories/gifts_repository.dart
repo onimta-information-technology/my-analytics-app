@@ -7,7 +7,6 @@ import 'package:ballys_reservation_app/models/guest_gift_modal.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class GiftsRepository {
   final ApiService apiService;
@@ -33,7 +32,8 @@ class GiftsRepository {
           "Para_Lenth": 100,
           "Para_Name": "@Text1",
           "Para_Type": "varchar",
-        },{
+        },
+        {
           "Para_Data": deviceId,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
@@ -69,7 +69,7 @@ class GiftsRepository {
   }
 
   Future<List<GuestGift>> getGuestGifts(String mid) async {
-     final deviceId = await DeviceId.get();
+    final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -86,7 +86,8 @@ class GiftsRepository {
           "Para_Lenth": 100,
           "Para_Name": "@Text1",
           "Para_Type": "varchar",
-        },{
+        },
+        {
           "Para_Data": deviceId,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
@@ -121,7 +122,7 @@ class GiftsRepository {
   // Inside GiftsRepository class
 
   Future<List<SpecialGiftRequest>> getSpecialGift(int iid, String text1) async {
-     final deviceId = await DeviceId.get();
+    final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -138,7 +139,8 @@ class GiftsRepository {
           "Para_Lenth": 100,
           "Para_Name": "@Text1",
           "Para_Type": "varchar",
-        },{
+        },
+        {
           "Para_Data": deviceId,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
@@ -174,7 +176,7 @@ class GiftsRepository {
     String text4,
     String text5,
   ) async {
-     final deviceId = await DeviceId.get();
+    final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -219,7 +221,8 @@ class GiftsRepository {
           "Para_Lenth": 1000,
           "Para_Name": "@Text5",
           "Para_Type": "varchar",
-        },{
+        },
+        {
           "Para_Data": deviceId,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
@@ -248,7 +251,7 @@ class GiftsRepository {
   }
 
   Future<List<GiftType>> getGiftForList() async {
-     final deviceId = await DeviceId.get();
+    final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -258,7 +261,8 @@ class GiftsRepository {
           "Para_Lenth": 1,
           "Para_Name": "@Iid",
           "Para_Type": "int",
-        },{
+        },
+        {
           "Para_Data": deviceId,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
@@ -282,48 +286,50 @@ class GiftsRepository {
       return [];
     }
   }
-Future<List<PrevGift>> getPrvGiftList(String text1) async {
-   final deviceId = await DeviceId.get();
-  final response = await apiService.post('CommonExecute', {
-    "HasReturnData": "T",
-    "Parameters": [
-      {
-        "Para_Data": 8888,
-        "Para_Direction": "Input",
-        "Para_Lenth": 1,
-        "Para_Name": "@Iid",
-        "Para_Type": "int",
-      },
-      {
-        "Para_Data": text1,
-        "Para_Direction": "Input",
-        "Para_Lenth": 5000,
-        "Para_Name": "@Text1",
-        "Para_Type": "varchar",
-      },{
+
+  Future<List<PrevGift>> getPrvGiftList(String text1) async {
+    final deviceId = await DeviceId.get();
+    final response = await apiService.post('CommonExecute', {
+      "HasReturnData": "T",
+      "Parameters": [
+        {
+          "Para_Data": 8888,
+          "Para_Direction": "Input",
+          "Para_Lenth": 1,
+          "Para_Name": "@Iid",
+          "Para_Type": "int",
+        },
+        {
+          "Para_Data": text1,
+          "Para_Direction": "Input",
+          "Para_Lenth": 5000,
+          "Para_Name": "@Text1",
+          "Para_Type": "varchar",
+        },
+        {
           "Para_Data": deviceId,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text30",
           "Para_Type": "varchar",
         },
-    ],
-    "SpName": "sp_CRM_Common_API",
-    "con": "1",
-  });
+      ],
+      "SpName": "sp_CRM_Common_API",
+      "con": "1",
+    });
 
-  if (response['CommonResult'] != null &&
-      response['CommonResult']['Table'] is List &&
-      (response['CommonResult']['Table'] as List).isNotEmpty) {
-    final tableData = response['CommonResult']['Table'] as List;
+    if (response['CommonResult'] != null &&
+        response['CommonResult']['Table'] is List &&
+        (response['CommonResult']['Table'] as List).isNotEmpty) {
+      final tableData = response['CommonResult']['Table'] as List;
 
-    return tableData.map((item) {
-      return PrevGift.fromJson(Map<String, dynamic>.from(item));
-    }).toList();
-  } else {
-    return [];
+      return tableData.map((item) {
+        return PrevGift.fromJson(Map<String, dynamic>.from(item));
+      }).toList();
+    } else {
+      return [];
+    }
   }
-}
 
   // GiftsRepository.dart
 
@@ -353,7 +359,7 @@ Future<List<PrevGift>> getPrvGiftList(String text1) async {
     required String userName,
   }) async {
     try {
-       final deviceId = await DeviceId.get();
+      final deviceId = await DeviceId.get();
       // helpers
       String numStr(num? v) => (v == null) ? "0" : v.toString();
       String decStr(num? v) => (v == null) ? "0" : v.toString();
@@ -556,14 +562,14 @@ Future<List<PrevGift>> getPrvGiftList(String text1) async {
             "Para_Lenth": 100,
             "Para_Name": "@Text25",
             "Para_Type": "varchar",
-          },{
-          "Para_Data": deviceId,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text30",
-          "Para_Type": "varchar",
-        },
-
+          },
+          {
+            "Para_Data": deviceId,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text30",
+            "Para_Type": "varchar",
+          },
         ],
         "SpName": "sp_CRM_Common_API",
         "con": "1",
@@ -577,6 +583,7 @@ Future<List<PrevGift>> getPrvGiftList(String text1) async {
       return false;
     }
   }
+
   Future<bool> approvedSPecialgiftRequest({
     required double reqid,
     required String remarks,
@@ -584,7 +591,7 @@ Future<List<PrevGift>> getPrvGiftList(String text1) async {
     required String userName,
   }) async {
     try {
- final deviceId = await DeviceId.get();
+      final deviceId = await DeviceId.get();
       final payload = {
         "HasReturnData": "T",
         "Parameters": [
@@ -603,7 +610,7 @@ Future<List<PrevGift>> getPrvGiftList(String text1) async {
             "Para_Name": "@Text1",
             "Para_Type": "varchar",
           },
-         
+
           {
             "Para_Data": userName,
             "Para_Direction": "Input",
@@ -626,14 +633,14 @@ Future<List<PrevGift>> getPrvGiftList(String text1) async {
             "Para_Lenth": 100,
             "Para_Name": "@Text4",
             "Para_Type": "varchar",
-          },{
-          "Para_Data": deviceId,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text30",
-          "Para_Type": "varchar",
-        },
-
+          },
+          {
+            "Para_Data": deviceId,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text30",
+            "Para_Type": "varchar",
+          },
         ],
         "SpName": "sp_CRM_Common_API",
         "con": "1",
@@ -647,12 +654,13 @@ Future<List<PrevGift>> getPrvGiftList(String text1) async {
       return false;
     }
   }
+
   Future<bool> rejectSPecialgiftRequest({
     required double reqid,
     required String userName,
   }) async {
     try {
- final deviceId = await DeviceId.get();
+      final deviceId = await DeviceId.get();
       final payload = {
         "HasReturnData": "T",
         "Parameters": [
@@ -671,21 +679,21 @@ Future<List<PrevGift>> getPrvGiftList(String text1) async {
             "Para_Name": "@Text1",
             "Para_Type": "varchar",
           },
-         
+
           {
             "Para_Data": userName,
             "Para_Direction": "Input",
             "Para_Lenth": 100,
             "Para_Name": "@Text2",
             "Para_Type": "varchar",
-          },{
-          "Para_Data": deviceId,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text30",
-          "Para_Type": "varchar",
-        },
-
+          },
+          {
+            "Para_Data": deviceId,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text30",
+            "Para_Type": "varchar",
+          },
         ],
         "SpName": "sp_CRM_Common_API",
         "con": "1",

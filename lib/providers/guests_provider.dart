@@ -2,29 +2,27 @@ import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
-import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class GuestsNotifier extends StateNotifier<GuestsState> {
   final GuestRepository guestRepository;
-  
+
   // 🔹 Track current app mode to prevent stale updates
   AppMode? _currentMode;
 
   GuestsNotifier(this.guestRepository) : super(GuestsState());
 
-
   Future<void> getGuestData(int iid, String text1, AppMode mode) async {
     try {
       // 🔹 Store current mode for this operation
       _currentMode = mode;
-      
+
       print('Loading data for iid: $iid, mode: $mode');
-      
+
       var guestList = await guestRepository.getGuestData(iid, text1);
-      
+
       // 🔹 Check if mode changed during API call
       if (_currentMode != mode) {
         print('Mode changed during API call, discarding results');
@@ -32,7 +30,7 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
       }
 
       String? mCode = await StorageUtil.getMarketingCode();
-      
+
       // 🔹 Apply filtering based on mode
       if (mode == AppMode.myData && mCode != null) {
         guestList = guestList.where((guest) => guest.mGroup == mCode).toList();
@@ -58,10 +56,9 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
         default:
           print('Unknown iid: $iid');
       }
-      
     } catch (e) {
       print('Error retrieving data for iid $iid: $e');
-      
+
       // 🔹 Set empty list for specific period on error
       switch (iid) {
         case 9009:
@@ -82,7 +79,7 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
     state = GuestsState();
     _currentMode = null;
   }
-  
+
   // 🔹 Method to update current mode tracking
   void setCurrentMode(AppMode mode) {
     _currentMode = mode;
@@ -134,14 +131,14 @@ class GuestsState {
       monthlyGuests: monthlyGuests ?? this.monthlyGuests,
     );
   }
-  
+
   // 🔹 Helper method to check if all data is loaded
   bool get isAllDataLoaded {
-    return todayGuests.isNotEmpty || 
-           yesterdayGuests.isNotEmpty || 
-           monthlyGuests.isNotEmpty;
+    return todayGuests.isNotEmpty ||
+        yesterdayGuests.isNotEmpty ||
+        monthlyGuests.isNotEmpty;
   }
-  
+
   // 🔹 Helper method to get counts
   Map<String, int> get counts {
     return {

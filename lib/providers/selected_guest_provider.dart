@@ -12,7 +12,7 @@ class SelectedGuestNotifier extends StateNotifier<Guest?> {
 
   void setSelectedGuest(Guest guest) {
     state = guest;
-    print(guest?.gName);
+    print(guest.gName);
   }
 
   Future<void> setSelectedGuestWithId(String memberId) async {

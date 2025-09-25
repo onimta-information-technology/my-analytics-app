@@ -87,17 +87,14 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
         _isLoading = false;
       });
       print('Error fetching trip history: $e');
-      
+
       // Show error message to user
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to load trip history: $e'),
             backgroundColor: Colors.red,
-            action: SnackBarAction(
-              label: 'Retry',
-              onPressed: _refreshData,
-            ),
+            action: SnackBarAction(label: 'Retry', onPressed: _refreshData),
           ),
         );
       }
@@ -189,7 +186,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
             onRefresh: _handleRefresh,
             color: Constants.kSecondaryColor,
             child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(), // Enables pull-to-refresh even when content doesn't scroll
+              physics:
+                  const AlwaysScrollableScrollPhysics(), // Enables pull-to-refresh even when content doesn't scroll
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   vertical: 10.0,
@@ -250,19 +248,19 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                     ),
                                   ),
                                 ),
-                                 const SizedBox(height: 5),
-                              Center(
-                                child: Text(
-                                  "M P - ${guest.gName}",
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    color: Color.fromARGB(255, 158, 0, 148),
-                                    fontWeight: FontWeight.bold,
+                                const SizedBox(height: 5),
+                                Center(
+                                  child: Text(
+                                    "M P - ${guest.gName}",
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      color: Color.fromARGB(255, 158, 0, 148),
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: 5),
+                                const SizedBox(height: 5),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
@@ -390,9 +388,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                   TableRow(
                                     children: [
                                       Container(
-                                        color: Constants.kPrimaryColor.withAlpha(
-                                          50,
-                                        ),
+                                        color: Constants.kPrimaryColor
+                                            .withAlpha(50),
                                         child: Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
@@ -400,7 +397,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             style: TextStyle(
                                               color: Colors.black,
                                               fontSize: fontSettings.fontSize,
-                                              fontWeight: fontSettings.fontWeight,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
                                             ),
                                           ),
                                         ),
@@ -424,9 +422,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                   TableRow(
                                     children: [
                                       Container(
-                                        color: Constants.kPrimaryColor.withAlpha(
-                                          50,
-                                        ),
+                                        color: Constants.kPrimaryColor
+                                            .withAlpha(50),
                                         child: Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
@@ -434,7 +431,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             style: TextStyle(
                                               color: Colors.black,
                                               fontSize: fontSettings.fontSize,
-                                              fontWeight: fontSettings.fontWeight,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
                                             ),
                                           ),
                                         ),
@@ -456,9 +454,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                   TableRow(
                                     children: [
                                       Container(
-                                        color: Constants.kPrimaryColor.withAlpha(
-                                          50,
-                                        ),
+                                        color: Constants.kPrimaryColor
+                                            .withAlpha(50),
                                         child: Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
@@ -466,7 +463,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             style: TextStyle(
                                               color: Colors.black,
                                               fontSize: fontSettings.fontSize,
-                                              fontWeight: fontSettings.fontWeight,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
                                             ),
                                           ),
                                         ),
@@ -488,9 +486,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                   TableRow(
                                     children: [
                                       Container(
-                                        color: Constants.kPrimaryColor.withAlpha(
-                                          50,
-                                        ),
+                                        color: Constants.kPrimaryColor
+                                            .withAlpha(50),
                                         child: Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
@@ -498,7 +495,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             style: TextStyle(
                                               color: Colors.black,
                                               fontSize: fontSettings.fontSize,
-                                              fontWeight: fontSettings.fontWeight,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
                                             ),
                                           ),
                                         ),
@@ -520,9 +518,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                   TableRow(
                                     children: [
                                       Container(
-                                        color: Constants.kPrimaryColor.withAlpha(
-                                          50,
-                                        ),
+                                        color: Constants.kPrimaryColor
+                                            .withAlpha(50),
                                         child: Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
@@ -530,7 +527,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             style: TextStyle(
                                               color: Colors.black,
                                               fontSize: fontSettings.fontSize,
-                                              fontWeight: fontSettings.fontWeight,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
                                             ),
                                           ),
                                         ),
@@ -552,9 +550,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                   TableRow(
                                     children: [
                                       Container(
-                                        color: Constants.kPrimaryColor.withAlpha(
-                                          50,
-                                        ),
+                                        color: Constants.kPrimaryColor
+                                            .withAlpha(50),
                                         child: Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
@@ -562,7 +559,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             style: TextStyle(
                                               color: Colors.black,
                                               fontSize: fontSettings.fontSize,
-                                              fontWeight: fontSettings.fontWeight,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
                                             ),
                                           ),
                                         ),
@@ -584,9 +582,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                   TableRow(
                                     children: [
                                       Container(
-                                        color: Constants.kPrimaryColor.withAlpha(
-                                          50,
-                                        ),
+                                        color: Constants.kPrimaryColor
+                                            .withAlpha(50),
                                         child: Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
@@ -594,7 +591,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             style: TextStyle(
                                               color: Colors.black,
                                               fontSize: fontSettings.fontSize,
-                                              fontWeight: fontSettings.fontWeight,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
                                             ),
                                           ),
                                         ),
@@ -618,9 +616,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                   TableRow(
                                     children: [
                                       Container(
-                                        color: Constants.kPrimaryColor.withAlpha(
-                                          50,
-                                        ),
+                                        color: Constants.kPrimaryColor
+                                            .withAlpha(50),
                                         child: Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
@@ -628,7 +625,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             style: TextStyle(
                                               color: Colors.black,
                                               fontSize: fontSettings.fontSize,
-                                              fontWeight: fontSettings.fontWeight,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
                                             ),
                                           ),
                                         ),
@@ -650,9 +648,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                   TableRow(
                                     children: [
                                       Container(
-                                        color: Constants.kPrimaryColor.withAlpha(
-                                          50,
-                                        ),
+                                        color: Constants.kPrimaryColor
+                                            .withAlpha(50),
                                         child: Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
@@ -660,7 +657,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             style: TextStyle(
                                               color: Colors.black,
                                               fontSize: fontSettings.fontSize,
-                                              fontWeight: fontSettings.fontWeight,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
                                             ),
                                           ),
                                         ),
@@ -684,9 +682,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                   TableRow(
                                     children: [
                                       Container(
-                                        color: Constants.kPrimaryColor.withAlpha(
-                                          50,
-                                        ),
+                                        color: Constants.kPrimaryColor
+                                            .withAlpha(50),
                                         child: Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
@@ -694,7 +691,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             style: TextStyle(
                                               color: Colors.black,
                                               fontSize: fontSettings.fontSize,
-                                              fontWeight: fontSettings.fontWeight,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
                                             ),
                                           ),
                                         ),
@@ -716,9 +714,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                   TableRow(
                                     children: [
                                       Container(
-                                        color: Constants.kPrimaryColor.withAlpha(
-                                          50,
-                                        ),
+                                        color: Constants.kPrimaryColor
+                                            .withAlpha(50),
                                         child: Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
@@ -726,7 +723,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             style: TextStyle(
                                               color: Colors.black,
                                               fontSize: fontSettings.fontSize,
-                                              fontWeight: fontSettings.fontWeight,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
                                             ),
                                           ),
                                         ),
@@ -748,9 +746,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                   TableRow(
                                     children: [
                                       Container(
-                                        color: Constants.kPrimaryColor.withAlpha(
-                                          50,
-                                        ),
+                                        color: Constants.kPrimaryColor
+                                            .withAlpha(50),
                                         child: Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
@@ -758,7 +755,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             style: TextStyle(
                                               color: Colors.black,
                                               fontSize: fontSettings.fontSize,
-                                              fontWeight: fontSettings.fontWeight,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
                                             ),
                                           ),
                                         ),
@@ -766,7 +764,9 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                       Padding(
                                         padding: const EdgeInsets.all(8.0),
                                         child: Text(
-                                          _parseNumberFormat(entry.transportCost),
+                                          _parseNumberFormat(
+                                            entry.transportCost,
+                                          ),
                                           textAlign: TextAlign.end,
                                           style: TextStyle(
                                             color: Colors.black,
@@ -780,9 +780,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                   TableRow(
                                     children: [
                                       Container(
-                                        color: Constants.kPrimaryColor.withAlpha(
-                                          50,
-                                        ),
+                                        color: Constants.kPrimaryColor
+                                            .withAlpha(50),
                                         child: Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
@@ -790,7 +789,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             style: TextStyle(
                                               color: Colors.black,
                                               fontSize: fontSettings.fontSize,
-                                              fontWeight: fontSettings.fontWeight,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
                                             ),
                                           ),
                                         ),
@@ -812,9 +812,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                   TableRow(
                                     children: [
                                       Container(
-                                        color: Constants.kPrimaryColor.withAlpha(
-                                          50,
-                                        ),
+                                        color: Constants.kPrimaryColor
+                                            .withAlpha(50),
                                         child: Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
@@ -822,7 +821,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             style: TextStyle(
                                               color: Colors.black,
                                               fontSize: fontSettings.fontSize,
-                                              fontWeight: fontSettings.fontWeight,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
                                             ),
                                           ),
                                         ),
@@ -902,9 +902,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                   TableRow(
                                     children: [
                                       Container(
-                                        color: Constants.kPrimaryColor.withAlpha(
-                                          50,
-                                        ),
+                                        color: Constants.kPrimaryColor
+                                            .withAlpha(50),
                                         child: Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
@@ -912,21 +911,21 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             style: TextStyle(
                                               color: Colors.black,
                                               fontSize: fontSettings.fontSize,
-                                              fontWeight: fontSettings.fontWeight,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
                                             ),
                                           ),
                                         ),
                                       ),
                                       Padding(
                                         padding: const EdgeInsets.all(8.0),
-                                        child:
-                                            (entry.exGift == null ||
-                                                entry.exGift.isEmpty)
+                                        child: (entry.exGift.isEmpty)
                                             ? Text(
                                                 "N/A",
                                                 textAlign: TextAlign.end,
                                                 style: TextStyle(
-                                                  fontSize: fontSettings.fontSize,
+                                                  fontSize:
+                                                      fontSettings.fontSize,
                                                   fontWeight:
                                                       fontSettings.fontWeight,
                                                 ),
@@ -944,14 +943,16 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                                             8,
                                                           ),
                                                       side: BorderSide(
-                                                        color:
-                                                            Colors.grey.shade300,
+                                                        color: Colors
+                                                            .grey
+                                                            .shade300,
                                                         width: 1,
                                                       ),
                                                     ),
-                                                    margin: const EdgeInsets.only(
-                                                      bottom: 8,
-                                                    ),
+                                                    margin:
+                                                        const EdgeInsets.only(
+                                                          bottom: 8,
+                                                        ),
                                                     child: Padding(
                                                       padding:
                                                           const EdgeInsets.all(
@@ -1021,9 +1022,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                   TableRow(
                                     children: [
                                       Container(
-                                        color: Constants.kPrimaryColor.withAlpha(
-                                          50,
-                                        ),
+                                        color: Constants.kPrimaryColor
+                                            .withAlpha(50),
                                         child: Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
@@ -1031,7 +1031,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             style: TextStyle(
                                               color: Colors.black,
                                               fontSize: fontSettings.fontSize,
-                                              fontWeight: fontSettings.fontWeight,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
                                             ),
                                           ),
                                         ),
@@ -1053,9 +1054,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                   TableRow(
                                     children: [
                                       Container(
-                                        color: Constants.kPrimaryColor.withAlpha(
-                                          50,
-                                        ),
+                                        color: Constants.kPrimaryColor
+                                            .withAlpha(50),
                                         child: Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
@@ -1063,7 +1063,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             style: TextStyle(
                                               color: Colors.black,
                                               fontSize: fontSettings.fontSize,
-                                              fontWeight: fontSettings.fontWeight,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
                                             ),
                                           ),
                                         ),

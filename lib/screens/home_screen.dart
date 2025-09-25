@@ -17,6 +17,7 @@ final guestCountsProvider = StateProvider<Map<String, int?>>(
   (ref) => {"today": null, "yesterday": null, "monthly": null},
 );
 final homeScreenInitializedProvider = StateProvider<bool>((ref) => false);
+
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -24,30 +25,30 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> with AutomaticKeepAliveClientMixin {
+class _HomeScreenState extends ConsumerState<HomeScreen>
+    with AutomaticKeepAliveClientMixin {
   String? userName;
   bool _isLoadingData = false;
-  bool _hasInitialized = false; // 🔹 Track if data has been loaded once
+  final bool _hasInitialized = false; // 🔹 Track if data has been loaded once
 
   // 🔹 Keep the widget alive when navigating away
   @override
   bool get wantKeepAlive => true;
 
   @override
-@override
-void initState() {
-  super.initState();
+  @override
+  void initState() {
+    super.initState();
     _loadUserName();
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    final hasInitialized = ref.read(homeScreenInitializedProvider);
-    if (!hasInitialized) {
-      ref.read(homeScreenInitializedProvider.notifier).state = true;
-      _initializeAppMode();
-      _loadGuestData();
-    }
-  });
-}
-
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final hasInitialized = ref.read(homeScreenInitializedProvider);
+      if (!hasInitialized) {
+        ref.read(homeScreenInitializedProvider.notifier).state = true;
+        _initializeAppMode();
+        _loadGuestData();
+      }
+    });
+  }
 
   // 🔹 Override didChangeDependencies to prevent auto-refresh on return
   @override
@@ -85,9 +86,9 @@ void initState() {
   Future<void> _loadGuestData() async {
     // Prevent multiple concurrent loads
     if (_isLoadingData) return;
-    
+
     _isLoadingData = true;
-    
+
     String? salesCode = await StorageUtil.getSalesCode();
 
     if (salesCode == null || salesCode.isEmpty) {
@@ -112,9 +113,15 @@ void initState() {
 
       // 🔹 Load data for all three periods
       await Future.wait<void>([
-        ref.read(guestsProvider.notifier).getGuestData(9009, salesCode, currentMode),
-        ref.read(guestsProvider.notifier).getGuestData(9010, salesCode, currentMode),
-        ref.read(guestsProvider.notifier).getGuestData(9011, salesCode, currentMode),
+        ref
+            .read(guestsProvider.notifier)
+            .getGuestData(9009, salesCode, currentMode),
+        ref
+            .read(guestsProvider.notifier)
+            .getGuestData(9010, salesCode, currentMode),
+        ref
+            .read(guestsProvider.notifier)
+            .getGuestData(9011, salesCode, currentMode),
       ]);
 
       // 🔹 Get the latest guest data after all loads complete
@@ -132,12 +139,17 @@ void initState() {
       // 🔹 Update counts with current data
       if (mounted) {
         ref.read(guestCountsProvider.notifier).state = {
-          "today": guestsState.todayGuests.where((g) => g.mid.isNotEmpty).length,
-          "yesterday": guestsState.yesterdayGuests.where((g) => g.mid.isNotEmpty).length,
-          "monthly": guestsState.monthlyGuests.where((g) => g.mid.isNotEmpty).length,
+          "today": guestsState.todayGuests
+              .where((g) => g.mid.isNotEmpty)
+              .length,
+          "yesterday": guestsState.yesterdayGuests
+              .where((g) => g.mid.isNotEmpty)
+              .length,
+          "monthly": guestsState.monthlyGuests
+              .where((g) => g.mid.isNotEmpty)
+              .length,
         };
       }
-      
     } catch (e) {
       print('Error loading guest data: $e');
       // Set counts to 0 on error instead of leaving as null
@@ -156,11 +168,11 @@ void initState() {
   // 🔹 Manual refresh method for explicit user action
   Future<void> _manualRefresh() async {
     if (_isLoadingData) return;
-    
+
     setState(() {
       userName = null;
     });
-    
+
     // Reset counts immediately
     ref.read(guestCountsProvider.notifier).state = {
       "today": null,
@@ -169,10 +181,7 @@ void initState() {
     };
 
     // Reload data
-    await Future.wait<void>([
-      _loadUserName(),
-      _loadGuestData(),
-    ]);
+    await Future.wait<void>([_loadUserName(), _loadGuestData()]);
   }
 
   // 🔹 Reusable fixed size box widget
@@ -228,15 +237,15 @@ void initState() {
   @override
   Widget build(BuildContext context) {
     super.build(context); // 🔹 Required for AutomaticKeepAliveClientMixin
-    
+
     final guests = ref.watch(guestsProvider);
     final counts = ref.watch(guestCountsProvider);
-    
+
     // 🔹 Only listen for app mode changes, not navigation returns
     ref.listen<AppModeSettings>(appmodeSettingsProvider, (prev, next) {
       if (prev?.appMode != next.appMode) {
         print('App mode changed from ${prev?.appMode} to ${next.appMode}');
-        
+
         // Reset counts and reload data only for mode changes
         ref.read(guestCountsProvider.notifier).state = {
           "today": null,
@@ -259,7 +268,8 @@ void initState() {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, size: 30),
-            onPressed: _manualRefresh, // 🔹 Only refresh when user explicitly taps
+            onPressed:
+                _manualRefresh, // 🔹 Only refresh when user explicitly taps
           ),
         ],
       ),
@@ -299,11 +309,13 @@ void initState() {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  
+
                   // Performance heading with loading indicator
                   Consumer(
                     builder: (context, ref, _) {
-                      final appMode = ref.watch(appmodeSettingsProvider).appMode;
+                      final appMode = ref
+                          .watch(appmodeSettingsProvider)
+                          .appMode;
                       String heading = appMode == AppMode.myData
                           ? "MY PERFORMANCE"
                           : "OVERALL PERFORMANCE";
@@ -333,7 +345,7 @@ void initState() {
                       );
                     },
                   ),
-                  
+
                   // Today & Yesterday row
                   Row(
                     children: [

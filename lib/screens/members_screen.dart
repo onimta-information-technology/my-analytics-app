@@ -74,9 +74,9 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                     inactiveMembers = List<Guest>.from(originalMembers);
                   } else {
                     inactiveMembers = originalMembers.where((guest) {
-                      return guest.memberName
-                              .toLowerCase()
-                              .contains(value.toLowerCase()) ||
+                      return guest.memberName.toLowerCase().contains(
+                            value.toLowerCase(),
+                          ) ||
                           guest.mid.toLowerCase().contains(value.toLowerCase());
                     }).toList();
                   }
@@ -97,8 +97,9 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
   }
 
   Future<void> _openMemberSearchBottomSheet(int iid) async {
-    GuestRepository guestRepository =
-        GuestRepository(ApiService(const FlutterSecureStorage()));
+    GuestRepository guestRepository = GuestRepository(
+      ApiService(const FlutterSecureStorage()),
+    );
 
     String searchTerm = "";
 
@@ -106,7 +107,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
     String fullMemberId = "$_selectedPrefix ${_memberIdController.text}";
     searchTerm = fullMemberId;
 
-    if (_memberIdController.text.length < 1) return;
+    if (_memberIdController.text.isEmpty) return;
 
     setState(() {
       _isLoading = true;
@@ -148,7 +149,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
   };
 
   Widget _buildMemberIdInput() {
-    final FocusNode _memberIdFocusNode = FocusNode();
+    final FocusNode memberIdFocusNode = FocusNode();
 
     return Row(
       children: [
@@ -200,7 +201,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
           child: TextFormField(
             keyboardType: const TextInputType.numberWithOptions(),
             autofocus: false,
-            focusNode: _memberIdFocusNode,
+            focusNode: memberIdFocusNode,
             controller: _memberIdController,
             decoration: InputDecoration(
               labelText: "Member ID",
@@ -228,9 +229,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Members'),
-      ),
+      appBar: AppBar(title: const Text('Members')),
       body: Stack(
         children: [
           SingleChildScrollView(
@@ -268,19 +267,23 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                                           gName: guest.gName ?? "",
                                         ),
                                       );
-                                      print("Guest selected: ${guest.gName}");
+                                  print("Guest selected: ${guest.gName}");
                                   context.push("/home/profile");
                                 },
                                 child: Card(
                                   margin: const EdgeInsets.symmetric(
-                                      vertical: 2.0, horizontal: 2.0),
+                                    vertical: 2.0,
+                                    horizontal: 2.0,
+                                  ),
                                   elevation: 4.0,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8.0),
                                   ),
                                   child: ListTile(
                                     contentPadding: const EdgeInsets.symmetric(
-                                        vertical: 5.0, horizontal: 8.0),
+                                      vertical: 5.0,
+                                      horizontal: 8.0,
+                                    ),
                                     leading: CircleAvatar(
                                       backgroundImage: MemoryImage(
                                         base64Decode(guests[index].memImage2),
@@ -290,7 +293,8 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                                     title: Text(
                                       guests[index].mid,
                                       style: const TextStyle(
-                                          fontWeight: FontWeight.bold),
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                     subtitle: Text(guests[index].mName),
                                   ),
@@ -298,7 +302,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                               );
                             },
                           ),
-                        )
+                        ),
                       ],
                     ),
                   ),
@@ -315,7 +319,8 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                 child: const Center(
                   child: RefreshProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(
-                        Constants.kSecondaryColor),
+                      Constants.kSecondaryColor,
+                    ),
                   ),
                 ),
               ),

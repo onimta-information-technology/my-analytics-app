@@ -112,6 +112,15 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
       routerConfig: AppNavigation.router,
+
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.noScaling, // This disables font scaling
+          ),
+          child: child!,
+        );
+      },
     );
   }
 }
@@ -124,6 +133,7 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  //  bool _hasInternet = true;
   @override
   void initState() {
     super.initState();
@@ -140,6 +150,23 @@ class _SplashScreenState extends State<SplashScreen> {
       );
       // Handle the notification data if needed
     }
+  // Future<void> _initializeSplash() async {
+  //   // Check internet
+  //   var connectivityResult = await Connectivity().checkConnectivity();
+  //   setState(() {
+  //     _hasInternet = connectivityResult != ConnectivityResult.none;
+  //   });
+
+  //   if (!_hasInternet) return; // Stay on NoInternetScreen
+
+  //   try {
+  //     RemoteMessage? initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+  //     if (initialMessage != null) {
+  //       print('App opened from notification: ${initialMessage.notification?.title}');
+  //     }
+  //   } catch (e) {
+  //     print("⚠️ Skipping FirebaseMessaging (offline): $e");
+  //   }
 
     Future.delayed(const Duration(seconds: 3), () async {
       final expiry = await StorageUtil.getExpiry();
@@ -159,6 +186,9 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    //    if (!_hasInternet) {
+    //   return const NoInternetScreen();
+    // }
     return Scaffold(
       backgroundColor: Colors.white,
       body: Center(

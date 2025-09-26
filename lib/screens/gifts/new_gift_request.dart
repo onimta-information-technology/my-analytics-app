@@ -75,6 +75,9 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
   //     userName = name;
   //   });
   // }
+  void _dismissKeyboard() {
+    FocusScope.of(context).unfocus();
+  }
 
   Future<void> _openMemberSearchBottomSheet(int iid) async {
     GuestRepository guestRepository = GuestRepository(
@@ -454,6 +457,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                   suffixIcon: IconButton(
                                     icon: const Icon(Icons.search),
                                     onPressed: () {
+                                      _dismissKeyboard();
                                       FocusScope.of(context).unfocus();
                                       _memberIdController.text =
                                           '$_selectedPrefix${_memberIdNumberController.text}';
@@ -528,6 +532,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                             suffixIcon: IconButton(
                               icon: const Icon(Icons.search),
                               onPressed: () {
+                                _dismissKeyboard();
                                 FocusScope.of(
                                   context,
                                 ).requestFocus(FocusNode());
@@ -553,6 +558,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                               child: ElevatedButton.icon(
                                 onPressed: () async {
                                   setState(() {
+                                    _dismissKeyboard();
                                     _isLoading = true;
                                     _showGuestData = false;
                                   });
@@ -597,6 +603,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () {
+                                  _dismissKeyboard();
                                   final memberId = _memberIdController.text
                                       .trim();
 
@@ -1007,6 +1014,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                           child: ElevatedButton(
                             onPressed: _showGuestData
                                 ? () async {
+                                    _dismissKeyboard();
                                     if (!_formKey.currentState!.validate()) {
                                       return;
                                     }

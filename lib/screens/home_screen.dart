@@ -383,7 +383,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 3),
                       Expanded(
                         child: GestureDetector(
                           onTap: () async {
@@ -418,7 +418,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     ],
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 3),
 
                   // Monthly row
                   Row(
@@ -462,7 +462,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
             ),
           ),
-          const Watermark(),
+         // const Watermark(),
         ],
       ),
     );

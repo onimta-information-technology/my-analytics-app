@@ -1,6 +1,7 @@
 import 'package:ballys_reservation_app/models/marketing.dart';
 import 'package:ballys_reservation_app/screens/marketing_detail_page.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:math' as math;
@@ -22,10 +23,11 @@ class _MarketingPerformanceWidgetState
   // Flag to disable tabs initially
   bool _tabsEnabled = false;
   AppMode? _previousAppMode;
-
+  String? userName;
   @override
   void initState() {
     super.initState();
+    _loadUserName();
     // Enable tabs after a short delay (no data loading)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _enableTabsAfterDelay();
@@ -38,6 +40,15 @@ class _MarketingPerformanceWidgetState
     if (mounted) {
       setState(() {
         _tabsEnabled = true;
+      });
+    }
+  }
+
+  Future<void> _loadUserName() async {
+    final name = await StorageUtil.getUserName();
+    if (mounted) {
+      setState(() {
+        userName = name;
       });
     }
   }
@@ -168,6 +179,7 @@ class _MarketingPerformanceWidgetState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // if (!widget.isFullScreen)
                       const Text(
                         "MARKETING PERFORMANCE",
                         style: TextStyle(
@@ -215,7 +227,13 @@ class _MarketingPerformanceWidgetState
                             MaterialPageRoute(
                               builder: (_) => Scaffold(
                                 appBar: AppBar(
-                                  title: const Text("Marketing Performance"),
+                                  // title: const Text("Marketing Performance"),
+                                  title: Text(
+                                    userName != null
+                                        ? 'Welcome, $userName '
+                                        : 'Loading...',
+                                    style: const TextStyle(fontSize: 16),
+                                  ),
                                 ),
                                 body: const SafeArea(
                                   child: SingleChildScrollView(

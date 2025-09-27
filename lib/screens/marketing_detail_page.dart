@@ -93,7 +93,7 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
           .setSelectedGuestWithId(memberId);
 
       if (mounted) {
-        context.push('/home/profile');
+       context.push('/home/profile', extra: {'fromMarketing': true});
       }
     } catch (error) {
       // Handle error if needed

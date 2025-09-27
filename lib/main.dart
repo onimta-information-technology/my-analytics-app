@@ -1,5 +1,9 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:ballys_reservation_app/navigation/app_navigation.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -133,6 +137,7 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  bool _hasInternet = true;
   //  bool _hasInternet = true;
   @override
   void initState() {
@@ -140,7 +145,133 @@ class _SplashScreenState extends State<SplashScreen> {
     _initializeSplash();
   }
 
+  Future<bool> _checkInternetConnectivity() async {
+    try {
+      print('Starting internet connectivity check...');
+
+      // First check basic connectivity
+      final connectivityResult = await Connectivity().checkConnectivity();
+      print('Connectivity status: $connectivityResult');
+
+      if (connectivityResult == ConnectivityResult.none) {
+        print('No connectivity detected');
+        return false;
+      }
+
+      // Test actual internet access with HTTP request
+      final client = HttpClient();
+      client.connectionTimeout = Duration(seconds: 2);
+
+      try {
+        // Try to make an actual HTTP request to a reliable server
+        final request = await client
+            .getUrl(Uri.parse('http://clients3.google.com/generate_204'))
+            .timeout(Duration(seconds: 2));
+
+        final response = await request.close().timeout(Duration(seconds: 2));
+
+        client.close();
+
+        if (response.statusCode == 204 || response.statusCode == 200) {
+          print('Internet access confirmed - HTTP 200 response');
+          return true;
+        } else {
+          print('HTTP request failed with status: ${response.statusCode}');
+          return false;
+        }
+      } on SocketException catch (e) {
+        print('Socket exception: $e');
+        client.close();
+        return false;
+      } on TimeoutException catch (e) {
+        print('Timeout exception: $e');
+        client.close();
+        return false;
+      } on HandshakeException catch (e) {
+        print('Handshake exception: $e');
+        client.close();
+        return false;
+      }
+    } catch (e) {
+      print('General error checking connectivity: $e');
+      return false;
+    }
+  }
+
+  void _showNoInternetDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.wifi_off, color: Colors.red, size: 28),
+              SizedBox(width: 10),
+              Text(
+                'No Internet Connection',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: Text(
+            'Please check your internet connection and try again. This app requires an active internet connection to function properly.',
+            style: TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Retry checking internet connection
+                _initializeSplash();
+              },
+              child: Text(
+                'Retry',
+                style: TextStyle(
+                  color: customGoldColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                // Exit the app
+                exit(0);
+              },
+              child: Text(
+                'Exit',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _initializeSplash() async {
+    setState(() {
+      _hasInternet = true; // Assume true initially to avoid premature dialog
+    });
+
+    // Check internet connectivity first
+    _hasInternet = await _checkInternetConnectivity();
+    print('Internet check result: $_hasInternet');
+
+    if (!_hasInternet) {
+      print('No internet detected - showing dialog');
+      // Show no internet dialog
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showNoInternetDialog();
+      });
+      return;
+    }
+
+    print('Internet available - proceeding with initialization');
+
     // Check if app was opened from a terminated state via notification
     RemoteMessage? initialMessage = await FirebaseMessaging.instance
         .getInitialMessage();
@@ -150,23 +281,6 @@ class _SplashScreenState extends State<SplashScreen> {
       );
       // Handle the notification data if needed
     }
-  // Future<void> _initializeSplash() async {
-  //   // Check internet
-  //   var connectivityResult = await Connectivity().checkConnectivity();
-  //   setState(() {
-  //     _hasInternet = connectivityResult != ConnectivityResult.none;
-  //   });
-
-  //   if (!_hasInternet) return; // Stay on NoInternetScreen
-
-  //   try {
-  //     RemoteMessage? initialMessage = await FirebaseMessaging.instance.getInitialMessage();
-  //     if (initialMessage != null) {
-  //       print('App opened from notification: ${initialMessage.notification?.title}');
-  //     }
-  //   } catch (e) {
-  //     print("⚠️ Skipping FirebaseMessaging (offline): $e");
-  //   }
 
     Future.delayed(const Duration(seconds: 3), () async {
       final expiry = await StorageUtil.getExpiry();
@@ -186,9 +300,6 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    //    if (!_hasInternet) {
-    //   return const NoInternetScreen();
-    // }
     return Scaffold(
       backgroundColor: Colors.white,
       body: Center(

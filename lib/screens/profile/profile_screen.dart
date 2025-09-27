@@ -30,11 +30,26 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen>
     with SingleTickerProviderStateMixin {
   bool _isLoading = false;
-
+  bool _isTableExpanded = false;
+  bool _isFromMarketing = false;
+  String? currentLoadingMember;
   @override
   void initState() {
     super.initState();
     _getGuestImage();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final state = GoRouterState.of(context);
+      final extra = state.extra as Map<String, dynamic>?;
+
+      if (extra != null && extra['fromMarketing'] == true) {
+        setState(() {
+          _isFromMarketing = true;
+        });
+        // Load profile details when coming from marketing
+        _getMemberMainProfileDetails();
+      }
+    });
+
     final guest = ref.read(selectedGuestProvider);
     if (guest?.mobile != null && guest!.mobile!.isNotEmpty) {
       _whatsappNumberController.text = guest.mobile!;
@@ -51,6 +66,41 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
     _animation = Tween<double>(begin: 0.0, end: 1.0).animate(_controller);
   }
+  //   Future<void> _handleMemberIdTap(String memberId) async {
+  //   if (currentLoadingMember == memberId || currentLoadingMember != null) {
+  //     return;
+  //   }
+
+  //   setState(() {
+  //     currentLoadingMember = memberId;
+  //   });
+
+  //   try {
+  //     await ref
+  //         .read(selectedGuestProvider.notifier)
+  //         .setSelectedGuestWithId(memberId);
+
+  //     if (mounted) {
+  //       // Pass the fromMarketing flag
+  //       context.push('/home/profile', extra: {'fromMarketing': true});
+  //     }
+  //   } catch (error) {
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(
+  //           content: Text('Error loading member details: $error'),
+  //           backgroundColor: Colors.red,
+  //         ),
+  //       );
+  //     }
+  //   } finally {
+  //     if (mounted) {
+  //       setState(() {
+  //         currentLoadingMember = null;
+  //       });
+  //     }
+  //   }
+  // }
 
   final TextEditingController _whatsappNumberController =
       TextEditingController();
@@ -497,6 +547,241 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                             ),
                           ),
                         ),
+                        if (_isFromMarketing)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16.0),
+                            child: _isLoading
+                                ? const Center(
+                                    child: RefreshProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Constants.kSecondaryColor,
+                                      ),
+                                    ),
+                                  )
+                                : Column(
+                                    children: [
+                                      // Expandable header card
+                                      Card(
+                                        elevation: 4,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        child: InkWell(
+                                          onTap: () {
+                                            setState(() {
+                                              _isTableExpanded =
+                                                  !_isTableExpanded;
+                                            });
+                                          },
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(16.0),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                const Text(
+                                                  "Member Profile Details",
+                                                  style: TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Color.fromARGB(
+                                                      255,
+                                                      0,
+                                                      0,
+                                                      0,
+                                                    ),
+                                                  ),
+                                                ),
+                                                Row(
+                                                  children: [
+                                                    // Text(
+                                                    // //  _isTableExpanded ? "Collapse" : "View Details",
+                                                    //   // style: const TextStyle(
+                                                    //   //   fontSize: 14,
+                                                    //   //   color: Constants.kPrimaryColor,
+                                                    //   //   fontWeight: FontWeight.w500,
+                                                    //   // ),
+                                                    // ),
+                                                    const SizedBox(width: 8),
+                                                    AnimatedRotation(
+                                                      turns: _isTableExpanded
+                                                          ? 0.5
+                                                          : 0,
+                                                      duration: const Duration(
+                                                        milliseconds: 300,
+                                                      ),
+                                                      child: const Icon(
+                                                        Icons
+                                                            .keyboard_arrow_down,
+                                                        color: Color.fromARGB(255, 0, 0, 0),
+                                                        size: 28,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                      const SizedBox(height: 8),
+
+                                      // Expandable table content with animation
+                                      AnimatedContainer(
+                                        duration: const Duration(
+                                          milliseconds: 400,
+                                        ),
+                                        curve: Curves.easeInOut,
+                                        height: _isTableExpanded ? null : 0,
+                                        child: AnimatedOpacity(
+                                          duration: const Duration(
+                                            milliseconds: 300,
+                                          ),
+                                          opacity: _isTableExpanded ? 1.0 : 0.0,
+                                          child: ClipRect(
+                                            child: Card(
+                                              elevation: 2,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child: Table(
+                                                border: TableBorder.all(
+                                                  color: Colors.grey.shade300,
+                                                  width: 1,
+                                                ),
+                                                columnWidths: const {
+                                                  0: FractionColumnWidth(0.5),
+                                                  1: FractionColumnWidth(0.5),
+                                                },
+                                                children: [
+                                                  ...guestProfileDetails.asMap().entries.map((
+                                                    entry,
+                                                  ) {
+                                                    int index = entry.key;
+                                                    var profileEntry =
+                                                        entry.value;
+
+                                                    return TableRow(
+                                                      decoration: BoxDecoration(
+                                                        // color: Constants
+                                                        //     .kPrimaryColor
+                                                        //     .withAlpha(50),
+
+                                                        color: index.isEven
+                                                        ? Constants.kPrimaryColor.withAlpha(50)
+                                                        : Colors.white,
+                                                      ),
+                                                      children: [
+                                                        Padding(
+                                                          padding:
+                                                              const EdgeInsets.all(
+                                                                12.0,
+                                                              ),
+                                                          child: Text(
+                                                            profileEntry
+                                                                .details['Name']!,
+                                                            style: TextStyle(
+                                                              color: Colors
+                                                                  .black87,
+                                                              fontSize:
+                                                                  fontSettings
+                                                                      .fontSize,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        Container(
+                                                          color: index.isEven
+                                                              ? Colors
+                                                                    .grey
+                                                                    .shade50
+                                                              : Colors.white,
+                                                          child: Padding(
+                                                            padding:
+                                                                const EdgeInsets.all(
+                                                                  12.0,
+                                                                ),
+                                                            child: Text(
+                                                              profileEntry
+                                                                  .details['Detail']!,
+                                                              textAlign:
+                                                                  TextAlign.end,
+                                                              style: TextStyle(
+                                                                color: Colors
+                                                                    .black,
+                                                                fontSize:
+                                                                    fontSettings
+                                                                        .fontSize,
+                                                                fontWeight:
+                                                                    fontSettings
+                                                                        .fontWeight,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    );
+                                                  }).toList(),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                      // Preview hint when collapsed
+                                      if (!_isTableExpanded &&
+                                          guestProfileDetails.isNotEmpty)
+                                        Card(
+                                          elevation: 1,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: Container(
+                                            width: double.infinity,
+                                            padding: const EdgeInsets.all(12.0),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.info_outline,
+                                                  size: 16,
+                                                  color: Constants.kPrimaryColor
+                                                      .withOpacity(0.7),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  "Tap above to view ${guestProfileDetails.length} profile details",
+                                                  style: TextStyle(
+                                                    fontSize:
+                                                        fontSettings.fontSize -
+                                                        1,
+                                                    color:
+                                                        Constants.kPrimaryColor,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                          ),
                         const SizedBox(height: 8),
                         if (GoRouter.of(context)
                                     .routerDelegate

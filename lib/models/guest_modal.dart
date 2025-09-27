@@ -55,22 +55,48 @@ class Guest {
     );
   }
 
+  // factory Guest.fromJson(Map<String, dynamic> json) {
+  //   return Guest(
+  //     mid: json['MID'],
+  //     memberName: json['MName'],
+  //     country: json['COUNTRY'],
+  //     lastVisitDate: json['LVD'],
+  //     age: json['AGE'],
+  //     gRating: json['G_Rating'],
+  //     mGroup: json['mGroup'],
+  //     gName: json['GName'],
+  //     memImage2: json['MemImage2'],
+  //     gift: json['GIFT'],
+  //     mDrop: json['MDROP'],
+  //   );
+  // }
+
+
   factory Guest.fromJson(Map<String, dynamic> json) {
+    String? getValue(List<String> keys) {
+      for (var key in keys) {
+        if (json.containsKey(key) && json[key] != null) {
+          return json[key].toString();
+        }
+      }
+      return null;
+    }
+
     return Guest(
-      mid: json['MID'],
-      memberName: json['MName'],
-      country: json['COUNTRY'],
-      lastVisitDate: json['LVD'],
-      age: json['AGE'],
-      gRating: json['G_Rating'],
-      mGroup: json['mGroup'],
-      gName: json['GName'],
-      memImage2: json['MemImage2'],
-      gift: json['GIFT'],
-      mDrop: json['MDROP'],
+      mid: getValue(['MID']) ?? '',
+      memberName: getValue(['MName', 'MNAME', 'MNane']) ?? '',
+      country: getValue(['COUNTRY']) ?? '',
+      lastVisitDate: getValue(['LVD']) ?? '1970-01-01',
+      age: int.tryParse(getValue(['AGE']) ?? '0') ?? 0,
+      gRating: getValue(['G_Rating']),
+      mGroup: getValue(['mGroup']),
+      gName: getValue(['GName']),
+      memImage2: getValue(['MemImage2']),
+      gift: getValue(['GIFT']),
+      mDrop: double.tryParse(getValue(['MDROP']) ?? '0'),
+     // mobile: getValue(['Mobile', 'MOBILE']),
     );
   }
-
   void updateWith({String? newMemImage2}) {
     if (newMemImage2 != null) {
       memImage2 = newMemImage2;

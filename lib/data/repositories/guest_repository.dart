@@ -54,7 +54,7 @@ class GuestRepository {
           guestList.add(
             Guest(
               mid: table['MID'] ?? '',
-              memberName: table['MName'] ?? '',
+              memberName: table['MName'] ?? table['MNane'] ?? table['MNAME'] ?? '',
               country: table['COUNTRY'] ?? '',
               lastVisitDate: table['LVD'] ?? '',
               age: table['AGE'] ?? '',

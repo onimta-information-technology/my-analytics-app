@@ -119,7 +119,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ],
             ),
           ),
-          const Watermark(),
+          //const Watermark(),
         ],
       ),
     );

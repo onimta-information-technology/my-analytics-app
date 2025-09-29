@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:ballys_reservation_app/components/developer_banner.dart';
 import 'package:ballys_reservation_app/navigation/app_navigation.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -118,11 +119,13 @@ class _MyAppState extends State<MyApp> {
       routerConfig: AppNavigation.router,
 
       builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaler: TextScaler.noScaling, // This disables font scaling
+        return DeveloperBanner(
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: TextScaler.noScaling, // This disables font scaling
+            ),
+            child: child!,
           ),
-          child: child!,
         );
       },
     );

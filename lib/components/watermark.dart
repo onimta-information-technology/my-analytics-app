@@ -37,25 +37,46 @@ class _WatermarkState extends State<Watermark> {
           opacity: 0.2,
           child: LayoutBuilder(
             builder: (context, constraints) {
-              return Wrap(
-                alignment: WrapAlignment.start,
-                runAlignment: WrapAlignment.center,
-                spacing: 1,
-                runSpacing: 25,
+              // Calculate how many watermarks we need based on screen size
+              final itemWidth = 200.0; // Approximate width of each watermark
+              final itemHeight = 40.0; // Approximate height of each watermark
+              
+              final columns = (constraints.maxWidth / itemWidth).ceil() + 1;
+              final rows = (constraints.maxHeight / itemHeight).ceil() + 1;
+              final totalItems = columns * rows;
+
+              return Stack(
                 children: List.generate(
-                  100,
-                  (index) => Transform.rotate(
-                    angle: -0.7,
-                    child: Text(
-                      "$userName\n$lastSeen",
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                  totalItems,
+                  (index) {
+                    // Calculate position for each watermark
+                    final row = index ~/ columns;
+                    final col = index % columns;
+                    
+                    // Offset alternate rows for better coverage
+                    final xOffset = col * itemWidth + (row.isOdd ? itemWidth / 2 : 0);
+                    final yOffset = row * itemHeight;
+
+                    return Positioned(
+                      left: xOffset - itemWidth / 2,
+                      top: yOffset,
+                      child: Transform.rotate(
+                        angle: -0.9,
+                        child: SizedBox(
+                          width: itemWidth,
+                          child: Text(
+                            "$userName\n$lastSeen",
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
               );
             },

@@ -151,7 +151,7 @@ class _DailyWalkingGuestScreenState
                       strokeWidth: 2,
                     ),
                   )
-                : const Icon(Icons.refresh),
+                : const Icon(Icons.refresh , size: 30),
             onPressed: _isRefreshing ? null : _refreshGuests,
           ),
         ],

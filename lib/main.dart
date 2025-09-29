@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-
 import 'package:ballys_reservation_app/components/developer_banner.dart';
 import 'package:ballys_reservation_app/navigation/app_navigation.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -11,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:screen_protector/screen_protector.dart';
 
 Color customGoldColor = const Color(0xFFDAB066);
 
@@ -24,6 +24,8 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await ScreenProtector.preventScreenshotOn();
 
   // Initialize Firebase
   await Firebase.initializeApp();
@@ -120,11 +122,12 @@ class _MyAppState extends State<MyApp> {
 
       builder: (context, child) {
         return DeveloperBanner(
+        // return MediaQuery(
           child: MediaQuery(
-            data: MediaQuery.of(context).copyWith(
-              textScaler: TextScaler.noScaling, // This disables font scaling
-            ),
-            child: child!,
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.noScaling, // This disables font scaling
+          ),
+          child: child!,
           ),
         );
       },

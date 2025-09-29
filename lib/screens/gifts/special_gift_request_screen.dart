@@ -96,7 +96,7 @@ class _SpecialGiftRequestScreenState
         title: const Text('Special Gift Request'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh ,size: 30),
             onPressed: () async {
               String? salesCode = await StorageUtil.getSalesCode();
               if (salesCode != null && salesCode.isNotEmpty) {

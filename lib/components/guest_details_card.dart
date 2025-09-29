@@ -56,6 +56,16 @@ class GuestDisplayCard extends ConsumerWidget {
     }
   }
 
+  // void _showFullScreenImage(BuildContext context, Guest selectedGuest) {
+  //   if (selectedGuest.memImage2 == null || selectedGuest.memImage2!.isEmpty) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(
+  //         content: Text('No image available'),
+  //         duration: Duration(seconds: 2),
+  //       ),
+  //     );
+  //     return;
+  //   }
   void _showFullScreenImage(BuildContext context, Guest selectedGuest) {
     if (selectedGuest.memImage2 == null || selectedGuest.memImage2!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -67,92 +77,125 @@ class GuestDisplayCard extends ConsumerWidget {
       return;
     }
 
-    showDialog(
+    //   showDialog(
+    //     context: context,
+    //      barrierDismissible: true,
+    //     barrierColor: Colors.black87,
+    //     builder: (BuildContext context) {
+    //       return Dialog(
+    //         backgroundColor: Colors.transparent,
+    //         child: Stack(
+    //           children: [
+    //             // Center(
+    //             //   child: Container(
+    //             //     constraints: BoxConstraints(
+    //             //       maxHeight: MediaQuery.of(context).size.height * 0.8,
+    //             //       maxWidth: MediaQuery.of(context).size.width * 0.9,
+    //             //     ),
+    //             //     child: ClipRRect(
+    //             //       borderRadius: BorderRadius.circular(12),
+    //             //       child: Image.memory(
+    //             //         base64Decode(selectedGuest.memImage2!),
+    //             //         fit: BoxFit.contain,
+    //             //         errorBuilder: (context, error, stackTrace) {
+    //             //           return Container(
+    //             //             height: 200,
+    //             //             width: 200,
+    //             //             color: Colors.grey.shade300,
+    //             //             child: const Icon(
+    //             //               Icons.error,
+    //             //               size: 50,
+    //             //               color: Colors.red,
+    //             //             ),
+    //             //           );
+    //             //         },
+    //             //       ),
+    //             //     ),
+    //             //   ),
+    //             // ),
+    //             // Positioned(
+    //             //   top: 40,
+    //             //   right: 20,
+    //             //   child: GestureDetector(
+    //             //     onTap: () => Navigator.of(context).pop(),
+    //             //     child: Container(
+    //             //       padding: const EdgeInsets.all(8),
+    //             //       decoration: const BoxDecoration(
+    //             //         color: Colors.black54,
+    //             //         shape: BoxShape.circle,
+    //             //       ),
+    //             //       child: const Icon(
+    //             //         Icons.close,
+    //             //         color: Colors.white,
+    //             //         size: 24,
+    //             //       ),
+    //             //     ),
+    //             //   ),
+    //             // ),
+    //             Center(
+    //               child: GestureDetector(
+    //                 onTap: () =>
+    //                     Navigator.of(context).pop(), // close on image tap
+    //                 child: Container(
+    //                   constraints: BoxConstraints(
+    //                     maxHeight: MediaQuery.of(context).size.height * 0.8,
+    //                     maxWidth: MediaQuery.of(context).size.width * 0.9,
+    //                   ),
+    //                   child: ClipRRect(
+    //                     borderRadius: BorderRadius.circular(12),
+    //                     child: Image.memory(
+    //                       base64Decode(selectedGuest.memImage2!),
+    //                       fit: BoxFit.contain,
+    //                       errorBuilder: (context, error, stackTrace) {
+    //                         return Container(
+    //                           height: 200,
+    //                           width: 200,
+    //                           color: Colors.grey.shade300,
+    //                           child: const Icon(
+    //                             Icons.error,
+    //                             size: 50,
+    //                             color: Colors.red,
+    //                           ),
+    //                         );
+    //                       },
+    //                     ),
+    //                   ),
+    //                 ),
+    //               ),
+    //             ),
+    //           ],
+    //         ),
+    //       );
+    //     },
+    //   );
+    // }
+    showGeneralDialog(
       context: context,
+      barrierDismissible: true, // tap outside will close
+      barrierLabel: "Close",
       barrierColor: Colors.black87,
-      builder: (BuildContext context) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          child: Stack(
-            children: [
-              // Center(
-              //   child: Container(
-              //     constraints: BoxConstraints(
-              //       maxHeight: MediaQuery.of(context).size.height * 0.8,
-              //       maxWidth: MediaQuery.of(context).size.width * 0.9,
-              //     ),
-              //     child: ClipRRect(
-              //       borderRadius: BorderRadius.circular(12),
-              //       child: Image.memory(
-              //         base64Decode(selectedGuest.memImage2!),
-              //         fit: BoxFit.contain,
-              //         errorBuilder: (context, error, stackTrace) {
-              //           return Container(
-              //             height: 200,
-              //             width: 200,
-              //             color: Colors.grey.shade300,
-              //             child: const Icon(
-              //               Icons.error,
-              //               size: 50,
-              //               color: Colors.red,
-              //             ),
-              //           );
-              //         },
-              //       ),
-              //     ),
-              //   ),
-              // ),
-              // Positioned(
-              //   top: 40,
-              //   right: 20,
-              //   child: GestureDetector(
-              //     onTap: () => Navigator.of(context).pop(),
-              //     child: Container(
-              //       padding: const EdgeInsets.all(8),
-              //       decoration: const BoxDecoration(
-              //         color: Colors.black54,
-              //         shape: BoxShape.circle,
-              //       ),
-              //       child: const Icon(
-              //         Icons.close,
-              //         color: Colors.white,
-              //         size: 24,
-              //       ),
-              //     ),
-              //   ),
-              // ),
-              Center(
-                child: GestureDetector(
-                  onTap: () =>
-                      Navigator.of(context).pop(), // close on image tap
-                  child: Container(
-                    constraints: BoxConstraints(
-                      maxHeight: MediaQuery.of(context).size.height * 0.8,
-                      maxWidth: MediaQuery.of(context).size.width * 0.9,
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.memory(
-                        base64Decode(selectedGuest.memImage2!),
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            height: 200,
-                            width: 200,
-                            color: Colors.grey.shade300,
-                            child: const Icon(
-                              Icons.error,
-                              size: 50,
-                              color: Colors.red,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
+      pageBuilder: (context, anim1, anim2) {
+        return Center(
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+              maxWidth: MediaQuery.of(context).size.width * 0.9,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.memory(
+                base64Decode(selectedGuest.memImage2!),
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 200,
+                    width: 200,
+                    color: Colors.grey.shade300,
+                    child: const Icon(Icons.error, size: 50, color: Colors.red),
+                  );
+                },
               ),
-            ],
+            ),
           ),
         );
       },

@@ -66,6 +66,7 @@ dependencies:
   path_provider: ^2.1.1
   share_plus: ^12.0.0
   connectivity_plus: ^6.0.3
+  screen_protector: ^1.4.1
   
 dev_dependencies:
   flutter_test:

@@ -35,4 +35,16 @@ import FirebaseCore
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
+  func userNotificationCenter(_ center: UNUserNotificationCenter,
+                              willPresent notification: UNNotification,
+                              withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+    completionHandler([.banner, .sound, .badge]) // Show banner + sound in foreground
+  }
+
+  // 🔔 Called when user taps the notification
+  func userNotificationCenter(_ center: UNUserNotificationCenter,
+                              didReceive response: UNNotificationResponse,
+                              withCompletionHandler completionHandler: @escaping () -> Void) {
+    completionHandler()
+  }
 }

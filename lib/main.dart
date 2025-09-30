@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:ballys_reservation_app/components/developer_banner.dart';
+import 'package:ballys_reservation_app/components/localNotificationService.dart';
 import 'package:ballys_reservation_app/navigation/app_navigation.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -29,7 +30,7 @@ void main() async {
 
   // Initialize Firebases
   await Firebase.initializeApp();
-
+  await LocalNotificationService.initialize();
   // Set up background message handler
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
@@ -58,12 +59,14 @@ class _MyAppState extends State<MyApp> {
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
       print('User granted notification permission');
 
-      // Get FCM token
-
       // Listen for token refresh
       FirebaseMessaging.instance.onTokenRefresh.listen((String token) {
         print('FCM Token refreshed: $token');
         // Update token on your server
+      });
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        print('Foreground message received!');
+        LocalNotificationService.showNotification(message); // ✅ show banner
       });
 
       // Handle foreground messages

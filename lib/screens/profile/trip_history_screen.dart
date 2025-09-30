@@ -173,7 +173,7 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
         actions: [
           // Manual refresh button in app bar
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, size: 30),
             onPressed: _isLoading ? null : _refreshData,
             tooltip: 'Refresh',
           ),

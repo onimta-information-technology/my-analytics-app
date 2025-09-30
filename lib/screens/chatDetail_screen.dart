@@ -1,11 +1,15 @@
 import 'package:ballys_reservation_app/screens/chat_screen.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 
-// Updated ChatMessage class with API fields
+// Updated ChatMessage class with API fields and file support
 class ChatMessage {
   final String id;
   final String text;
@@ -13,6 +17,9 @@ class ChatMessage {
   final DateTime timestamp;
   final String? apiMessageId;
   final String? apiChatId;
+  final String? filePath;
+  final String? fileType; // 'image', 'document', etc.
+  final String? fileName;
 
   ChatMessage({
     required this.id,
@@ -21,6 +28,9 @@ class ChatMessage {
     required this.timestamp,
     this.apiMessageId,
     this.apiChatId,
+    this.filePath,
+    this.fileType,
+    this.fileName,
   });
 
   ChatMessage copyWith({
@@ -30,6 +40,9 @@ class ChatMessage {
     DateTime? timestamp,
     String? apiMessageId,
     String? apiChatId,
+    String? filePath,
+    String? fileType,
+    String? fileName,
   }) {
     return ChatMessage(
       id: id ?? this.id,
@@ -38,6 +51,9 @@ class ChatMessage {
       timestamp: timestamp ?? this.timestamp,
       apiMessageId: apiMessageId ?? this.apiMessageId,
       apiChatId: apiChatId ?? this.apiChatId,
+      filePath: filePath ?? this.filePath,
+      fileType: fileType ?? this.fileType,
+      fileName: fileName ?? this.fileName,
     );
   }
 
@@ -48,6 +64,9 @@ class ChatMessage {
     'timestamp': timestamp.millisecondsSinceEpoch,
     'apiMessageId': apiMessageId,
     'apiChatId': apiChatId,
+    'filePath': filePath,
+    'fileType': fileType,
+    'fileName': fileName,
   };
 
   static ChatMessage fromJson(Map<String, dynamic> json) => ChatMessage(
@@ -57,6 +76,9 @@ class ChatMessage {
     timestamp: DateTime.fromMillisecondsSinceEpoch(json['timestamp']),
     apiMessageId: json['apiMessageId'],
     apiChatId: json['apiChatId'],
+    filePath: json['filePath'],
+    fileType: json['fileType'],
+    fileName: json['fileName'],
   );
 }
 
@@ -72,9 +94,11 @@ class IndividualChatScreen extends StatefulWidget {
 class _IndividualChatScreenState extends State<IndividualChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+
   List<ChatMessage> _messages = [];
   String? _currentUserName;
   String? _selectedMessageId;
+  final ImagePicker _imagePicker = ImagePicker();
 
   @override
   void initState() {
@@ -282,6 +306,191 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
     }
   }
 
+  // Handler for camera icon
+  void _onCameraPressed() async {
+    try {
+      final XFile? photo = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 80,
+      );
+
+      if (photo != null) {
+        // Create a message with the image
+        final localMessageId = DateTime.now().millisecondsSinceEpoch.toString();
+        final message = ChatMessage(
+          id: localMessageId,
+          text: 'Photo',
+          isMe: true,
+          timestamp: DateTime.now(),
+          filePath: photo.path,
+          fileType: 'image',
+          fileName: photo.name,
+        );
+
+        setState(() {
+          _messages.add(message);
+        });
+
+        _saveMessages();
+        _scrollToBottom();
+
+        // TODO: Upload image to server and send message
+        // You can implement this based on your API requirements
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Photo captured successfully!'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error taking photo: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error taking photo: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Handler for file attachment icon
+  void _onAttachFilePressed() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Colors.blue),
+                title: const Text('Gallery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImageFromGallery();
+                },
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.insert_drive_file,
+                  color: Colors.orange,
+                ),
+                title: const Text('Document'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickDocument();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.cancel, color: Colors.red),
+                title: const Text('Cancel'),
+                onTap: () {
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Pick image from gallery
+  Future<void> _pickImageFromGallery() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
+
+      if (image != null) {
+        final localMessageId = DateTime.now().millisecondsSinceEpoch.toString();
+        final message = ChatMessage(
+          id: localMessageId,
+          text: 'Image',
+          isMe: true,
+          timestamp: DateTime.now(),
+          filePath: image.path,
+          fileType: 'image',
+          fileName: image.name,
+        );
+
+        setState(() {
+          _messages.add(message);
+        });
+
+        _saveMessages();
+        _scrollToBottom();
+
+        // TODO: Upload image to server
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Image selected successfully!'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error picking image: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error selecting image: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Pick document
+  Future<void> _pickDocument() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'xls', 'xlsx'],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        final file = result.files.single;
+        final localMessageId = DateTime.now().millisecondsSinceEpoch.toString();
+        final message = ChatMessage(
+          id: localMessageId,
+          text: file.name,
+          isMe: true,
+          timestamp: DateTime.now(),
+          filePath: file.path,
+          fileType: 'document',
+          fileName: file.name,
+        );
+
+        setState(() {
+          _messages.add(message);
+        });
+
+        _saveMessages();
+        _scrollToBottom();
+
+        // TODO: Upload document to server
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Document "${file.name}" selected!'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error picking document: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error selecting document: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -412,13 +621,69 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        message.text,
-                        style: TextStyle(
-                          color: message.isMe ? Colors.white : Colors.black87,
-                          fontSize: 16,
+                      // Display image if fileType is image
+                      if (message.fileType == 'image' &&
+                          message.filePath != null) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.file(
+                            File(message.filePath!),
+                            width: 200,
+                            height: 200,
+                            fit: BoxFit.cover,
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 8),
+                      ],
+                      // Display document info if fileType is document
+                      if (message.fileType == 'document' &&
+                          message.fileName != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: message.isMe
+                                ? Colors.green[700]
+                                : Colors.grey[400],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.insert_drive_file,
+                                color: message.isMe
+                                    ? Colors.white
+                                    : Colors.black87,
+                                size: 24,
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  message.fileName!,
+                                  style: TextStyle(
+                                    color: message.isMe
+                                        ? Colors.white
+                                        : Colors.black87,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      // Display text message
+                      if (message.text.isNotEmpty &&
+                          message.fileType != 'image' &&
+                          message.fileType != 'document')
+                        Text(
+                          message.text,
+                          style: TextStyle(
+                            color: message.isMe ? Colors.white : Colors.black87,
+                            fontSize: 16,
+                          ),
+                        ),
                       const SizedBox(height: 4),
                       Row(
                         mainAxisSize: MainAxisSize.min,
@@ -563,8 +828,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
           ],
         ),
         actions: [
-          //  IconButton(icon: const Icon(Icons.videocam), onPressed: () {}),
-          // IconButton(icon: const Icon(Icons.call), onPressed: () {}),
           IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
         ],
       ),
@@ -595,6 +858,14 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
             ),
             child: Row(
               children: [
+                // Camera icon button
+                IconButton(
+                  icon: const Icon(Icons.camera_alt, color: Colors.grey),
+                  onPressed: _onCameraPressed,
+                  tooltip: 'Camera',
+                ),
+                const SizedBox(width: 4),
+                // Text input field with attach icon inside
                 Expanded(
                   child: TextField(
                     controller: _messageController,
@@ -610,6 +881,11 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
                         horizontal: 20,
                         vertical: 10,
                       ),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.attach_file, color: Colors.grey),
+                        onPressed: _onAttachFilePressed,
+                        tooltip: 'Attach file',
+                      ),
                     ),
                     maxLines: null,
                     textInputAction: TextInputAction.newline,
@@ -617,6 +893,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
+                // Send button
                 FloatingActionButton(
                   backgroundColor: Colors.green,
                   mini: true,

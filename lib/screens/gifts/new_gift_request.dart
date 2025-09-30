@@ -304,6 +304,13 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
     );
   }
 
+  bool get _areRequiredFieldsFilled {
+    return _fromDateController.text.isNotEmpty &&
+        _toDateController.text.isNotEmpty &&
+        _memberIdController.text.isNotEmpty &&
+        _memberNameController.text.isNotEmpty;
+  }
+
   @override
   Widget build(BuildContext context) {
     final fontSettings = ref.watch(fontSettingsProvider);
@@ -363,7 +370,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                           readOnly: true,
                           style: _inputTextStyle(fontSettings),
                           decoration: InputDecoration(
-                            labelText: "From Date & Time",
+                            labelText: "From Date & Time *",
                             labelStyle: TextStyle(
                               fontSize: fontSettings.fontSize,
                               fontWeight: fontSettings.fontWeight,
@@ -378,13 +385,13 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                           onTap: () =>
                               _pickDateTime(context, _fromDateController),
                         ),
-                        const SizedBox(height: 16.0),
+                        const SizedBox(height: 10.0),
                         TextFormField(
                           controller: _toDateController,
                           readOnly: true,
                           style: _inputTextStyle(fontSettings),
                           decoration: InputDecoration(
-                            labelText: "To Date & Time",
+                            labelText: "To Date & Time *",
                             labelStyle: TextStyle(
                               fontSize: fontSettings.fontSize,
                               fontWeight: fontSettings.fontWeight,
@@ -399,7 +406,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                           onTap: () =>
                               _pickDateTime(context, _toDateController),
                         ),
-                        const SizedBox(height: 16.0),
+                        const SizedBox(height: 10.0),
                         Row(
                           children: [
                             Expanded(
@@ -410,7 +417,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                 controller: _memberIdNumberController,
                                 style: _inputTextStyle(fontSettings),
                                 decoration: InputDecoration(
-                                  labelText: "Member ID",
+                                  labelText: "Member ID *",
                                   labelStyle: TextStyle(
                                     fontSize: fontSettings.fontSize,
                                     fontWeight: fontSettings.fontWeight,
@@ -513,13 +520,13 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16.0),
+                        const SizedBox(height: 10.0),
                         TextFormField(
                           autofocus: false,
                           controller: _memberNameController,
                           style: _inputTextStyle(fontSettings),
                           decoration: InputDecoration(
-                            labelText: "Member Name",
+                            labelText: "Member Name *",
                             labelStyle: TextStyle(
                               fontSize: fontSettings.fontSize,
                               fontWeight: fontSettings.fontWeight,
@@ -550,35 +557,37 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                             });
                           },
                         ),
-                        const SizedBox(height: 16.0),
+                        const SizedBox(height: 10.0),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
                             Expanded(
                               child: ElevatedButton.icon(
-                                onPressed: () async {
-                                  setState(() {
-                                    _dismissKeyboard();
-                                    _isLoading = true;
-                                    _showGuestData = false;
-                                  });
+                                onPressed: _areRequiredFieldsFilled
+                                    ? () async {
+                                        setState(() {
+                                          _dismissKeyboard();
+                                          _isLoading = true;
+                                          _showGuestData = false;
+                                        });
 
-                                  await ref
-                                      .read(giftProvider.notifier)
-                                      .getGestgiftGift(
-                                        8886,
-                                        _fromDateController.text,
-                                        _toDateController.text,
-                                        _memberIdController.text,
-                                        _fromDateController.text,
-                                        _toDateController.text,
-                                      );
+                                        await ref
+                                            .read(giftProvider.notifier)
+                                            .getGestgiftGift(
+                                              8886,
+                                              _fromDateController.text,
+                                              _toDateController.text,
+                                              _memberIdController.text,
+                                              _fromDateController.text,
+                                              _toDateController.text,
+                                            );
 
-                                  setState(() {
-                                    _isLoading = false;
-                                    _showGuestData = true;
-                                  });
-                                },
+                                        setState(() {
+                                          _isLoading = false;
+                                          _showGuestData = true;
+                                        });
+                                      }
+                                    : null,
                                 icon: const Icon(Icons.person),
                                 label: Text(
                                   "Guest Data",
@@ -588,8 +597,12 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                   ),
                                 ),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.orange,
-                                  foregroundColor: Colors.white,
+                                  backgroundColor: _areRequiredFieldsFilled
+                                      ? Colors.orange
+                                      : Colors.grey.shade300,
+                                  foregroundColor: _areRequiredFieldsFilled
+                                      ? Colors.white
+                                      : Colors.grey.shade600,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -602,27 +615,31 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: ElevatedButton.icon(
-                                onPressed: () {
-                                  _dismissKeyboard();
-                                  final memberId = _memberIdController.text
-                                      .trim();
+                                onPressed: _areRequiredFieldsFilled
+                                    ? () {
+                                        _dismissKeyboard();
+                                        final memberId = _memberIdController
+                                            .text
+                                            .trim();
 
-                                  if (memberId.isEmpty) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          "Please enter a Member ID",
-                                        ),
-                                      ),
-                                    );
-                                    return;
-                                  }
-
-                                  // Navigate to PrvGift page with MID as parameter
-                                  context.push(
-                                    '/gifts/special-gift-requests/prv-gifts/$memberId',
-                                  );
-                                },
+                                        if (memberId.isEmpty) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                "Please enter a Member ID",
+                                              ),
+                                            ),
+                                          );
+                                          return;
+                                        }
+                                        // Navigate to PrvGift page with MID as parameter
+                                        context.push(
+                                          '/gifts/special-gift-requests/prv-gifts/$memberId',
+                                        );
+                                      }
+                                    : null,
                                 icon: const Icon(Icons.card_giftcard),
                                 label: Text(
                                   "Prv Gift",
@@ -632,8 +649,12 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                   ),
                                 ),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue,
-                                  foregroundColor: Colors.white,
+                                  backgroundColor: _areRequiredFieldsFilled
+                                      ? Colors.blue
+                                      : Colors.grey.shade300,
+                                  foregroundColor: _areRequiredFieldsFilled
+                                      ? Colors.white
+                                      : Colors.grey.shade600,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -791,7 +812,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                             },
                           ),
                         ],
-                        const SizedBox(height: 16.0),
+                        const SizedBox(height: 10.0),
 
                         Row(
                           children: [
@@ -854,7 +875,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 10),
 
                             Consumer(
                               builder: (context, ref, child) {
@@ -911,7 +932,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                               },
                             ),
 
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 10),
                             DropdownButtonFormField<String>(
                               style: _inputTextStyle(fontSettings),
                               decoration: InputDecoration(
@@ -953,7 +974,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                   : null,
                             ),
 
-                            const SizedBox(height: 16.0),
+                            const SizedBox(height: 10.0),
 
                             TextFormField(
                               controller: _amountController,
@@ -982,7 +1003,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                               },
                             ),
 
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 10),
                           ],
                         ),
 

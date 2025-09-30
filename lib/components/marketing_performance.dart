@@ -5,7 +5,6 @@ import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:math' as math;
-
 import 'package:ballys_reservation_app/providers/marketing_provider.dart';
 
 class MarketingPerformanceWidget extends ConsumerStatefulWidget {
@@ -24,6 +23,7 @@ class _MarketingPerformanceWidgetState
   bool _tabsEnabled = false;
   AppMode? _previousAppMode;
   String? userName;
+  bool _refreshEnabled = false;
   @override
   void initState() {
     super.initState();
@@ -107,21 +107,6 @@ class _MarketingPerformanceWidgetState
     }).toList();
   }
 
-  // void _handleAppModeChange(AppMode currentAppMode) {
-  //   if (_previousAppMode != null && _previousAppMode != currentAppMode) {
-  //     print('=== App Mode Changed in MarketingPerformanceWidget ===');
-  //     print('Previous: $_previousAppMode, Current: $currentAppMode');
-
-  //     // Refresh ALL tabs when app mode changes
-  //     WidgetsBinding.instance.addPostFrameCallback((_) {
-  //       if (mounted) {
-  //         ref.read(marketingProvider.notifier).onAppModeChanged(currentAppMode);
-  //       }
-  //     });
-  //   }
-  //   _previousAppMode = currentAppMode;
-  // }
-
   @override
   Widget build(BuildContext context) {
     final marketingState = ref.watch(marketingProvider);
@@ -188,30 +173,11 @@ class _MarketingPerformanceWidgetState
                           color: Colors.black87,
                         ),
                       ),
-                      // Text(
-                      //   "Mode: ${currentAppMode.toString().split('.').last}",
-                      //   style: TextStyle(
-                      //     fontSize: 12,
-                      //     color: Colors.grey[600],
-                      //     fontWeight: FontWeight.w500,
-                      //   ),
-                      // ),
                     ],
                   ),
                 ),
                 Row(
                   children: [
-                    // Show loading indicator when refreshing
-                    // if (marketingState.isLoading)
-                    //   const Padding(
-                    //     padding: EdgeInsets.only(right: 8.0),
-                    //     child: SizedBox(
-                    //       width: 16,
-                    //       height: 16,
-                    //       child: CircularProgressIndicator(strokeWidth: 2),
-                    //     ),
-                    //   ),
-                    // Expand/collapse button
                     IconButton(
                       icon: Icon(
                         widget.isFullScreen ? Icons.zoom_out : Icons.zoom_in,
@@ -253,36 +219,60 @@ class _MarketingPerformanceWidgetState
                 ),
               ],
             ),
-
             const SizedBox(height: 16),
-
             // Tab buttons - Updated to handle enabled/disabled state
-            Row(
-              children: [
-                _buildTabButton(
-                  "Today",
-                  0,
-                  marketingState.selectedTab == 0,
-                  tabsEnabled,
-                ),
-                const SizedBox(width: 8),
-                _buildTabButton(
-                  "Yesterday",
-                  1,
-                  marketingState.selectedTab == 1,
-                  tabsEnabled,
-                ),
-                const SizedBox(width: 8),
-                _buildTabButton(
-                  "Monthly",
-                  2,
-                  marketingState.selectedTab == 2,
-                  tabsEnabled,
-                ),
-              ],
+            // Row(
+            //   children: [
+            //     _buildTabButton(
+            //       "Today",
+            //       0,
+            //       marketingState.selectedTab == 0,
+            //       tabsEnabled,
+            //     ),
+            //     const SizedBox(width: 8),
+            //     _buildTabButton(
+            //       "Yesterday",
+            //       1,
+            //       marketingState.selectedTab == 1,
+            //       tabsEnabled,
+            //     ),
+            //     const SizedBox(width: 8),
+            //     _buildTabButton(
+            //       "Monthly",
+            //       2,
+            //       marketingState.selectedTab == 2,
+            //       tabsEnabled,
+            //     ),
+            //   ],
+            // ),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildTabButton(
+                    "Today",
+                    0,
+                    marketingState.selectedTab == 0,
+                    tabsEnabled,
+                  ),
+                  const SizedBox(width: 7),
+                  _buildTabButton(
+                    "Yesterday",
+                    1,
+                    marketingState.selectedTab == 1,
+                    tabsEnabled,
+                  ),
+                  const SizedBox(width: 7),
+                  _buildTabButton(
+                    "Monthly",
+                    2,
+                    marketingState.selectedTab == 2,
+                    tabsEnabled,
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
-
             // Performance list with loading/error handling
             if (marketingState.isLoading)
               const Center(
@@ -318,23 +308,7 @@ class _MarketingPerformanceWidgetState
                     padding: const EdgeInsets.only(bottom: 12.0),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Text(
-                        //   "${marketingState.currentTabTitle} (${sortedData.length} items)",
-                        //   style: TextStyle(
-                        //     fontSize: 12,
-                        //     color: Colors.grey[600],
-                        //     fontWeight: FontWeight.w500,
-                        //   ),
-                        // ),
-                        // Text(
-                        //   "Last updated: ${DateTime.now().toString().substring(11, 19)}",
-                        //   style: TextStyle(
-                        //     fontSize: 10,
-                        //     color: Colors.grey[500],
-                        //   ),
-                        // ),
-                      ],
+                      children: [],
                     ),
                   ),
 
@@ -386,31 +360,13 @@ class _MarketingPerformanceWidgetState
                   ],
                 ),
 
-                // Manual refresh button
-                // TextButton.icon(
-                //   onPressed: marketingState.isLoading
-                //       ? null
-                //       : _refreshCurrentTab,
-                //   icon: Icon(
-                //     Icons.refresh,
-                //     size: 16,
-                //     color: marketingState.isLoading ? Colors.grey : Colors.blue,
-                //   ),
-                //   label: Text(
-                //     "Refresh",
-                //     style: TextStyle(
-                //       fontSize: 12,
-                //       color: marketingState.isLoading
-                //           ? Colors.grey
-                //           : Colors.blue,
-                //     ),
-                //   ),
-                // ),
                 Card(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  color: marketingState.isLoading ? Colors.grey : Colors.blue,
+                  color: (!_refreshEnabled || marketingState.isLoading)
+                      ? Colors.grey
+                      : Colors.blue,
                   elevation: 2,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -418,7 +374,7 @@ class _MarketingPerformanceWidgetState
                       // vertical: 1,
                     ),
                     child: TextButton.icon(
-                      onPressed: marketingState.isLoading
+                      onPressed: !_refreshEnabled || marketingState.isLoading
                           ? null
                           : _refreshCurrentTab,
                       icon: const Icon(
@@ -534,7 +490,7 @@ class _MarketingPerformanceWidgetState
                 performance.smName,
                 style: const TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.bold,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -569,21 +525,6 @@ class _MarketingPerformanceWidgetState
             ),
             const SizedBox(width: 8),
 
-            // // Value display
-            // SizedBox(
-            //   width: 60,
-            //   child: Text(
-            //     performance.displayValue.toString(),
-            //     style: TextStyle(
-            //       fontSize: 10,
-            //       fontWeight: FontWeight.bold,
-            //       color: performance.isPositive ? Colors.green : Colors.red,
-            //     ),
-            //     textAlign: TextAlign.end,
-            //   ),
-            // ),
-            // const SizedBox(width: 4),
-
             // Add an arrow icon to indicate it's clickable
             Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey[600]),
           ],
@@ -610,6 +551,11 @@ class _MarketingPerformanceWidgetState
     final notifier = ref.read(marketingProvider.notifier);
     final state = ref.read(marketingProvider);
     notifier.setSelectedTab(index);
+    if (!_refreshEnabled) {
+      setState(() {
+        _refreshEnabled = true; // 👈 enable refresh after first tab click
+      });
+    }
 
     // Load data based on selected tab
     switch (index) {

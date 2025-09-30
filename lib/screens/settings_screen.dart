@@ -1,4 +1,3 @@
-import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart'
@@ -51,7 +50,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (_canShowOverallData) ...[
-                  const Text('App Mode', style: TextStyle(fontSize: 16.0)),
+                  const Text('App Mode', style: TextStyle(fontSize: 16.0, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -63,7 +62,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 20),
                 ] else ...[
                   // For regular users, only show My Data option (non-interactive)
                   const Text('App Mode', style: TextStyle(fontSize: 16.0)),
@@ -91,7 +90,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ],
                 const Text(
                   'Font Size Settings',
-                  style: TextStyle(fontSize: 16.0),
+                  style: TextStyle(fontSize: 16.0, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 20),
                 Row(
@@ -105,7 +104,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 const SizedBox(height: 20),
                 const Text(
                   'Font Weight Settings',
-                  style: TextStyle(fontSize: 16.0),
+                  style: TextStyle(fontSize: 16.0, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 20),
                 Row(

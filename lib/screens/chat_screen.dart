@@ -980,7 +980,7 @@ class _ChatScreenState extends State<ChatScreen>
                 _buildChatList(3),
               ],
             ),
-            const Watermark(),
+          //  const Watermark(),
             if (_errorMessage != null && _contacts.isNotEmpty)
               Positioned(
                 top: 0,

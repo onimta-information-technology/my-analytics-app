@@ -38,13 +38,14 @@ import 'package:ballys_reservation_app/wrappers/main_wrapper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
-
+import 'package:ballys_reservation_app/main.dart' show navigatorKey;
 class AppNavigation {
   AppNavigation._();
 
   static String initialRoute = '/splash';
 
   static final GoRouter router = GoRouter(
+    navigatorKey: navigatorKey, 
     initialLocation: initialRoute,
     routes: <RouteBase>[
       GoRoute(

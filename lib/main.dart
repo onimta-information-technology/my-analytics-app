@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:ballys_reservation_app/components/developer_banner.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:ballys_reservation_app/components/localNotificationService.dart';
 import 'package:ballys_reservation_app/navigation/app_navigation.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -15,6 +15,8 @@ import 'package:screen_protector/screen_protector.dart';
 
 Color customGoldColor = const Color(0xFFDAB066);
 
+// Global navigator key for navigation from anywhere
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 // Top-level function for background message handling
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
@@ -30,9 +32,11 @@ void main() async {
 
   // Initialize Firebases
   await Firebase.initializeApp();
-  await LocalNotificationService.initialize();
+
   // Set up background message handler
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  await NotificationService().initializeLocalNotifications();
 
   runApp(const ProviderScope(child: MyApp()));
 }
@@ -45,6 +49,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  final NotificationService _notificationService = NotificationService();
+
   @override
   void initState() {
     super.initState();
@@ -63,10 +69,6 @@ class _MyAppState extends State<MyApp> {
       FirebaseMessaging.instance.onTokenRefresh.listen((String token) {
         print('FCM Token refreshed: $token');
         // Update token on your server
-      });
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        print('Foreground message received!');
-        LocalNotificationService.showNotification(message); // ✅ show banner
       });
 
       // Handle foreground messages
@@ -93,15 +95,20 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  void _showForegroundNotification(RemoteMessage message) {
-    // You can show a dialog, snackbar, or custom notification widget here
-    // For now, we'll just print the message
-    print('Showing foreground notification: ${message.notification?.title}');
+  Future<void> _showForegroundNotification(RemoteMessage message) async {
+    // Use NotificationService to show the notification
+    await _notificationService.showForegroundNotification(message);
   }
 
   void _handleNotificationTap(RemoteMessage message) {
-    // Handle navigation based on notification data
-    // You can access message.data to get custom data from the notification
+    if (message.data['type'] == 'chat' ||
+        message.data['screen'] == 'chat' ||
+        message.data.containsKey('chat')) {
+      // Ensure we're on home first, then navigate
+      Future.delayed(Duration(milliseconds: 300), () {
+        context.go('/menu/chats');
+      });
+    }
     print('Handling notification tap with data: ${message.data}');
   }
 
@@ -284,6 +291,11 @@ class _SplashScreenState extends State<SplashScreen> {
     // Check if app was opened from a terminated state via notification
     RemoteMessage? initialMessage = await FirebaseMessaging.instance
         .getInitialMessage();
+
+    // Check awesome notifications for initial action
+    ReceivedAction? receivedAction = await AwesomeNotifications()
+        .getInitialNotificationAction(removeFromActionEvents: true);
+
     if (initialMessage != null) {
       print(
         'App opened from notification: ${initialMessage.notification?.title}',
@@ -296,7 +308,16 @@ class _SplashScreenState extends State<SplashScreen> {
       if (expiry != null) {
         final expiryTime = DateTime.parse(expiry);
         if (DateTime.now().isBefore(expiryTime)) {
-          context.go('/home');
+          // Check if opened from notification
+          if (initialMessage != null || receivedAction != null) {
+            print('App opened from notification, navigating to chat');
+            // Navigate to chat after ensuring we're logged in
+            context.go('/home');
+            await Future.delayed(Duration(milliseconds: 500));
+            context.go('/menu/chats');
+          } else {
+            context.go('/home');
+          }
         } else {
           await StorageUtil.clearUserData();
           context.go('/login');

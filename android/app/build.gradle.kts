@@ -12,7 +12,7 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        isCoreLibraryDesugaringEnabled = true
+        // isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -30,7 +30,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        multiDexEnabled = true
+        // multiDexEnabled = true
     }
 
     buildTypes {
@@ -49,5 +49,5 @@ flutter {
 dependencies {
     implementation("com.google.firebase:firebase-messaging:23.4.0")
     implementation("com.google.android.gms:play-services-auth-api-phone:18.0.1")
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    //coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }

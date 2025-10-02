@@ -1,18 +1,20 @@
 import 'dart:convert';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class FirebaseApiService {
-  static const String domain =
-      'https://ballysnotifications.onimtaitsl.com'; // Replace with your actual domain
+  static const String domain = 'https://ballysnotifications.onimtaitsl.com';
   static const String fmcDomain = 'https://ballysnotifications.onimtaitsl.com';
 
   static const Map<String, String> endpoints = {
     'InsertFcmToken': '/api/users/update-fcm-token',
     'InsertChatFMCToken': '/api/users/sync',
     'sendMessage': '/api/chat/send-message-with-notification',
-    'deleteMessage':
-        '/api/chats', // Base endpoint, chatId and messageId will be appended
+    'deleteMessage': '/api/chats',
+    'createChat': '/api/chats/create',
+    'fetchUserChats': '/api/chats/user',
+    'fetchAllUsers': '/api/users',
   };
 
   // Helper to get Bearer token header
@@ -25,7 +27,7 @@ class FirebaseApiService {
     };
   }
 
-  // Helper for POST requests - now returns both success status and response
+  // Helper for POST requests
   static Future<Map<String, dynamic>> postRequest(
     String url,
     Map<String, dynamic> body,
@@ -60,24 +62,44 @@ class FirebaseApiService {
     }
   }
 
-  // Helper for DELETE requests
-  static Future<Map<String, dynamic>> deleteRequest(
-    String url,
-    Map<String, dynamic> body,
-  ) async {
+  // Helper for GET requests
+  static Future<Map<String, dynamic>> getRequest(String url) async {
     try {
       final headers = await getAuthHeaders();
-      print('DELETE Request to $url with body: $body');
+      print('GET Request to $url');
 
-      final request = http.Request('DELETE', Uri.parse(url))
-        ..headers.addAll(headers)
-        ..body = jsonEncode(body);
+      final response = await http.get(Uri.parse(url), headers: headers);
 
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
 
-      print('Delete Response status: ${response.statusCode}');
-      print('Delete Response body: ${response.body}');
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body) as Map<String, dynamic>;
+        return {'success': true, 'data': responseData};
+      } else {
+        return {
+          'success': false,
+          'error': 'Server returned status code: ${response.statusCode}',
+          'statusCode': response.statusCode,
+          'responseBody': response.body,
+        };
+      }
+    } catch (e) {
+      print('Error in getRequest: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  // Helper for DELETE requests
+  static Future<Map<String, dynamic>> deleteRequest(String url) async {
+    try {
+      final headers = await getAuthHeaders();
+      print('DELETE Request to $url');
+
+      final response = await http.delete(Uri.parse(url), headers: headers);
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body) as Map<String, dynamic>;
@@ -94,15 +116,6 @@ class FirebaseApiService {
       print('Error in deleteRequest: $e');
       return {'success': false, 'error': e.toString()};
     }
-  }
-
-  // Set FCM token for user
-  static Future<Map<String, dynamic>> setFmcToken(
-    String memberId,
-    String fcmToken,
-  ) async {
-    final url = '$domain${endpoints['InsertFcmToken']}';
-    return await postRequest(url, {'userId': memberId, 'fcmToken': fcmToken});
   }
 
   // Sync FCM token with chat service
@@ -134,163 +147,87 @@ class FirebaseApiService {
     return prefs.getString('name');
   }
 
-  // Send message with notification
-  static Future<Map<String, dynamic>> sendMessage(
-    String memberId,
-    String hostName,
-    String message,
-  ) async {
-    final url = '$fmcDomain${endpoints['sendMessage']}';
-    return await postRequest(url, {
-      'senderFirstName': memberId.replaceAll(' ', ''),
-      'recipientFirstName': hostName,
-      'message': message,
-      'title': message,
-      'body': message,
-      'chatId': '',
-    });
-  }
+  // Create a new chat
+  static Future<String?> createChat(String receiverName) async {
+    final currentUserName = await getName();
+    if (currentUserName == null) {
+      print('Current user name is null');
+      return null;
+    }
 
-  // Send message with notification and chatId
-  static Future<Map<String, dynamic>> sendMessageWithChatId(
-    String senderFirstName,
-    String recipientFirstName,
-    String message,
-    String title,
-    String body,
-    String chatId,
-  ) async {
-    final url = '$fmcDomain${endpoints['sendMessage']}';
-    return await postRequest(url, {
-      'senderFirstName': senderFirstName,
-      'recipientFirstName': recipientFirstName,
-      'message': message,
-      'title': title,
-      'body': body,
-      'chatId': chatId,
-    });
-  }
-
-  // Soft delete a message
-  static Future<Map<String, dynamic>> deleteMessage(
-    String chatId,
-    String messageId,
-  ) async {
-    final url =
-        '$fmcDomain${endpoints['deleteMessage']}/$chatId/messages/$messageId/soft-delete';
-    return await deleteRequest(url, {'userId': 'Mr Anushka'});
-  }
-
-  // Delete/leave a chat
-  static Future<Map<String, dynamic>> deleteChat(String chatId) async {
-    final url = '$fmcDomain/api/chats/$chatId';
-    return await deleteRequest(url, {'userId': 'Mr Anushka'});
-  }
-
-  // Get user chats
-  static Future<Map<String, dynamic>> getUserChats() async {
     try {
-      final headers = await getAuthHeaders();
-      final url = '$fmcDomain/api/chats';
+      final url = '$domain${endpoints['createChat']}';
+      print('Creating chat with receiver: $receiverName');
+      print('Creating chat with currentUserName: $currentUserName');
 
-      final response = await http.get(Uri.parse(url), headers: headers);
+      final response = await postRequest(url, {
+        "participants": [receiverName, currentUserName],
+      });
 
-      print('Get chats response status: ${response.statusCode}');
-      print('Get chats response body: ${response.body}');
+      print('Create chat response: $response');
 
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body) as Map<String, dynamic>;
-        return {'success': true, 'data': responseData};
-      } else {
-        return {
-          'success': false,
-          'error': 'Server returned status code: ${response.statusCode}',
-          'statusCode': response.statusCode,
-          'responseBody': response.body,
-        };
+      if (response['success'] == true && response['data']?['chatId'] != null) {
+        return response['data']['chatId'];
       }
+
+      print('Failed to create chat');
+      return null;
     } catch (e) {
-      print('Error getting user chats: $e');
-      return {'success': false, 'error': e.toString()};
+      print('Error creating chat: $e');
+      return null;
     }
   }
 
-  // Get all users
-  static Future<Map<String, dynamic>> getAllUsers() async {
+  // Delete a chat
+  static Future<bool> deleteChat(String chatId) async {
     try {
-      final headers = await getAuthHeaders();
-      final url = '$fmcDomain/api/users';
+      final url = '$domain${endpoints['deleteMessage']}/$chatId';
+      final response = await deleteRequest(url);
 
-      final response = await http.get(Uri.parse(url), headers: headers);
-
-      print('Get users response status: ${response.statusCode}');
-      print('Get users response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body) as Map<String, dynamic>;
-        return {'success': true, 'data': responseData};
-      } else {
-        return {
-          'success': false,
-          'error': 'Server returned status code: ${response.statusCode}',
-          'statusCode': response.statusCode,
-          'responseBody': response.body,
-        };
-      }
+      print('Delete chat response: $response');
+      return response['success'] == true;
     } catch (e) {
-      print('Error getting all users: $e');
-      return {'success': false, 'error': e.toString()};
+      print('Error deleting chat: $e');
+      return false;
     }
   }
 
-  // Get messages for a specific chat
-  static Future<Map<String, dynamic>> getChatMessages(
-    String chatId, {
-    int page = 1,
-    int limit = 50,
-  }) async {
+  // Fetch user chats
+  static Future<Map<String, dynamic>> fetchUserChats() async {
     try {
-      final headers = await getAuthHeaders();
-      final url =
-          '$fmcDomain/api/chats/$chatId/messages?page=$page&limit=$limit';
+      final userId = await StorageUtil.getUserName();
 
-      final response = await http.get(Uri.parse(url), headers: headers);
+      if (userId == null || userId.isEmpty) {
+        throw Exception('User ID not found in storage');
+      }
+      final url = '$domain${endpoints['fetchUserChats']}/$userId';
+      final response = await getRequest(url);
 
-      print('Get messages response status: ${response.statusCode}');
-      print('Get messages response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body) as Map<String, dynamic>;
-        return {'success': true, 'data': responseData};
+      if (response['success'] == true) {
+        return response['data'] ?? {};
       } else {
-        return {
-          'success': false,
-          'error': 'Server returned status code: ${response.statusCode}',
-          'statusCode': response.statusCode,
-          'responseBody': response.body,
-        };
+        throw Exception(response['error'] ?? 'Failed to fetch chats');
       }
     } catch (e) {
-      print('Error getting chat messages: $e');
-      return {'success': false, 'error': e.toString()};
+      print('Error fetching user chats: $e');
+      throw Exception('Failed to fetch chats: $e');
     }
   }
 
-  // Mark messages as read
-  static Future<Map<String, dynamic>> markMessagesAsRead(
-    String chatId,
-    List<String> messageIds,
-  ) async {
-    final url = '$fmcDomain/api/chats/$chatId/messages/mark-read';
-    return await postRequest(url, {'messageIds': messageIds});
-  }
+  // Fetch all users
+  static Future<Map<String, dynamic>> fetchAllUsers() async {
+    try {
+      final url = '$domain${endpoints['fetchAllUsers']}';
+      final response = await getRequest(url);
 
-  // Update user online status
-  static Future<Map<String, dynamic>> updateOnlineStatus(bool isOnline) async {
-    final url = '$fmcDomain/api/users/status';
-    return await postRequest(url, {
-      'isOnline': isOnline,
-      'lastSeen': DateTime.now().toIso8601String(),
-    });
+      if (response['success'] == true) {
+        return response['data'] ?? {};
+      } else {
+        throw Exception(response['error'] ?? 'Failed to fetch users');
+      }
+    } catch (e) {
+      print('Error fetching all users: $e');
+      throw Exception('Failed to fetch users: $e');
+    }
   }
 }

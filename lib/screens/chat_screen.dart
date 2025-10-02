@@ -1,238 +1,18 @@
+import 'package:ballys_reservation_app/components/notification_banner.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
-import 'package:ballys_reservation_app/providers/chat_api.dart';
+import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/screens/chatDetail_screen.dart';
-import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
-
-// Chat data model updated for new API structure
-class ChatContact {
-  final String id;
-  final String chatUuid;
-  final String name;
-  final String firstName;
-  final String lastMessage;
-  final String time;
-  final bool isOnline;
-  final Color avatarColor;
-  final String initials;
-  final int unreadCount;
-  final DateTime? lastMessageTime;
-  final String? lastMessageSender;
-  final List<String> participants;
-  final DateTime createdAt;
-
-  ChatContact({
-    required this.id,
-    required this.chatUuid,
-    required this.name,
-    this.firstName = '',
-    required this.lastMessage,
-    required this.time,
-    this.isOnline = false,
-    required this.avatarColor,
-    required this.initials,
-    this.unreadCount = 0,
-    this.lastMessageTime,
-    this.lastMessageSender,
-    required this.participants,
-    required this.createdAt,
-  });
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'chatUuid': chatUuid,
-    'name': name,
-    'firstName': firstName,
-    'lastMessage': lastMessage,
-    'time': time,
-    'isOnline': isOnline,
-    'avatarColor': avatarColor.value,
-    'initials': initials,
-    'unreadCount': unreadCount,
-    'lastMessageTime': lastMessageTime?.millisecondsSinceEpoch,
-    'lastMessageSender': lastMessageSender,
-    'participants': participants,
-    'createdAt': createdAt.millisecondsSinceEpoch,
-  };
-
-  static ChatContact fromJson(Map<String, dynamic> json) => ChatContact(
-    id: json['id'],
-    chatUuid: json['chatUuid'],
-    name: json['name'],
-    firstName: json['firstName'] ?? '',
-    lastMessage: json['lastMessage'],
-    time: json['time'],
-    isOnline: json['isOnline'] ?? false,
-    avatarColor: Color(json['avatarColor']),
-    initials: json['initials'],
-    unreadCount: json['unreadCount'] ?? 0,
-    lastMessageTime: json['lastMessageTime'] != null
-        ? DateTime.fromMillisecondsSinceEpoch(json['lastMessageTime'])
-        : null,
-    lastMessageSender: json['lastMessageSender'],
-    participants: List<String>.from(json['participants'] ?? []),
-    createdAt: DateTime.fromMillisecondsSinceEpoch(json['createdAt']),
-  );
-
-  // Factory constructor to create ChatContact from chat API response
-  static ChatContact fromChatApiJson(
-    Map<String, dynamic> json,
-    String currentUserName, {
-    Map<String, dynamic>? participantDetails,
-  }) {
-    final List<String> participants = List<String>.from(
-      json['participants'] ?? [],
-    );
-
-    // Get the other participant's name (not the current user)
-    final String otherParticipant = participants.firstWhere(
-      (participant) => participant != currentUserName,
-      orElse: () => participants.isNotEmpty ? participants[0] : 'Unknown',
-    );
-
-    final String name = otherParticipant;
-
-    // Extract firstName from participantDetails if available
-    String firstName = '';
-    if (participantDetails != null &&
-        participantDetails.containsKey(otherParticipant)) {
-      firstName = participantDetails[otherParticipant]['firstName'] ?? '';
-    }
-
-    // If firstName is still empty, try to extract it from the name
-    if (firstName.isEmpty) {
-      // For names like "Mr Prathap", extract "Prathap"
-      final nameParts = name.trim().split(' ');
-      if (nameParts.length > 1) {
-        firstName = nameParts.last; // Take the last part as firstName
-      } else {
-        firstName = name; // Use the full name if no spaces
-      }
-    }
-
-    final String initials = _generateInitials(name);
-    final Color avatarColor = _generateColorFromName(name);
-
-    // Parse lastMessageTime to generate relative time
-    final DateTime? lastMessageTime = json['lastMessageTime'] != null
-        ? DateTime.parse(json['lastMessageTime'])
-        : null;
-    final String timeAgo = _getTimeAgo(lastMessageTime);
-
-    final String lastMessage = json['lastMessage'] ?? 'No messages yet';
-
-    return ChatContact(
-      id: json['id'] ?? '',
-      chatUuid: json['chatUuid'] ?? json['id'] ?? '',
-      name: name,
-      firstName: firstName, // Now properly set
-      lastMessage: lastMessage,
-      time: timeAgo,
-      isOnline: participantDetails?[otherParticipant]?['isOnline'] ?? false,
-      avatarColor: avatarColor,
-      initials: initials,
-      unreadCount: json['unreadCount'] ?? 0,
-      lastMessageTime: lastMessageTime,
-      lastMessageSender: json['lastMessageSender'],
-      participants: participants,
-      createdAt: DateTime.parse(json['createdAt']),
-    );
-  }
-
-  static String _generateInitials(String name) {
-    final parts = name.trim().split(' ');
-    if (parts.isEmpty) return 'U';
-
-    if (parts.length == 1) {
-      return parts[0].isNotEmpty ? parts[0][0].toUpperCase() : 'U';
-    } else {
-      final first = parts[0].isNotEmpty ? parts[0][0] : '';
-      final last = parts[parts.length - 1].isNotEmpty
-          ? parts[parts.length - 1][0]
-          : '';
-      return (first + last).toUpperCase();
-    }
-  }
-
-  static Color _generateColorFromName(String name) {
-    final colors = [
-      Colors.blue,
-      Colors.green,
-      Colors.red,
-      Colors.purple,
-      Colors.orange,
-      Colors.teal,
-      Colors.pink,
-      Colors.indigo,
-      Colors.cyan,
-      Colors.amber,
-    ];
-
-    final int hash = name.hashCode;
-    return colors[hash.abs() % colors.length];
-  }
-
-  static String _getTimeAgo(DateTime? dateTime) {
-    if (dateTime == null) return 'Unknown';
-
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inMinutes < 1) {
-      return 'now';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays}d ago';
-    } else {
-      return '${(difference.inDays / 7).floor()}w ago';
-    }
-  }
-}
-
-class ChatMessage {
-  final String id;
-  final String text;
-  final bool isMe;
-  final DateTime timestamp;
-
-  ChatMessage({
-    required this.id,
-    required this.text,
-    required this.isMe,
-    required this.timestamp,
-  });
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'text': text,
-    'isMe': isMe,
-    'timestamp': timestamp.millisecondsSinceEpoch,
-  };
-
-  static ChatMessage fromJson(Map<String, dynamic> json) => ChatMessage(
-    id: json['id'],
-    text: json['text'],
-    isMe: json['isMe'],
-    timestamp: DateTime.fromMillisecondsSinceEpoch(json['timestamp']),
-  );
-}
 
 List<ChatContact> _filteredUsers = [];
 
 class ChatScreen extends StatefulWidget {
   final Map<String, dynamic>? notificationData;
-  const ChatScreen({
-    super.key,
-    this.notificationData,
-  }); // Pass notificationData notificationData});
+  const ChatScreen({super.key, this.notificationData});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -243,13 +23,14 @@ class _ChatScreenState extends State<ChatScreen>
   late TabController _tabController;
   List<ChatContact> _contacts = [];
   List<ChatContact> _filteredContacts = [];
-  List<ChatContact> _allUsers = []; // For new chat modal
+  List<ChatContact> _allUsers = [];
   String _searchQuery = '';
   bool _isLoading = false;
   String? _errorMessage;
   String? _currentUserName;
-  String? _selectedContactId; // For tracking long-pressed contact
+  String? _selectedContactId;
   bool _hasProcessedNotification = false;
+
   @override
   void initState() {
     super.initState();
@@ -266,7 +47,6 @@ class _ChatScreenState extends State<ChatScreen>
   Future<void> _initializeData() async {
     await _getName();
     await _fetchChatsFromApi();
-
     _checkAndOpenNotificationChat();
   }
 
@@ -284,7 +64,6 @@ class _ChatScreenState extends State<ChatScreen>
       if (chatId != null && chatId.isNotEmpty) {
         _hasProcessedNotification = true;
 
-        // Find the contact by chatId or sender name
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _openSpecificChat(chatId, senderName, senderId);
         });
@@ -292,15 +71,12 @@ class _ChatScreenState extends State<ChatScreen>
     }
   }
 
-  // Method to open a specific chat from notification
   void _openSpecificChat(String chatId, String? senderName, String? senderId) {
-    // Try to find the chat by chatUuid first
     ChatContact? targetContact = _contacts.cast<ChatContact?>().firstWhere(
       (contact) => contact?.chatUuid == chatId,
       orElse: () => null,
     );
 
-    // If not found by chatUuid, try by sender name or ID
     if (targetContact == null && senderName != null) {
       targetContact = _contacts.cast<ChatContact?>().firstWhere(
         (contact) =>
@@ -317,7 +93,6 @@ class _ChatScreenState extends State<ChatScreen>
     if (targetContact != null) {
       print('Found contact: ${targetContact.name}, navigating to chat');
 
-      // Navigate to the individual chat screen
       Navigator.of(context)
           .push(
             MaterialPageRoute(
@@ -330,13 +105,11 @@ class _ChatScreenState extends State<ChatScreen>
             ),
           )
           .then((_) {
-            // Refresh chats when returning
             _fetchChatsFromApi();
           });
     } else {
       print('Contact not found for chatId: $chatId, sender: $senderName');
 
-      // Show a message to user
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -349,9 +122,7 @@ class _ChatScreenState extends State<ChatScreen>
         ),
       );
 
-      // Refresh chats in case it's a new chat
       _fetchChatsFromApi().then((_) {
-        // Try again after refresh
         if (_contacts.isNotEmpty) {
           final refreshedContact = _contacts.cast<ChatContact?>().firstWhere(
             (contact) =>
@@ -388,75 +159,6 @@ class _ChatScreenState extends State<ChatScreen>
     }
   }
 
-  // New method to create chat
-  Future<String?> _createChat(String receiverName) async {
-    if (_currentUserName == null) {
-      print('Current user name is null');
-      return null;
-    }
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('Token') ?? '';
-      print('Creating chat with receiver: $receiverName');
-      print('Creating chat with currentUserName: $_currentUserName');
-      final response = await http.post(
-        Uri.parse(
-          'https://ballysnotifications.onimtaitsl.com/api/chats/create',
-        ),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          "participants": [receiverName, _currentUserName],
-        }),
-      );
-
-      print('Create chat response status: ${response.statusCode}');
-      print('Create chat response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        if (responseData['success'] == true && responseData['chatId'] != null) {
-          return responseData['chatId'];
-        }
-      }
-
-      print('Failed to create chat: ${response.statusCode}');
-      return null;
-    } catch (e) {
-      print('Error creating chat: $e');
-      return null;
-    }
-  }
-
-  // New method to delete chat
-  Future<bool> _deleteChat(String chatId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('Token') ?? '';
-
-      final response = await http.delete(
-        Uri.parse(
-          'https://ballysnotifications.onimtaitsl.com/api/chats/$chatId',
-        ),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      print('Delete chat response status: ${response.statusCode}');
-      print('Delete chat response body: ${response.body}');
-
-      return response.statusCode == 200;
-    } catch (e) {
-      print('Error deleting chat: $e');
-      return false;
-    }
-  }
-
   void _showDeleteConfirmation(ChatContact contact) {
     showDialog(
       context: context,
@@ -472,7 +174,7 @@ class _ChatScreenState extends State<ChatScreen>
               onPressed: () {
                 Navigator.of(context).pop();
                 setState(() {
-                  _selectedContactId = null; // Clear selection
+                  _selectedContactId = null;
                 });
               },
             ),
@@ -481,7 +183,6 @@ class _ChatScreenState extends State<ChatScreen>
               onPressed: () async {
                 Navigator.of(context).pop();
 
-                // Show loading
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Row(
@@ -499,14 +200,13 @@ class _ChatScreenState extends State<ChatScreen>
                   ),
                 );
 
-                // Delete chat
-                final success = await _deleteChat(contact.chatUuid);
+                final success = await FirebaseApiService.deleteChat(
+                  contact.chatUuid,
+                );
 
-                // Hide loading
                 ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
                 if (success) {
-                  // Remove from local list
                   setState(() {
                     _contacts.removeWhere(
                       (c) => c.chatUuid == contact.chatUuid,
@@ -517,10 +217,8 @@ class _ChatScreenState extends State<ChatScreen>
                     _selectedContactId = null;
                   });
 
-                  // Update cache
                   await _saveChats();
 
-                  // Show success message
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Chat deleted successfully'),
@@ -528,7 +226,6 @@ class _ChatScreenState extends State<ChatScreen>
                     ),
                   );
                 } else {
-                  // Show error message
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Failed to delete chat'),
@@ -538,7 +235,7 @@ class _ChatScreenState extends State<ChatScreen>
                 }
 
                 setState(() {
-                  _selectedContactId = null; // Clear selection
+                  _selectedContactId = null;
                 });
               },
             ),
@@ -555,14 +252,12 @@ class _ChatScreenState extends State<ChatScreen>
     });
 
     try {
-      // Fetch both chats and users data
-      final chatData = await ChatApi.fetchUserChats();
-      final userData = await ChatApi.fetchAllUsers();
+      final chatData = await FirebaseApiService.fetchUserChats();
+      final userData = await FirebaseApiService.fetchAllUsers();
 
       if (chatData['chats'] != null) {
         final List<dynamic> chats = chatData['chats'];
 
-        // Create a map of user details for quick lookup
         Map<String, dynamic> userDetailsMap = {};
         if (userData['users'] != null) {
           final List<dynamic> users = userData['users'];
@@ -586,7 +281,6 @@ class _ChatScreenState extends State<ChatScreen>
           _isLoading = false;
         });
 
-        // Save chats to local storage
         await _saveChats();
       } else {
         setState(() {
@@ -600,29 +294,27 @@ class _ChatScreenState extends State<ChatScreen>
         _isLoading = false;
       });
 
-      // Fallback to cached data if available
       await _loadChats();
     }
   }
 
   Future<void> _fetchAllUsersForNewChat() async {
     try {
-      final data = await ChatApi.fetchAllUsers();
+      final data = await FirebaseApiService.fetchAllUsers();
 
       if (data['users'] != null) {
         final List<dynamic> users = data['users'];
-        // Convert users to ChatContact format for display in modal
         final List<ChatContact> userContacts = users.map((user) {
           final String name = user['name'] ?? user['firstName'] ?? 'Unknown';
           final String firstName = user['firstName'] ?? name;
-          final String initials = ChatContact._generateInitials(name);
-          final Color avatarColor = ChatContact._generateColorFromName(name);
+          final String initials = ChatContact.generateInitials(name);
+          final Color avatarColor = ChatContact.generateColorFromName(name);
 
           return ChatContact(
             id: user['id'] ?? user['userUuid'] ?? '',
-            chatUuid: '', // Empty for new chats
+            chatUuid: '',
             name: name,
-            firstName: firstName, // Properly set from API response
+            firstName: firstName,
             lastMessage: user['isOnline'] == true ? 'Online' : 'Offline',
             time: '',
             isOnline: user['isOnline'] ?? false,
@@ -693,16 +385,16 @@ class _ChatScreenState extends State<ChatScreen>
 
   List<ChatContact> _getFilteredContactsForTab(int tabIndex) {
     switch (tabIndex) {
-      case 0: // All
+      case 0:
         return _filteredContacts;
-      case 1: // Unread
+      case 1:
         return _filteredContacts.where((c) => c.unreadCount > 0).toList();
-      case 2: // Groups
+      case 2:
         return _filteredContacts
             .where((c) => c.participants.length > 2)
             .toList();
-      case 3: // Favorites
-        return []; // No favorites in this example
+      case 3:
+        return [];
       default:
         return _filteredContacts;
     }
@@ -753,17 +445,14 @@ class _ChatScreenState extends State<ChatScreen>
       child: InkWell(
         onTap: () async {
           if (isSelected) {
-            // If selected, clear selection
             setState(() {
               _selectedContactId = null;
             });
             return;
           }
 
-          // Create chat before navigating to IndividualChatScreen
-          final chatId = await _createChat(contact.name);
+          final chatId = await FirebaseApiService.createChat(contact.name);
 
-          // Create a new contact with the chatId for the IndividualChatScreen
           final contactWithChatId = ChatContact(
             id: contact.id,
             chatUuid: chatId ?? contact.chatUuid,
@@ -795,7 +484,6 @@ class _ChatScreenState extends State<ChatScreen>
                 ),
               )
               .then((_) {
-                // Refresh when returning
                 _fetchChatsFromApi();
               });
         },
@@ -803,9 +491,6 @@ class _ChatScreenState extends State<ChatScreen>
           setState(() {
             _selectedContactId = contact.id;
           });
-
-          // Provide haptic feedback
-          // HapticFeedback.lightImpact(); // Uncomment if you want haptic feedback
         },
         child: ListTile(
           leading: Stack(
@@ -993,7 +678,6 @@ class _ChatScreenState extends State<ChatScreen>
       onRefresh: _fetchChatsFromApi,
       child: GestureDetector(
         onTap: () {
-          // Clear selection when tapping outside
           if (_selectedContactId != null) {
             setState(() {
               _selectedContactId = null;
@@ -1033,7 +717,6 @@ class _ChatScreenState extends State<ChatScreen>
               ),
             ],
           ),
-
           backgroundColor: _selectedContactId != null
               ? Colors.red
               : Colors.green,
@@ -1061,7 +744,6 @@ class _ChatScreenState extends State<ChatScreen>
                   ),
                 ]
               : [
-                  // IconButton(icon: const Icon(Icons.search), onPressed: () {}),
                   IconButton(
                     icon: const Icon(Icons.menu),
                     onPressed: () {
@@ -1084,7 +766,6 @@ class _ChatScreenState extends State<ChatScreen>
                     color: Colors.white,
                     child: Column(
                       children: [
-                        // Search bar
                         Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: TextField(
@@ -1104,7 +785,6 @@ class _ChatScreenState extends State<ChatScreen>
                             ),
                           ),
                         ),
-                        // Tabs
                         TabBar(
                           controller: _tabController,
                           indicatorColor: Colors.green,
@@ -1123,18 +803,20 @@ class _ChatScreenState extends State<ChatScreen>
                 )
               : null,
         ),
-        body: Stack(
+        body: Column(
           children: [
-            TabBarView(
-              controller: _tabController,
-              children: [
-                _buildChatList(0),
-                _buildChatList(1),
-                _buildChatList(2),
-                _buildChatList(3),
-              ],
+            const NotificationBanner(),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildChatList(0),
+                  _buildChatList(1),
+                  _buildChatList(2),
+                  _buildChatList(3),
+                ],
+              ),
             ),
-            //  const Watermark(),
             if (_errorMessage != null && _contacts.isNotEmpty)
               Positioned(
                 top: 0,
@@ -1153,11 +835,9 @@ class _ChatScreenState extends State<ChatScreen>
           ],
         ),
         floatingActionButton: _selectedContactId == null
-            ? // Replace the FloatingActionButton's onPressed method with this:
-              FloatingActionButton(
+            ? FloatingActionButton(
                 backgroundColor: Colors.green,
                 onPressed: () async {
-                  // Fetch all users when opening the modal
                   await _fetchAllUsersForNewChat();
 
                   showModalBottomSheet(
@@ -1238,9 +918,6 @@ class _ChatScreenState extends State<ChatScreen>
                                             itemBuilder: (context, index) {
                                               final contact =
                                                   _filteredUsers[index];
-                                              print(
-                                                'Contact ID: ${contact.name}',
-                                              );
                                               return ListTile(
                                                 leading: CircleAvatar(
                                                   backgroundColor:
@@ -1259,7 +936,6 @@ class _ChatScreenState extends State<ChatScreen>
                                                       : "Offline",
                                                 ),
                                                 onTap: () async {
-                                                  // Store the navigator for safe navigation
                                                   final navigator =
                                                       Navigator.of(context);
                                                   final scaffoldMessenger =
@@ -1267,10 +943,8 @@ class _ChatScreenState extends State<ChatScreen>
                                                         context,
                                                       );
 
-                                                  // Close the bottom sheet first
                                                   navigator.pop();
 
-                                                  // Show inline loading message instead of modal
                                                   scaffoldMessenger.showSnackBar(
                                                     const SnackBar(
                                                       content: Row(
@@ -1304,25 +978,20 @@ class _ChatScreenState extends State<ChatScreen>
                                                   );
 
                                                   try {
-                                                    // Create chat
                                                     final chatId =
-                                                        await _createChat(
+                                                        await FirebaseApiService.createChat(
                                                           contact.name,
                                                         );
 
-                                                    // Remove loading message
                                                     scaffoldMessenger
                                                         .hideCurrentSnackBar();
 
-                                                    // Create contact with chatId
                                                     final contactWithChatId =
                                                         ChatContact(
                                                           id: contact.id,
                                                           chatUuid:
                                                               chatId ??
-                                                              contact
-                                                                  .chatUuid ??
-                                                              '',
+                                                              contact.chatUuid,
                                                           name: contact.name,
                                                           firstName:
                                                               contact
@@ -1352,7 +1021,6 @@ class _ChatScreenState extends State<ChatScreen>
                                                               contact.createdAt,
                                                         );
 
-                                                    // Navigate to IndividualChatScreen
                                                     await navigator.push(
                                                       MaterialPageRoute(
                                                         builder: (context) =>
@@ -1374,10 +1042,8 @@ class _ChatScreenState extends State<ChatScreen>
                                                       ),
                                                     );
 
-                                                    // Refresh chats after returning from IndividualChatScreen
                                                     _fetchChatsFromApi();
                                                   } catch (e) {
-                                                    // Remove loading message and show error
                                                     scaffoldMessenger
                                                         .hideCurrentSnackBar();
 
@@ -1385,7 +1051,6 @@ class _ChatScreenState extends State<ChatScreen>
                                                       'Error in contact tap: $e',
                                                     );
 
-                                                    // Show error message
                                                     scaffoldMessenger.showSnackBar(
                                                       SnackBar(
                                                         content: Text(
@@ -1396,7 +1061,6 @@ class _ChatScreenState extends State<ChatScreen>
                                                       ),
                                                     );
 
-                                                    // Navigate anyway with existing contact data
                                                     final contactWithChatId =
                                                         ChatContact(
                                                           id: contact.id,
@@ -1461,7 +1125,7 @@ class _ChatScreenState extends State<ChatScreen>
                 },
                 child: const Icon(Icons.chat, color: Colors.white),
               )
-            : null, // Hide FAB when contact is selected
+            : null,
       ),
     );
   }

@@ -64,4 +64,6 @@ class StorageUtil {
   return prefs.containsKey('userName') || prefs.containsKey('userLevel');
 }
 
+  Future getToken() async {}
+
 }

@@ -35,6 +35,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
 
   List<ChatMessage> _messages = [];
   String? _currentUserName;
+  String? _currentUsersaved;
   String? _selectedMessageId;
   final ImagePicker _imagePicker = ImagePicker();
   bool _isLoadingMessages = false;
@@ -49,6 +50,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     _getCurrentUserName();
     _loadMessagesFromApi();
     _startMessagePolling();
+    _getCurrentUserNameonlyusemsgsend();
   }
 
   Future<void> _getCurrentUserName() async {
@@ -57,6 +59,31 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
       setState(() {
         _currentUserName = userName;
       });
+    } catch (e) {
+      print('Error getting current user name: $e');
+    }
+  }
+
+  Future<void> _getCurrentUserNameonlyusemsgsend() async {
+    try {
+      String? userName = await StorageUtil.getUserName();
+
+      if (userName != null) {
+        // Clean unwanted prefixes (Mr, Mr., ., etc.)
+        userName = userName
+            .replaceAll(
+              RegExp(
+                r'^(Mr\.?|Ms\.?|Mrs\.?|Dr\.?|Prof\.?|M\.?)\s*',
+                caseSensitive: false,
+              ),
+              '',
+            )
+            .trim();
+
+        setState(() {
+          _currentUsersaved = userName;
+        });
+      }
     } catch (e) {
       print('Error getting current user name: $e');
     }
@@ -224,7 +251,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           'Authorization': 'Bearer $token',
         },
         body: jsonEncode({
-          "senderFirstName": "Anushka",
+          "senderFirstName": _currentUsersaved,
           "recipientFirstName": widget.contact.firstName,
           "message": messageText,
           "title": "New Message from $_currentUserName",

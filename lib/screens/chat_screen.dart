@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/providers/chat_api.dart';
 import 'package:ballys_reservation_app/screens/chatDetail_screen.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -227,7 +228,11 @@ class ChatMessage {
 List<ChatContact> _filteredUsers = [];
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+  final Map<String, dynamic>? notificationData;
+  const ChatScreen({
+    super.key,
+    this.notificationData,
+  }); // Pass notificationData notificationData});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -244,7 +249,7 @@ class _ChatScreenState extends State<ChatScreen>
   String? _errorMessage;
   String? _currentUserName;
   String? _selectedContactId; // For tracking long-pressed contact
-
+  bool _hasProcessedNotification = false;
   @override
   void initState() {
     super.initState();
@@ -259,13 +264,122 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   Future<void> _initializeData() async {
-    await _getCurrentUserName();
+    await _getName();
     await _fetchChatsFromApi();
+
+    _checkAndOpenNotificationChat();
   }
 
-  Future<void> _getCurrentUserName() async {
+  void _checkAndOpenNotificationChat() {
+    if (_hasProcessedNotification) return;
+
+    if (widget.notificationData != null &&
+        widget.notificationData!['openChat'] == true) {
+      final chatId = widget.notificationData!['chatId'] as String?;
+      final senderName = widget.notificationData!['senderName'] as String?;
+      final senderId = widget.notificationData!['senderId'] as String?;
+
+      print('Processing notification: chatId=$chatId, sender=$senderName');
+
+      if (chatId != null && chatId.isNotEmpty) {
+        _hasProcessedNotification = true;
+
+        // Find the contact by chatId or sender name
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _openSpecificChat(chatId, senderName, senderId);
+        });
+      }
+    }
+  }
+
+  // Method to open a specific chat from notification
+  void _openSpecificChat(String chatId, String? senderName, String? senderId) {
+    // Try to find the chat by chatUuid first
+    ChatContact? targetContact = _contacts.cast<ChatContact?>().firstWhere(
+      (contact) => contact?.chatUuid == chatId,
+      orElse: () => null,
+    );
+
+    // If not found by chatUuid, try by sender name or ID
+    if (targetContact == null && senderName != null) {
+      targetContact = _contacts.cast<ChatContact?>().firstWhere(
+        (contact) =>
+            contact?.name.toLowerCase().contains(senderName.toLowerCase()) ==
+                true ||
+            contact?.firstName.toLowerCase().contains(
+                  senderName.toLowerCase(),
+                ) ==
+                true,
+        orElse: () => null,
+      );
+    }
+
+    if (targetContact != null) {
+      print('Found contact: ${targetContact.name}, navigating to chat');
+
+      // Navigate to the individual chat screen
+      Navigator.of(context)
+          .push(
+            MaterialPageRoute(
+              builder: (context) => IndividualChatScreen(
+                contact: targetContact!,
+                onMessageSent: (String lastMessage) {
+                  _updateContactLastMessage(targetContact!.id, lastMessage);
+                },
+              ),
+            ),
+          )
+          .then((_) {
+            // Refresh chats when returning
+            _fetchChatsFromApi();
+          });
+    } else {
+      print('Contact not found for chatId: $chatId, sender: $senderName');
+
+      // Show a message to user
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            senderName != null
+                ? 'Chat with $senderName not found. Refreshing...'
+                : 'Chat not found. Refreshing...',
+          ),
+          duration: const Duration(seconds: 2),
+          backgroundColor: Colors.orange,
+        ),
+      );
+
+      // Refresh chats in case it's a new chat
+      _fetchChatsFromApi().then((_) {
+        // Try again after refresh
+        if (_contacts.isNotEmpty) {
+          final refreshedContact = _contacts.cast<ChatContact?>().firstWhere(
+            (contact) =>
+                contact?.chatUuid == chatId ||
+                (senderName != null &&
+                    contact?.name.toLowerCase().contains(
+                          senderName.toLowerCase(),
+                        ) ==
+                        true),
+            orElse: () => null,
+          );
+
+          if (refreshedContact != null) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) =>
+                    IndividualChatScreen(contact: refreshedContact!),
+              ),
+            );
+          }
+        }
+      });
+    }
+  }
+
+  Future<void> _getName() async {
     try {
-      final userName = await StorageUtil.getUserName();
+      final userName = await FirebaseApiService.getName();
       setState(() {
         _currentUserName = userName;
       });
@@ -284,7 +398,8 @@ class _ChatScreenState extends State<ChatScreen>
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('Token') ?? '';
-
+      print('Creating chat with receiver: $receiverName');
+      print('Creating chat with currentUserName: $_currentUserName');
       final response = await http.post(
         Uri.parse(
           'https://ballysnotifications.onimtaitsl.com/api/chats/create',
@@ -593,6 +708,38 @@ class _ChatScreenState extends State<ChatScreen>
     }
   }
 
+  void _updateContactLastMessage(String contactId, String lastMessage) {
+    setState(() {
+      final index = _contacts.indexWhere((c) => c.id == contactId);
+      if (index != -1) {
+        _contacts[index] = ChatContact(
+          id: _contacts[index].id,
+          chatUuid: _contacts[index].chatUuid,
+          name: _contacts[index].name,
+          firstName: _contacts[index].firstName,
+          lastMessage: lastMessage,
+          time: 'now',
+          isOnline: _contacts[index].isOnline,
+          avatarColor: _contacts[index].avatarColor,
+          initials: _contacts[index].initials,
+          unreadCount: _contacts[index].unreadCount,
+          lastMessageTime: DateTime.now(),
+          lastMessageSender: _currentUserName,
+          participants: _contacts[index].participants,
+          createdAt: _contacts[index].createdAt,
+        );
+
+        final filteredIndex = _filteredContacts.indexWhere(
+          (c) => c.id == contactId,
+        );
+        if (filteredIndex != -1) {
+          _filteredContacts[filteredIndex] = _contacts[index];
+        }
+      }
+    });
+    _saveChats();
+  }
+
   Widget _buildContactCard(ChatContact contact) {
     final bool hasLastMessage =
         contact.lastMessage.isNotEmpty &&
@@ -614,9 +761,7 @@ class _ChatScreenState extends State<ChatScreen>
           }
 
           // Create chat before navigating to IndividualChatScreen
-          final chatId = await _createChat(
-            contact.firstName.isNotEmpty ? contact.firstName : contact.name,
-          );
+          final chatId = await _createChat(contact.name);
 
           // Create a new contact with the chatId for the IndividualChatScreen
           final contactWithChatId = ChatContact(
@@ -638,12 +783,21 @@ class _ChatScreenState extends State<ChatScreen>
             createdAt: contact.createdAt,
           );
 
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) =>
-                  IndividualChatScreen(contact: contactWithChatId),
-            ),
-          );
+          Navigator.of(context)
+              .push(
+                MaterialPageRoute(
+                  builder: (context) => IndividualChatScreen(
+                    contact: contactWithChatId,
+                    onMessageSent: (String lastMessage) {
+                      _updateContactLastMessage(contact.id, lastMessage);
+                    },
+                  ),
+                ),
+              )
+              .then((_) {
+                // Refresh when returning
+                _fetchChatsFromApi();
+              });
         },
         onLongPress: () {
           setState(() {
@@ -980,7 +1134,7 @@ class _ChatScreenState extends State<ChatScreen>
                 _buildChatList(3),
               ],
             ),
-          //  const Watermark(),
+            //  const Watermark(),
             if (_errorMessage != null && _contacts.isNotEmpty)
               Positioned(
                 top: 0,
@@ -1084,6 +1238,9 @@ class _ChatScreenState extends State<ChatScreen>
                                             itemBuilder: (context, index) {
                                               final contact =
                                                   _filteredUsers[index];
+                                              print(
+                                                'Contact ID: ${contact.name}',
+                                              );
                                               return ListTile(
                                                 leading: CircleAvatar(
                                                   backgroundColor:
@@ -1150,12 +1307,7 @@ class _ChatScreenState extends State<ChatScreen>
                                                     // Create chat
                                                     final chatId =
                                                         await _createChat(
-                                                          contact
-                                                                  .firstName
-                                                                  .isNotEmpty
-                                                              ? contact
-                                                                    .firstName
-                                                              : contact.name,
+                                                          contact.name,
                                                         );
 
                                                     // Remove loading message
@@ -1207,6 +1359,17 @@ class _ChatScreenState extends State<ChatScreen>
                                                             IndividualChatScreen(
                                                               contact:
                                                                   contactWithChatId,
+                                                              onMessageSent:
+                                                                  (
+                                                                    String
+                                                                    lastMessage,
+                                                                  ) {
+                                                                    _updateContactLastMessage(
+                                                                      contact
+                                                                          .id,
+                                                                      lastMessage,
+                                                                    );
+                                                                  },
                                                             ),
                                                       ),
                                                     );

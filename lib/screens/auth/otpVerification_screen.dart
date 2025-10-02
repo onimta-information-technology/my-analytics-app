@@ -672,7 +672,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       var result = await FirebaseApiService.syncFmcToken(name, token);
 
       if (result['success'] == true) {
-        print('✅ FCM Token sent to server successfully');
+        print('✅ FCM Token sent to server successfully',);
       } else {
         print('❌ Failed to send FCM Token: ${result['error']}');
       }

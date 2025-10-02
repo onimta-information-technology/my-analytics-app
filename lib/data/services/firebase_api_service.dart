@@ -111,12 +111,27 @@ class FirebaseApiService {
     String fcmToken,
   ) async {
     final url = '$fmcDomain${endpoints['InsertChatFMCToken']}';
-    return await postRequest(url, {
+    final response = await postRequest(url, {
       'id': name,
       'name': name,
       'email': 'email',
       'fcmToken': fcmToken,
     });
+    print('syncFmcToken response: $response');
+
+    // Save user name to SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    final user = response['data']?['user'];
+    if (user != null && user['name'] != null) {
+      await prefs.setString('name', user['name']);
+    }
+
+    return response;
+  }
+
+  static Future<String?> getName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('name');
   }
 
   // Send message with notification
@@ -164,14 +179,6 @@ class FirebaseApiService {
     final url =
         '$fmcDomain${endpoints['deleteMessage']}/$chatId/messages/$messageId/soft-delete';
     return await deleteRequest(url, {'userId': 'Mr Anushka'});
-  }
-
-  // Create a new chat
-  static Future<Map<String, dynamic>> createChat(
-    List<String> participants,
-  ) async {
-    final url = '$fmcDomain/api/chats/create';
-    return await postRequest(url, {'participants': participants});
   }
 
   // Delete/leave a chat

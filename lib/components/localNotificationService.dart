@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:ballys_reservation_app/main.dart' show navigatorKey;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
@@ -50,11 +51,32 @@ class NotificationService {
 
   // Show notification when app is in foreground
   Future<void> showForegroundNotification(RemoteMessage message) async {
-    // Create payload with navigation data
+    // Parse the Details field to extract chat information
+    String? detailsJson = message.data['Details'];
+    Map<String, dynamic>? chatDetails;
+
+    if (detailsJson != null) {
+      try {
+        chatDetails = json.decode(detailsJson);
+      } catch (e) {
+        print('Error parsing Details JSON: $e');
+      }
+    }
+
+    // Debug: Print the parsed details
+    print('Parsed chat details: $chatDetails');
+
+    // Create payload with navigation data including chat details
     Map<String, String> payload = {
-      'type': message.data['type']?.toString() ?? 'chat',
-      'screen': message.data['screen']?.toString() ?? 'chat',
+      'type': message.data['msg_type']?.toString() ?? 'chat',
+      'screen': 'chat',
+      'chatId': chatDetails?['chatId']?.toString() ?? '',
+      'senderId': chatDetails?['senderId']?.toString() ?? '',
+      'senderName': chatDetails?['senderName']?.toString() ?? '',
+      'hostName': chatDetails?['hostName']?.toString() ?? '',
     };
+
+    print('Notification payload: $payload');
 
     // Get the icon from Firebase notification or use default
     String? largeIcon = message.notification?.android?.imageUrl;
@@ -64,13 +86,13 @@ class NotificationService {
       content: NotificationContent(
         id: message.hashCode,
         channelKey: 'high_importance_channel',
-        title: message.notification?.title ?? 'New Notification',
+        title: message.notification?.title ?? 'New Message',
         body: message.notification?.body ?? '',
         notificationLayout: NotificationLayout.Default,
         payload: payload,
-        largeIcon: largeIcon, // Use same icon as Firebase notification
-        bigPicture: bigPicture, // Use same image if available
-        icon: 'resource://mipmap/launcher_icon', // Your app icon
+        largeIcon: largeIcon,
+        bigPicture: bigPicture,
+        icon: 'resource://mipmap/launcher_icon',
       ),
     );
 
@@ -84,20 +106,33 @@ class NotificationService {
   ) async {
     print('Notification action received: ${receivedAction.payload}');
 
-    // Navigate to chat screen
+    // Navigate to specific chat
     if (receivedAction.payload != null && receivedAction.payload!.isNotEmpty) {
       final payload = receivedAction.payload!;
 
-      // Check if payload indicates chat notification
-      if (payload['type'] == 'chat' ||
+      // Check if it's a chat notification
+      if (payload['type'] == '11' ||
           payload['screen'] == 'chat' ||
-          payload.containsKey('chat')) {
+          payload.containsKey('chatId')) {
+        final chatId = payload['chatId'] ?? '';
+        final senderName = payload['senderName'] ?? '';
+
         // Use the global navigator key to navigate
         final context = navigatorKey.currentContext;
         if (context != null && context.mounted) {
           // Small delay to ensure app is ready
           await Future.delayed(Duration(milliseconds: 500));
-          context.go('/menu/chats');
+
+          // Navigate to chat screen with specific chat data
+          context.go(
+            '/menu/chats',
+            extra: {
+              'chatId': chatId,
+              'senderName': senderName,
+              'openChat':
+                  true, // Flag to indicate we should open this specific chat
+            },
+          );
         }
       }
     }
@@ -127,14 +162,33 @@ class NotificationService {
     print('Notification dismissed: ${receivedAction.id}');
   }
 
-  // Handle notification tap
-  void handleNotificationTap(String? payload) {
-    print('Handling notification tap with payload: $payload');
+  // Handle notification tap with chat data
+  void handleNotificationTap(RemoteMessage message) {
+    print('Handling notification tap');
 
-    // Navigate to chat screen
+    // Parse chat details
+    String? detailsJson = message.data['Details'];
+    Map<String, dynamic>? chatDetails;
+
+    if (detailsJson != null) {
+      try {
+        chatDetails = json.decode(detailsJson);
+      } catch (e) {
+        print('Error parsing Details JSON: $e');
+      }
+    }
+
+    // Navigate to chat screen with specific chat
     final context = navigatorKey.currentContext;
     if (context != null && context.mounted) {
-      context.go('/menu/chats');
+      context.go(
+        '/menu/chats',
+        extra: {
+          'chatId': chatDetails?['chatId'] ?? '',
+          'senderName': chatDetails?['senderName'] ?? '',
+          'openChat': true,
+        },
+      );
     }
   }
 

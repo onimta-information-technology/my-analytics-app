@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:ballys_reservation_app/screens/chat_screen.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +22,7 @@ class ChatMessage {
   final String? filePath;
   final String? fileType; // 'image', 'document', etc.
   final String? fileName;
+  final bool? isRead;
 
   ChatMessage({
     required this.id,
@@ -31,6 +34,7 @@ class ChatMessage {
     this.filePath,
     this.fileType,
     this.fileName,
+    this.isRead,
   });
 
   ChatMessage copyWith({
@@ -43,6 +47,7 @@ class ChatMessage {
     String? filePath,
     String? fileType,
     String? fileName,
+    bool? isRead,
   }) {
     return ChatMessage(
       id: id ?? this.id,
@@ -54,6 +59,7 @@ class ChatMessage {
       filePath: filePath ?? this.filePath,
       fileType: fileType ?? this.fileType,
       fileName: fileName ?? this.fileName,
+      isRead: isRead ?? this.isRead,
     );
   }
 
@@ -67,6 +73,7 @@ class ChatMessage {
     'filePath': filePath,
     'fileType': fileType,
     'fileName': fileName,
+    'isRead': isRead,
   };
 
   static ChatMessage fromJson(Map<String, dynamic> json) => ChatMessage(
@@ -79,19 +86,44 @@ class ChatMessage {
     filePath: json['filePath'],
     fileType: json['fileType'],
     fileName: json['fileName'],
+    isRead: json['isRead'],
   );
+
+  // Create ChatMessage from API response
+  static ChatMessage fromApiResponse(
+    Map<String, dynamic> json,
+    String currentUserName,
+  ) {
+    final senderName = json['senderName'] ?? json['senderId'] ?? '';
+    final isMe = senderName == currentUserName;
+
+    return ChatMessage(
+      id: json['id'] ?? json['messageUuid'],
+      text: json['text'] ?? '',
+      isMe: isMe,
+      timestamp: DateTime.parse(json['timestamp']),
+      apiMessageId: json['messageUuid'],
+      apiChatId: json['chatUuid'],
+      isRead: json['read'] == 1,
+    );
+  }
 }
 
 class IndividualChatScreen extends StatefulWidget {
   final ChatContact contact;
-
-  const IndividualChatScreen({super.key, required this.contact});
+  final Function(String)? onMessageSent;
+  const IndividualChatScreen({
+    super.key,
+    required this.contact,
+    this.onMessageSent,
+  });
 
   @override
   State<IndividualChatScreen> createState() => _IndividualChatScreenState();
 }
 
-class _IndividualChatScreenState extends State<IndividualChatScreen> {
+class _IndividualChatScreenState extends State<IndividualChatScreen>
+    with WidgetsBindingObserver {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -99,13 +131,18 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
   String? _currentUserName;
   String? _selectedMessageId;
   final ImagePicker _imagePicker = ImagePicker();
+  bool _isLoadingMessages = false;
 
+  Timer? _messagePollingTimer;
+  static const Duration _pollingInterval = Duration(
+    seconds: 5,
+  ); // Poll every 5 seconds
   @override
   void initState() {
     super.initState();
-    _loadMessages();
-    _loadInitialMessages();
     _getCurrentUserName();
+    _loadMessagesFromApi();
+    _startMessagePolling();
   }
 
   Future<void> _getCurrentUserName() async {
@@ -119,18 +156,97 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
     }
   }
 
-  void _loadInitialMessages() {
-    // Add some initial messages if none exist
-    if (_messages.isEmpty) {
-      _messages = [
-        ChatMessage(
-          id: '1',
-          text: 'Hello! How can I help you today?',
-          isMe: false,
-          timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
-        ),
-      ];
-      _saveMessages();
+  // Fetch messages from API
+  Future<void> _loadMessagesFromApi({bool silent = false}) async {
+    if (_isLoadingMessages && !silent) return;
+
+    if (!silent) {
+      setState(() {
+        _isLoadingMessages = true;
+      });
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('Token') ?? '';
+      final chatId = widget.contact.chatUuid;
+
+      final response = await http
+          .get(
+            Uri.parse(
+              'https://ballysnotifications.onimtaitsl.com/api/chats/$chatId/messages',
+            ),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(Duration(seconds: 10)); // Add timeout
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+
+        if (responseData['success'] == true &&
+            responseData['messages'] != null) {
+          final List<dynamic> messagesJson = responseData['messages'];
+
+          final List<ChatMessage> fetchedMessages = messagesJson.map((json) {
+            return ChatMessage.fromApiResponse(json, _currentUserName ?? '');
+          }).toList();
+
+          // Check if messages changed
+          bool messagesChanged = _messages.length != fetchedMessages.length;
+
+          if (!messagesChanged &&
+              _messages.isNotEmpty &&
+              fetchedMessages.isNotEmpty) {
+            // Check if last message is different
+            messagesChanged =
+                _messages.last.id != fetchedMessages.last.id ||
+                _messages.last.text != fetchedMessages.last.text;
+          }
+
+          setState(() {
+            _messages = fetchedMessages;
+            if (!silent) {
+              _isLoadingMessages = false;
+            }
+          });
+
+          _saveMessages();
+
+          // Update parent with the latest message
+          if (fetchedMessages.isNotEmpty && widget.onMessageSent != null) {
+            final lastMsg = fetchedMessages.last;
+            widget.onMessageSent!(lastMsg.text);
+          }
+          // Only scroll to bottom if messages changed and not silent refresh
+          if (messagesChanged) {
+            _scrollToBottom();
+          }
+        } else {
+          if (!silent) {
+            setState(() {
+              _isLoadingMessages = false;
+            });
+          }
+        }
+      } else {
+        if (!silent) {
+          setState(() {
+            _isLoadingMessages = false;
+          });
+          _loadMessages(); // Fallback to cached
+        }
+      }
+    } catch (e) {
+      print('Error fetching messages from API: $e');
+      if (!silent) {
+        setState(() {
+          _isLoadingMessages = false;
+        });
+        _loadMessages(); // Fallback to cached
+      }
     }
   }
 
@@ -155,7 +271,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
 
       if (response.statusCode != 200) {
         print('Failed to delete message via API: ${response.statusCode}');
-        // Show error to user
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
@@ -168,7 +283,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
       }
     } catch (e) {
       print('Error deleting message via API: $e');
-      // Show error to user
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -222,7 +336,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
           final messageId = responseData['data']['messageId'];
           final chatId = responseData['data']['chatId'];
 
-          // Update the local message with API IDs
           setState(() {
             final messageIndex = _messages.indexWhere(
               (msg) => msg.id == localMessageId,
@@ -240,7 +353,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
         }
       } else {
         print('Failed to send message via API: ${response.statusCode}');
-        // Show error to user
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Failed to send message. Please try again.'),
@@ -250,7 +362,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
       }
     } catch (e) {
       print('Error sending message via API: $e');
-      // Show error to user
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Error sending message. Please check your connection.'),
@@ -301,12 +412,13 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
       _saveMessages();
       _scrollToBottom();
 
-      // Send message via API and update with server IDs
+      if (widget.onMessageSent != null) {
+        widget.onMessageSent!(messageText);
+      }
       await _sendMessageWithApi(messageText, localMessageId);
     }
   }
 
-  // Handler for camera icon
   void _onCameraPressed() async {
     try {
       final XFile? photo = await _imagePicker.pickImage(
@@ -315,7 +427,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
       );
 
       if (photo != null) {
-        // Create a message with the image
         final localMessageId = DateTime.now().millisecondsSinceEpoch.toString();
         final message = ChatMessage(
           id: localMessageId,
@@ -334,8 +445,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
         _saveMessages();
         _scrollToBottom();
 
-        // TODO: Upload image to server and send message
-        // You can implement this based on your API requirements
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Photo captured successfully!'),
@@ -354,7 +463,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
     }
   }
 
-  // Handler for file attachment icon
   void _onAttachFilePressed() async {
     showModalBottomSheet(
       context: context,
@@ -398,7 +506,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
     );
   }
 
-  // Pick image from gallery
   Future<void> _pickImageFromGallery() async {
     try {
       final XFile? image = await _imagePicker.pickImage(
@@ -425,7 +532,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
         _saveMessages();
         _scrollToBottom();
 
-        // TODO: Upload image to server
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Image selected successfully!'),
@@ -444,7 +550,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
     }
   }
 
-  // Pick document
   Future<void> _pickDocument() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -472,7 +577,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
         _saveMessages();
         _scrollToBottom();
 
-        // TODO: Upload document to server
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Document "${file.name}" selected!'),
@@ -525,7 +629,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
               onPressed: () async {
                 Navigator.of(context).pop();
 
-                // Show loading indicator
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Deleting message...'),
@@ -533,28 +636,23 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
                   ),
                 );
 
-                // Find the message to get API IDs
                 final message = _messages.firstWhere(
                   (msg) => msg.id == messageId,
                 );
 
-                // Check if message has API IDs (chatId and messageId from server)
                 if (message.apiChatId != null && message.apiMessageId != null) {
-                  // Call API to delete message
                   await _deleteMessageFromApi(
                     message.apiChatId!,
                     message.apiMessageId!,
                   );
                 }
 
-                // Remove from local storage regardless of API call result
                 setState(() {
                   _messages.removeWhere((message) => message.id == messageId);
                   _selectedMessageId = null;
                 });
                 _saveMessages();
 
-                // Show confirmation
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Message deleted'),
@@ -621,7 +719,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Display image if fileType is image
                       if (message.fileType == 'image' &&
                           message.filePath != null) ...[
                         ClipRRect(
@@ -635,7 +732,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
                         ),
                         const SizedBox(height: 8),
                       ],
-                      // Display document info if fileType is document
                       if (message.fileType == 'document' &&
                           message.fileName != null) ...[
                         Container(
@@ -673,7 +769,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
                         ),
                         const SizedBox(height: 8),
                       ],
-                      // Display text message
                       if (message.text.isNotEmpty &&
                           message.fileType != 'image' &&
                           message.fileType != 'document')
@@ -699,9 +794,13 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
                           ),
                           if (message.isMe) ...[
                             const SizedBox(width: 4),
-                            const Icon(
-                              Icons.done_all,
-                              color: Colors.white70,
+                            Icon(
+                              message.isRead == true
+                                  ? Icons.done_all
+                                  : Icons.done,
+                              color: message.isRead == true
+                                  ? Colors.blue[200]
+                                  : Colors.white70,
                               size: 16,
                             ),
                           ],
@@ -756,9 +855,40 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
 
   @override
   void dispose() {
+    _messagePollingTimer?.cancel(); // Stop polling
+    WidgetsBinding.instance.removeObserver(this);
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    if (state == AppLifecycleState.resumed) {
+      // App came to foreground, refresh messages immediately
+      print('App resumed - refreshing messages');
+      _loadMessagesFromApi();
+      _startMessagePolling();
+    } else if (state == AppLifecycleState.paused) {
+      // App went to background, stop polling
+      print('App paused - stopping message polling');
+      _messagePollingTimer?.cancel();
+    }
+  }
+
+  // Start automatic message polling
+  void _startMessagePolling() {
+    _messagePollingTimer?.cancel(); // Cancel existing timer if any
+
+    _messagePollingTimer = Timer.periodic(_pollingInterval, (timer) {
+      if (mounted) {
+        _loadMessagesFromApi(
+          silent: true,
+        ); // Silent refresh without loading indicator
+      }
+    });
   }
 
   @override
@@ -769,7 +899,10 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
         foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            _messagePollingTimer?.cancel(); // Stop polling when leaving
+            Navigator.pop(context);
+          },
         ),
         title: Row(
           children: [
@@ -828,20 +961,37 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => _loadMessagesFromApi(silent: false),
+            tooltip: 'Refresh messages',
+          ),
           IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
         ],
       ),
       body: Column(
         children: [
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                return _buildMessage(_messages[index]);
-              },
+          if (_isLoadingMessages)
+            const LinearProgressIndicator(
+              backgroundColor: Colors.grey,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
             ),
+          Expanded(
+            child: _messages.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No messages yet',
+                      style: TextStyle(color: Colors.grey, fontSize: 16),
+                    ),
+                  )
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) {
+                      return _buildMessage(_messages[index]);
+                    },
+                  ),
           ),
           Container(
             padding: const EdgeInsets.all(16),
@@ -858,14 +1008,12 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
             ),
             child: Row(
               children: [
-                // Camera icon button
                 IconButton(
                   icon: const Icon(Icons.camera_alt, color: Colors.grey),
                   onPressed: _onCameraPressed,
                   tooltip: 'Camera',
                 ),
                 const SizedBox(width: 4),
-                // Text input field with attach icon inside
                 Expanded(
                   child: TextField(
                     controller: _messageController,
@@ -893,7 +1041,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Send button
                 FloatingActionButton(
                   backgroundColor: Colors.green,
                   mini: true,

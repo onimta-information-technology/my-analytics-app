@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:ballys_reservation_app/components/localNotificationService.dart';
@@ -295,12 +296,41 @@ class _SplashScreenState extends State<SplashScreen> {
     // Check awesome notifications for initial action
     ReceivedAction? receivedAction = await AwesomeNotifications()
         .getInitialNotificationAction(removeFromActionEvents: true);
-
+    // Extract chat details from notification
+    Map<String, dynamic>? notificationChatData;
+    
     if (initialMessage != null) {
       print(
-        'App opened from notification: ${initialMessage.notification?.title}',
+        'App opened from FCM notification: ${initialMessage.notification?.title}',
       );
-      // Handle the notification data if needed
+
+      // Parse Details from FCM notification
+      String? detailsJson = initialMessage.data['Details'];
+      if (detailsJson != null) {
+        try {
+          final chatDetails = json.decode(detailsJson);
+          notificationChatData = {
+            'chatId': chatDetails['chatId'] ?? '',
+            'senderName': chatDetails['senderName'] ?? '',
+            'senderId': chatDetails['senderId'] ?? '',
+            'openChat': true,
+          };
+          print('Extracted chat data: $notificationChatData');
+        } catch (e) {
+          print('Error parsing notification Details: $e');
+        }
+      }
+    } else if (receivedAction != null && receivedAction.payload != null) {
+      print('App opened from Awesome notification: ${receivedAction.payload}');
+
+      // Extract from Awesome Notifications payload
+      notificationChatData = {
+        'chatId': receivedAction.payload!['chatId'] ?? '',
+        'senderName': receivedAction.payload!['senderName'] ?? '',
+        'senderId': receivedAction.payload!['senderId'] ?? '',
+        'openChat': true,
+      };
+      print('Extracted chat data: $notificationChatData');
     }
 
     Future.delayed(const Duration(seconds: 3), () async {
@@ -309,12 +339,11 @@ class _SplashScreenState extends State<SplashScreen> {
         final expiryTime = DateTime.parse(expiry);
         if (DateTime.now().isBefore(expiryTime)) {
           // Check if opened from notification
-          if (initialMessage != null || receivedAction != null) {
-            print('App opened from notification, navigating to chat');
-            // Navigate to chat after ensuring we're logged in
-            context.go('/home');
-            await Future.delayed(Duration(milliseconds: 500));
-            context.go('/menu/chats');
+          if (notificationChatData != null &&
+              notificationChatData['chatId'] != '') {
+            print('Navigating to chat with data: $notificationChatData');
+            // Navigate directly to chat with the notification data
+            context.go('/menu/chats', extra: notificationChatData);
           } else {
             context.go('/home');
           }

@@ -39,13 +39,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ballys_reservation_app/main.dart' show navigatorKey;
+
 class AppNavigation {
   AppNavigation._();
 
   static String initialRoute = '/splash';
 
   static final GoRouter router = GoRouter(
-    navigatorKey: navigatorKey, 
+    navigatorKey: navigatorKey,
     initialLocation: initialRoute,
     routes: <RouteBase>[
       GoRoute(
@@ -68,7 +69,8 @@ class AppNavigation {
       GoRoute(
         path: '/otp-verification',
         pageBuilder: (context, state) {
-          final Map<String, dynamic> extra = state.extra as Map<String, dynamic>;
+          final Map<String, dynamic> extra =
+              state.extra as Map<String, dynamic>;
           return CustomTransitionPage(
             child: OTPVerificationScreen(
               phoneNumber: extra['phoneNumber'] as String,
@@ -78,10 +80,15 @@ class AppNavigation {
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
                   return SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(1.0, 0.0),
-                      end: Offset.zero,
-                    ).animate(CurveTween(curve: Curves.easeInOut).animate(animation)),
+                    position:
+                        Tween<Offset>(
+                          begin: const Offset(1.0, 0.0),
+                          end: Offset.zero,
+                        ).animate(
+                          CurveTween(
+                            curve: Curves.easeInOut,
+                          ).animate(animation),
+                        ),
                     child: FadeTransition(opacity: animation, child: child),
                   );
                 },
@@ -633,23 +640,23 @@ class AppNavigation {
                   //   ),
                   // ),
                   GoRoute(
-  path: 'view-specific-gift-request',
-  builder: (context, state) {
-    // Expecting state.extra to be a Map<String, dynamic>
-    final extra = state.extra as Map<String, dynamic>? ?? {};
-    final gift = extra['gift'] as SpecialGiftRequest?;
-    final isPending = extra['isPending'] as bool? ?? false; // ✅ read flag
+                    path: 'view-specific-gift-request',
+                    builder: (context, state) {
+                      // Expecting state.extra to be a Map<String, dynamic>
+                      final extra = state.extra as Map<String, dynamic>? ?? {};
+                      final gift = extra['gift'] as SpecialGiftRequest?;
+                      final isPending =
+                          extra['isPending'] as bool? ?? false; // ✅ read flag
 
-    return ViewSpecificGiftRequest(
-      giftsRepository: GiftsRepository(
-        ApiService(const FlutterSecureStorage()),
-      ),
-      gift: gift,
-      isPending: isPending, // ✅ pass it to widget
-    );
-  },
-),
-
+                      return ViewSpecificGiftRequest(
+                        giftsRepository: GiftsRepository(
+                          ApiService(const FlutterSecureStorage()),
+                        ),
+                        gift: gift,
+                        isPending: isPending, // ✅ pass it to widget
+                      );
+                    },
+                  ),
                 ],
               ),
             ],
@@ -696,36 +703,62 @@ class AppNavigation {
         ],
       ),
       // GoRoute(path: '/menu', builder: (context, state) => const MenuScreen()),
-GoRoute(
-  path: '/menu', 
-  pageBuilder: (context, state) => CustomTransitionPage(
-    fullscreenDialog: true,
-    key: state.pageKey,
-    child: const MenuScreen(),
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      return FadeTransition(
-        opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
-        child: child,
-      );
-    },
-  ),
-  routes: [
-    GoRoute(
-      path: 'chats',
-      pageBuilder: (context, state) => CustomTransitionPage(
-        fullscreenDialog: false,
-        key: state.pageKey,
-        child: const ChatScreen(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
-            child: child,
-          );
-        },
+      GoRoute(
+        path: '/menu',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          fullscreenDialog: true,
+          key: state.pageKey,
+          child: const MenuScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: CurveTween(
+                curve: Curves.easeInOutCirc,
+              ).animate(animation),
+              child: child,
+            );
+          },
+        ),
+        routes: [
+          // GoRoute(
+          //   path: 'chats',
+          //   pageBuilder: (context, state) => CustomTransitionPage(
+          //     fullscreenDialog: false,
+          //     key: state.pageKey,
+          //     child: const ChatScreen(),
+          //     transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          //       return FadeTransition(
+          //         opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+          //         child: child,
+          //       );
+          //     },
+          //   ),
+          // ),
+          GoRoute(
+            path: 'chats',
+            pageBuilder: (context, state) {
+              // Extract notification data from state.extra
+              final notificationData = state.extra as Map<String, dynamic>?;
+
+              return CustomTransitionPage(
+                fullscreenDialog: false,
+                key: state.pageKey,
+                child: ChatScreen(
+                  notificationData: notificationData,
+                ), // Pass notification data
+                transitionsBuilder:
+                    (context, animation, secondaryAnimation, child) {
+                      return FadeTransition(
+                        opacity: CurveTween(
+                          curve: Curves.easeInOutCirc,
+                        ).animate(animation),
+                        child: child,
+                      );
+                    },
+              );
+            },
+          ),
+        ],
       ),
-    ),
-  ],
-),
       // GoRoute(
       //   path: '/menu',
       //   pageBuilder: (context, state) => CustomTransitionPage(

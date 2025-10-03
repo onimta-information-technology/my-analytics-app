@@ -1,23 +1,21 @@
 import 'dart:async';
-
-import 'package:ballys_reservation_app/models/chat_contact.dart';
-import 'package:ballys_reservation_app/models/chat_message.dart';
-import 'package:ballys_reservation_app/screens/chat_screen.dart';
-import 'package:ballys_reservation_app/utils/storage_util.dart';
-import 'package:flutter/material.dart';
-
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:io';
+
+import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
+import 'package:ballys_reservation_app/models/chat_contact.dart';
+import 'package:ballys_reservation_app/models/chat_message.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 
-// Updated ChatMessage class with API fields and file support
-
 class IndividualChatScreen extends StatefulWidget {
   final ChatContact contact;
   final Function(String)? onMessageSent;
+
   const IndividualChatScreen({
     super.key,
     required this.contact,
@@ -32,25 +30,174 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     with WidgetsBindingObserver {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final ImagePicker _imagePicker = ImagePicker();
 
   List<ChatMessage> _messages = [];
   String? _currentUserName;
   String? _currentUsersaved;
   String? _selectedMessageId;
-  final ImagePicker _imagePicker = ImagePicker();
   bool _isLoadingMessages = false;
+  bool _isLoadingMore = false;
+
+  // Pagination variables
+  static const int _messagesPerPage = 30;
+  int _currentPage = 0;
+  bool _hasMoreMessages = true;
+
+  // Optimization variables
+  DateTime? _lastFetchTime;
+  String? _lastMessageId;
+  bool _hasLoadedInitialMessages = false;
 
   Timer? _messagePollingTimer;
-  static const Duration _pollingInterval = Duration(
-    seconds: 5,
-  ); // Poll every 5 seconds
+  // static const Duration _pollingInterval = Duration(seconds: 5);
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _getCurrentUserName();
-    _loadMessagesFromApi();
-    _startMessagePolling();
     _getCurrentUserNameonlyusemsgsend();
+
+    // Load recent messages first for quick display
+    _initializeMessages();
+
+    // Setup scroll listener for pagination
+    _scrollController.addListener(_onScroll);
+
+    // _startMessagePolling();
+  }
+
+  @override
+  void dispose() {
+    _messagePollingTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _messageController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    // Load more when scrolled to top (for older messages)
+    if (_scrollController.position.pixels <= 100 &&
+        !_isLoadingMore &&
+        _hasMoreMessages) {
+      _loadMoreMessages();
+    }
+  }
+
+  // Load initial recent messages only
+  Future<void> _initializeMessages() async {
+    await _loadRecentMessagesFromLocal();
+    await _fetchNewMessagesFromApi(silent: false);
+  }
+
+  // Load only recent messages from local storage
+  Future<void> _loadRecentMessagesFromLocal() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final storageKey = 'messages_${widget.contact.chatUuid}';
+      final jsonString = prefs.getString(storageKey);
+
+      if (jsonString != null) {
+        final jsonList = jsonDecode(jsonString) as List;
+        final allMessages = jsonList
+            .map((json) => ChatMessage.fromJson(json))
+            .toList();
+
+        // Take only the last 30 messages for initial load
+        final recentMessages = allMessages.length > _messagesPerPage
+            ? allMessages.sublist(allMessages.length - _messagesPerPage)
+            : allMessages;
+
+        setState(() {
+          _messages = recentMessages;
+          _currentPage = 1;
+          _hasMoreMessages = allMessages.length > _messagesPerPage;
+
+          if (_messages.isNotEmpty) {
+            _lastMessageId = _messages.last.apiMessageId ?? _messages.last.id;
+            _lastFetchTime = _messages.last.timestamp;
+          }
+        });
+
+        print('Loaded ${_messages.length} recent messages from local storage');
+        _scrollToBottom();
+      }
+    } catch (e) {
+      print('Error loading local messages: $e');
+    }
+  }
+
+  // Load older messages when scrolling up
+  Future<void> _loadMoreMessages() async {
+    if (_isLoadingMore || !_hasMoreMessages) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final storageKey = 'messages_${widget.contact.chatUuid}';
+      final jsonString = prefs.getString(storageKey);
+
+      if (jsonString != null) {
+        final jsonList = jsonDecode(jsonString) as List;
+        final allMessages = jsonList
+            .map((json) => ChatMessage.fromJson(json))
+            .toList();
+
+        final currentLoadedCount = (_currentPage) * _messagesPerPage;
+        final remainingMessages = allMessages.length - currentLoadedCount;
+
+        if (remainingMessages > 0) {
+          final startIndex =
+              allMessages.length - currentLoadedCount - _messagesPerPage;
+          final endIndex = allMessages.length - currentLoadedCount;
+
+          final olderMessages = allMessages.sublist(
+            startIndex > 0 ? startIndex : 0,
+            endIndex,
+          );
+
+          // Store current scroll position
+          final currentScrollPosition = _scrollController.position.pixels;
+
+          setState(() {
+            _messages.insertAll(0, olderMessages);
+            _currentPage++;
+            _hasMoreMessages = startIndex > 0;
+            _isLoadingMore = false;
+          });
+
+          // Restore scroll position
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_scrollController.hasClients) {
+              _scrollController.jumpTo(currentScrollPosition + 100);
+            }
+          });
+
+          print(
+            'Loaded ${olderMessages.length} more messages. Total: ${_messages.length}',
+          );
+        } else {
+          setState(() {
+            _hasMoreMessages = false;
+            _isLoadingMore = false;
+          });
+        }
+      } else {
+        setState(() {
+          _isLoadingMore = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading more messages: $e');
+      setState(() {
+        _isLoadingMore = false;
+      });
+    }
   }
 
   Future<void> _getCurrentUserName() async {
@@ -69,7 +216,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
       String? userName = await StorageUtil.getUserName();
 
       if (userName != null) {
-        // Clean unwanted prefixes (Mr, Mr., ., etc.)
         userName = userName
             .replaceAll(
               RegExp(
@@ -84,13 +230,50 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           _currentUsersaved = userName;
         });
       }
+      print('Current user namesaved: $_currentUsersaved');
     } catch (e) {
       print('Error getting current user name: $e');
     }
   }
 
-  // Fetch messages from API
-  Future<void> _loadMessagesFromApi({bool silent = false}) async {
+  // Save all messages to local storage
+  Future<void> _saveMessagesToLocal() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final storageKey = 'messages_${widget.contact.chatUuid}';
+
+      // Load existing messages first
+      final jsonString = prefs.getString(storageKey);
+      List<ChatMessage> allMessages = [];
+
+      if (jsonString != null) {
+        final jsonList = jsonDecode(jsonString) as List;
+        allMessages = jsonList
+            .map((json) => ChatMessage.fromJson(json))
+            .toList();
+      }
+
+      // Merge with current messages (avoiding duplicates)
+      final messageIds = allMessages.map((m) => m.apiMessageId ?? m.id).toSet();
+      for (var msg in _messages) {
+        if (!messageIds.contains(msg.apiMessageId ?? msg.id)) {
+          allMessages.add(msg);
+        }
+      }
+
+      // Sort by timestamp
+      allMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+      final jsonList = allMessages.map((message) => message.toJson()).toList();
+      await prefs.setString(storageKey, jsonEncode(jsonList));
+      print('Saved ${allMessages.length} messages to local storage');
+    } catch (e) {
+      print('Error saving messages to local: $e');
+    }
+  }
+
+  // Fetch only new messages from API
+  Future<void> _fetchNewMessagesFromApi({bool silent = false}) async {
     if (_isLoadingMessages && !silent) return;
 
     if (!silent) {
@@ -114,7 +297,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
               'Authorization': 'Bearer $token',
             },
           )
-          .timeout(Duration(seconds: 10)); // Add timeout
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
@@ -123,39 +306,79 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
             responseData['messages'] != null) {
           final List<dynamic> messagesJson = responseData['messages'];
 
-          final List<ChatMessage> fetchedMessages = messagesJson.map((json) {
-            return ChatMessage.fromApiResponse(json, _currentUserName ?? '');
-          }).toList();
+          final List<ChatMessage> fetchedMessages = messagesJson
+              .map(
+                (json) =>
+                    ChatMessage.fromApiResponse(json, _currentUserName ?? ''),
+              )
+              .toList();
 
-          // Check if messages changed
-          bool messagesChanged = _messages.length != fetchedMessages.length;
-
-          if (!messagesChanged &&
-              _messages.isNotEmpty &&
-              fetchedMessages.isNotEmpty) {
-            // Check if last message is different
-            messagesChanged =
-                _messages.last.id != fetchedMessages.last.id ||
-                _messages.last.text != fetchedMessages.last.text;
+          // Filter to get only new messages
+          List<ChatMessage> newMessages = [];
+          if (_hasLoadedInitialMessages && _lastFetchTime != null) {
+            newMessages = fetchedMessages.where((msg) {
+              return msg.timestamp.isAfter(_lastFetchTime!);
+            }).toList();
+          } else {
+            // First load: take only recent messages
+            newMessages = fetchedMessages.length > _messagesPerPage
+                ? fetchedMessages.sublist(
+                    fetchedMessages.length - _messagesPerPage,
+                  )
+                : fetchedMessages;
+            _hasLoadedInitialMessages = true;
           }
 
-          setState(() {
-            _messages = fetchedMessages;
-            if (!silent) {
-              _isLoadingMessages = false;
+          if (newMessages.isNotEmpty || !_hasLoadedInitialMessages) {
+            setState(() {
+              if (_hasLoadedInitialMessages) {
+                // Remove duplicates based on message ID
+                final existingIds = _messages
+                    .map((m) => m.apiMessageId ?? m.id)
+                    .toSet();
+                final uniqueNewMessages = newMessages
+                    .where(
+                      (msg) =>
+                          !existingIds.contains(msg.apiMessageId ?? msg.id),
+                    )
+                    .toList();
+
+                _messages.addAll(uniqueNewMessages);
+                print('Added ${uniqueNewMessages.length} new messages');
+              } else {
+                // First load: set recent messages only
+                _messages = newMessages;
+                print('Loaded ${_messages.length} recent messages from API');
+              }
+
+              // Update tracking variables
+              if (_messages.isNotEmpty) {
+                _lastMessageId =
+                    _messages.last.apiMessageId ?? _messages.last.id;
+                _lastFetchTime = _messages.last.timestamp;
+              }
+
+              if (!silent) {
+                _isLoadingMessages = false;
+              }
+            });
+
+            await _saveMessagesToLocal();
+            await _markMessagesAsRead();
+
+            if (widget.onMessageSent != null && _messages.isNotEmpty) {
+              final lastMsg = _messages.last;
+              widget.onMessageSent!(lastMsg.text);
             }
-          });
 
-          _saveMessages();
-
-          // Update parent with the latest message
-          if (fetchedMessages.isNotEmpty && widget.onMessageSent != null) {
-            final lastMsg = fetchedMessages.last;
-            widget.onMessageSent!(lastMsg.text);
-          }
-          // Only scroll to bottom if messages changed and not silent refresh
-          if (messagesChanged) {
             _scrollToBottom();
+          } else {
+            print('No new messages found');
+            if (!silent) {
+              setState(() {
+                _isLoadingMessages = false;
+              });
+            }
           }
         } else {
           if (!silent) {
@@ -165,11 +388,11 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           }
         }
       } else {
+        print('Failed to fetch messages: ${response.statusCode}');
         if (!silent) {
           setState(() {
             _isLoadingMessages = false;
           });
-          _loadMessages(); // Fallback to cached
         }
       }
     } catch (e) {
@@ -178,12 +401,38 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         setState(() {
           _isLoadingMessages = false;
         });
-        _loadMessages(); // Fallback to cached
       }
     }
   }
 
-  // Method to delete message from API
+  // Rest of the methods remain the same...
+  Future<void> _markMessagesAsRead() async {
+    try {
+      if (_currentUserName == null || _messages.isEmpty) return;
+
+      final unreadMessageIds = _messages
+          .where((msg) => !msg.isMe && msg.apiMessageId != null)
+          .map((msg) => msg.apiMessageId!)
+          .toList();
+
+      if (unreadMessageIds.isEmpty) return;
+
+      print('Marking ${unreadMessageIds.length} messages as read');
+
+      final response = await FirebaseApiService.markMessagesAsRead(
+        widget.contact.chatUuid,
+        unreadMessageIds,
+        _currentUserName!,
+      );
+
+      if (response['success'] == true) {
+        print('Successfully marked messages as read');
+      }
+    } catch (e) {
+      print('Error marking messages as read: $e');
+    }
+  }
+
   Future<void> _deleteMessageFromApi(String chatId, String messageId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -199,20 +448,13 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         },
       );
 
-      print('Delete message response status: ${response.statusCode}');
-      print('Delete message response body: ${response.body}');
-
       if (response.statusCode != 200) {
-        print('Failed to delete message via API: ${response.statusCode}');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text(
-              'Failed to delete message from server. Please try again.',
-            ),
+            content: Text('Failed to delete message from server.'),
             backgroundColor: Colors.red,
           ),
         );
-        return;
       }
     } catch (e) {
       print('Error deleting message via API: $e');
@@ -224,11 +466,9 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           backgroundColor: Colors.red,
         ),
       );
-      return;
     }
   }
 
-  // Method to send message with API call
   Future<String?> _sendMessageWithApi(
     String messageText,
     String localMessageId,
@@ -260,9 +500,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         }),
       );
 
-      print('Send message response status: ${response.statusCode}');
-      print('Send message response body: ${response.body}');
-
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
         if (responseData['success'] == true && responseData['data'] != null) {
@@ -280,12 +517,11 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
               );
             }
           });
-          _saveMessages();
 
+          await _saveMessagesToLocal();
           return messageId;
         }
       } else {
-        print('Failed to send message via API: ${response.statusCode}');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Failed to send message. Please try again.'),
@@ -305,49 +541,33 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     return null;
   }
 
-  Future<void> _loadMessages() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getString('messages_${widget.contact.id}');
-    if (jsonString != null) {
-      final jsonList = jsonDecode(jsonString) as List;
-      setState(() {
-        _messages = jsonList.map((json) => ChatMessage.fromJson(json)).toList();
-      });
-    }
-  }
-
-  Future<void> _saveMessages() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonList = _messages.map((message) => message.toJson()).toList();
-    await prefs.setString(
-      'messages_${widget.contact.id}',
-      jsonEncode(jsonList),
-    );
-  }
-
   void _sendMessage() async {
     if (_messageController.text.trim().isNotEmpty) {
       final messageText = _messageController.text.trim();
       final localMessageId = DateTime.now().millisecondsSinceEpoch.toString();
+      final now = DateTime.now();
 
       final message = ChatMessage(
         id: localMessageId,
         text: messageText,
         isMe: true,
-        timestamp: DateTime.now(),
+        timestamp: now,
       );
 
       setState(() {
         _messages.add(message);
+        _lastMessageId = localMessageId;
+        _lastFetchTime = now;
       });
 
       _messageController.clear();
-      _saveMessages();
+      await _saveMessagesToLocal();
       _scrollToBottom();
 
       if (widget.onMessageSent != null) {
         widget.onMessageSent!(messageText);
       }
+
       await _sendMessageWithApi(messageText, localMessageId);
     }
   }
@@ -375,7 +595,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           _messages.add(message);
         });
 
-        _saveMessages();
+        await _saveMessagesToLocal();
         _scrollToBottom();
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -462,7 +682,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           _messages.add(message);
         });
 
-        _saveMessages();
+        await _saveMessagesToLocal();
         _scrollToBottom();
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -507,7 +727,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           _messages.add(message);
         });
 
-        _saveMessages();
+        await _saveMessagesToLocal();
         _scrollToBottom();
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -562,13 +782,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
               onPressed: () async {
                 Navigator.of(context).pop();
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Deleting message...'),
-                    duration: Duration(seconds: 1),
-                  ),
-                );
-
                 final message = _messages.firstWhere(
                   (msg) => msg.id == messageId,
                 );
@@ -584,7 +797,8 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                   _messages.removeWhere((message) => message.id == messageId);
                   _selectedMessageId = null;
                 });
-                _saveMessages();
+
+                await _saveMessagesToLocal();
 
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -787,42 +1001,28 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
   }
 
   @override
-  void dispose() {
-    _messagePollingTimer?.cancel(); // Stop polling
-    WidgetsBinding.instance.removeObserver(this);
-    _messageController.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
     if (state == AppLifecycleState.resumed) {
-      // App came to foreground, refresh messages immediately
-      print('App resumed - refreshing messages');
-      _loadMessagesFromApi();
-      _startMessagePolling();
+      print('App resumed - fetching new messages');
+      _fetchNewMessagesFromApi(silent: true);
+      // _startMessagePolling();
     } else if (state == AppLifecycleState.paused) {
-      // App went to background, stop polling
       print('App paused - stopping message polling');
       _messagePollingTimer?.cancel();
     }
   }
 
-  // Start automatic message polling
-  void _startMessagePolling() {
-    _messagePollingTimer?.cancel(); // Cancel existing timer if any
+  // void _startMessagePolling() {
+  //   _messagePollingTimer?.cancel();
 
-    _messagePollingTimer = Timer.periodic(_pollingInterval, (timer) {
-      if (mounted) {
-        _loadMessagesFromApi(
-          silent: true,
-        ); // Silent refresh without loading indicator
-      }
-    });
-  }
+  //   _messagePollingTimer = Timer.periodic(_pollingInterval, (timer) {
+  //     if (mounted) {
+  //       _fetchNewMessagesFromApi(silent: true);
+  //     }
+  //   });
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -833,7 +1033,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            _messagePollingTimer?.cancel(); // Stop polling when leaving
+            _messagePollingTimer?.cancel();
             Navigator.pop(context);
           },
         ),
@@ -896,7 +1096,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => _loadMessagesFromApi(silent: false),
+            onPressed: () => _fetchNewMessagesFromApi(silent: false),
             tooltip: 'Refresh messages',
           ),
           IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
@@ -908,6 +1108,25 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
             const LinearProgressIndicator(
               backgroundColor: Colors.grey,
               valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+            ),
+          if (_isLoadingMore)
+            Container(
+              padding: const EdgeInsets.all(8),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'Loading older messages...',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
             ),
           Expanded(
             child: _messages.isEmpty

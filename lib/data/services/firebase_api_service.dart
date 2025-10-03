@@ -15,6 +15,7 @@ class FirebaseApiService {
     'createChat': '/api/chats/create',
     'fetchUserChats': '/api/chats/user',
     'fetchAllUsers': '/api/users',
+    'markAsRead': '/api/chats',
   };
 
   // Helper to get Bearer token header
@@ -27,7 +28,7 @@ class FirebaseApiService {
     };
   }
 
-  // Helper for POST requests
+  //  for POST requests
   static Future<Map<String, dynamic>> postRequest(
     String url,
     Map<String, dynamic> body,
@@ -62,7 +63,41 @@ class FirebaseApiService {
     }
   }
 
-  // Helper for GET requests
+  static Future<Map<String, dynamic>> putRequest(
+    String url,
+    Map<String, dynamic> body,
+  ) async {
+    try {
+      final headers = await getAuthHeaders();
+      print('PUT Request to $url with body: $body');
+
+      final response = await http.put(
+        Uri.parse(url),
+        headers: headers,
+        body: jsonEncode(body),
+      );
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body) as Map<String, dynamic>;
+        return {'success': true, 'data': responseData};
+      } else {
+        return {
+          'success': false,
+          'error': 'Server returned status code: ${response.statusCode}',
+          'statusCode': response.statusCode,
+          'responseBody': response.body,
+        };
+      }
+    } catch (e) {
+      print('Error in putRequest: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  //  GET requests
   static Future<Map<String, dynamic>> getRequest(String url) async {
     try {
       final headers = await getAuthHeaders();
@@ -114,6 +149,30 @@ class FirebaseApiService {
       }
     } catch (e) {
       print('Error in deleteRequest: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> markMessagesAsRead(
+    String chatId,
+    List<String> messageIds,
+    String userId,
+  ) async {
+    try {
+      final url = '$domain${endpoints['markAsRead']}/$chatId/messages/read';
+      print(
+        'Marking messages as read: chatId=$chatId, messageIds=$messageIds, userId=$userId',
+      );
+
+      final response = await putRequest(url, {
+        'messageIds': messageIds,
+        'userId': userId,
+      });
+
+      print('Mark as read response: $response');
+      return response;
+    } catch (e) {
+      print('Error marking messages as read: $e');
       return {'success': false, 'error': e.toString()};
     }
   }

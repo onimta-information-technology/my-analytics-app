@@ -448,11 +448,12 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
   void dispose() {
     print('🧹 Disposing OTP screen...');
 
-    try {
-      ref.read(authProvider.notifier).clearPendingUser();
-    } catch (e) {
-      print('❌ Error clearing pending user data: $e');
-    }
+    // try {
+    //   //ref.read(authProvider.notifier).clearPendingUser();
+
+    // } catch (e) {
+    //   print('❌ Error clearing pending user data: $e');
+    // }
     // Clean up SMS auto-fill
     try {
       cancel(); // from CodeAutoFill mixin
@@ -672,7 +673,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       var result = await FirebaseApiService.syncFmcToken(name, token);
 
       if (result['success'] == true) {
-        print('✅ FCM Token sent to server successfully',);
+        print('✅ FCM Token sent to server successfully');
       } else {
         print('❌ Failed to send FCM Token: ${result['error']}');
       }
@@ -850,7 +851,12 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => context.pop(),
+          // onPressed: () => context.pop(),
+          onPressed: () {
+            // Clear pending user data before popping
+            ref.read(authProvider.notifier).clearPendingUser();
+            context.pop();
+          },
         ),
         title: const Text(
           'OTP Verification',

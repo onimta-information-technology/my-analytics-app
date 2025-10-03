@@ -7,6 +7,8 @@ import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'dart:async';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 List<ChatContact> _filteredUsers = [];
 
@@ -19,7 +21,7 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
   List<ChatContact> _contacts = [];
   List<ChatContact> _filteredContacts = [];
@@ -31,17 +33,92 @@ class _ChatScreenState extends State<ChatScreen>
   String? _selectedContactId;
   bool _hasProcessedNotification = false;
 
+  // Add message subscription
+  StreamSubscription<RemoteMessage>? _messageSubscription;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 4, vsync: this);
     _initializeData();
+    _setupNotificationListener();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
+    _messageSubscription?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    if (state == AppLifecycleState.resumed) {
+      // Refresh when app comes to foreground
+      _fetchChatsFromApi();
+    }
+  }
+
+  void _setupNotificationListener() {
+    // Listen for foreground messages
+    _messageSubscription = FirebaseMessaging.onMessage.listen((
+      RemoteMessage message,
+    ) {
+      print('Foreground message received in ChatScreen');
+
+      // Check if it's a chat notification
+      if (message.data['msg_type'] == '11' ||
+          message.data['type'] == 'chat' ||
+          message.data.containsKey('Details')) {
+        print('Chat notification received - refreshing chat list silently');
+
+        // Refresh silently without showing loading indicator
+        _fetchChatsFromApiSilently();
+      }
+    });
+  }
+
+  // Silent refresh - no loading indicator
+  Future<void> _fetchChatsFromApiSilently() async {
+    try {
+      final chatData = await FirebaseApiService.fetchUserChats();
+      final userData = await FirebaseApiService.fetchAllUsers();
+
+      if (chatData['chats'] != null) {
+        final List<dynamic> chats = chatData['chats'];
+
+        Map<String, dynamic> userDetailsMap = {};
+        if (userData['users'] != null) {
+          final List<dynamic> users = userData['users'];
+          for (var user in users) {
+            final userName = user['name'] ?? user['id'] ?? '';
+            userDetailsMap[userName] = user;
+          }
+        }
+
+        setState(() {
+          _contacts = chats
+              .map(
+                (chat) => ChatContact.fromChatApiJson(
+                  chat,
+                  _currentUserName ?? '',
+                  participantDetails: userDetailsMap,
+                ),
+              )
+              .toList();
+          _filteredContacts = List.from(_contacts);
+        });
+
+        await _saveChats();
+      }
+    } catch (e) {
+      print('Error in silent refresh: $e');
+      // Don't show error to user, just log it
+    }
   }
 
   Future<void> _initializeData() async {
@@ -246,8 +323,11 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   Future<void> _fetchChatsFromApi() async {
+    // Don't show loading indicator if already loading
+    bool showLoading = !_isLoading;
+
     setState(() {
-      _isLoading = true;
+      if (showLoading) _isLoading = true;
       _errorMessage = null;
     });
 
@@ -278,26 +358,27 @@ class _ChatScreenState extends State<ChatScreen>
               )
               .toList();
           _filteredContacts = List.from(_contacts);
-          _isLoading = false;
+          if (showLoading) _isLoading = false;
         });
 
         await _saveChats();
       } else {
         setState(() {
           _errorMessage = 'No chats data received';
-          _isLoading = false;
+          if (showLoading) _isLoading = false;
         });
       }
     } catch (e) {
       setState(() {
         _errorMessage = e.toString();
-        _isLoading = false;
+        if (showLoading) _isLoading = false;
       });
 
       await _loadChats();
     }
   }
 
+  // Rest of the methods remain the same...
   Future<void> _fetchAllUsersForNewChat() async {
     try {
       final data = await FirebaseApiService.fetchAllUsers();

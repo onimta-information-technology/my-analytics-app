@@ -36,26 +36,6 @@ class _ChatScreenState extends State<ChatScreen>
   // Add message subscription
   StreamSubscription<RemoteMessage>? _messageSubscription;
 
-  String _formatRelativeTime(DateTime? messageTime) {
-    if (messageTime == null) return '';
-
-    final now = DateTime.now();
-    final difference = now.difference(messageTime);
-
-    if (difference.inSeconds < 60) {
-      return 'now';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}h';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays}d';
-    } else {
-      // For older messages, show the date
-      return '${messageTime.day}/${messageTime.month}/${messageTime.year}';
-    }
-  }
-
   @override
   void initState() {
     super.initState();
@@ -681,8 +661,7 @@ class _ChatScreenState extends State<ChatScreen>
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      // contact.time,
-                      _formatRelativeTime(contact.lastMessageTime),
+                      contact.time,
                       style: TextStyle(color: Colors.grey[600], fontSize: 12),
                     ),
                     if (contact.unreadCount > 0)

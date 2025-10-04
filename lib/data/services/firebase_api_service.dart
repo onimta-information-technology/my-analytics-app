@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -182,9 +183,10 @@ class FirebaseApiService {
     String name,
     String fcmToken,
   ) async {
+    final deviceId = await DeviceId.get();
     final url = '$fmcDomain${endpoints['InsertChatFMCToken']}';
     final response = await postRequest(url, {
-      'id': name,
+      'id': deviceId,
       'name': name,
       'email': 'email',
       'fcmToken': fcmToken,

@@ -30,7 +30,8 @@ class MarketingDetailPage extends ConsumerStatefulWidget {
 
 class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
   List<MarketingDetailedData> filteredMembers = [];
-  String? currentLoadingMember; // Track single loading member
+  String? currentLoadingMember;
+  Set<String> expandedCards = {}; // Track which cards are expanded
 
   @override
   void initState() {
@@ -71,14 +72,12 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
 
   Color _getAmountColor(double amount) {
     if (amount == 0) return Colors.red;
-    if (amount > 0) return Colors.red; // N/A values are red
-    if (amount < 0) return Colors.green; // Negative amounts are green
-    return Colors.black87; // Positive amounts are black
+    if (amount > 0) return Colors.red;
+    if (amount < 0) return Colors.green;
+    return Colors.black87;
   }
 
-  // Handle member ID click with loading state
   Future<void> _handleMemberIdTap(String memberId) async {
-    // Prevent multiple clicks for the same user or if already loading
     if (currentLoadingMember == memberId || currentLoadingMember != null) {
       return;
     }
@@ -93,10 +92,9 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
           .setSelectedGuestWithId(memberId);
 
       if (mounted) {
-       context.push('/home/profile', extra: {'fromMarketing': true});
+        context.push('/home/profile', extra: {'fromMarketing': true});
       }
     } catch (error) {
-      // Handle error if needed
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -134,7 +132,7 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // 🔹 Top Card Section
+                      // Top Card Section
                       Card(
                         elevation: 4,
                         shape: RoundedRectangleBorder(
@@ -194,19 +192,9 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
                       ),
                       const SizedBox(height: 16),
 
-                      Table(
-                        border: TableBorder.all(),
-                        columnWidths: const {
-                          0: FlexColumnWidth(1),
-                          1: FlexColumnWidth(1.5),
-                        },
-                        children: filteredMembers
-                            .map(
-                              (member) =>
-                                  _buildMemberRows(member, fontSettings),
-                            )
-                            .expand((rows) => rows)
-                            .toList(),
+                      // Member Cards
+                      ...filteredMembers.map(
+                        (member) => _buildMemberCard(member, fontSettings),
                       ),
                     ],
                   ),
@@ -217,161 +205,200 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
     );
   }
 
-  List<TableRow> _buildMemberRows(MarketingDetailedData member, fontSettings) {
-    return [
-      // Header row for each member
-      TableRow(
-        decoration: const BoxDecoration(
-          color: Color.fromARGB(47, 181, 225, 250),
-        ),
+  Widget _buildMemberCard(MarketingDetailedData member, fontSettings) {
+    final isExpanded = expandedCards.contains(member.memId);
+    final isLoading = currentLoadingMember == member.memId;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Column(
         children: [
-          const Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Text(
-              '',
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                color: Colors.black,
+          // Main visible section
+          InkWell(
+            onTap: () {
+              setState(() {
+                if (isExpanded) {
+                  expandedCards.remove(member.memId);
+                } else {
+                  expandedCards.add(member.memId);
+                }
+              });
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            GestureDetector(
+                              onTap: isLoading
+                                  ? null
+                                  : () => _handleMemberIdTap(member.memId),
+                              child: Row(
+                                children: [
+                                  if (isLoading) ...[
+                                    const SizedBox(
+                                      height: 16,
+                                      width: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Colors.blue,
+                                            ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                  ],
+                                  Flexible(
+                                    child: Text(
+                                      member.memId,
+                                      style: TextStyle(
+                                        fontSize: fontSettings.fontSize + 2,
+                                        fontWeight: FontWeight.bold,
+                                        color: isLoading
+                                            ? Colors.grey
+                                            : Colors.blue,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              member.mName.isNotEmpty ? member.mName : 'N/A',
+                              style: TextStyle(
+                                fontSize: fontSettings.fontSize,
+                                fontWeight: fontSettings.fontWeight,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            'Win/Lost',
+                            style: TextStyle(
+                              fontSize: fontSettings.fontSize - 1,
+                              fontWeight: fontSettings.fontWeight,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            member.winLost == 0
+                                ? 'N/A'
+                                : _formatCurrency(member.winLost),
+                            style: TextStyle(
+                              fontSize: fontSettings.fontSize + 2,
+                              fontWeight: FontWeight.bold,
+                              color: _getAmountColor(member.winLost),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Icon(
+                        isExpanded ? Icons.expand_less : Icons.expand_more,
+                        color: Colors.grey[600],
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            // child: Center(
-            child: Text(
-              'Detail',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: fontSettings.fontSize + 1,
-                fontWeight: FontWeight.w900,
+
+          // Expandable details section
+          if (isExpanded)
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(12),
+                  bottomRight: Radius.circular(12),
+                ),
               ),
-              //  ),
+              child: Column(
+                children: [
+                  const Divider(height: 1),
+                  _buildDetailItem(
+                    'MDrop',
+                    _formatCurrency(member.mDrop),
+                    fontSettings,
+                  ),
+                  _buildDetailItem(
+                    'Cash Out',
+                    member.cashOut == 0
+                        ? 'N/A'
+                        : _formatCurrency(member.cashOut),
+                    fontSettings,
+                  ),
+                  _buildDetailItem(
+                    'Commission',
+                    _formatCurrency(member.comm),
+                    fontSettings,
+                    valueColor: _getAmountColor(member.comm),
+                  ),
+                  _buildDetailItem(
+                    'Paid Commission',
+                    _formatCurrency(member.paidComm),
+                    fontSettings,
+                  ),
+                  _buildDetailItem(
+                    'Balance Commission',
+                    _formatCurrency(member.balanceComm),
+                    fontSettings,
+                    valueColor: _getAmountColor(member.balanceComm),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailItem(
+    String label,
+    String value,
+    fontSettings, {
+    Color? valueColor,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: fontSettings.fontSize,
+              fontWeight: fontSettings.fontWeight,
+              color: Colors.black87,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: fontSettings.fontSize,
+              fontWeight: fontSettings.fontWeight,
+              color: valueColor ?? Colors.black,
             ),
           ),
         ],
       ),
-      // Member data rows
-      _buildDetailRow(
-        'Member ID',
-        member.memId,
-        fontSettings,
-        isLink: true,
-        isLoading: currentLoadingMember == member.memId,
-        onTap: () => _handleMemberIdTap(member.memId),
-      ),
-      _buildDetailRow(
-        'Member Name',
-        member.mName.isNotEmpty ? member.mName : 'N/A',
-        fontSettings,
-      ),
-      _buildDetailRow('MDrop', _formatCurrency(member.mDrop), fontSettings),
-      _buildDetailRow(
-        'Cash Out',
-        member.cashOut == 0 ? 'N/A' : _formatCurrency(member.cashOut),
-        fontSettings,
-      ),
-      _buildDetailRow(
-        'Commission',
-        _formatCurrency(member.comm),
-        fontSettings,
-        valueColor: _getAmountColor(member.comm),
-      ),
-      _buildDetailRow(
-        'Paid Commission',
-        _formatCurrency(member.paidComm),
-        fontSettings,
-      ),
-      _buildDetailRow(
-        'Balance Commission',
-        _formatCurrency(member.balanceComm),
-        fontSettings,
-        valueColor: _getAmountColor(member.balanceComm),
-      ),
-      _buildDetailRow(
-        'Win/Lost',
-        member.winLost == 0 ? 'N/A' : _formatCurrency(member.winLost),
-        fontSettings,
-        isBold: true,
-        valueColor: _getAmountColor(member.winLost),
-      ),
-    ];
-  }
-
-  TableRow _buildDetailRow(
-    String label,
-    String value,
-    fontSettings, {
-    bool isLink = false,
-    bool isLoading = false,
-    Color? valueColor,
-    VoidCallback? onTap,
-    bool isBold = false,
-  }) {
-    return TableRow(
-      children: [
-        Container(
-          width: double.infinity,
-          color: Constants.kPrimaryColor.withAlpha(50),
-          padding: const EdgeInsets.all(8.0),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: fontSettings.fontSize,
-              fontWeight: fontSettings.fontWeight,
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: isLink
-              ? GestureDetector(
-                  onTap: isLoading ? null : onTap, // Disable tap when loading
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (isLoading) ...[
-                        const SizedBox(
-                          height: 16,
-                          width: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.blue,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                      Flexible(
-                        child: Text(
-                          value,
-                          textAlign: TextAlign.end,
-                          style: TextStyle(
-                            color: isLoading ? Colors.grey : Colors.blue,
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: fontSettings.fontWeight,
-                            // decoration: isLoading
-                            //     ? null
-                            //     : TextDecoration.underline,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : Text(
-                  value,
-                  textAlign: TextAlign.end,
-                  style: TextStyle(
-                    color: valueColor ?? Colors.black,
-                    fontSize: fontSettings.fontSize,
-                    fontWeight: fontSettings.fontWeight,
-                  ),
-                ),
-        ),
-      ],
     );
   }
 }
@@ -395,9 +422,8 @@ Widget _buildSummaryItem({
         Text(
           title,
           style: TextStyle(
-            fontSize: fontSettings.fontSize + 4, // 👈 dynamic font size
-            fontWeight: FontWeight.bold, // 👈 dynamic weight
-            // color: Colors.black,
+            fontSize: fontSettings.fontSize + 4,
+            fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 6),

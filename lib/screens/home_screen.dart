@@ -272,7 +272,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             padding: const EdgeInsets.all(10.0),
             icon: const Icon(Icons.refresh, size: 30),
             onPressed:
-                _manualRefresh, // 🔹 Only refresh when user explicitly taps
+                _manualRefresh, 
           ),
         ],
       ),

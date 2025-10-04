@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/models/chat_message.dart';
+import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -244,29 +245,30 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
 
       // Load existing messages first
       final jsonString = prefs.getString(storageKey);
-      List<ChatMessage> allMessages = [];
+      Map<String, ChatMessage> uniqueMessages = {};
 
       if (jsonString != null) {
         final jsonList = jsonDecode(jsonString) as List;
-        allMessages = jsonList
-            .map((json) => ChatMessage.fromJson(json))
-            .toList();
-      }
-
-      // Merge with current messages (avoiding duplicates)
-      final messageIds = allMessages.map((m) => m.apiMessageId ?? m.id).toSet();
-      for (var msg in _messages) {
-        if (!messageIds.contains(msg.apiMessageId ?? msg.id)) {
-          allMessages.add(msg);
+        for (var json in jsonList) {
+          final msg = ChatMessage.fromJson(json);
+          final key = msg.apiMessageId ?? msg.id;
+          uniqueMessages[key] = msg;
         }
       }
 
-      // Sort by timestamp
+      // Merge with current messages (using map to prevent duplicates)
+      for (var msg in _messages) {
+        final key = msg.apiMessageId ?? msg.id;
+        uniqueMessages[key] = msg;
+      }
+
+      // Convert back to list and sort
+      final allMessages = uniqueMessages.values.toList();
       allMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
       final jsonList = allMessages.map((message) => message.toJson()).toList();
       await prefs.setString(storageKey, jsonEncode(jsonList));
-      print('Saved ${allMessages.length} messages to local storage');
+      print('Saved ${allMessages.length} unique messages to local storage');
     } catch (e) {
       print('Error saving messages to local: $e');
     }
@@ -313,42 +315,45 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
               )
               .toList();
 
+          // Create a set of existing message IDs for efficient lookup
+          final existingMessageIds = _messages
+              .map((m) => m.apiMessageId ?? m.id)
+              .toSet();
+
           // Filter to get only new messages
           List<ChatMessage> newMessages = [];
           if (_hasLoadedInitialMessages && _lastFetchTime != null) {
+            // For subsequent fetches: get messages after last fetch time
+            // AND not already in our list
             newMessages = fetchedMessages.where((msg) {
-              return msg.timestamp.isAfter(_lastFetchTime!);
+              final messageId = msg.apiMessageId ?? msg.id;
+              final isAfterLastFetch = msg.timestamp.isAfter(_lastFetchTime!);
+              final notDuplicate = !existingMessageIds.contains(messageId);
+
+              return isAfterLastFetch && notDuplicate;
             }).toList();
           } else {
-            // First load: take only recent messages
-            newMessages = fetchedMessages.length > _messagesPerPage
+            // First load: take only recent messages that aren't duplicates
+            final recentMessages = fetchedMessages.length > _messagesPerPage
                 ? fetchedMessages.sublist(
                     fetchedMessages.length - _messagesPerPage,
                   )
                 : fetchedMessages;
+
+            // Filter out any duplicates even on first load
+            newMessages = recentMessages.where((msg) {
+              final messageId = msg.apiMessageId ?? msg.id;
+              return !existingMessageIds.contains(messageId);
+            }).toList();
+
             _hasLoadedInitialMessages = true;
           }
 
           if (newMessages.isNotEmpty || !_hasLoadedInitialMessages) {
             setState(() {
-              if (_hasLoadedInitialMessages) {
-                // Remove duplicates based on message ID
-                final existingIds = _messages
-                    .map((m) => m.apiMessageId ?? m.id)
-                    .toSet();
-                final uniqueNewMessages = newMessages
-                    .where(
-                      (msg) =>
-                          !existingIds.contains(msg.apiMessageId ?? msg.id),
-                    )
-                    .toList();
-
-                _messages.addAll(uniqueNewMessages);
-                print('Added ${uniqueNewMessages.length} new messages');
-              } else {
-                // First load: set recent messages only
-                _messages = newMessages;
-                print('Loaded ${_messages.length} recent messages from API');
+              if (newMessages.isNotEmpty) {
+                _messages.addAll(newMessages);
+                print('Added ${newMessages.length} new unique messages');
               }
 
               // Update tracking variables
@@ -366,12 +371,14 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
             await _saveMessagesToLocal();
             await _markMessagesAsRead();
 
-            if (widget.onMessageSent != null && _messages.isNotEmpty) {
-              final lastMsg = _messages.last;
+            if (widget.onMessageSent != null && newMessages.isNotEmpty) {
+              final lastMsg = newMessages.last;
               widget.onMessageSent!(lastMsg.text);
             }
 
-            _scrollToBottom();
+            if (newMessages.isNotEmpty) {
+              _scrollToBottom();
+            }
           } else {
             print('No new messages found');
             if (!silent) {
@@ -481,7 +488,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('Token') ?? '';
-
+      final deviceId = await DeviceId.get();
       final response = await http.post(
         Uri.parse(
           'https://ballysnotifications.onimtaitsl.com/api/chat/send-message-with-notification',
@@ -491,8 +498,8 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           'Authorization': 'Bearer $token',
         },
         body: jsonEncode({
-          "senderFirstName": _currentUsersaved,
-          "recipientFirstName": widget.contact.firstName,
+          "senderUuid": deviceId,
+          "recipientUuid": widget.contact.id,
           "message": messageText,
           "title": "New Message from $_currentUserName",
           "body": messageText,
@@ -518,7 +525,8 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
             }
           });
 
-          await _saveMessagesToLocal();
+          // DON'T save to local storage here
+          // Let the next API fetch handle it
           return messageId;
         }
       } else {
@@ -561,14 +569,26 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
       });
 
       _messageController.clear();
-      await _saveMessagesToLocal();
       _scrollToBottom();
 
       if (widget.onMessageSent != null) {
         widget.onMessageSent!(messageText);
       }
 
-      await _sendMessageWithApi(messageText, localMessageId);
+      // Send to API and update with API ID
+      final apiMessageId = await _sendMessageWithApi(
+        messageText,
+        localMessageId,
+      );
+
+      if (apiMessageId != null) {
+        // DON'T save to local here - wait for next API fetch to get it
+        // This prevents the double-save issue
+        print('Message sent successfully with API ID: $apiMessageId');
+      } else {
+        // Only save locally if API call failed
+        await _saveMessagesToLocal();
+      }
     }
   }
 

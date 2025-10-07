@@ -160,6 +160,8 @@ class FirebaseApiService {
     String userId,
   ) async {
     try {
+      print('User ID for marking as read: $userId');
+      print('Message IDs to mark as read: $messageIds');
       final url = '$domain${endpoints['markAsRead']}/$chatId/messages/read';
       print(
         'Marking messages as read: chatId=$chatId, messageIds=$messageIds, userId=$userId',
@@ -188,7 +190,7 @@ class FirebaseApiService {
     final response = await postRequest(url, {
       'id': deviceId,
       'name': name,
-      'email': 'email',
+      'email': name,
       'fcmToken': fcmToken,
     });
     print('syncFmcToken response: $response');

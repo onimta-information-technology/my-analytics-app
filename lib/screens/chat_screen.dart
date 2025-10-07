@@ -488,6 +488,7 @@ class _ChatScreenState extends State<ChatScreen>
         _contacts[index] = ChatContact(
           id: _contacts[index].id,
           chatUuid: _contacts[index].chatUuid,
+          userUuid: _contacts[index].userUuid,
           name: _contacts[index].name,
           firstName: _contacts[index].firstName,
           lastMessage: lastMessage,
@@ -537,6 +538,7 @@ class _ChatScreenState extends State<ChatScreen>
           final contactWithChatId = ChatContact(
             id: contact.id,
             chatUuid: chatId ?? contact.chatUuid,
+            userUuid: contact.userUuid,
             name: contact.name,
             firstName: contact.firstName.isNotEmpty
                 ? contact.firstName
@@ -1073,6 +1075,7 @@ class _ChatScreenState extends State<ChatScreen>
                                                           chatUuid:
                                                               chatId ??
                                                               contact.chatUuid,
+                                                          userUuid: contact.userUuid,
                                                           name: contact.name,
                                                           firstName:
                                                               contact
@@ -1147,6 +1150,7 @@ class _ChatScreenState extends State<ChatScreen>
                                                           id: contact.id,
                                                           chatUuid:
                                                               contact.chatUuid,
+                                                          userUuid: contact.userUuid,
                                                           name: contact.name,
                                                           firstName:
                                                               contact

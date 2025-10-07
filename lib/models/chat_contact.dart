@@ -3,8 +3,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 class ChatContact {
-  final String id;
+  final String id; // Keep for backward compatibility
   final String chatUuid;
+  final String userUuid; // The actual user UUID for messaging
   final String name;
   final String firstName;
   final String lastMessage;
@@ -21,6 +22,7 @@ class ChatContact {
   ChatContact({
     required this.id,
     required this.chatUuid,
+    String? userUuid,
     required this.name,
     this.firstName = '',
     required this.lastMessage,
@@ -33,11 +35,12 @@ class ChatContact {
     this.lastMessageSender,
     required this.participants,
     required this.createdAt,
-  });
+  }) : userUuid = userUuid ?? id;
 
   Map<String, dynamic> toJson() => {
     'id': id,
     'chatUuid': chatUuid,
+    'userUuid': userUuid,
     'name': name,
     'firstName': firstName,
     'lastMessage': lastMessage,
@@ -55,6 +58,7 @@ class ChatContact {
   static ChatContact fromJson(Map<String, dynamic> json) => ChatContact(
     id: json['id'],
     chatUuid: json['chatUuid'],
+    userUuid: json['userUuid'],
     name: json['name'],
     firstName: json['firstName'] ?? '',
     lastMessage: json['lastMessage'],
@@ -89,21 +93,31 @@ class ChatContact {
 
     final String name = otherParticipant;
 
-    // Extract firstName from participantDetails if available
+    // Extract firstName and userUuid from participantDetails
     String firstName = '';
+    String actualUserUuid = '';
+
     if (participantDetails != null &&
         participantDetails.containsKey(otherParticipant)) {
-      firstName = participantDetails[otherParticipant]['firstName'] ?? '';
+      final participantData = participantDetails[otherParticipant];
+      firstName = participantData['firstName'] ?? '';
+      // Get the actual user UUID from participant details
+      actualUserUuid =
+          participantData['id'] ??
+          participantData['userUuid'] ??
+          participantData['uuid'] ??
+          '';
+
+      print('Found user UUID for $otherParticipant: $actualUserUuid');
     }
 
     // If firstName is still empty, try to extract it from the name
     if (firstName.isEmpty) {
-      // For names like "Mr Prathap", extract "Prathap"
       final nameParts = name.trim().split(' ');
       if (nameParts.length > 1) {
-        firstName = nameParts.last; // Take the last part as firstName
+        firstName = nameParts.last;
       } else {
-        firstName = name; // Use the full name if no spaces
+        firstName = name;
       }
     }
 
@@ -119,8 +133,9 @@ class ChatContact {
     final String lastMessage = json['lastMessage'] ?? 'No messages yet';
 
     return ChatContact(
-      id: json['id'] ?? '',
+      id: json['id'] ?? '', // Chat ID for backward compatibility
       chatUuid: json['chatUuid'] ?? json['id'] ?? '',
+      userUuid: actualUserUuid, // Store the actual user UUID here
       name: name,
       firstName: firstName,
       lastMessage: lastMessage,
@@ -136,7 +151,6 @@ class ChatContact {
     );
   }
 
-  // Made public - removed underscore prefix
   static String generateInitials(String name) {
     final parts = name.trim().split(' ');
     if (parts.isEmpty) return 'U';
@@ -152,7 +166,6 @@ class ChatContact {
     }
   }
 
-  // Made public - removed underscore prefix
   static Color generateColorFromName(String name) {
     final colors = [
       Colors.blue,
@@ -171,7 +184,6 @@ class ChatContact {
     return colors[hash.abs() % colors.length];
   }
 
-  // Made public - removed underscore prefix
   static String getTimeAgo(DateTime? dateTime) {
     if (dateTime == null) return 'Unknown';
 

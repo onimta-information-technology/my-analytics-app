@@ -6,8 +6,9 @@ import '../data/repositories/auth_repository.dart';
 import '../data/services/api_service.dart';
 import '../utils/storage_util.dart';
 
-final flutterSecureStorageProvider =
-    Provider((ref) => const FlutterSecureStorage());
+final flutterSecureStorageProvider = Provider(
+  (ref) => const FlutterSecureStorage(),
+);
 
 final apiServiceProvider = Provider((ref) {
   final storage = ref.read(flutterSecureStorageProvider);
@@ -33,55 +34,52 @@ class AuthNotifier extends StateNotifier<AuthState?> {
   dynamic _pendingUser;
 
   AuthNotifier(this.authRepository)
-      : super(AuthState(user: null, isLoading: false)){
-         _checkAppVersion();
-      }
-
-// Future<void> _checkAppVersion() async {
-//     try {
-//       final packageInfo = await PackageInfo.fromPlatform();
-//       final currentVersion = packageInfo.version;
-
-//       final savedVersion = await StorageUtil.getAppVersion();
-
-//       if (savedVersion == null || savedVersion != currentVersion) {
-//         // App is either newly installed OR updated
-//         await StorageUtil.clearUserData();
-//         await StorageUtil.saveAppVersion(currentVersion);
-
-//         // Reset auth state
-//         state = AuthState(user: null, isLoading: false, error: null);
-
-//         print('App version changed. Cleared old data.');
-//       }
-//     } catch (e) {
-//       print('Version check failed: $e');
-//     }
-//   }
-
-Future<void> _checkAppVersion() async {
-  try {
-    final packageInfo = await PackageInfo.fromPlatform();
-    final currentVersion = packageInfo.version;
-
-    final savedVersion = await StorageUtil.getAppVersion();
-    final hasUser = await StorageUtil.hasUserData();
-
-   
-    if (savedVersion == null || savedVersion != currentVersion || !hasUser) {
-      await authRepository.storage.deleteAll(); 
-      await StorageUtil.clearUserData();      
-      await StorageUtil.saveAppVersion(currentVersion);
-
-      state = AuthState(user: null, isLoading: false, error: null);
-      print('Reinstall/version change detected. Cleared old data.');
-    }
-  } catch (e) {
-    print('Version/reinstall check failed: $e');
+    : super(AuthState(user: null, isLoading: false)) {
+    _checkAppVersion();
   }
-}
 
+  // Future<void> _checkAppVersion() async {
+  //     try {
+  //       final packageInfo = await PackageInfo.fromPlatform();
+  //       final currentVersion = packageInfo.version;
 
+  //       final savedVersion = await StorageUtil.getAppVersion();
+
+  //       if (savedVersion == null || savedVersion != currentVersion) {
+  //         // App is either newly installed OR updated
+  //         await StorageUtil.clearUserData();
+  //         await StorageUtil.saveAppVersion(currentVersion);
+
+  //         // Reset auth state
+  //         state = AuthState(user: null, isLoading: false, error: null);
+
+  //         print('App version changed. Cleared old data.');
+  //       }
+  //     } catch (e) {
+  //       print('Version check failed: $e');
+  //     }
+  //   }
+
+  Future<void> _checkAppVersion() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      final currentVersion = packageInfo.version;
+
+      final savedVersion = await StorageUtil.getAppVersion();
+      final hasUser = await StorageUtil.hasUserData();
+
+      if (savedVersion == null || savedVersion != currentVersion || !hasUser) {
+        await authRepository.storage.deleteAll();
+        await StorageUtil.clearUserData();
+        await StorageUtil.saveAppVersion(currentVersion);
+
+        state = AuthState(user: null, isLoading: false, error: null);
+        print('Reinstall/version change detected. Cleared old data.');
+      }
+    } catch (e) {
+      print('Version/reinstall check failed: $e');
+    }
+  }
 
   Future<void> authenticateAndLogin(String username, String password) async {
     isLoading = true;
@@ -94,50 +92,57 @@ Future<void> _checkAppVersion() async {
       }
 
       final user = await authRepository.login(username, password);
-       _pendingUser = user;
+      _pendingUser = user;
       // await StorageUtil.saveUserData(
       //     user.userName, user.userLevel, user.salesCode, user.marketingCode, user.mobileNumber ?? "");
       state = AuthState(user: user, isLoading: false);
     } catch (e) {
       print('Login failed: $e');
-        String errorMessage = e.toString();
+      String errorMessage = e.toString();
       if (errorMessage.startsWith('Exception: ')) {
-        errorMessage = errorMessage.substring(11); // Remove "Exception: " prefix
+        errorMessage = errorMessage.substring(
+          11,
+        ); // Remove "Exception: " prefix
       }
       state = AuthState(user: null, isLoading: false, error: errorMessage);
     } finally {
       isLoading = false;
     }
   }
-  
-   Future<void> completeLoginAfterOTP() async {
+
+  Future<void> completeLoginAfterOTP() async {
     try {
       if (_pendingUser != null) {
-        await StorageUtil.clearUserData(); 
+        await StorageUtil.clearUserData();
         // Now save the user data to storage after successful OTP verification
         await StorageUtil.saveUserData(
-          _pendingUser.userName, 
-          _pendingUser.userLevel, 
-          _pendingUser.salesCode, 
-          _pendingUser.marketingCode, 
-          _pendingUser.mobileNumber ?? ""
+          _pendingUser.userName,
+          _pendingUser.userLevel,
+          _pendingUser.salesCode,
+          _pendingUser.marketingCode,
+          _pendingUser.mobileNumber ?? "",
         );
-        
+
         // Update state to fully authenticated
         state = AuthState(user: _pendingUser, isLoading: false);
         _pendingUser = null; // Clear pending data
-        
+
         print('Login completed successfully after OTP verification');
       } else {
         throw Exception('No pending user data found');
       }
     } catch (e) {
       print('Error completing login: $e');
-      state = AuthState(user: null, isLoading: false, error: 'Login completion failed');
+      state = AuthState(
+        user: null,
+        isLoading: false,
+        error: 'Login completion failed',
+      );
       _pendingUser = null;
     }
   }
-void clearError() {
+
+  void clearError() {
     if (state?.error != null) {
       state = AuthState(
         user: state?.user,
@@ -146,12 +151,13 @@ void clearError() {
       );
     }
   }
-  
+
   Future<void> logout() async {
     await StorageUtil.clearUserData();
-    state = AuthState(user: null, isLoading: false,error: null);
+    state = AuthState(user: null, isLoading: false, error: null);
   }
-   void clearPendingUser() {
+
+  void clearPendingUser() {
     _pendingUser = null;
     state = AuthState(user: null, isLoading: false);
   }

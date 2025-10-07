@@ -35,17 +35,55 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   bool get wantKeepAlive => true;
 
-  @override
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   _loadUserName();
+  //   WidgetsBinding.instance.addPostFrameCallback((_) {
+  //     final hasInitialized = ref.read(homeScreenInitializedProvider);
+  //     if (!hasInitialized) {
+  //       ref.read(homeScreenInitializedProvider.notifier).state = true;
+  //       _initializeAppMode();
+  //       _loadGuestData();
+  //     }
+  //   });
+  // }
   @override
   void initState() {
     super.initState();
     _loadUserName();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // 🔹 Check if user is actually logged in
+      final userName = await StorageUtil.getUserName();
+      final salesCode = await StorageUtil.getSalesCode();
+
+      if (userName == null || salesCode == null) {
+        // User not logged in, reset everything
+        ref.read(homeScreenInitializedProvider.notifier).state = false;
+        ref.read(guestsProvider.notifier).resetData();
+        ref.read(guestCountsProvider.notifier).state = {
+          "today": null,
+          "yesterday": null,
+          "monthly": null,
+        };
+        return;
+      }
+
       final hasInitialized = ref.read(homeScreenInitializedProvider);
       if (!hasInitialized) {
         ref.read(homeScreenInitializedProvider.notifier).state = true;
         _initializeAppMode();
         _loadGuestData();
+      } else {
+        // 🔹 Even if initialized, verify data exists
+        final guestsState = ref.read(guestsProvider);
+        if (guestsState.todayGuests.isEmpty &&
+            guestsState.yesterdayGuests.isEmpty &&
+            guestsState.monthlyGuests.isEmpty) {
+          // Data is missing, reload
+          print('Data missing after login, reloading...');
+          _loadGuestData();
+        }
       }
     });
   }
@@ -271,8 +309,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           IconButton(
             padding: const EdgeInsets.all(10.0),
             icon: const Icon(Icons.refresh, size: 30),
-            onPressed:
-                _manualRefresh, 
+            onPressed: _manualRefresh,
           ),
         ],
       ),
@@ -311,7 +348,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ),
                     ),
                   ),
-                 // const SizedBox(height: 1),
+                  // const SizedBox(height: 1),
 
                   // Performance heading with loading indicator
                   Consumer(
@@ -462,7 +499,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
             ),
           ),
-         // const Watermark(),
+          // const Watermark(),
         ],
       ),
     );

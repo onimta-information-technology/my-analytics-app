@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:http/http.dart' as http;
@@ -211,20 +212,22 @@ class FirebaseApiService {
   }
 
   // Create a new chat
-  static Future<String?> createChat(String receiverName) async {
-    final currentUserName = await getName();
-    if (currentUserName == null) {
-      print('Current user name is null');
-      return null;
-    }
+
+  static Future<String?> createChat(String userUid) async {
+   // final currentUserName = await getName();
+   final deviceId = await DeviceId.get();
+    // if (currentUserName == null) {
+    //   print('Current user name is null');
+    //   return null;
+    // }
 
     try {
       final url = '$domain${endpoints['createChat']}';
-      print('Creating chat with receiver: $receiverName');
-      print('Creating chat with currentUserName: $currentUserName');
+      print('Creating chat with receiver: $userUid');
+      print('Creating chat with deviceId: $deviceId');
 
       final response = await postRequest(url, {
-        "participants": [receiverName, currentUserName],
+        "participants": [userUid, deviceId],
       });
 
       print('Create chat response: $response');

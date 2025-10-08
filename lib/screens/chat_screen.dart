@@ -533,7 +533,7 @@ class _ChatScreenState extends State<ChatScreen>
             return;
           }
 
-          final chatId = await FirebaseApiService.createChat(contact.name);
+          final chatId = await FirebaseApiService.createChat(contact.userUuid);
 
           final contactWithChatId = ChatContact(
             id: contact.id,
@@ -1063,7 +1063,7 @@ class _ChatScreenState extends State<ChatScreen>
                                                   try {
                                                     final chatId =
                                                         await FirebaseApiService.createChat(
-                                                          contact.name,
+                                                          contact.userUuid,
                                                         );
 
                                                     scaffoldMessenger
@@ -1075,7 +1075,8 @@ class _ChatScreenState extends State<ChatScreen>
                                                           chatUuid:
                                                               chatId ??
                                                               contact.chatUuid,
-                                                          userUuid: contact.userUuid,
+                                                          userUuid:
+                                                              contact.userUuid,
                                                           name: contact.name,
                                                           firstName:
                                                               contact
@@ -1150,7 +1151,8 @@ class _ChatScreenState extends State<ChatScreen>
                                                           id: contact.id,
                                                           chatUuid:
                                                               contact.chatUuid,
-                                                          userUuid: contact.userUuid,
+                                                          userUuid:
+                                                              contact.userUuid,
                                                           name: contact.name,
                                                           firstName:
                                                               contact

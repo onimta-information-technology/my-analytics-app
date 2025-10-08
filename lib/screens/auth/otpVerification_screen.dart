@@ -551,7 +551,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
         _showErrorMessage('Invalid OTP. Please try again.');
         _clearOTPFields();
         // Clear pending user data on OTP failure
-        ref.read(authProvider.notifier).clearPendingUser();
+        // ref.read(authProvider.notifier).clearPendingUser();
       }
     } catch (e) {
       _showErrorMessage('Verification failed. Please try again.');

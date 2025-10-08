@@ -4,6 +4,9 @@ class GuestGift {
   final String expireDate;
   final double amount;
   final String categoryCode;
+  final String gName;
+  final String? lvd;
+  final String? gRating;
 
   GuestGift({
     required this.mid,
@@ -11,6 +14,9 @@ class GuestGift {
     required this.expireDate,
     required this.amount,
     required this.categoryCode,
+    required this.gName,
+     this.lvd,
+     this.gRating,
   });
 
   factory GuestGift.fromJson(Map<String, dynamic> json) {
@@ -20,6 +26,10 @@ class GuestGift {
       expireDate: json['D_EXP_DATE'],
       amount: json['AMT'],
       categoryCode: json['CatCode'],
+      gName: json['GName'],
+      lvd: json['LVD'],
+      gRating: json['G_Rating'],
+
     );
   }
 }

@@ -29,7 +29,7 @@ class Guest {
 
   Guest.withGift({required this.mid, required this.memberName})
     : country = '',
-      lastVisitDate = '1970-01-01',
+      lastVisitDate = '1990-01-01',
       age = 0,
       gRating = null,
       mGroup = null,

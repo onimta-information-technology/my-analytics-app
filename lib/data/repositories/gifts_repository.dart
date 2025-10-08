@@ -58,6 +58,7 @@ class GiftsRepository {
             Guest.withGift(mid: table['MID'], memberName: table['MNAME']),
           );
         }
+        print("hello");
         print(giftGuestsList[0].memberName);
         return giftGuestsList;
       } else {
@@ -333,7 +334,7 @@ class GiftsRepository {
 
   // GiftsRepository.dart
 
-Future<Map<String, dynamic>?> insertSpecialGiftRequest({
+  Future<Map<String, dynamic>?> insertSpecialGiftRequest({
     required String mid,
     required String memberName,
     required String fromDateTime,
@@ -575,18 +576,18 @@ Future<Map<String, dynamic>?> insertSpecialGiftRequest({
         "con": "1",
       };
 
-   final resp = await apiService.post('CommonExecute', payload);
+      final resp = await apiService.post('CommonExecute', payload);
 
-    // Print the full response for debugging
-    print('insertSpecialGiftRequest full response: $resp');
+      // Print the full response for debugging
+      print('insertSpecialGiftRequest full response: $resp');
 
-    // Return the full response instead of just the boolean
-    return resp;
-  } catch (e) {
-    print('insertSpecialGiftRequest error: $e');
-    return null;
+      // Return the full response instead of just the boolean
+      return resp;
+    } catch (e) {
+      print('insertSpecialGiftRequest error: $e');
+      return null;
+    }
   }
-}
 
   Future<bool> approvedSPecialgiftRequest({
     required double reqid,

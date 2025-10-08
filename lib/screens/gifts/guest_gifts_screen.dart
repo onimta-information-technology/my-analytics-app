@@ -13,8 +13,11 @@ class GuestGiftsScreen extends ConsumerStatefulWidget {
   final GiftsRepository giftsRepository;
   final String mid;
 
-  const GuestGiftsScreen(
-      {super.key, required this.giftsRepository, required this.mid});
+  const GuestGiftsScreen({
+    super.key,
+    required this.giftsRepository,
+    required this.mid,
+  });
 
   @override
   ConsumerState<GuestGiftsScreen> createState() => _GuestGiftsScreenState();
@@ -60,18 +63,14 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> {
   Widget build(BuildContext context) {
     final fontSettings = ref.watch(fontSettingsProvider);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Guest Gifts'),
-      ),
+      appBar: AppBar(title: const Text('Guest Gifts')),
       body: Stack(
         children: [
           Column(
             children: [
               Expanded(
                 child: inactiveMembers.isEmpty
-                    ? const Center(
-                        child: Text("No gifts available"),
-                      )
+                    ? const Center(child: Text("No gifts available"))
                     : Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: ListView.builder(
@@ -85,31 +84,40 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> {
                               onTap: () {
                                 ref
                                     .read(selectedGuestProvider.notifier)
-                                    .setSelectedGuest(Guest(
+                                    .setSelectedGuest(
+                                      Guest(
                                         mid: guest.mid,
                                         memberName: guest.memberName,
                                         country: "",
-                                        lastVisitDate: "1990-01-01",
-                                        gift: guest.amount.toString(),
+                                        lastVisitDate:
+                                            guest.lvd ?? "1990-01-01",
+                                        gift: NumberFormat.currency(
+                                          symbol: '',
+                                          decimalDigits: 0,
+                                        ).format(guest.amount),
                                         age: 0,
-                                        gRating: "",
+                                        gRating: guest.gRating ?? "",
                                         mGroup: "",
-                                        gName: ""));
+                                        gName: guest.gName,
+                                      ),
+                                    );
                                 context.push('/home/profile');
                               },
                               child: Card(
-                                margin:
-                                    const EdgeInsets.symmetric(vertical: 5.0),
+                                margin: const EdgeInsets.symmetric(
+                                  vertical: 5.0,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12.0),
                                 ),
                                 elevation: 2,
                                 child: Padding(
                                   padding: const EdgeInsets.only(
-                                      left: 16.0,
-                                      right: 16.0,
-                                      top: 28.0,
-                                      bottom: 16.0),
+                                    left: 16.0,
+                                    right: 16.0,
+                                    top: 28.0,
+                                    bottom: 16.0,
+                                  ),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
@@ -145,9 +153,9 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> {
                                           ),
                                           Text(
                                             NumberFormat.currency(
-                                                    symbol: '',
-                                                    decimalDigits: 0)
-                                                .format(guest.amount),
+                                              symbol: '',
+                                              decimalDigits: 0,
+                                            ).format(guest.amount),
                                             style: const TextStyle(
                                               fontSize: 25.0,
                                               fontWeight: FontWeight.bold,
@@ -195,7 +203,8 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> {
                 child: const Center(
                   child: RefreshProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(
-                        Constants.kSecondaryColor),
+                      Constants.kSecondaryColor,
+                    ),
                   ),
                 ),
               ),

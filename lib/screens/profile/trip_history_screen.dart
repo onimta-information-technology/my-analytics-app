@@ -67,6 +67,7 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
   }
 
   Future<void> _getTripHistory() async {
+   
     try {
       final guest = ref.watch(selectedGuestProvider);
       setState(() {
@@ -76,6 +77,7 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
       final tripHistory = await widget.memberProfileRepository.getTripHistory2(
         playerId: guest!.mid,
       );
+
       print(tripHistory[0].toJson());
 
       setState(() {

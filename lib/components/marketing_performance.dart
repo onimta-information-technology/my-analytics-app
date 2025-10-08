@@ -269,6 +269,13 @@ class _MarketingPerformanceWidgetState
                     marketingState.selectedTab == 2,
                     tabsEnabled,
                   ),
+                  const SizedBox(width: 7),
+                  _buildTabButton(
+                    "Last Month",
+                    3,
+                    marketingState.selectedTab == 3,
+                    tabsEnabled,
+                  ),
                 ],
               ),
             ),
@@ -422,6 +429,9 @@ class _MarketingPerformanceWidgetState
         break;
       case 2:
         borderColor = Colors.blue; // Monthly
+        break;
+      case 3:
+        borderColor = const Color.fromARGB(255, 203, 56, 196); 
         break;
       default:
         borderColor = Colors.grey;

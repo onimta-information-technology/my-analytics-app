@@ -201,7 +201,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           'Authorization': 'Bearer $token',
         },
       );
-
+      print('Deleting message from API: response ${response.body}');
       if (response.statusCode != 200) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

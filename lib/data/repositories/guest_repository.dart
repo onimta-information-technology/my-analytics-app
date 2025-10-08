@@ -11,6 +11,7 @@ class GuestRepository {
   Future<List<Guest>> getGuestData(int iid, String text1) async {
     final deviceId = await DeviceId.get();
     print('Device ID guestdate used: $deviceId');
+    print('IID used: $iid');
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -54,7 +55,8 @@ class GuestRepository {
           guestList.add(
             Guest(
               mid: table['MID'] ?? '',
-              memberName: table['MName'] ?? table['MNane'] ?? table['MNAME'] ?? '',
+              memberName:
+                  table['MName'] ?? table['MNane'] ?? table['MNAME'] ?? '',
               country: table['COUNTRY'] ?? '',
               lastVisitDate: table['LVD'] ?? '',
               age: table['AGE'] ?? '',
@@ -97,6 +99,7 @@ class GuestRepository {
 
   Future<String?> fetchGuestImage(int iid, String text1) async {
     final deviceId = await DeviceId.get();
+    print('IID used: $iid');
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -144,6 +147,7 @@ class GuestRepository {
 
   Future<List<GuestSearchResponse>> searchGuest(int iid, String text1) async {
     final deviceId = await DeviceId.get();
+    print('IID used: $iid');
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [

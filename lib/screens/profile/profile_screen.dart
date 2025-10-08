@@ -370,7 +370,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                     .routerDelegate
                                     .currentConfiguration
                                     .fullPath ==
-                                '/gifts')
+                                '/gifts/event-gifts')
                           const SizedBox(height: 20),
                         if (GoRouter.of(context)
                                     .routerDelegate
@@ -381,7 +381,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                     .routerDelegate
                                     .currentConfiguration
                                     .fullPath ==
-                                '/gifts')
+                                '/gifts/event-gifts')
                           AnimatedBuilder(
                             animation: _animation,
                             builder: (context, child) {
@@ -561,90 +561,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                               : Column(
                                   //mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    // Expandable header card
-                                    // SizedBox(
-                                    //   width: double.infinity,
-                                    //   child: Card(
-                                    //     elevation: 4,
-                                    //     color: Constants.kPrimaryColor,
-                                    //     shape: RoundedRectangleBorder(
-                                    //       borderRadius: BorderRadius.circular(
-                                    //         12,
-                                    //       ),
-                                    //     ),
-                                    //     child: InkWell(
-                                    //       onTap: () {
-                                    //         setState(() {
-                                    //           _isTableExpanded =
-                                    //               !_isTableExpanded;
-                                    //         });
-                                    //       },
-                                    //       borderRadius: BorderRadius.circular(
-                                    //         12,
-                                    //       ),
-                                    //       child: Padding(
-                                    //         padding: const EdgeInsets.symmetric(
-                                    //           vertical: 16,
-                                    //           horizontal: 20,
-                                    //         ),
-                                    //         child: Row(
-                                    //           mainAxisAlignment:
-                                    //               MainAxisAlignment
-                                    //                   .spaceBetween,
-                                    //           children: [
-                                    //             Icon(
-                                    //               Icons.person,
-                                    //               color: Colors.white,
-                                    //               size: 30,
-                                    //             ),
-                                    //             const SizedBox(width: 8),
-                                    //             const Expanded(
-                                    //               child: Text(
-                                    //                 "Guest Profile Details",
-                                    //                 style: TextStyle(
-                                    //                   fontSize: 18,
-                                    //                   fontWeight:
-                                    //                       FontWeight.bold,
-                                    //                   // color: Constants.kPrimaryColor,
-                                    //                   color: Colors.white,
-                                    //                 ),
-                                    //                 overflow:
-                                    //                     TextOverflow.ellipsis,
-                                    //               ),
-                                    //             ),
-                                    //             Row(
-                                    //               children: [
-                                    //                 // Text(
-                                    //                 // //  _isTableExpanded ? "Collapse" : "View Details",
-                                    //                 //   // style: const TextStyle(
-                                    //                 //   //   fontSize: 14,
-                                    //                 //   //   color: Constants.kPrimaryColor,
-                                    //                 //   //   fontWeight: FontWeight.w500,
-                                    //                 //   // ),
-                                    //                 // ),
-                                    //                 // const SizedBox(width: 8),
-                                    //                 AnimatedRotation(
-                                    //                   turns: _isTableExpanded
-                                    //                       ? 0.5
-                                    //                       : 0,
-                                    //                   duration: const Duration(
-                                    //                     milliseconds: 300,
-                                    //                   ),
-                                    //                   child: const Icon(
-                                    //                     Icons
-                                    //                         .keyboard_arrow_down,
-                                    //                     color: Colors.white,
-                                    //                     size: 28,
-                                    //                   ),
-                                    //                 ),
-                                    //               ],
-                                    //             ),
-                                    //           ],
-                                    //         ),
-                                    //       ),
-                                    //     ),
-                                    //   ),
-                                    // ),
                                     SizedBox(
                                       width: double.infinity,
                                       child: ElevatedButton(
@@ -799,95 +715,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                           ],
                                         ),
                                       ),
-                                      // child: Card(
-                                      //   elevation: 2,
-                                      //   shape: RoundedRectangleBorder(
-                                      //     borderRadius:
-                                      //         BorderRadius.circular(8),
-                                      //   ),
-                                      //   child: Table(
-                                      //     border: TableBorder.all(
-                                      //       color: Colors.grey.shade300,
-                                      //       width: 1,
-                                      //     ),
-                                      //     columnWidths: const {
-                                      //       0: FractionColumnWidth(0.5),
-                                      //       1: FractionColumnWidth(0.5),
-                                      //     },
-                                      //     children: [
-                                      //       ...guestProfileDetails.asMap().entries.map((
-                                      //         entry,
-                                      //       ) {
-                                      //         int index = entry.key;
-                                      //         var profileEntry =
-                                      //             entry.value;
-
-                                      //         return TableRow(
-                                      //           decoration: BoxDecoration(
-                                      //             // color: Constants
-                                      //             //     .kPrimaryColor
-                                      //             //     .withAlpha(50),
-
-                                      //             color: index.isEven
-                                      //             ? Constants.kPrimaryColor.withAlpha(50)
-                                      //             : Colors.white,
-                                      //           ),
-                                      //           children: [
-                                      //             Padding(
-                                      //               padding:
-                                      //                   const EdgeInsets.all(
-                                      //                     12.0,
-                                      //                   ),
-                                      //               child: Text(
-                                      //                 profileEntry
-                                      //                     .details['Name']!,
-                                      //                 style: TextStyle(
-                                      //                   color: Colors
-                                      //                       .black87,
-                                      //                   fontSize:
-                                      //                       fontSettings
-                                      //                           .fontSize,
-                                      //                   fontWeight:
-                                      //                       FontWeight
-                                      //                           .bold,
-                                      //                 ),
-                                      //               ),
-                                      //             ),
-                                      //             Container(
-                                      //               color: index.isEven
-                                      //                   ? Colors
-                                      //                         .grey
-                                      //                         .shade50
-                                      //                   : Colors.white,
-                                      //               child: Padding(
-                                      //                 padding:
-                                      //                     const EdgeInsets.all(
-                                      //                       12.0,
-                                      //                     ),
-                                      //                 child: Text(
-                                      //                   profileEntry
-                                      //                       .details['Detail']!,
-                                      //                   textAlign:
-                                      //                       TextAlign.end,
-                                      //                   style: TextStyle(
-                                      //                     color: Colors
-                                      //                         .black,
-                                      //                     fontSize:
-                                      //                         fontSettings
-                                      //                             .fontSize,
-                                      //                     fontWeight:
-                                      //                         fontSettings
-                                      //                             .fontWeight,
-                                      //                   ),
-                                      //                 ),
-                                      //               ),
-                                      //             ),
-                                      //           ],
-                                      //         );
-                                      //       }).toList(),
-                                      //     ],
-                                      //   ),
-                                      // ),
                                     ),
 
                                     // Preview hint when collapsed
@@ -942,7 +769,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                     .routerDelegate
                                     .currentConfiguration
                                     .fullPath ==
-                                '/gifts')
+                                '/gifts/event-gifts')
                           // Card(
                           //   elevation: 5,
                           //   shape: RoundedRectangleBorder(
@@ -1234,89 +1061,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                               ),
                             ),
                           ),
-                        // if (GoRouter.of(
-                        //       context,
-                        //     ).routerDelegate.currentConfiguration.fullPath ==
-                        //     '/members')
-                          // Padding(
-                          //   padding: const EdgeInsets.symmetric(vertical: 16.0),
-                          //   child: Container(
-                          //     // color: Colors.white,
-                          //     child: _isLoading
-                          //         ? const Center(
-                          //             child: RefreshProgressIndicator(
-                          //               valueColor:
-                          //                   AlwaysStoppedAnimation<Color>(
-                          //                     Constants.kSecondaryColor,
-                          //                   ),
-                          //             ),
-                          //           )
-                          //         : Table(
-                          //             border: TableBorder.all(),
-                          //             columnWidths: const {
-                          //               0: FractionColumnWidth(0.5),
-                          //               1: FractionColumnWidth(0.5),
-                          //             },
-                          //             children: [
-                          //               ...guestProfileDetails
-                          //                   .map((entry) {
-                          //                     return [
-                          //                       TableRow(
-                          //                         decoration: BoxDecoration(
-                          //                           color: Constants
-                          //                               .kPrimaryColor
-                          //                               .withAlpha(50),
-                          //                         ),
-                          //                         children: [
-                          //                           Padding(
-                          //                             padding:
-                          //                                 const EdgeInsets.all(
-                          //                                   8.0,
-                          //                                 ),
-                          //                             child: Text(
-                          //                               entry.details['Name']!,
-                          //                               style: TextStyle(
-                          //                                 color: Colors.black,
-                          //                                 fontSize: fontSettings
-                          //                                     .fontSize,
-                          //                                 fontWeight:
-                          //                                     FontWeight.bold,
-                          //                               ),
-                          //                             ),
-                          //                           ),
-                          //                           Container(
-                          //                             color: Colors.white,
-                          //                             child: Padding(
-                          //                               padding:
-                          //                                   const EdgeInsets.all(
-                          //                                     8.0,
-                          //                                   ),
-                          //                               child: Text(
-                          //                                 entry
-                          //                                     .details['Detail']!,
-                          //                                 textAlign:
-                          //                                     TextAlign.end,
-                          //                                 style: TextStyle(
-                          //                                   color: Colors.black,
-                          //                                   fontSize:
-                          //                                       fontSettings
-                          //                                           .fontSize,
-                          //                                   fontWeight:
-                          //                                       fontSettings
-                          //                                           .fontWeight,
-                          //                                 ),
-                          //                               ),
-                          //                             ),
-                          //                           ),
-                          //                         ],
-                          //                       ),
-                          //                     ];
-                          //                   })
-                          //                   .expand((x) => x),
-                          //             ],
-                          //           ),
-                          //   ),
-                          // ),
                       ],
                     ),
                   ),

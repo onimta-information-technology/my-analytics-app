@@ -58,9 +58,7 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
   Widget build(BuildContext context) {
     final fontSettings = ref.watch(fontSettingsProvider);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Gifts'),
-      ),
+      appBar: AppBar(title: const Text('Gifts')),
       body: Stack(
         children: [
           Column(
@@ -74,12 +72,12 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
                         inactiveMembers = List<Guest>.from(originalMembers);
                       } else {
                         inactiveMembers = originalMembers.where((guest) {
-                          return guest.memberName
-                                  .toLowerCase()
-                                  .contains(value.toLowerCase()) ||
-                              guest.mid
-                                  .toLowerCase()
-                                  .contains(value.toLowerCase());
+                          return guest.memberName.toLowerCase().contains(
+                                value.toLowerCase(),
+                              ) ||
+                              guest.mid.toLowerCase().contains(
+                                value.toLowerCase(),
+                              );
                         }).toList();
                       }
                     });
@@ -95,9 +93,7 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
               ),
               Expanded(
                 child: inactiveMembers.isEmpty
-                    ? const Center(
-                        child: Text("No gifts available"),
-                      )
+                    ? const Center(child: Text("No gifts available"))
                     : Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: ListView.builder(
@@ -115,21 +111,24 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
                                         .read(selectedGuestProvider.notifier)
                                         .setSelectedGuest(guest);
                                     context.push(
-                                        '/gifts/guest-gifts/${guest.mid}');
+                                      '/gifts/event-gifts/guest-gifts/${guest.mid}',
+                                    );
                                   },
                                   child: Card(
                                     margin: const EdgeInsets.symmetric(
-                                        vertical: 5.0),
+                                      vertical: 5.0,
+                                    ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12.0),
                                     ),
                                     elevation: 2,
                                     child: Padding(
                                       padding: const EdgeInsets.only(
-                                          left: 16.0,
-                                          right: 16.0,
-                                          top: 28.0,
-                                          bottom: 16.0),
+                                        left: 16.0,
+                                        right: 16.0,
+                                        top: 28.0,
+                                        bottom: 16.0,
+                                      ),
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
@@ -148,57 +147,57 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
                                               ),
                                             ],
                                           ),
-                                          const SizedBox(height: 8),
-                                          Row(
-                                            children: [
-                                              const Icon(
-                                                Icons.calendar_today,
-                                                color: Colors.grey,
-                                                size: 18,
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                'Last visit on ${DateFormat('dd MMM yyyy').format(DateTime.parse(guest.lastVisitDate))}',
-                                                style: TextStyle(
-                                                  fontSize:
-                                                      fontSettings.fontSize,
-                                                  color: Colors.grey[600],
-                                                ),
-                                              ),
-                                            ],
-                                          ),
+                                          // const SizedBox(height: 8),
+                                          // Row(
+                                          //   children: [
+                                          //     const Icon(
+                                          //       Icons.calendar_today,
+                                          //       color: Colors.grey,
+                                          //       size: 18,
+                                          //     ),
+                                          //     const SizedBox(width: 8),
+                                          //     Text(
+                                          //       'Last visit on ${DateFormat('dd MMM yyyy').format(DateTime.parse(guest.lastVisitDate))}',
+                                          //       style: TextStyle(
+                                          //         fontSize:
+                                          //             fontSettings.fontSize,
+                                          //         color: Colors.grey[600],
+                                          //       ),
+                                          //     ),
+                                          //   ],
+                                          // ),
                                         ],
                                       ),
                                     ),
                                   ),
                                 ),
-                                Positioned(
-                                  top: 6,
-                                  right: -2,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(0),
-                                    child: SizedBox(
-                                      width: 80,
-                                      height: 26,
-                                      child: ratingImageMap[guest.gRating] !=
-                                              null
-                                          ? Hero(
-                                              tag: "rating-image-${guest.mid}",
-                                              child: Image.asset(
-                                                ratingImageMap[guest.gRating]!,
-                                                fit: BoxFit.contain,
-                                              ),
-                                            )
-                                          : Hero(
-                                              tag: "rating-image-${guest.mid}",
-                                              child: Image.asset(
-                                                "assets/images/ratings/CLASSIC.png",
-                                                fit: BoxFit.contain,
-                                              ),
-                                            ),
-                                    ),
-                                  ),
-                                ),
+                                // Positioned(
+                                //   top: 6,
+                                //   right: -2,
+                                //   child: Padding(
+                                //     padding: const EdgeInsets.all(0),
+                                //     child: SizedBox(
+                                //       width: 80,
+                                //       height: 26,
+                                //       child:
+                                //           ratingImageMap[guest.gRating] != null
+                                //           ? Hero(
+                                //               tag: "rating-image-${guest.mid}",
+                                //               child: Image.asset(
+                                //                 ratingImageMap[guest.gRating]!,
+                                //                 fit: BoxFit.contain,
+                                //               ),
+                                //             )
+                                //           : Hero(
+                                //               tag: "rating-image-${guest.mid}",
+                                //               child: Image.asset(
+                                //                 "assets/images/ratings/CLASSIC.png",
+                                //                 fit: BoxFit.contain,
+                                //               ),
+                                //             ),
+                                //     ),
+                                //   ),
+                                // ),
                               ],
                             );
                           },
@@ -216,12 +215,13 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
                 child: const Center(
                   child: RefreshProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(
-                        Constants.kSecondaryColor),
+                      Constants.kSecondaryColor,
+                    ),
                   ),
                 ),
               ),
             ),
-              const Watermark(),
+          const Watermark(),
         ],
       ),
     );

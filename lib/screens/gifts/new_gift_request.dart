@@ -739,75 +739,89 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                 },
                               ];
 
-                              return Container(
-                                margin: const EdgeInsets.only(top: 10),
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: Colors.grey.shade400,
-                                  ),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: DataTable(
-                                  headingRowColor: WidgetStateProperty.all(
-                                    Colors.amber.shade100,
-                                  ),
-                                  border: TableBorder.all(
-                                    color: Colors.grey.shade300,
-                                  ),
-                                  columns: [
-                                    DataColumn(
-                                      label: Text(
-                                        "Field",
-                                        style: TextStyle(
-                                          fontSize: fontSettings.fontSize,
-                                          fontWeight: fontSettings.fontWeight,
-                                        ),
+                              return Stack(
+                                children: [
+                                  Container(
+                                    margin: const EdgeInsets.only(top: 10),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: Colors.grey.shade400,
                                       ),
+                                      borderRadius: BorderRadius.circular(6),
                                     ),
-                                    DataColumn(
-                                      label: Text(
-                                        "Value",
-                                        style: TextStyle(
-                                          fontSize: fontSettings.fontSize,
-                                          fontWeight: fontSettings.fontWeight,
-                                        ),
+                                    child: DataTable(
+                                      headingRowColor: WidgetStateProperty.all(
+                                        Colors.amber.shade100,
                                       ),
-                                    ),
-                                  ],
-                                  rows: rows.map((row) {
-                                    return DataRow(
-                                      cells: [
-                                        DataCell(
-                                          Align(
-                                            alignment: Alignment.centerLeft,
-                                            child: Text(
-                                              row["Field"].toString(),
-                                              style: TextStyle(
-                                                fontSize: fontSettings.fontSize,
-                                                fontWeight:
-                                                    fontSettings.fontWeight,
-                                              ),
+                                      border: TableBorder.all(
+                                        color: Colors.grey.shade300,
+                                      ),
+                                      columns: [
+                                        DataColumn(
+                                          label: Text(
+                                            "Field",
+                                            style: TextStyle(
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
                                             ),
                                           ),
                                         ),
-                                        DataCell(
-                                          Align(
-                                            alignment: Alignment.centerRight,
-                                            child: Text(
-                                              formatNumber(row["Value"]),
-
-                                              style: TextStyle(
-                                                fontSize: fontSettings.fontSize,
-                                                fontWeight:
-                                                    fontSettings.fontWeight,
-                                              ),
+                                        DataColumn(
+                                          label: Text(
+                                            "Value",
+                                            style: TextStyle(
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
                                             ),
                                           ),
                                         ),
                                       ],
-                                    );
-                                  }).toList(),
-                                ),
+                                      rows: rows.map((row) {
+                                        return DataRow(
+                                          cells: [
+                                            DataCell(
+                                              Align(
+                                                alignment: Alignment.centerLeft,
+                                                child: Text(
+                                                  row["Field"].toString(),
+                                                  style: TextStyle(
+                                                    fontSize:
+                                                        fontSettings.fontSize,
+                                                    fontWeight:
+                                                        fontSettings.fontWeight,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            DataCell(
+                                              Align(
+                                                alignment:
+                                                    Alignment.centerRight,
+                                                child: Text(
+                                                  formatNumber(row["Value"]),
+
+                                                  style: TextStyle(
+                                                    fontSize:
+                                                        fontSettings.fontSize,
+                                                    fontWeight:
+                                                        fontSettings.fontWeight,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                                  Positioned.fill(
+                                    child: IgnorePointer(
+                                      child: const Watermark(),
+                                    ),
+                                  ),
+                                ],
                               );
                             },
                           ),
@@ -1416,7 +1430,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                     ),
                   ),
                 ),
-              const Watermark(),
+              // const Watermark(),
             ],
           ),
         ),

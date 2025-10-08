@@ -1,3 +1,4 @@
 {
-    "java.configuration.updateBuildConfiguration": "interactive"
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "cmake.sourceDirectory": "/Users/tharinduliyanagama/Documents/CloneProjects/2025/ballys-reservation-v2/linux"
 }

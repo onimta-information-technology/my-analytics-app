@@ -816,11 +816,8 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                       }).toList(),
                                     ),
                                   ),
-                                  Positioned.fill(
-                                    child: IgnorePointer(
-                                      child: const Watermark(),
-                                    ),
-                                  ),
+
+                                  const Watermark(),
                                 ],
                               );
                             },

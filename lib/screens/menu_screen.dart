@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -14,7 +15,8 @@ class MenuScreen extends StatefulWidget {
 class _MenuScreenState extends State<MenuScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-
+  String? _salesCode;
+  bool _isLoading = true;
   @override
   void initState() {
     super.initState();
@@ -22,6 +24,44 @@ class _MenuScreenState extends State<MenuScreen>
       duration: const Duration(seconds: 1),
       vsync: this,
     );
+    _loadSalesCode();
+  }
+
+  Future<void> _loadSalesCode() async {
+    final salesCode = await StorageUtil.getSalesCode();
+    setState(() {
+      _salesCode = salesCode;
+      _isLoading = false;
+    });
+  }
+
+  bool get _isReservationsBlocked => _salesCode == "CD001";
+
+  void _handleReservationsTap() {
+    if (_isReservationsBlocked) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: const [
+              Icon(Icons.block, color: Colors.white),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Access denied: Reservations not available for your account',
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      );
+    } else {
+      context.go('/reservations');
+    }
   }
 
   @override
@@ -32,6 +72,9 @@ class _MenuScreenState extends State<MenuScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
       // appBar: AppBar(
       //     // title: const Text(
@@ -80,31 +123,79 @@ class _MenuScreenState extends State<MenuScreen>
                       ),
                     ),
                     // SizedBox(width: 16),
+                    // Expanded(
+                    //   child: InkWell(
+                    //     onTap: () {
+                    //       context.go('/reservations');
+                    //     },
+                    //     child: Card(
+                    //       color: Colors.orange[700],
+                    //       child: const Padding(
+                    //         padding: EdgeInsets.symmetric(vertical: 30),
+                    //         child: Column(
+                    //           children: [
+                    //             Icon(
+                    //               Icons.luggage,
+                    //               size: 60,
+                    //               color: Colors.white,
+                    //             ),
+                    //             Text(
+                    //               'Reservations',
+                    //               style: TextStyle(
+                    //                 fontSize: 16.0,
+                    //                 fontWeight: FontWeight.normal,
+                    //                 color: Colors.white,
+                    //               ),
+                    //             ),
+                    //           ],
+                    //         ),
+                    //       ),
+                    //     ),
+                    //   ),
+                    // ),
                     Expanded(
-                      child: InkWell(
-                        onTap: () {
-                          context.go('/reservations');
-                        },
-                        child: Card(
-                          color: Colors.orange[700],
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 30),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.luggage,
-                                  size: 60,
-                                  color: Colors.white,
-                                ),
-                                Text(
-                                  'Reservations',
-                                  style: TextStyle(
-                                    fontSize: 16.0,
-                                    fontWeight: FontWeight.normal,
-                                    color: Colors.white,
+                      child: Opacity(
+                        opacity: _isReservationsBlocked ? 0.5 : 1.0,
+                        child: InkWell(
+                          onTap: _handleReservationsTap,
+                          child: Card(
+                            color: _isReservationsBlocked
+                                ? Colors.grey
+                                : Colors.orange[700],
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 30),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Column(
+                                    children: [
+                                      Icon(
+                                        Icons.luggage,
+                                        size: 60,
+                                        color: Colors.white,
+                                      ),
+                                      const Text(
+                                        'Reservations',
+                                        style: TextStyle(
+                                          fontSize: 16.0,
+                                          fontWeight: FontWeight.normal,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                              ],
+                                  if (_isReservationsBlocked)
+                                    Positioned(
+                                      top: 8,
+                                      right: 8,
+                                      child: Icon(
+                                        Icons.lock,
+                                        size: 24,
+                                        color: Colors.white.withOpacity(0.8),
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -112,6 +203,7 @@ class _MenuScreenState extends State<MenuScreen>
                     ),
                   ],
                 ),
+
                 Row(
                   children: [
                     Expanded(
@@ -275,8 +367,10 @@ class _MenuScreenState extends State<MenuScreen>
                   children: [
                     Expanded(
                       child: GestureDetector(
-                        onTap: () {  context.go('/daily-gests');},
-                   
+                        onTap: () {
+                          context.go('/daily-gests');
+                        },
+
                         child: const Card(
                           color: Color.fromARGB(176, 4, 123, 235),
                           child: Padding(

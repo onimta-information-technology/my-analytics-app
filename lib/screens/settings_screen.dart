@@ -1,10 +1,12 @@
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
+import 'package:ballys_reservation_app/providers/auth_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart'
     hide AppMode;
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -36,6 +38,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     });
   }
 
+  Future<void> _handleLogout() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true && mounted) {
+      await ref.read(authProvider.notifier).logout();
+      if (mounted) {
+        context.go('/login');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final double selectedFontSize = ref.watch(fontSettingsProvider).fontSize;
@@ -50,7 +79,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (_canShowOverallData) ...[
-                  const Text('App Mode', style: TextStyle(fontSize: 16.0, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'App Mode',
+                    style: TextStyle(
+                      fontSize: 16.0,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -115,6 +150,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     _buildFontWeightButton(FontWeight.w900, 'Extra Bold'),
                   ],
                 ),
+                const Spacer(),
+                // Logout Button
+                Center(
+                  child: ElevatedButton.icon(
+                    onPressed: _handleLogout,
+                    icon: const Icon(Icons.logout, size: 18),
+                    label: const Text('Logout', style: TextStyle(fontSize: 14)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 10,
+                        horizontal: 16,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
               ],
             ),
           ),
@@ -140,7 +197,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       child: Text(name),
     );
   }
-  
 
   Widget _buildFontWeightButton(FontWeight weight, String name) {
     return ElevatedButton(

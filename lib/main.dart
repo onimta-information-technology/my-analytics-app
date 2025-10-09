@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:awesome_notifications/awesome_notifications.dart';
-import 'package:ballys_reservation_app/components/developer_banner.dart';
 import 'package:ballys_reservation_app/components/localNotificationService.dart';
 import 'package:ballys_reservation_app/navigation/app_navigation.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -30,7 +29,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await ScreenProtector.preventScreenshotOn();
+  // await ScreenProtector.preventScreenshotOn();
 
   // Initialize Firebases
   await Firebase.initializeApp();
@@ -133,14 +132,14 @@ class _MyAppState extends State<MyApp> {
       routerConfig: AppNavigation.router,
 
       builder: (context, child) {
-        return DeveloperBanner(
-          // return MediaQuery(
-          child: MediaQuery(
-            data: MediaQuery.of(context).copyWith(
-              textScaler: TextScaler.noScaling, // This disables font scaling
-            ),
-            child: child!,
+        // return DeveloperBanner(
+        return MediaQuery(
+          // child: MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.noScaling, // This disables font scaling
           ),
+          child: child!,
+          // ),
         );
       },
     );

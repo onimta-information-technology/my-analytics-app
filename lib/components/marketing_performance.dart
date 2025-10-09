@@ -245,38 +245,41 @@ class _MarketingPerformanceWidgetState
             //     ),
             //   ],
             // ),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _buildTabButton(
-                    "Today",
-                    0,
-                    marketingState.selectedTab == 0,
-                    tabsEnabled,
-                  ),
-                  const SizedBox(width: 7),
-                  _buildTabButton(
-                    "Yesterday",
-                    1,
-                    marketingState.selectedTab == 1,
-                    tabsEnabled,
-                  ),
-                  const SizedBox(width: 7),
-                  _buildTabButton(
-                    "Monthly",
-                    2,
-                    marketingState.selectedTab == 2,
-                    tabsEnabled,
-                  ),
-                  const SizedBox(width: 7),
-                  _buildTabButton(
-                    "Last Month",
-                    3,
-                    marketingState.selectedTab == 3,
-                    tabsEnabled,
-                  ),
-                ],
+            Center(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildTabButton(
+                      "Today",
+                      0,
+                      marketingState.selectedTab == 0,
+                      tabsEnabled,
+                    ),
+                    const SizedBox(width: 7),
+                    _buildTabButton(
+                      "Yesterday",
+                      1,
+                      marketingState.selectedTab == 1,
+                      tabsEnabled,
+                    ),
+                    const SizedBox(width: 7),
+                    _buildTabButton(
+                      "Monthly",
+                      2,
+                      marketingState.selectedTab == 2,
+                      tabsEnabled,
+                    ),
+                    const SizedBox(width: 7),
+                    _buildTabButton(
+                      "Last Month",
+                      3,
+                      marketingState.selectedTab == 3,
+                      tabsEnabled,
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -431,7 +434,7 @@ class _MarketingPerformanceWidgetState
         borderColor = Colors.blue; // Monthly
         break;
       case 3:
-        borderColor = const Color.fromARGB(255, 203, 56, 196); 
+        borderColor = const Color.fromARGB(255, 203, 56, 196);
         break;
       default:
         borderColor = Colors.grey;

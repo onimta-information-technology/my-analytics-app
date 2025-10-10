@@ -60,226 +60,161 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _handleBiometricToggle(bool value) async {
     if (value && _isBiometricAvailable) {
-      // Enable biometric - ask for username and password
-      await _showBiometricEnableDialog();
+      // Enable biometric - directly prompt for biometric authentication
+      await _enableBiometricDirectly();
     } else if (!value && _isBiometricEnabled) {
       // Disable biometric
       await _disableBiometric();
     }
   }
 
-  Future<void> _showBiometricEnableDialog() async {
-    final biometricName = _biometricService.getBiometricTypeName(
-      _availableBiometrics,
-    );
-
-    final usernameController = TextEditingController();
-    final passwordController = TextEditingController();
-    bool showPassword = false;
-
-    final result = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  _availableBiometrics.contains(BiometricType.face)
-                      ? Icons.face
-                      : Icons.fingerprint,
-                  color: Colors.orange[700],
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Enable $biometricName',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Enter your credentials to enable $biometricName for quick login',
-                  style: const TextStyle(fontSize: 16),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: usernameController,
-                  decoration: InputDecoration(
-                    labelText: 'Username',
-                    prefixIcon: const Icon(Icons.person),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: passwordController,
-                  obscureText: !showPassword,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        showPassword ? Icons.visibility : Icons.visibility_off,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          showPassword = !showPassword;
-                        });
-                      },
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.blue.withOpacity(0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: Colors.blue[700],
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Your credentials will be stored securely',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.blue[700],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey[300],
-                    foregroundColor: Colors.black87,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    'Cancel',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    'Enable',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-
-    usernameController.dispose();
-    passwordController.dispose();
-
-    if (result == true) {
-      final username = usernameController.text.trim();
-      final password = passwordController.text;
-
-      if (username.isNotEmpty && password.isNotEmpty) {
-        await _enableBiometric(username, password);
-      } else {
-        _showErrorSnackBar('Please enter both username and password');
-      }
-    }
-  }
-
-  Future<void> _enableBiometric(String username, String password) async {
+  Future<void> _enableBiometricDirectly() async {
     try {
-      await _biometricService.saveCredentials(username, password);
-      setState(() {
-        _isBiometricEnabled = true;
-      });
-      _showSuccessSnackBar(
-        '${_biometricService.getBiometricTypeName(_availableBiometrics)} enabled successfully',
+      final biometricName = _biometricService.getBiometricTypeName(
+        _availableBiometrics,
       );
+
+      // Get current user credentials from storage
+      final username = await _getStoredUsename();
+      final password = await _getStoredPassword();
+
+      if (username == null || username.isEmpty) {
+        _showErrorSnackBar('User credentials not found. Please login first.');
+        return;
+      }
+
+      print('🔐 Requesting $biometricName authentication to enable...');
+
+      // Authenticate with biometric
+      final authenticated = await _biometricService.authenticate(
+        reason: 'Authenticate to enable $biometricName for login',
+      );
+
+      if (authenticated) {
+        // Save credentials and enable biometric
+        if (password != null) {
+          await _biometricService.saveCredentials(username, password);
+          setState(() {
+            _isBiometricEnabled = true;
+          });
+          _showSuccessSnackBar('$biometricName enabled successfully');
+          print('✅ $biometricName enabled successfully');
+        } else {
+          _showErrorSnackBar('Password not found. Please login again.');
+        }
+      } else {
+        print('❌ Biometric authentication cancelled or failed');
+      }
     } catch (e) {
-      print('Error enabling biometric: $e');
+      print('❌ Error enabling biometric: $e');
       _showErrorSnackBar('Failed to enable biometric authentication');
     }
   }
 
+  // Helper method to get stored password from auth provider or secure storage
+  Future<String?> _getStoredPassword() async {
+    try {
+      // First try to get password from current session (in memory)
+      final sessionPassword = ref
+          .read(authProvider.notifier)
+          .getCurrentSessionPassword();
+      if (sessionPassword != null && sessionPassword.isNotEmpty) {
+        print('✅ Retrieved password from current session');
+        return sessionPassword;
+      }
+
+      // If not in session, check if we have stored biometric credentials
+      final credentials = await _biometricService.getCredentials();
+      if (credentials != null && credentials['password'] != null) {
+        print('✅ Retrieved password from biometric storage');
+        return credentials['password'];
+      }
+
+      print('⚠️ No password found in session or storage');
+      return null;
+    } catch (e) {
+      print('Error getting stored password: $e');
+      return null;
+    }
+  }
+
+  Future<String?> _getStoredUsename() async {
+    try {
+      // First try to get password from current session (in memory)
+      final sessionUsername = ref
+          .read(authProvider.notifier)
+          .getCurrentSessionUsername();
+      if (sessionUsername != null && sessionUsername.isNotEmpty) {
+        print('✅ Retrieved Username from current session');
+        return sessionUsername;
+      }
+
+      // If not in session, check if we have stored biometric credentials
+      final credentials = await _biometricService.getCredentials();
+      if (credentials != null && credentials['username'] != null) {
+        print('✅ Retrieved username from biometric storage');
+        return credentials['username'];
+      }
+
+      print('⚠️ No username found in session or storage');
+      return null;
+    } catch (e) {
+      print('Error getting stored username: $e');
+      return null;
+    }
+  }
+
   Future<void> _disableBiometric() async {
+    final biometricName = _biometricService.getBiometricTypeName(
+      _availableBiometrics,
+    );
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Disable Biometric'),
-        content: const Text(
-          'Are you sure you want to disable biometric authentication?',
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.orange[700],
+              size: 28,
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Disable Biometric',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to disable $biometricName authentication?',
+          style: const TextStyle(fontSize: 16),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            ),
+            child: const Text('Cancel', style: TextStyle(fontSize: 16)),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Disable', style: TextStyle(color: Colors.red)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              'Disable',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -291,7 +226,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         setState(() {
           _isBiometricEnabled = false;
         });
-        _showSuccessSnackBar('Biometric authentication disabled');
+        _showSuccessSnackBar('$biometricName authentication disabled');
       } catch (e) {
         print('Error disabling biometric: $e');
         _showErrorSnackBar('Failed to disable biometric authentication');
@@ -433,7 +368,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                // Biometric Settings
                 if (_isBiometricAvailable) ...[
                   const Text(
                     'Biometric Authentication',

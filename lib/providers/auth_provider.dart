@@ -35,6 +35,8 @@ class AuthNotifier extends StateNotifier<AuthState?> {
   bool isLoading = false;
 
   dynamic _pendingUser;
+    String? _currentSessionPassword;
+      String? _currentSessionusername;
  // Biometric storage keys that should NOT be deleted
   static const String _biometricEnabledKey = 'biometric_enabled';
   static const String _usernameKey = 'biometric_username';
@@ -135,6 +137,8 @@ class AuthNotifier extends StateNotifier<AuthState?> {
 
       final user = await authRepository.login(username, password);
       _pendingUser = user;
+       _currentSessionPassword = password;
+        _currentSessionusername = username;
       // await StorageUtil.saveUserData(
       //     user.userName, user.userLevel, user.salesCode, user.marketingCode, user.mobileNumber ?? "");
       state = AuthState(user: user, isLoading: false);
@@ -183,6 +187,12 @@ class AuthNotifier extends StateNotifier<AuthState?> {
       _pendingUser = null;
     }
   }
+    String? getCurrentSessionPassword() {
+    return _currentSessionPassword;
+  }
+     String? getCurrentSessionUsername() {
+    return _currentSessionusername;
+  }
 
   void clearError() {
     if (state?.error != null) {
@@ -196,6 +206,8 @@ class AuthNotifier extends StateNotifier<AuthState?> {
 
   Future<void> logout() async {
     await StorageUtil.clearUserData();
+      _currentSessionPassword = null;
+      _currentSessionusername = null;
     state = AuthState(user: null, isLoading: false, error: null);
   }
 

@@ -21,18 +21,24 @@ final authRepositoryProvider = Provider((ref) {
   return AuthRepository(apiService, storage);
 });
 
+
 // Define the AuthNotifier to manage authentication state
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState?>((ref) {
   final authRepository = ref.read(authRepositoryProvider);
+
   return AuthNotifier(authRepository);
 });
 
 class AuthNotifier extends StateNotifier<AuthState?> {
   final AuthRepository authRepository;
+
   bool isLoading = false;
 
   dynamic _pendingUser;
-
+ // Biometric storage keys that should NOT be deleted
+  static const String _biometricEnabledKey = 'biometric_enabled';
+  static const String _usernameKey = 'biometric_username';
+  static const String _passwordKey = 'biometric_password';
   AuthNotifier(this.authRepository)
     : super(AuthState(user: null, isLoading: false)) {
     _checkAppVersion();
@@ -69,8 +75,44 @@ class AuthNotifier extends StateNotifier<AuthState?> {
       final hasUser = await StorageUtil.hasUserData();
 
       if (savedVersion == null || savedVersion != currentVersion || !hasUser) {
+           // Save biometric data before clearing storage
+        final biometricEnabled =
+            await authRepository.storage.read(key: _biometricEnabledKey);
+        final biometricUsername =
+            await authRepository.storage.read(key: _usernameKey);
+        final biometricPassword =
+            await authRepository.storage.read(key: _passwordKey);
+
+        print('🔐 Backing up biometric data before clearing storage...');
+        print('   - Enabled: $biometricEnabled');
+        print('   - Username saved: ${biometricUsername != null}');
+        print('   - Password saved: ${biometricPassword != null}');
+
         await authRepository.storage.deleteAll();
         await StorageUtil.clearUserData();
+
+         // Restore biometric data
+        if (biometricEnabled != null) {
+          await authRepository.storage.write(
+            key: _biometricEnabledKey,
+            value: biometricEnabled,
+          );
+          print('✅ Restored biometric_enabled');
+        }
+        if (biometricUsername != null) {
+          await authRepository.storage.write(
+            key: _usernameKey,
+            value: biometricUsername,
+          );
+          print('✅ Restored biometric_username');
+        }
+        if (biometricPassword != null) {
+          await authRepository.storage.write(
+            key: _passwordKey,
+            value: biometricPassword,
+          );
+          print('✅ Restored biometric_password');
+        }
         await StorageUtil.saveAppVersion(currentVersion);
 
         state = AuthState(user: null, isLoading: false, error: null);
@@ -161,4 +203,5 @@ class AuthNotifier extends StateNotifier<AuthState?> {
     _pendingUser = null;
     state = AuthState(user: null, isLoading: false);
   }
+
 }

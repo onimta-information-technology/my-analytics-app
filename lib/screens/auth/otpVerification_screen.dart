@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:ballys_reservation_app/data/services/biometric_service.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
 import 'package:ballys_reservation_app/providers/auth_provider.dart';
@@ -11,6 +12,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
+import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sms_autofill/sms_autofill.dart';
 
@@ -36,8 +38,8 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
   String? _actualOTP;
   bool _isSendingOTP = false;
   String? _appSignature;
+  final _biometricService = BiometricService();
 
-  //String? code; // This will be set by SMS auto-fill
   final List<TextEditingController> _otpControllers = List.generate(
     5,
     (index) => TextEditingController(),
@@ -53,7 +55,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
   String _currentOTP = '';
   StreamSubscription? _smsSubscription;
 
-  // Auto-fill permission tracking
   bool? _autoFillPermissionGranted;
   String? _pendingSMSCode;
 
@@ -73,7 +74,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
     _startResendTimer();
     await _sendInitialOTP();
 
-    // Focus first field after a delay
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
@@ -88,13 +88,13 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       print('🔧 Setting up SMS auto-fill...');
 
       _appSignature = await SmsAutoFill().getAppSignature;
-      print(' App Signature: $_appSignature');
+      print('📱 App Signature: $_appSignature');
 
       try {
         String? phoneHint = await SmsAutoFill().hint;
-        print(' Phone hint: $phoneHint');
+        print('📱 Phone hint: $phoneHint');
       } catch (e) {
-        print(' Phone hint failed: $e');
+        print('⚠️ Phone hint failed: $e');
       }
 
       await SmsAutoFill().listenForCode();
@@ -102,20 +102,20 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
 
       _setupManualSMSListener();
     } catch (e) {
-      print(' Error setting up SMS auto-fill: $e');
+      print('❌ Error setting up SMS auto-fill: $e');
     }
   }
 
   void _setupManualSMSListener() {
     try {
       _smsSubscription = SmsAutoFill().code.listen((String receivedCode) {
-        print(' Manual SMS listener received: $receivedCode');
+        print('📩 Manual SMS listener received: $receivedCode');
         if (receivedCode.isNotEmpty) {
           _handleReceivedSMS(receivedCode);
         }
       });
     } catch (e) {
-      print(' Error setting up manual SMS listener: $e');
+      print('❌ Error setting up manual SMS listener: $e');
     }
   }
 
@@ -226,42 +226,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
               ),
             ],
           ),
-          // actions: [
-          //   TextButton(
-          //     onPressed: () => Navigator.of(context).pop(false),
-          //     style: TextButton.styleFrom(
-          //       padding: const EdgeInsets.symmetric(
-          //         horizontal: 20,
-          //         vertical: 12,
-          //       ),
-          //     ),
-          //     child: Text(
-          //       'Deny',
-          //       style: TextStyle(
-          //         color: Colors.grey[600],
-          //         fontWeight: FontWeight.w500,
-          //       ),
-          //     ),
-          //   ),
-          //   ElevatedButton(
-          //     onPressed: () => Navigator.of(context).pop(true),
-          //     style: ElevatedButton.styleFrom(
-          //       backgroundColor: Colors.orange,
-          //       foregroundColor: Colors.white,
-          //       padding: const EdgeInsets.symmetric(
-          //         horizontal: 20,
-          //         vertical: 12,
-          //       ),
-          //       shape: RoundedRectangleBorder(
-          //         borderRadius: BorderRadius.circular(8),
-          //       ),
-          //     ),
-          //     child: const Text(
-          //       'Allow',
-          //       style: TextStyle(fontWeight: FontWeight.w600),
-          //     ),
-          //   ),
-          // ],
           actions: [
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -269,7 +233,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
                 ElevatedButton(
                   onPressed: () => Navigator.of(context).pop(false),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red, // Red button
+                    backgroundColor: Colors.red,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
@@ -284,11 +248,11 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
-                const SizedBox(width: 12), // space between buttons
+                const SizedBox(width: 12),
                 ElevatedButton(
                   onPressed: () => Navigator.of(context).pop(true),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green, // Green button
+                    backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
@@ -310,7 +274,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       },
     );
 
-    // Handle the user's choice
     if (mounted) {
       setState(() {
         _autoFillPermissionGranted = result ?? false;
@@ -322,14 +285,11 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
         _showInfoMessage('OTP received. Please enter manually.');
       }
 
-      // Clear pending SMS code
       _pendingSMSCode = null;
     }
   }
 
   void _fillOTPFields(String otp) {
-    // Fill the OTP fields
-
     for (int i = 0; i < 5; i++) {
       _otpControllers[i].text = otp[i];
     }
@@ -361,22 +321,20 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       return fallbackMatch.group(0) ?? '';
     }
 
-    print(' No valid OTP pattern found');
+    print('⚠️ No valid OTP pattern found');
     return '';
   }
 
-  // Auto-fill callback from CodeAutoFill mixin
   @override
   void codeUpdated() {
-    print('codeUpdated callback triggered');
-    print('Received code: $code');
+    print('📱 codeUpdated callback triggered');
+    print('📩 Received code: $code');
 
     if (code != null && code!.isNotEmpty) {
       _handleReceivedSMS(code!);
     }
   }
 
-  // Send OTP via SMS gateway
   Future<bool> _sendOTPSMS(String phoneNumber, String otp) async {
     try {
       String baseUrl =
@@ -387,11 +345,10 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
         formattedPhone = '0${phoneNumber.substring(3)}';
       }
 
-      // ✅ Only clean text (no app signature)
       String message =
           'Your OTP code is $otp. Do not share this code with anyone.';
       if (_appSignature != null && _appSignature!.isNotEmpty) {
-        message += '\u200B$_appSignature'; // hidden signature
+        message += '\u200B$_appSignature';
       }
 
       String fullUrl =
@@ -448,22 +405,14 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
   void dispose() {
     print('🧹 Disposing OTP screen...');
 
-    // try {
-    //   //ref.read(authProvider.notifier).clearPendingUser();
-
-    // } catch (e) {
-    //   print('❌ Error clearing pending user data: $e');
-    // }
-    // Clean up SMS auto-fill
     try {
-      cancel(); // from CodeAutoFill mixin
+      cancel();
       SmsAutoFill().unregisterListener();
       _smsSubscription?.cancel();
     } catch (e) {
       print('❌ Error disposing SMS auto-fill: $e');
     }
 
-    // Clean up other resources
     _timer?.cancel();
     for (var controller in _otpControllers) {
       controller.dispose();
@@ -493,7 +442,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
 
   void _onOTPChanged(String value, int index) {
     if (_previousValues[index].isNotEmpty && value.isEmpty) {
-      // This is backspace - move to previous field if exists
       if (index > 0) {
         Future.delayed(const Duration(milliseconds: 50), () {
           _otpFocusNodes[index - 1].requestFocus();
@@ -501,7 +449,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       }
     }
 
-    // Update previous value for next comparison
     _previousValues[index] = value;
     setState(() {
       _currentOTP = _otpControllers.map((controller) => controller.text).join();
@@ -511,7 +458,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       _otpFocusNodes[index + 1].requestFocus();
     }
 
-    // Auto-verify when all 5 digits are entered manually
     if (_currentOTP.length == 5) {
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted && _currentOTP.length == 5) {
@@ -533,7 +479,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       return;
     }
 
-    if (_isVerifying) return; // Prevent multiple verification attempts
+    if (_isVerifying) return;
 
     setState(() {
       _isVerifying = true;
@@ -546,22 +492,195 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
 
       if (isValid) {
         _showSuccessMessage('OTP verified successfully!');
+        
+        // Check if biometric should be offered
+        await _checkAndOfferBiometric();
+        
         await _completeLoginProcess();
       } else {
         _showErrorMessage('Invalid OTP. Please try again.');
         _clearOTPFields();
-        // Clear pending user data on OTP failure
-        // ref.read(authProvider.notifier).clearPendingUser();
       }
     } catch (e) {
       _showErrorMessage('Verification failed. Please try again.');
       print('❌ OTP verification error: $e');
-      // Clear pending user data on error
       ref.read(authProvider.notifier).clearPendingUser();
     } finally {
       setState(() {
         _isVerifying = false;
       });
+    }
+  }
+
+  Future<void> _checkAndOfferBiometric() async {
+    try {
+      // Check if device supports biometrics
+      final isAvailable = await _biometricService.isDeviceSupported();
+      if (!isAvailable) {
+        print('⚠️ Biometric not available on this device');
+        return;
+      }
+
+      // Check if biometric is already enabled
+      final isEnabled = await _biometricService.isBiometricEnabled();
+      if (isEnabled) {
+        print('✅ Biometric already enabled, skipping prompt');
+        return;
+      }
+
+      // Show biometric enable dialog
+      await _showBiometricEnableDialog();
+    } catch (e) {
+      print('❌ Error checking biometric availability: $e');
+    }
+  }
+
+  Future<void> _showBiometricEnableDialog() async {
+    if (!mounted) return;
+
+    final availableBiometrics = await _biometricService.getAvailableBiometrics();
+    final biometricName = _biometricService.getBiometricTypeName(availableBiometrics);
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                availableBiometrics.contains(BiometricType.face)
+                    ? Icons.face
+                    : Icons.fingerprint,
+                color: Colors.orange[700],
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Enable $biometricName?',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Use $biometricName for quick and secure login next time?',
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: Colors.blue[700],
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Your credentials will be stored securely on your device',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.blue[700],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey[300],
+                  foregroundColor: Colors.black87,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  'Not Now',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  'Enable',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && mounted) {
+      await _enableBiometric();
+    }
+  }
+
+  Future<void> _enableBiometric() async {
+    try {
+      print('🔐 Enabling biometric authentication...');
+      
+      // Save the credentials that were used for this login
+      await _biometricService.saveCredentials(
+        widget.username,
+        widget.password,
+      );
+      
+      _showSuccessMessage('Biometric authentication enabled successfully!');
+      print('✅ Biometric enabled with current credentials');
+    } catch (e) {
+      print('❌ Error enabling biometric: $e');
+      _showErrorMessage('Failed to enable biometric authentication');
     }
   }
 
@@ -574,7 +693,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
     try {
       print('🚀 Starting complete login process...');
 
-      // Complete the login process after successful OTP verification
       await ref.read(authProvider.notifier).completeLoginAfterOTP();
 
       final authState = ref.read(authProvider);
@@ -585,7 +703,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
         final salesCode = await StorageUtil.getSalesCode();
 
         if (salesCode != null) {
-          // Set the sales code in the app mode provider
           ref.read(appmodeSettingsProvider.notifier).setSalesCode(salesCode);
           print('Sales code set in app mode provider: $salesCode');
         }
@@ -618,8 +735,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
     } catch (e) {
       print('❌ Error in complete login process: $e');
       _showErrorMessage('Login completion failed. Please try again.');
-
-      // Clear pending user data on failure
       ref.read(authProvider.notifier).clearPendingUser();
     }
   }
@@ -686,7 +801,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
     for (var controller in _otpControllers) {
       controller.clear();
     }
-    // Clear previous values tracking
     for (int i = 0; i < _previousValues.length; i++) {
       _previousValues[i] = '';
     }
@@ -788,14 +902,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
     return phoneNumber;
   }
 
-  // Debug button to test auto-fill manually
-  void _testAutoFill() {
-    String testOTP = _actualOTP ?? '12345';
-    _handleReceivedSMS(
-      'Your verification code is $testOTP. Do not share this code.',
-    );
-  }
-
   bool _programmatic = false;
 
   void _setDigit(int index, String ch) {
@@ -817,7 +923,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       _otpControllers[box].text = digits[i];
       _otpControllers[box].selection = TextSelection.collapsed(offset: 1);
     }
-    // clear remaining boxes if over-pasted or to reset tail
     for (int box = startIndex + i; box < 5; box++) {
       _otpControllers[box].clear();
     }
@@ -830,7 +935,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       _currentOTP = _otpControllers.map((c) => c.text).join();
     });
 
-    // AUTO-TRIGGER for paste/multi-input
     if (_currentOTP.length == 5 && !_isVerifying) {
       print('🔄 Paste/Multi-input complete: $_currentOTP');
       Future.delayed(const Duration(milliseconds: 800), () {
@@ -851,9 +955,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          // onPressed: () => context.pop(),
           onPressed: () {
-            // Clear pending user data before popping
             ref.read(authProvider.notifier).clearPendingUser();
             context.pop();
           },
@@ -862,16 +964,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
           'OTP Verification',
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
         ),
-        // centerTitle: true,
-        // actions: [
-        //   // Debug button - remove in production
-        //   if (kDebugMode)
-        //     IconButton(
-        //       icon: const Icon(Icons.bug_report, color: Colors.orange),
-        //       onPressed: _testAutoFill,
-        //       tooltip: 'Test Auto-fill',
-        //     ),
-        // ],
       ),
       body: Stack(
         children: [
@@ -942,7 +1034,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
                           color: Color(0xFF333333),
                         ),
                         keyboardType: TextInputType.number,
-                        // IMPORTANT: remove LengthLimitingTextInputFormatter(1)
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
                         ],
@@ -953,23 +1044,19 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
                         onChanged: (value) {
                           if (_programmatic) return;
 
-                          // If user pasted/multi-typed, distribute across boxes
                           if (value.length > 1) {
                             _distributeFrom(index, value);
                             return;
                           }
 
                           if (value.isNotEmpty) {
-                            // Keep only the last digit (just in case)
                             final last = value[value.length - 1];
                             if (value.length != 1) _setDigit(index, last);
 
-                            // Move to next box
                             if (index < 4) {
                               _otpFocusNodes[index + 1].requestFocus();
                             }
                           } else {
-                            // Became empty (likely backspace) → go to previous
                             if (index > 0) {
                               _otpFocusNodes[index - 1].requestFocus();
                             }
@@ -998,7 +1085,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
                           }
                         },
                         onTap: () {
-                          // put cursor at end of the char (cosmetic)
                           final t = _otpControllers[index].text;
                           _otpControllers[index].selection =
                               TextSelection.collapsed(offset: t.length);

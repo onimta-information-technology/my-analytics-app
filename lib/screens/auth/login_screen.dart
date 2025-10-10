@@ -1,11 +1,13 @@
 import 'package:ballys_reservation_app/core/constants.dart';
+import 'package:ballys_reservation_app/data/services/biometric_service.dart';
 import 'package:ballys_reservation_app/providers/auth_provider.dart';
 import 'package:ballys_reservation_app/providers/guests_provider.dart';
-import 'package:ballys_reservation_app/utils/storage_util.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:local_auth/local_auth.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -16,9 +18,16 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _biometricService = BiometricService();
+
   var _username = "";
   var _password = "";
   bool _showPassword = false;
+  bool _isBiometricAvailable = false;
+  bool _isBiometricEnabled = false;
+  List<BiometricType> _availableBiometrics = [];
+  bool _biometricCheckComplete = false;
+
   PackageInfo _packageInfo = PackageInfo(
     appName: 'Unknown',
     packageName: 'Unknown',
@@ -35,6 +44,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(guestsProvider.notifier).resetData();
+      _initializeBiometrics();
     });
   }
 
@@ -45,161 +55,147 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
   }
 
-  // void _onLogin() async {
-  //   FocusScope.of(context).unfocus();
-  //   if (_formKey.currentState!.validate()) {
-  //     _formKey.currentState!.save();
+  Future<void> _initializeBiometrics() async {
+    try {
+      print('🔍 Initializing biometrics...');
 
-  //     print('Attempting login for username: $_username');
+      final isAvailable = await _biometricService.isDeviceSupported();
+      final isEnabled = await _biometricService.isBiometricEnabled();
+      final biometrics = await _biometricService.getAvailableBiometrics();
 
-  //     // First, validate username and password
-  //     await ref
-  //         .read(authProvider.notifier)
-  //         .authenticateAndLogin(_username, _password);
+      print('📊 Biometric status:');
+      print('  - Available: $isAvailable');
+      print('  - Enabled: $isEnabled');
+      print('  - Types: ${biometrics.map((e) => e.name).join(", ")}');
 
-  //     final authState = ref.read(authProvider);
+      setState(() {
+        _isBiometricAvailable = isAvailable;
+        _isBiometricEnabled = isEnabled;
+        _availableBiometrics = biometrics;
+        _biometricCheckComplete = true;
+      });
 
-  //     if (authState != null && authState.user != null) {
-  //       print('Login credentials validated successfully');
+      // If biometric is enabled and available, trigger login after UI is ready
+      if (isEnabled && isAvailable && mounted) {
+        print('✅ Biometric is enabled and available - triggering auto-login');
 
-  //       // If credentials are valid, get phone number and navigate to OTP screen
-  //       String? phoneNumber = await _getUserPhoneNumber();
+        // Add a delay to ensure UI is fully rendered
+        await Future.delayed(const Duration(milliseconds: 500));
 
-  //       if (phoneNumber != null && phoneNumber.isNotEmpty) {
-  //         print('Phone number retrieved: $phoneNumber');
+        if (mounted) {
+          await _loginWithBiometric();
+        }
+      }
+    } catch (e) {
+      print('❌ Error initializing biometrics: $e');
+      setState(() {
+        _biometricCheckComplete = true;
+      });
+    }
+  }
 
-  //         // Send OTP (simulate for now since no SMS gateway)
-  //         await _sendOTP(phoneNumber);
+  Future<void> _loginWithBiometric() async {
+    try {
+      print('🔐 Starting biometric login...');
 
-  //         // Navigate to OTP verification screen
-  //         if (mounted) {
-  //           context.push('/otp-verification', extra: {
-  //             'phoneNumber': phoneNumber,
-  //             'username': _username,
-  //             'password': _password,
-  //           });
-  //         }
-  //       } else {
-  //         // If no phone number, show error
-  //         ScaffoldMessenger.of(context).showSnackBar(
-  //           const SnackBar(
-  //             content: Text('Phone number not found. Please contact support.'),
-  //           ),
-  //         );
-  //       }
-  //     } else {
-  //       print('Login failed - invalid credentials');
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         const SnackBar(
-  //           content: Text('Login failed. Please check your credentials.'),
-  //         ),
-  //       );
-  //     }
-  //   }
-  // }
+      final biometricName = _biometricService.getBiometricTypeName(
+        _availableBiometrics,
+      );
+
+      print('🔐 Prompting for $biometricName authentication...');
+
+      final authenticated = await _biometricService.authenticate(
+        reason: 'Authenticate to login to Bally\'s',
+      );
+
+      print('🔐 Biometric result: $authenticated');
+
+      if (authenticated) {
+        final credentials = await _biometricService.getCredentials();
+
+        if (credentials != null) {
+          _username = credentials['username']!;
+          _password = credentials['password']!;
+
+          print('✅ Credentials retrieved - performing login');
+          await _performLogin(showBiometricDialog: false);
+        } else {
+          print('⚠️ Credentials not found in secure storage');
+          _showErrorSnackBar('Credentials not found. Please login manually.');
+        }
+      } else {
+        print('❌ Biometric authentication cancelled or failed');
+      }
+    } catch (e) {
+      print('❌ Biometric login error: $e');
+      _showErrorSnackBar('Biometric authentication failed: ${e.toString()}');
+    }
+  }
+
   void _onLogin() async {
     FocusScope.of(context).unfocus();
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
+      await _performLogin(showBiometricDialog: true);
+    }
+  }
 
-      print('Attempting login for username: $_username');
+  Future<void> _performLogin({required bool showBiometricDialog}) async {
+    print('Attempting login for username: $_username');
 
-      // Clear any previous errors
-      ref.read(authProvider.notifier).clearError();
+    ref.read(authProvider.notifier).clearError();
 
-      // Attempt authentication and login
-      await ref
-          .read(authProvider.notifier)
-          .authenticateAndLogin(_username, _password);
+    await ref
+        .read(authProvider.notifier)
+        .authenticateAndLogin(_username, _password);
 
-      final authState = ref.read(authProvider);
+    final authState = ref.read(authProvider);
 
-      if (authState != null) {
-        // Check if there's an error and display it
-        if (authState.error != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(authState.error!),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 4),
-              behavior: SnackBarBehavior.floating,
-              margin: const EdgeInsets.all(16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          );
-          return; // Don't proceed further if there's an error
-        }
+    if (authState != null) {
+      if (authState.error != null) {
+        _showErrorSnackBar(authState.error!);
+        return;
+      }
 
-        // If no error and user is authenticated, proceed with OTP flow
-        if (authState.user != null) {
-          print('Login credentials validated successfully');
+      if (authState.user != null) {
+        print('Login credentials validated successfully');
 
-          // If credentials are valid, get phone number and navigate to OTP screen
-          String? phoneNumber = await _getUserPhoneNumber();
-          print(phoneNumber);
-          if (phoneNumber != null && phoneNumber.isNotEmpty) {
-            print('Phone number retrieved: $phoneNumber');
+        String? phoneNumber = await _getUserPhoneNumber();
 
-            // Send OTP (simulate for now since no SMS gateway)
-            try {
-              await _sendOTP(phoneNumber);
+        if (phoneNumber != null && phoneNumber.isNotEmpty) {
+          print('Phone number retrieved: $phoneNumber');
 
-              // Navigate to OTP verification screen
-              if (mounted) {
-                context.push(
-                  '/otp-verification',
-                  extra: {
-                    'phoneNumber': phoneNumber,
-                    'username': _username,
-                    'password': _password,
-                  },
-                );
-              }
-            } catch (e) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Failed to send OTP: ${e.toString()}'),
-                  backgroundColor: Colors.orange,
-                ),
+          try {
+            await _sendOTP(phoneNumber);
+
+            if (mounted) {
+              context.push(
+                '/otp-verification',
+                extra: {
+                  'phoneNumber': phoneNumber,
+                  'username': _username,
+                  'password': _password,
+                },
               );
             }
-          } else {
-            // If no phone number, show error
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Phone number not found. Please contact support.',
-                ),
-                backgroundColor: Colors.orange,
-              ),
-            );
+          } catch (e) {
+            _showErrorSnackBar('Failed to send OTP: ${e.toString()}');
           }
+        } else {
+          _showErrorSnackBar('Phone number not found. Please contact support.');
         }
       }
     }
   }
 
-  // Get user's phone number from your user data
   Future<String?> _getUserPhoneNumber() async {
     try {
       final authState = ref.read(authProvider);
-      print('Auth state: ${authState?.user}');
-      print('Mobile from auth: ${authState?.user?.mobileNumber}');
 
       if (authState?.user?.mobileNumber != null &&
           authState!.user!.mobileNumber!.isNotEmpty) {
         return authState.user!.mobileNumber;
       }
-
-      // Example of how you might get it from your auth state:
-      // final authState = ref.read(authProvider);
-      // return authState?.user?.phoneNumber;
-
-      // Or from an API call:
-      // final userData = await FirebaseApiService.getUserData(_username);
-      // return userData['phoneNumber'];
     } catch (e) {
       print('Error getting phone number: $e');
       return null;
@@ -207,23 +203,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return null;
   }
 
-  // Send OTP to user's phone (simulate for now)
   Future<void> _sendOTP(String phoneNumber) async {
     try {
-      // Since you don't have SMS gateway yet, this is just a placeholder
-      // Replace this with your actual SMS service integration
-
       print('Sending OTP to: $phoneNumber');
-
-      // Example of how you might integrate with an SMS service:
-      /*
-      await FirebaseApiService.sendOTP({
-        'phoneNumber': phoneNumber,
-        'username': _username,
-      });
-      */
-
-      // For now, just simulate a delay
       await Future.delayed(const Duration(seconds: 1));
       print('OTP simulation sent successfully');
     } catch (e) {
@@ -232,11 +214,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+
   @override
   void dispose() {
-    // Clear any pending authentication data when leaving login screen
-    // This ensures that if user closes app before completing OTP,
-    // they won't be auto-logged in
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(authProvider.notifier).clearPendingUser();
     });
@@ -289,6 +294,74 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           ),
                           const SizedBox(height: 40),
+
+                          // Biometric Login Button (if enabled and check is complete)
+                          if (_biometricCheckComplete &&
+                              _isBiometricEnabled &&
+                              _isBiometricAvailable)
+                            Column(
+                              children: [
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 16,
+                                      ),
+                                      side: const BorderSide(
+                                        color: Colors.orange,
+                                        width: 2,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    onPressed: _loginWithBiometric,
+                                    icon: Icon(
+                                      _availableBiometrics.contains(
+                                            BiometricType.face,
+                                          )
+                                          ? Icons.face
+                                          : Icons.fingerprint,
+                                      color: Colors.orange,
+                                    ),
+                                    label: Text(
+                                      'Login with ${_biometricService.getBiometricTypeName(_availableBiometrics)}',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.orange,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Divider(color: Colors.grey[400]),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                      ),
+                                      child: Text(
+                                        'OR',
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Divider(color: Colors.grey[400]),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 20),
+                              ],
+                            ),
+
                           TextFormField(
                             decoration: InputDecoration(
                               hintText: 'Username',
@@ -304,9 +377,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                             ),
                             validator: (value) {
-                              if (value == "") {
-                                return "This field is required!";
-                              }
+                              if (value == "") return "This field is required!";
                               return null;
                             },
                             onSaved: (value) {
@@ -343,9 +414,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                             ),
                             validator: (value) {
-                              if (value == "") {
-                                return "This field is required!";
-                              }
+                              if (value == "") return "This field is required!";
                               return null;
                             },
                             onSaved: (value) {
@@ -357,8 +426,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             width: double.infinity,
                             child: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Constants
-                                    .kSecondaryColor, // Custom gold color
+                                backgroundColor: Constants.kSecondaryColor,
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 16,
                                 ),
@@ -370,7 +438,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               icon: const Icon(
                                 Icons.login,
                                 color: Colors.white,
-                              ), // Login icon
+                              ),
                               label: const Text(
                                 'Log In',
                                 style: TextStyle(
@@ -391,8 +459,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                             ),
                           ),
-                          if (authState!.user != null)
-                            Text('Welcome, ${authState.user?.userName}'),
                           Padding(
                             padding: const EdgeInsets.only(top: 20.0),
                             child: Text(
@@ -407,7 +473,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ),
                   ),
-                  if (authState.isLoading)
+                  if (authState!.isLoading)
                     Positioned.fill(
                       child: Container(
                         color: const Color.fromARGB(134, 253, 253, 253),

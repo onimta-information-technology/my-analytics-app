@@ -14,6 +14,7 @@ class StorageUtil {
     await prefs.setString('salesCode', salesCode);
     await prefs.setString('marketingCode', marketingCode);
     await prefs.setString('mobileNumber', mobileNumber);
+    
 
     final now = DateTime.now();
     final expiryTime = now.add(const Duration(days: 365));
@@ -59,6 +60,8 @@ class StorageUtil {
   static Future<String?> getAppVersion() async {
     return await _storage.read(key: _keyAppVersion);
   }
+
+  
   static Future<bool> hasUserData() async {
   final prefs = await SharedPreferences.getInstance();
   return prefs.containsKey('userName') || prefs.containsKey('userLevel');

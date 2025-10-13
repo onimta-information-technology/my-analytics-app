@@ -52,7 +52,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     _getCurrentUserName();
     _fetchMessagesFromApi();
     _setupForegroundMessageListener();
-   
   }
 
   @override
@@ -895,7 +894,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                   ),
                   Text(
                     widget.contact.isOnline ? "Online" : "Last seen recently",
-                
+
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.normal,

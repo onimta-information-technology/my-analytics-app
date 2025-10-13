@@ -188,10 +188,11 @@ class FirebaseApiService {
   ) async {
     final deviceId = await DeviceId.get();
     final url = '$fmcDomain${endpoints['InsertChatFMCToken']}';
+    final timestamp = DateTime.now().toIso8601String();
     final response = await postRequest(url, {
       'id': deviceId,
       'name': name,
-      'email': name,
+      'email': timestamp,
       'fcmToken': fcmToken,
     });
     print('syncFmcToken response: $response');
@@ -216,10 +217,7 @@ class FirebaseApiService {
   static Future<String?> createChat(String userUid) async {
     // final currentUserName = await getName();
     final deviceId = await DeviceId.get();
-    // if (currentUserName == null) {
-    //   print('Current user name is null');
-    //   return null;
-    // }
+   
 
     try {
       final url = '$domain${endpoints['createChat']}';

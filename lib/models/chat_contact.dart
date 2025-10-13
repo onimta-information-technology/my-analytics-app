@@ -89,6 +89,8 @@ class ChatContact {
     print('=== DEBUG fromChatApiJson ===');
     print('Current User Device ID: $currentUserDeviceId');
     print('Participants Data: $participantsData');
+    print('isOnline value: ${json['isOnline']}');
+    print('isOnline type: ${json['isOnline'].runtimeType}');
     //print('Raw isOnline value from API: ${json['email']}');
     String otherParticipantUuid = '';
     String otherParticipantName = '';

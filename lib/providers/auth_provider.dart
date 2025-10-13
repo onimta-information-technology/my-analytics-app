@@ -1,7 +1,9 @@
 import 'package:ballys_reservation_app/models/auth_state.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/services/api_service.dart';
 import '../utils/storage_util.dart';
@@ -21,7 +23,6 @@ final authRepositoryProvider = Provider((ref) {
   return AuthRepository(apiService, storage);
 });
 
-
 // Define the AuthNotifier to manage authentication state
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState?>((ref) {
   final authRepository = ref.read(authRepositoryProvider);
@@ -35,9 +36,9 @@ class AuthNotifier extends StateNotifier<AuthState?> {
   bool isLoading = false;
 
   dynamic _pendingUser;
-    String? _currentSessionPassword;
-      String? _currentSessionusername;
- // Biometric storage keys that should NOT be deleted
+  String? _currentSessionPassword;
+  String? _currentSessionusername;
+  // Biometric storage keys that should NOT be deleted
   static const String _biometricEnabledKey = 'biometric_enabled';
   static const String _usernameKey = 'biometric_username';
   static const String _passwordKey = 'biometric_password';
@@ -77,13 +78,16 @@ class AuthNotifier extends StateNotifier<AuthState?> {
       final hasUser = await StorageUtil.hasUserData();
 
       if (savedVersion == null || savedVersion != currentVersion || !hasUser) {
-           // Save biometric data before clearing storage
-        final biometricEnabled =
-            await authRepository.storage.read(key: _biometricEnabledKey);
-        final biometricUsername =
-            await authRepository.storage.read(key: _usernameKey);
-        final biometricPassword =
-            await authRepository.storage.read(key: _passwordKey);
+        // Save biometric data before clearing storage
+        final biometricEnabled = await authRepository.storage.read(
+          key: _biometricEnabledKey,
+        );
+        final biometricUsername = await authRepository.storage.read(
+          key: _usernameKey,
+        );
+        final biometricPassword = await authRepository.storage.read(
+          key: _passwordKey,
+        );
 
         print('🔐 Backing up biometric data before clearing storage...');
         print('   - Enabled: $biometricEnabled');
@@ -93,7 +97,7 @@ class AuthNotifier extends StateNotifier<AuthState?> {
         await authRepository.storage.deleteAll();
         await StorageUtil.clearUserData();
 
-         // Restore biometric data
+        // Restore biometric data
         if (biometricEnabled != null) {
           await authRepository.storage.write(
             key: _biometricEnabledKey,
@@ -137,9 +141,9 @@ class AuthNotifier extends StateNotifier<AuthState?> {
 
       final user = await authRepository.login(username, password);
       _pendingUser = user;
-       _currentSessionPassword = password;
-        _currentSessionusername = username;
-    
+      _currentSessionPassword = password;
+      _currentSessionusername = username;
+
       state = AuthState(user: user, isLoading: false);
     } catch (e) {
       print('Login failed: $e');
@@ -186,10 +190,12 @@ class AuthNotifier extends StateNotifier<AuthState?> {
       _pendingUser = null;
     }
   }
-    String? getCurrentSessionPassword() {
+
+  String? getCurrentSessionPassword() {
     return _currentSessionPassword;
   }
-     String? getCurrentSessionUsername() {
+
+  String? getCurrentSessionUsername() {
     return _currentSessionusername;
   }
 
@@ -203,16 +209,52 @@ class AuthNotifier extends StateNotifier<AuthState?> {
     }
   }
 
+  // Future<void> logout() async {
+  //   await StorageUtil.clearUserData();
+  //     _currentSessionPassword = null;
+  //     _currentSessionusername = null;
+  //   state = AuthState(user: null, isLoading: false, error: null);
+  // }
   Future<void> logout() async {
-    await StorageUtil.clearUserData();
+    try {
+      print('🔴 Starting logout process...');
+    
+      final prefs = await SharedPreferences.getInstance();
+      final fcmToken = prefs.getString('FCMToken');
+      if (fcmToken != null) {
+        await FirebaseMessaging.instance.deleteToken();
+        print('FCM token deleted from device');
+
+        // Clear stored FCM token
+        await prefs.remove('FCMToken');
+        print('✅ FCM token removed from local storage');
+      } else {
+        print('⚠️ No FCM token found in preferences');
+      }
+      // Clear user data
+      await StorageUtil.clearUserData();
+
+      // Clear session data
       _currentSessionPassword = null;
       _currentSessionusername = null;
-    state = AuthState(user: null, isLoading: false, error: null);
+
+      // Update state
+      state = AuthState(user: null, isLoading: false, error: null);
+
+      print('✅ Logout completed successfully');
+    } catch (e) {
+      print('❌ Error during logout: $e');
+
+      // Still clear local data even if server call fails
+      await StorageUtil.clearUserData();
+      _currentSessionPassword = null;
+      _currentSessionusername = null;
+      state = AuthState(user: null, isLoading: false, error: null);
+    }
   }
 
   void clearPendingUser() {
     _pendingUser = null;
     state = AuthState(user: null, isLoading: false);
   }
-
 }

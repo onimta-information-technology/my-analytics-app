@@ -301,7 +301,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
         );
       },
     );
-    // context.go("/reservations/new-reservation/hotel-selection");
+
   }
 
   void _openAirTicketsSelectorScreen(BuildContext context) {
@@ -314,51 +314,6 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
       },
     );
   }
-
-  // Future<void> _openMemberSearchBottomSheet(int iid) async {
-  //   GuestRepository guestRepository = GuestRepository(
-  //     ApiService(const FlutterSecureStorage()),
-  //   );
-
-  //   String searchTerm = "";
-
-  //   if (iid == 8002) {
-  //     searchTerm = _memberIdController.text;
-  //   } else {
-  //     searchTerm = _memberNameController.text;
-  //   }
-
-  //   if (searchTerm.length < 3) return;
-  //   print(_memberNameController.text);
-  //    print(_memberIdController.text);
-  //   setState(() {
-  //     _isLoading = true;
-  //   });
-
-  //   try {
-  //     List<GuestSearchResponse> guests = await guestRepository.searchGuest(
-  //       iid,
-  //       searchTerm,
-  //     );
-
-  //     setState(() {
-  //       _isLoading = false;
-  //     });
-
-  //     showModalBottomSheet(
-  //       context: context,
-  //       isScrollControlled: true,
-  //       shape: const RoundedRectangleBorder(
-  //         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-  //       ),
-  //       builder: (BuildContext context) {
-  //         return MemberSearchBottomSheet(guests: guests);
-  //       },
-  //     );
-  //   } catch (e) {
-  //     print("Error searching guests: $e");
-  //   }
-  // }
   bool _canChangeAirTicketToNo() {
     // In edit mode, if there are existing flights, don't allow changing to "No"
     if (_isEditMode) {
@@ -531,28 +486,6 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
       });
       hasError = true;
     }
-
-    // 4. Hotel booking dates validation
-    // if (selectedHotels.isNotEmpty &&
-    //     _arrivalDate != null &&
-    //     _departureDate != null) {
-    //   for (var hotel in selectedHotels) {
-    //     if (hotel.noOfNights != null && hotel.noOfNights! > 0) {
-    //       int calculatedNights = _departureDate!
-    //           .difference(_arrivalDate!)
-    //           .inDays;
-    //       if (calculatedNights != hotel.noOfNights) {
-    //         setState(() {
-    //           _hotelError =
-    //               "Hotel nights (${hotel.noOfNights}) don't match date range ($calculatedNights nights)";
-    //         });
-    //         hasError = true;
-    //         break;
-    //       }
-    //     }
-    //   }
-    // }
-
     // 5. Flight dates validation
     if (selectedFlights.isNotEmpty &&
         _arrivalDate != null &&
@@ -574,21 +507,6 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
       }
     }
 
-    // 6. Guest count consistency validation
-    // if (selectedHotels.isNotEmpty && selectedFlights.isNotEmpty) {
-    //   int hotelGuests = selectedHotels.fold<int>(0, (sum, hotel) => sum + (hotel.guestCount ?? 0));
-    //   int flightGuests = selectedFlights.fold<int>(0, (sum, flight) => sum + flight.guestCount);
-
-    //   if (hotelGuests != flightGuests) {
-    //     ScaffoldMessenger.of(context).showSnackBar(
-    //       SnackBar(
-    //         content: Text('Guest count mismatch: Hotels ($hotelGuests) vs Flights ($flightGuests)'),
-    //         backgroundColor: Colors.orange,
-    //       ),
-    //     );
-    //     // This could be a warning rather than blocking error
-    //   }
-    // }
     if (_isEditMode && _airTicketRequisition == "No") {
       final selectedFlights = ref.watch(selectedFlightProvider);
       if (selectedFlights.isNotEmpty) {
@@ -641,17 +559,8 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
     }
   }
 
-  // Widget _buildPlaceholderAvatar() {
-  //   return Container(
-  //     color: Colors.grey.shade300,
-  //     child: Icon(Icons.person, size: 40, color: Colors.grey.shade600),
-  //   );
-  // }
-
   void _confirmReservation() async {
-    // if (!_formKey.currentState!.validate()) {
-    //   return;
-    // }
+   
     if (_isEditMode) {
       if (!_validateUpdateFields()) {
         return;

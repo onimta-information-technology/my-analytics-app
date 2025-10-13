@@ -18,7 +18,6 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  final String _selectedFontWeight = 'Normal';
   bool _canShowOverallData = false;
   final _biometricService = BiometricService();
 

@@ -16,7 +16,7 @@ class FirebaseApiService {
     'deleteMessage': '/api/chats',
     'createChat': '/api/chats/create',
     'fetchUserChats': '/api/chats/user',
-    'fetchAllUsers': '/api/users',
+    'fetchAllUsers': '/api/users/contacts',
     'markAsRead': '/api/chats',
   };
 
@@ -214,8 +214,8 @@ class FirebaseApiService {
   // Create a new chat
 
   static Future<String?> createChat(String userUid) async {
-   // final currentUserName = await getName();
-   final deviceId = await DeviceId.get();
+    // final currentUserName = await getName();
+    final deviceId = await DeviceId.get();
     // if (currentUserName == null) {
     //   print('Current user name is null');
     //   return null;
@@ -261,12 +261,12 @@ class FirebaseApiService {
   // Fetch user chats
   static Future<Map<String, dynamic>> fetchUserChats() async {
     try {
-      final userId = await StorageUtil.getUserName();
-
-      if (userId == null || userId.isEmpty) {
-        throw Exception('User ID not found in storage');
+      //final userId = await StorageUtil.getUserName();
+      final deviceId = await DeviceId.get();
+      if (deviceId == null || deviceId.isEmpty) {
+        throw Exception('deviceId not found in storage');
       }
-      final url = '$domain${endpoints['fetchUserChats']}/$userId';
+      final url = '$domain${endpoints['fetchUserChats']}/$deviceId';
       final response = await getRequest(url);
 
       if (response['success'] == true) {
@@ -283,7 +283,9 @@ class FirebaseApiService {
   // Fetch all users
   static Future<Map<String, dynamic>> fetchAllUsers() async {
     try {
-      final url = '$domain${endpoints['fetchAllUsers']}';
+      final deviceId = await DeviceId.get();
+
+      final url = '$domain${endpoints['fetchAllUsers']}/$deviceId';
       final response = await getRequest(url);
 
       if (response['success'] == true) {

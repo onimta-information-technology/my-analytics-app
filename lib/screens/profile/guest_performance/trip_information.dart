@@ -7,13 +7,6 @@ import 'package:intl/intl.dart';
 
 class TripInformationWidget extends ConsumerWidget {
   const TripInformationWidget({super.key});
-
-  String _timeFormat(String dateString) {
-    if (dateString == "") return "N/A";
-    final date = DateTime.parse(dateString);
-    return DateFormat('HH:mm:ss').format(date);
-  }
-
   String _formatDate2(String dateString) {
     if (dateString == "") return "N/A";
     final date = DateTime.parse(dateString);
@@ -25,11 +18,6 @@ class TripInformationWidget extends ConsumerWidget {
     final formatter = NumberFormat('#,##0');
     String formattedNumber = formatter.format(value);
     return formattedNumber;
-  }
-
-  String _parseString(String value) {
-    if (value == "") return "N/A";
-    return value;
   }
 
   @override

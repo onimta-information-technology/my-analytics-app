@@ -91,6 +91,26 @@ class _ChatScreenState extends State<ChatScreen>
       if (chatData['chats'] != null) {
         final List<dynamic> chats = chatData['chats'];
 
+        // Extract the actual device ID from the first chat's participants
+        String? actualDeviceId;
+        if (chats.isNotEmpty && _currentUserName != null) {
+          final firstChat = chats[0];
+          final participants =
+              firstChat['participants'] as List<dynamic>? ?? [];
+
+          for (var participant in participants) {
+            final uuid = participant['user_uuid'] as String?;
+            final name = participant['name'] as String?;
+
+            if (name == _currentUserName && uuid != null && uuid != name) {
+              actualDeviceId = uuid;
+              break;
+            }
+          }
+        }
+
+        final String userIdentifier = actualDeviceId ?? _currentUserName ?? '';
+
         Map<String, dynamic> userDetailsMap = {};
         if (userData['users'] != null) {
           final List<dynamic> users = userData['users'];
@@ -105,7 +125,7 @@ class _ChatScreenState extends State<ChatScreen>
               .map(
                 (chat) => ChatContact.fromChatApiJson(
                   chat,
-                  _currentUserName ?? '',
+                  userIdentifier,
                   participantDetails: userDetailsMap,
                 ),
               )
@@ -117,7 +137,6 @@ class _ChatScreenState extends State<ChatScreen>
       }
     } catch (e) {
       print('Error in silent refresh: $e');
-      // Don't show error to user, just log it
     }
   }
 
@@ -323,7 +342,6 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   Future<void> _fetchChatsFromApi() async {
-    // Don't show loading indicator if already loading
     bool showLoading = !_isLoading;
 
     setState(() {
@@ -332,11 +350,37 @@ class _ChatScreenState extends State<ChatScreen>
     });
 
     try {
+      final prefs = await SharedPreferences.getInstance();
+
       final chatData = await FirebaseApiService.fetchUserChats();
       final userData = await FirebaseApiService.fetchAllUsers();
 
       if (chatData['chats'] != null) {
         final List<dynamic> chats = chatData['chats'];
+
+        // Extract the actual device ID from the first chat's participants
+        String? actualDeviceId;
+        if (chats.isNotEmpty && _currentUserName != null) {
+          final firstChat = chats[0];
+          final participants =
+              firstChat['participants'] as List<dynamic>? ?? [];
+
+          for (var participant in participants) {
+            final uuid = participant['user_uuid'] as String?;
+            final name = participant['name'] as String?;
+
+            // Find the participant with matching name to get the real device ID
+            if (name == _currentUserName && uuid != null && uuid != name) {
+              actualDeviceId = uuid;
+              print('=== Found actual device ID: $actualDeviceId ===');
+              break;
+            }
+          }
+        }
+
+        // Use the actual device ID if found, otherwise fall back to current user name
+        final String userIdentifier = actualDeviceId ?? _currentUserName ?? '';
+        print('=== Using identifier for filtering: $userIdentifier ===');
 
         Map<String, dynamic> userDetailsMap = {};
         if (userData['users'] != null) {
@@ -352,7 +396,7 @@ class _ChatScreenState extends State<ChatScreen>
               .map(
                 (chat) => ChatContact.fromChatApiJson(
                   chat,
-                  _currentUserName ?? '',
+                  userIdentifier,
                   participantDetails: userDetailsMap,
                 ),
               )
@@ -404,6 +448,7 @@ class _ChatScreenState extends State<ChatScreen>
             unreadCount: 0,
             participants: [name],
             createdAt: DateTime.now(),
+            lastMessageSenderName: null,
           );
         }).toList();
 
@@ -501,8 +546,9 @@ class _ChatScreenState extends State<ChatScreen>
           lastMessageSender: _currentUserName,
           participants: _contacts[index].participants,
           createdAt: _contacts[index].createdAt,
+          lastMessageSenderName: _contacts[index].lastMessageSenderName,
         );
-
+        print('Updated last message for contact $contactId: $index');
         final filteredIndex = _filteredContacts.indexWhere(
           (c) => c.id == contactId,
         );
@@ -553,6 +599,7 @@ class _ChatScreenState extends State<ChatScreen>
             lastMessageSender: contact.lastMessageSender,
             participants: contact.participants,
             createdAt: contact.createdAt,
+            lastMessageSenderName: contact.lastMessageSenderName,
           );
 
           Navigator.of(context)
@@ -628,7 +675,7 @@ class _ChatScreenState extends State<ChatScreen>
                 ),
                 if (contact.lastMessageSender != null)
                   Text(
-                    'by ${contact.lastMessageSender}',
+                    'by ${contact.lastMessageSenderName}',
                     style: TextStyle(color: Colors.grey[500], fontSize: 12),
                   ),
               ] else
@@ -1069,42 +1116,42 @@ class _ChatScreenState extends State<ChatScreen>
                                                     scaffoldMessenger
                                                         .hideCurrentSnackBar();
 
-                                                    final contactWithChatId =
-                                                        ChatContact(
-                                                          id: contact.id,
-                                                          chatUuid:
-                                                              chatId ??
-                                                              contact.chatUuid,
-                                                          userUuid:
-                                                              contact.userUuid,
-                                                          name: contact.name,
-                                                          firstName:
-                                                              contact
-                                                                  .firstName
-                                                                  .isNotEmpty
-                                                              ? contact
-                                                                    .firstName
-                                                              : contact.name,
-                                                          lastMessage: contact
-                                                              .lastMessage,
-                                                          time: contact.time,
-                                                          isOnline:
-                                                              contact.isOnline,
-                                                          avatarColor: contact
-                                                              .avatarColor,
-                                                          initials:
-                                                              contact.initials,
-                                                          unreadCount: contact
-                                                              .unreadCount,
-                                                          lastMessageTime: contact
-                                                              .lastMessageTime,
-                                                          lastMessageSender: contact
-                                                              .lastMessageSender,
-                                                          participants: contact
-                                                              .participants,
-                                                          createdAt:
-                                                              contact.createdAt,
-                                                        );
+                                                    final contactWithChatId = ChatContact(
+                                                      id: contact.id,
+                                                      chatUuid:
+                                                          chatId ??
+                                                          contact.chatUuid,
+                                                      userUuid:
+                                                          contact.userUuid,
+                                                      name: contact.name,
+                                                      firstName:
+                                                          contact
+                                                              .firstName
+                                                              .isNotEmpty
+                                                          ? contact.firstName
+                                                          : contact.name,
+                                                      lastMessage:
+                                                          contact.lastMessage,
+                                                      time: contact.time,
+                                                      isOnline:
+                                                          contact.isOnline,
+                                                      avatarColor:
+                                                          contact.avatarColor,
+                                                      initials:
+                                                          contact.initials,
+                                                      unreadCount:
+                                                          contact.unreadCount,
+                                                      lastMessageTime: contact
+                                                          .lastMessageTime,
+                                                      lastMessageSender: contact
+                                                          .lastMessageSender,
+                                                      participants:
+                                                          contact.participants,
+                                                      createdAt:
+                                                          contact.createdAt,
+                                                      lastMessageSenderName: contact
+                                                          .lastMessageSenderName,
+                                                    );
 
                                                     await navigator.push(
                                                       MaterialPageRoute(
@@ -1146,41 +1193,41 @@ class _ChatScreenState extends State<ChatScreen>
                                                       ),
                                                     );
 
-                                                    final contactWithChatId =
-                                                        ChatContact(
-                                                          id: contact.id,
-                                                          chatUuid:
-                                                              contact.chatUuid,
-                                                          userUuid:
-                                                              contact.userUuid,
-                                                          name: contact.name,
-                                                          firstName:
-                                                              contact
-                                                                  .firstName
-                                                                  .isNotEmpty
-                                                              ? contact
-                                                                    .firstName
-                                                              : contact.name,
-                                                          lastMessage: contact
-                                                              .lastMessage,
-                                                          time: contact.time,
-                                                          isOnline:
-                                                              contact.isOnline,
-                                                          avatarColor: contact
-                                                              .avatarColor,
-                                                          initials:
-                                                              contact.initials,
-                                                          unreadCount: contact
-                                                              .unreadCount,
-                                                          lastMessageTime: contact
-                                                              .lastMessageTime,
-                                                          lastMessageSender: contact
-                                                              .lastMessageSender,
-                                                          participants: contact
-                                                              .participants,
-                                                          createdAt:
-                                                              contact.createdAt,
-                                                        );
+                                                    final contactWithChatId = ChatContact(
+                                                      id: contact.id,
+                                                      chatUuid:
+                                                          contact.chatUuid,
+                                                      userUuid:
+                                                          contact.userUuid,
+                                                      name: contact.name,
+                                                      firstName:
+                                                          contact
+                                                              .firstName
+                                                              .isNotEmpty
+                                                          ? contact.firstName
+                                                          : contact.name,
+                                                      lastMessage:
+                                                          contact.lastMessage,
+                                                      time: contact.time,
+                                                      isOnline:
+                                                          contact.isOnline,
+                                                      avatarColor:
+                                                          contact.avatarColor,
+                                                      initials:
+                                                          contact.initials,
+                                                      unreadCount:
+                                                          contact.unreadCount,
+                                                      lastMessageTime: contact
+                                                          .lastMessageTime,
+                                                      lastMessageSender: contact
+                                                          .lastMessageSender,
+                                                      participants:
+                                                          contact.participants,
+                                                      createdAt:
+                                                          contact.createdAt,
+                                                      lastMessageSenderName: contact
+                                                          .lastMessageSenderName,
+                                                    );
 
                                                     await navigator.push(
                                                       MaterialPageRoute(

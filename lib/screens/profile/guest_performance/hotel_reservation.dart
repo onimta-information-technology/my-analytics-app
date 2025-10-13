@@ -8,23 +8,10 @@ import 'package:intl/intl.dart';
 class HotelReservationWidget extends ConsumerWidget {
   const HotelReservationWidget({super.key});
 
-  String _timeFormat(String dateString) {
-    if (dateString == "") return "N/A";
-    final date = DateTime.parse(dateString);
-    return DateFormat('HH:mm:ss').format(date);
-  }
-
   String _formatDate2(String dateString) {
     if (dateString == "") return "N/A";
     final date = DateTime.parse(dateString);
     return DateFormat('yyyy-MM-dd').format(date);
-  }
-
-  String _parseNumberFormat(double? value) {
-    if (value == null || value == 0) return "0.00";
-    final formatter = NumberFormat('#,##0');
-    String formattedNumber = formatter.format(value);
-    return formattedNumber;
   }
 
   String _parseString(String value) {

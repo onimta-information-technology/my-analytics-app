@@ -220,31 +220,7 @@ class _MarketingPerformanceWidgetState
               ],
             ),
             const SizedBox(height: 16),
-            // Tab buttons - Updated to handle enabled/disabled state
-            // Row(
-            //   children: [
-            //     _buildTabButton(
-            //       "Today",
-            //       0,
-            //       marketingState.selectedTab == 0,
-            //       tabsEnabled,
-            //     ),
-            //     const SizedBox(width: 8),
-            //     _buildTabButton(
-            //       "Yesterday",
-            //       1,
-            //       marketingState.selectedTab == 1,
-            //       tabsEnabled,
-            //     ),
-            //     const SizedBox(width: 8),
-            //     _buildTabButton(
-            //       "Monthly",
-            //       2,
-            //       marketingState.selectedTab == 2,
-            //       tabsEnabled,
-            //     ),
-            //   ],
-            // ),
+
             Center(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -585,6 +561,11 @@ class _MarketingPerformanceWidgetState
           notifier.getMonthlyPerformance();
         }
         break;
+      case 3:
+        if (state.lastmonthPerformance.isEmpty) {
+          notifier.getLastMonthPerformance();
+        }
+        break;
     }
   }
 
@@ -601,6 +582,9 @@ class _MarketingPerformanceWidgetState
         break;
       case 2:
         notifier.getMonthlyPerformance();
+        break;
+      case 3:
+        notifier.getLastMonthPerformance();
         break;
       default:
         notifier.getTodayPerformance();

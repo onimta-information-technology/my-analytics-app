@@ -9,25 +9,7 @@ class HotelHistoryNotifier extends StateNotifier<List<HotelHistory>> {
 
   HotelHistoryNotifier(this.memberProfileRepository)
       : super([
-          // HotelHistory(
-          //     resNo: "",
-          //     checkIn: "",
-          //     checkOut: "",
-          //     hotel: "",
-          //     checkInFor: "",
-          //     checkOutFor: "",
-          //     requestBy: "",
-          //     status: "",
-          //     payIns: "",
-          //     extra: "",
-          //     special: "",
-          //     rem: "",
-          //     catName: "",
-          //     roomType: "",
-          //     mealPlan: "",
-          //     rooms: 0,
-          //     nights: 0,
-          //     adults: 0)
+         
         ]);
 
   Future<void> getHotelHistory({
@@ -46,25 +28,7 @@ class HotelHistoryNotifier extends StateNotifier<List<HotelHistory>> {
 
   void reset() {
     state = [
-      // HotelHistory(
-      //     resNo: "",
-      //     checkIn: "",
-      //     checkOut: "",
-      //     hotel: "",
-      //     checkInFor: "",
-      //     checkOutFor: "",
-      //     requestBy: "",
-      //     status: "",
-      //     payIns: "",
-      //     extra: "",
-      //     special: "",
-      //     rem: "",
-      //     catName: "",
-      //     roomType: "",
-      //     mealPlan: "",
-      //     rooms: 0,
-      //     nights: 0,
-      //     adults: 0)
+     
     ];
   }
 }

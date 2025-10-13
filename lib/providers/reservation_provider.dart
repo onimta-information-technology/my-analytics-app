@@ -21,8 +21,7 @@ class ReservationNotifier
   }
 
   void addReservationToPending(Reservation newReservation) {
-    // List<Reservation> updatedPendingList = [...state['Pending'] ?? [], newReservation];
-    // state = {...state, 'Pending': updatedPendingList};
+   
   }
   // Add this method to your ReservationNotifier class
 
@@ -34,12 +33,7 @@ class ReservationNotifier
     required String remarks,
   }) async {
     try {
-      // print("Provider: Calling approveOrRejectReservation with:");
-      // print("Member ID: $memberID");
-      // print("Reservation No: $reservationNo");
-      // print("Current User: $currentUName");
-      // print("Status: $status");
-      // print("Remarks: $remarks");
+      
       final success = await reservationRepository.approveOrRejectReservation(
         memberID: memberID,
         reservationNo: reservationNo,

@@ -10,7 +10,8 @@ class MarketingNotifier extends StateNotifier<MarketingState> {
   final MarketingRepository marketingRepository;
   final Ref ref;
 
-  MarketingNotifier(this.marketingRepository, this.ref) : super(MarketingState());
+  MarketingNotifier(this.marketingRepository, this.ref)
+    : super(MarketingState());
 
   // Updated to fetch both performance and detailed data in one call
   Future<void> getMarketingData(int iid, {AppMode? overrideAppMode}) async {
@@ -25,8 +26,12 @@ class MarketingNotifier extends StateNotifier<MarketingState> {
       print('IID: $iid, Sales Code: $salesCode, App Mode: $appMode');
 
       // Single API call to get both tables
-      final result = await marketingRepository.getMarketingData(iid, appMode, salesCode!);
-      
+      final result = await marketingRepository.getMarketingData(
+        iid,
+        appMode,
+        salesCode!,
+      );
+
       print('MarketingNotifier - Combined API Response for iid $iid:');
       print('Performance items: ${result.performanceData.length}');
       print('Detailed items: ${result.detailedData.length}');
@@ -61,6 +66,13 @@ class MarketingNotifier extends StateNotifier<MarketingState> {
             isLoading: false,
           );
           break;
+        case 8899: //Last Monthly
+          state = state.copyWith(
+            lastmonthPerformance: result.performanceData,
+            lastmonthDetailedData: result.detailedData,
+            isLoading: false,
+          );
+          break;
       }
 
       print('State updated successfully for IID $iid');
@@ -91,6 +103,13 @@ class MarketingNotifier extends StateNotifier<MarketingState> {
             isLoading: false,
           );
           break;
+        case 8899: //Last Monthly
+          state = state.copyWith(
+            lastmonthPerformance: [],
+            lastmonthDetailedData: [],
+            isLoading: false,
+          );
+          break;
       }
     }
   }
@@ -107,6 +126,9 @@ class MarketingNotifier extends StateNotifier<MarketingState> {
       case 2:
         await getMarketingData(8898, overrideAppMode: overrideAppMode);
         break;
+      case 3:
+        await getMarketingData(8899, overrideAppMode: overrideAppMode);
+        break;
       default:
         // If no tab selected, refresh today by default
         await getMarketingData(8896, overrideAppMode: overrideAppMode);
@@ -115,33 +137,34 @@ class MarketingNotifier extends StateNotifier<MarketingState> {
   }
 
   // NEW METHOD: Handle app mode change - refresh ALL tabs
-Future<void> onAppModeChanged(AppMode newAppMode) async {
-  // Only refresh data if a tab is currently selected
-  if (state.selectedTab == -1) {
-    print('No tab selected, skipping app mode refresh');
-    return;
+  Future<void> onAppModeChanged(AppMode newAppMode) async {
+    // Only refresh data if a tab is currently selected
+    if (state.selectedTab == -1) {
+      print('No tab selected, skipping app mode refresh');
+      return;
+    }
+
+    print('=== App Mode Changed: $newAppMode ===');
+    print('Refreshing all tabs with new app mode: $newAppMode');
+
+    // Refresh ALL tabs with the new app mode
+    await refreshAllDataWithAppMode(newAppMode);
   }
-  
-  print('=== App Mode Changed: $newAppMode ===');
-  print('Refreshing all tabs with new app mode: $newAppMode');
-  
-  // Refresh ALL tabs with the new app mode
-  await refreshAllDataWithAppMode(newAppMode);
-}
 
   // NEW METHOD: Refresh all data with specific app mode
   Future<void> refreshAllDataWithAppMode(AppMode appMode) async {
     // Show loading state
     state = state.copyWith(isLoading: true);
-    
+
     try {
       // Refresh all tabs with the specified app mode
       await Future.wait([
         getMarketingData(8896, overrideAppMode: appMode), // Today
         getMarketingData(8897, overrideAppMode: appMode), // Yesterday
         getMarketingData(8898, overrideAppMode: appMode), // Monthly
+        getMarketingData(8899, overrideAppMode: appMode), // last month
       ]);
-      
+
       print('All tabs refreshed successfully with app mode: $appMode');
     } catch (e) {
       print('Error refreshing all tabs with app mode $appMode: $e');
@@ -154,7 +177,7 @@ Future<void> onAppModeChanged(AppMode newAppMode) async {
   // Get detailed data for a specific SM from already loaded data
   List<MarketingDetailedData> getDetailedDataForSM(String smCode) {
     List<MarketingDetailedData> currentDetailedData;
-    
+
     switch (state.selectedTab) {
       case 0:
         currentDetailedData = state.todayDetailedData;
@@ -164,6 +187,9 @@ Future<void> onAppModeChanged(AppMode newAppMode) async {
         break;
       case 2:
         currentDetailedData = state.monthlyDetailedData;
+        break;
+      case 3:
+        currentDetailedData = state.lastmonthDetailedData;
         break;
       default:
         currentDetailedData = state.todayDetailedData;
@@ -186,6 +212,10 @@ Future<void> onAppModeChanged(AppMode newAppMode) async {
     await getMarketingData(8898);
   }
 
+  Future<void> getLastMonthData() async {
+    await getMarketingData(8899);
+  }
+
   // Legacy methods for backward compatibility
   Future<void> getTodayPerformance() async {
     await getTodayData();
@@ -197,6 +227,10 @@ Future<void> onAppModeChanged(AppMode newAppMode) async {
 
   Future<void> getMonthlyPerformance() async {
     await getMonthlyData();
+  }
+
+  Future<void> getLastMonthPerformance() async {
+    await getLastMonthData();
   }
 
   Future<void> getMonthlyPerformanceOverall() async {
@@ -212,6 +246,7 @@ Future<void> onAppModeChanged(AppMode newAppMode) async {
         getTodayData(),
         getYesterdayData(),
         getMonthlyData(),
+        getLastMonthData(),
       ]);
     }
   }
@@ -226,7 +261,9 @@ Future<void> onAppModeChanged(AppMode newAppMode) async {
 }
 
 // Providers remain the same
-final flutterSecureStorageProvider = Provider((ref) => const FlutterSecureStorage());
+final flutterSecureStorageProvider = Provider(
+  (ref) => const FlutterSecureStorage(),
+);
 
 final apiServiceProvider = Provider((ref) {
   final storage = ref.read(flutterSecureStorageProvider);
@@ -238,23 +275,27 @@ final marketingRepositoryProvider = Provider((ref) {
   return MarketingRepository(apiService);
 });
 
-final marketingProvider = StateNotifierProvider<MarketingNotifier, MarketingState>((ref) {
-  final marketingRepository = ref.read(marketingRepositoryProvider);
-  return MarketingNotifier(marketingRepository, ref);
-});
+final marketingProvider =
+    StateNotifierProvider<MarketingNotifier, MarketingState>((ref) {
+      final marketingRepository = ref.read(marketingRepositoryProvider);
+      return MarketingNotifier(marketingRepository, ref);
+    });
 
 // Updated MarketingState to store detailed data for each time period
 class MarketingState {
   final List<MarketingPerformance> todayPerformance;
   final List<MarketingPerformance> yesterdayPerformance;
   final List<MarketingPerformance> monthlyPerformance;
-  
+  final List<MarketingPerformance> lastmonthPerformance;
+
   // Store detailed data for each time period
   final List<MarketingDetailedData> todayDetailedData;
   final List<MarketingDetailedData> yesterdayDetailedData;
   final List<MarketingDetailedData> monthlyDetailedData;
-  
-  final List<MarketingDetailedData> detailedData; // Keep for backward compatibility
+  final List<MarketingDetailedData> lastmonthDetailedData;
+
+  final List<MarketingDetailedData>
+  detailedData; // Keep for backward compatibility
   final int selectedTab;
   final bool isLoading;
 
@@ -262,9 +303,11 @@ class MarketingState {
     this.todayPerformance = const [],
     this.yesterdayPerformance = const [],
     this.monthlyPerformance = const [],
+    this.lastmonthPerformance = const [],
     this.todayDetailedData = const [],
     this.yesterdayDetailedData = const [],
     this.monthlyDetailedData = const [],
+    this.lastmonthDetailedData = const [],
     this.detailedData = const [],
     this.selectedTab = -1,
     this.isLoading = false,
@@ -274,9 +317,11 @@ class MarketingState {
     List<MarketingPerformance>? todayPerformance,
     List<MarketingPerformance>? yesterdayPerformance,
     List<MarketingPerformance>? monthlyPerformance,
+    List<MarketingPerformance>? lastmonthPerformance,
     List<MarketingDetailedData>? todayDetailedData,
     List<MarketingDetailedData>? yesterdayDetailedData,
     List<MarketingDetailedData>? monthlyDetailedData,
+    List<MarketingDetailedData>? lastmonthDetailedData,
     List<MarketingDetailedData>? detailedData,
     int? selectedTab,
     bool? isLoading,
@@ -285,9 +330,13 @@ class MarketingState {
       todayPerformance: todayPerformance ?? this.todayPerformance,
       yesterdayPerformance: yesterdayPerformance ?? this.yesterdayPerformance,
       monthlyPerformance: monthlyPerformance ?? this.monthlyPerformance,
+      lastmonthPerformance: lastmonthPerformance ?? this.lastmonthPerformance,
       todayDetailedData: todayDetailedData ?? this.todayDetailedData,
-      yesterdayDetailedData: yesterdayDetailedData ?? this.yesterdayDetailedData,
+      yesterdayDetailedData:
+          yesterdayDetailedData ?? this.yesterdayDetailedData,
       monthlyDetailedData: monthlyDetailedData ?? this.monthlyDetailedData,
+      lastmonthDetailedData:
+          lastmonthDetailedData ?? this.lastmonthDetailedData,
       detailedData: detailedData ?? this.detailedData,
       selectedTab: selectedTab ?? this.selectedTab,
       isLoading: isLoading ?? this.isLoading,
@@ -297,28 +346,46 @@ class MarketingState {
   // Helper methods to get current data based on selected tab
   List<MarketingPerformance> get currentPerformanceData {
     switch (selectedTab) {
-      case 0: return todayPerformance;
-      case 1: return yesterdayPerformance;
-      case 2: return monthlyPerformance;
-      default: return todayPerformance;
+      case 0:
+        return todayPerformance;
+      case 1:
+        return yesterdayPerformance;
+      case 2:
+        return monthlyPerformance;
+      case 3:
+        return lastmonthPerformance;
+      default:
+        return todayPerformance;
     }
   }
 
   List<MarketingDetailedData> get currentDetailedData {
     switch (selectedTab) {
-      case 0: return todayDetailedData;
-      case 1: return yesterdayDetailedData;
-      case 2: return monthlyDetailedData;
-      default: return todayDetailedData;
+      case 0:
+        return todayDetailedData;
+      case 1:
+        return yesterdayDetailedData;
+      case 2:
+        return monthlyDetailedData;
+      case 3:
+        return lastmonthDetailedData;
+      default:
+        return todayDetailedData;
     }
   }
 
   String get currentTabTitle {
     switch (selectedTab) {
-      case 0: return "Today";
-      case 1: return "Yesterday";
-      case 2: return "Monthly";
-      default: return "Today";
+      case 0:
+        return "Today";
+      case 1:
+        return "Yesterday";
+      case 2:
+        return "Monthly";
+      case 3:
+        return "Last Month";
+      default:
+        return "Today";
     }
   }
 }

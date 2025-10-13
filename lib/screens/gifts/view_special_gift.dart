@@ -1,5 +1,5 @@
 import 'package:ballys_reservation_app/components/watermark.dart';
-import 'package:ballys_reservation_app/core/constants.dart';
+
 import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
@@ -136,57 +136,6 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
       return DateFormat('yyyy-MM-dd HH:mm a').format(date);
     } catch (_) {
       return dateString;
-    }
-  }
-
-  // _loadUserName() async {
-  //   final name = await StorageUtil.getUserName();
-  //   setState(() {
-  //     userName = name;
-  //   });
-  // }
-
-  Future<void> _openMemberSearchBottomSheet(int iid) async {
-    GuestRepository guestRepository = GuestRepository(
-      ApiService(const FlutterSecureStorage()),
-    );
-
-    String searchTerm = "";
-
-    if (iid == 8002) {
-      searchTerm = _memberIdController.text;
-    } else {
-      searchTerm = _memberNameController.text;
-    }
-
-    if (searchTerm.length < 3) return;
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      List<GuestSearchResponse> guests = await guestRepository.searchGuest(
-        iid,
-        searchTerm,
-      );
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-        builder: (BuildContext context) {
-          return MemberSearchBottomSheet(guests: guests);
-        },
-      );
-    } catch (e) {
-      print("Error searching guests: $e");
     }
   }
 
@@ -345,13 +294,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                   horizontal: 12.0,
                                   vertical: -5.0,
                                 ),
-                                // suffixIcon: IconButton(
-                                //   icon: const Icon(Icons.search),
-                                //   onPressed: () {
-                                //     FocusScope.of(context).unfocus();
-                                //     _openMemberSearchBottomSheet(8002);
-                                //   },
-                                // ),
+                             
                               ),
                               onChanged: (value) {
                                 _memberNameController.text = '';
@@ -362,57 +305,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             ),
                           ),
                           const SizedBox(width: 16.0),
-                          //     ElevatedButton.icon(
-                          //       onPressed: () {
-                          //         final memberId = _memberIdController.text.trim();
-                          //         final memberName = _memberNameController.text
-                          //             .trim();
-
-                          //         if (memberId.isEmpty && memberName.isEmpty) {
-                          //           ScaffoldMessenger.of(context).showSnackBar(
-                          //             const SnackBar(
-                          //               content: Text(
-                          //                 "Please enter Member ID or Name",
-                          //               ),
-                          //             ),
-                          //           );
-                          //           return;
-                          //         }
-
-                          //         ref
-                          //             .read(selectedGuestProvider.notifier)
-                          //             .updateMemberInfo(memberId, memberName);
-
-                          //         print(memberId);
-                          //         context.push('/home/profile');
-                          //       },
-                          //       icon: const Icon(Icons.person),
-                          //       label: Text(
-                          //         "Guest Details",
-                          //         style: TextStyle(
-                          //           fontSize: fontSettings.fontSize,
-                          //           fontWeight: fontSettings.fontWeight,
-                          //         ),
-                          //       ),
-                          //       style: ElevatedButton.styleFrom(
-                          //         backgroundColor: const Color.fromARGB(
-                          //           255,
-                          //           70,
-                          //           70,
-                          //           70,
-                          //         ),
-                          //         foregroundColor: Colors.white,
-                          //         shape: RoundedRectangleBorder(
-                          //           borderRadius: BorderRadius.circular(12),
-                          //         ),
-                          //         padding: const EdgeInsets.symmetric(
-                          //           vertical: 16,
-                          //           horizontal: 20,
-                          //         ),
-                          //       ),
-                          //     ),
-                          //   ],
-                          // ),
+                          
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.black, // Black background
@@ -537,13 +430,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             horizontal: 12.0,
                             vertical: -5.0,
                           ),
-                          // suffixIcon: IconButton(
-                          //   icon: const Icon(Icons.search),
-                          //   onPressed: () {
-                          //     FocusScope.of(context).requestFocus(FocusNode());
-                          //     _openMemberSearchBottomSheet(8003);
-                          //   },
-                          // ),
+                         
                         ),
                         onChanged: (value) {
                           _memberIdController.text = '';

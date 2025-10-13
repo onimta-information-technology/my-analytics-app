@@ -8,12 +8,6 @@ import 'package:intl/intl.dart';
 class GamesSummaryWidget extends ConsumerWidget {
   const GamesSummaryWidget({super.key});
 
-  String _timeFormat(String dateString) {
-    if (dateString == "") return "N/A";
-    final date = DateTime.parse(dateString);
-    return DateFormat('HH:mm:ss').format(date);
-  }
-
   String _formatDate2(String dateString) {
     if (dateString == "") return "N/A";
     final date = DateTime.parse(dateString);

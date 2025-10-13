@@ -6,7 +6,6 @@ import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart'
 import 'package:ballys_reservation_app/providers/auth_provider.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -440,38 +439,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
     });
   }
 
-  void _onOTPChanged(String value, int index) {
-    if (_previousValues[index].isNotEmpty && value.isEmpty) {
-      if (index > 0) {
-        Future.delayed(const Duration(milliseconds: 50), () {
-          _otpFocusNodes[index - 1].requestFocus();
-        });
-      }
-    }
-
-    _previousValues[index] = value;
-    setState(() {
-      _currentOTP = _otpControllers.map((controller) => controller.text).join();
-    });
-
-    if (value.isNotEmpty && index < 4) {
-      _otpFocusNodes[index + 1].requestFocus();
-    }
-
-    if (_currentOTP.length == 5) {
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted && _currentOTP.length == 5) {
-          _verifyOTP();
-        }
-      });
-    }
-  }
-
-  void _onBackspace(int index) {
-    if (index > 0) {
-      _otpFocusNodes[index - 1].requestFocus();
-    }
-  }
+ 
 
   Future<void> _verifyOTP() async {
     if (_currentOTP.length != 5) {

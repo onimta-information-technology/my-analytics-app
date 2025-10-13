@@ -37,8 +37,7 @@ class GuestPerformanceScreen extends ConsumerStatefulWidget {
 }
 
 class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
-  final TextEditingController _startDateController = TextEditingController();
-  final TextEditingController _endDateController = TextEditingController();
+
   final ValueNotifier<DateTime?> startDateNotifier = ValueNotifier<DateTime?>(
     null,
   );
@@ -119,13 +118,7 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
     );
     if (selectedArrivalDate != null && selectedArrivalDate != _dateFrom) {
       ref.read(dateFilterProvider.notifier).setDateFrom(selectedArrivalDate);
-      // setState(() {
-      //   _dateFrom = selectedArrivalDate;
-      //   _startDateController.text = '${_dateFrom!.toLocal()}'.split(' ')[0];
-      // Reset the departure date if the arrival date is changed
-      // _dateTo = null;
-      // _endDateController.clear();
-      // });
+  
     }
     print("date is ${ref.watch(dateFilterProvider).dateFrom}");
   }
@@ -139,10 +132,7 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
     );
     if (selectedDepartureDate != null && selectedDepartureDate != _dateTo) {
       ref.read(dateFilterProvider.notifier).setDateTo(selectedDepartureDate);
-      // setState(() {
-      //   _dateTo = selectedDepartureDate;
-      //   _endDateController.text = '${_dateTo!.toLocal()}'.split(' ')[0];
-      // });
+   
     }
   }
 

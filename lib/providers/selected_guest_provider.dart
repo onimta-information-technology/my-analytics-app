@@ -3,7 +3,7 @@ import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:intl/intl.dart';
+
 
 class SelectedGuestNotifier extends StateNotifier<Guest?> {
   final GuestRepository guestRepository;
@@ -70,16 +70,6 @@ class SelectedGuestNotifier extends StateNotifier<Guest?> {
     } finally {}
   }
 }
-
-// List<Guest> _updateGuestList(
-//     List<Guest> guestList, String mid, String imageUrl) {
-//   return guestList.map((guest) {
-//     if (guest.mid == mid) {
-//       return guest.copyWith(memImage2: imageUrl);
-//     }
-//     return guest;
-//   }).toList();
-// }
 
 final flutterSecureStorageProvider = Provider(
   (ref) => const FlutterSecureStorage(),

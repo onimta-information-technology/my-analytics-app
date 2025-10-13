@@ -38,13 +38,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     super.initState();
     _getGuestImage();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // final state = GoRouterState.of(context);
-      // final extra = state.extra as Map<String, dynamic>?;
-
-      // if (extra != null && extra['fromMarketing'] == true) {
-      //   setState(() {
-      //     _isFromMarketing = true;
-      //   });
+      
       // Load profile details when coming from marketing
       _getMemberMainProfileDetails();
       // }
@@ -66,41 +60,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
     _animation = Tween<double>(begin: 0.0, end: 1.0).animate(_controller);
   }
-  //   Future<void> _handleMemberIdTap(String memberId) async {
-  //   if (currentLoadingMember == memberId || currentLoadingMember != null) {
-  //     return;
-  //   }
-
-  //   setState(() {
-  //     currentLoadingMember = memberId;
-  //   });
-
-  //   try {
-  //     await ref
-  //         .read(selectedGuestProvider.notifier)
-  //         .setSelectedGuestWithId(memberId);
-
-  //     if (mounted) {
-  //       // Pass the fromMarketing flag
-  //       context.push('/home/profile', extra: {'fromMarketing': true});
-  //     }
-  //   } catch (error) {
-  //     if (mounted) {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         SnackBar(
-  //           content: Text('Error loading member details: $error'),
-  //           backgroundColor: Colors.red,
-  //         ),
-  //       );
-  //     }
-  //   } finally {
-  //     if (mounted) {
-  //       setState(() {
-  //         currentLoadingMember = null;
-  //       });
-  //     }
-  //   }
-  // }
 
   final TextEditingController _whatsappNumberController =
       TextEditingController();
@@ -143,11 +102,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       _isLoading = false;
     });
   }
-
-  // String formatDate(String dateString) {
-  //   final date = DateTime.parse(dateString);
-  //   return DateFormat('dd MMM yyyy').format(date);
-  // }
 
   String formatDate(String dateString) {
     if (dateString == "1990-01-01" || dateString.isEmpty) {
@@ -770,107 +724,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                     .currentConfiguration
                                     .fullPath ==
                                 '/gifts/event-gifts')
-                          // Card(
-                          //   elevation: 5,
-                          //   shape: RoundedRectangleBorder(
-                          //     borderRadius: BorderRadius.circular(12),
-                          //   ),
-                          //   child: Container(
-                          //     color: Colors.green[10],
-                          //     padding: const EdgeInsets.all(16.0),
-                          //     child: Column(
-                          //       crossAxisAlignment: CrossAxisAlignment.start,
-                          //       children: [
-                          //         const Text(
-                          //           "Send the Gift via Whatsapp",
-                          //           style: TextStyle(
-                          //             fontSize: 18,
-                          //             fontWeight: FontWeight.bold,
-                          //           ),
-                          //         ),
-                          //         const SizedBox(height: 10),
-                          //         TextField(
-                          //           controller: _whatsappNumberController,
-                          //           keyboardType: TextInputType.number,
-                          //           decoration: InputDecoration(
-                          //             border: OutlineInputBorder(
-                          //               borderRadius: BorderRadius.circular(12),
-                          //               borderSide: const BorderSide(
-                          //                 color: Colors.green,
-                          //                 width: 2.0,
-                          //               ),
-                          //             ),
-                          //             enabledBorder: OutlineInputBorder(
-                          //               borderRadius: BorderRadius.circular(12),
-                          //               borderSide: const BorderSide(
-                          //                 color: Colors.green,
-                          //                 width: 2.0,
-                          //               ),
-                          //             ),
-                          //             focusedBorder: OutlineInputBorder(
-                          //               borderRadius: BorderRadius.circular(12),
-                          //               borderSide: const BorderSide(
-                          //                 color: Colors.green,
-                          //                 width: 2.0,
-                          //               ),
-                          //             ),
-                          //             hintText: "Enter the whatsapp number",
-                          //           ),
-                          //         ),
-                          //         const SizedBox(height: 10),
-                          //         const Text(
-                          //           "Note: Please enter the whatsapp number with the country code Eg:- 94712345678, 97712333456780",
-                          //           style: TextStyle(
-                          //             fontSize: 14,
-                          //             color: Colors.grey,
-                          //           ),
-                          //         ),
-                          //         const SizedBox(height: 20),
-                          //         SizedBox(
-                          //           width: double.infinity,
-                          //           child: ElevatedButton.icon(
-                          //             onPressed: () {
-                          //               ref
-                          //                   .read(birthdayProvider.notifier)
-                          //                   .sendWhatsappMessage(
-                          //                     mname: guest.memberName,
-                          //                     whatsappNumber:
-                          //                         _whatsappNumberController.text,
-                          //                     gift: guest.gift!,
-                          //                   );
-                          //             },
-                          //             icon: Image.asset(
-                          //               'assets/images/others/whatsapp.png',
-                          //               width: 24,
-                          //               height: 24,
-                          //               color: Colors.white,
-                          //             ),
-                          //             label: const Text(
-                          //               "Send the gift",
-                          //               style: TextStyle(
-                          //                 fontSize: 16,
-                          //                 fontWeight: FontWeight.bold,
-                          //                 color: Colors.white,
-                          //               ),
-                          //             ),
-                          //             style: ElevatedButton.styleFrom(
-                          //               backgroundColor: Colors.green,
-                          //               padding: const EdgeInsets.symmetric(
-                          //                 vertical: 16,
-                          //                 horizontal: 20,
-                          //               ),
-                          //               shape: RoundedRectangleBorder(
-                          //                 borderRadius: BorderRadius.circular(12),
-                          //               ),
-                          //             ),
-                          //           ),
-                          //         ),
-                          //       ],
-                          //     ),
-                          //   ),
-                          // ),
-                          // Updated WhatsApp section in ProfileScreen
-                          // Replace the existing WhatsApp Card section with this:
+                         
                           Card(
                             elevation: 5,
                             shape: RoundedRectangleBorder(
@@ -952,26 +806,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                             ),
                                           );
                                           return;
-                                        }
-
-                                        // Check if phone number is valid (at least 10 digits)
-                                        // String cleanNumber = phoneNumber
-                                        //     .replaceAll(RegExp(r'[^\d]'), '');
-                                        // if (cleanNumber.length < 10) {
-                                        //   ScaffoldMessenger.of(
-                                        //     context,
-                                        //   ).showSnackBar(
-                                        //     const SnackBar(
-                                        //       content: Text(
-                                        //         'Please enter a valid phone number',
-                                        //       ),
-                                        //       backgroundColor: Colors.red,
-                                        //     ),
-                                        //   );
-                                        //   return;
-                                        // }
-
-                                        try {
+                                        }try {
                                           // Show loading
                                           EasyLoading.show(
                                             status: 'Sending gift...',

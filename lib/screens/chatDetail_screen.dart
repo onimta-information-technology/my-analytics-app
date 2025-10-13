@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class IndividualChatScreen extends StatefulWidget {
   final ChatContact contact;
@@ -42,7 +43,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
   DateTime? _lastFetchTime;
   String? _lastMessageId;
 
-  Timer? _messagePollingTimer;
+  StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
 
   @override
   void initState() {
@@ -50,15 +51,65 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     WidgetsBinding.instance.addObserver(this);
     _getCurrentUserName();
     _fetchMessagesFromApi();
+    _setupForegroundMessageListener();
+   
   }
 
   @override
   void dispose() {
-    _messagePollingTimer?.cancel();
+    _foregroundMessageSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _setupForegroundMessageListener() {
+    // Listen for foreground messages while in this chat
+    _foregroundMessageSubscription = FirebaseMessaging.onMessage.listen((
+      RemoteMessage message,
+    ) {
+      print('========================================');
+      print('Foreground message received in IndividualChatScreen');
+      print('Message data: ${message.data}');
+      print('Current chat UUID: ${widget.contact.chatUuid}');
+      print('========================================');
+
+      // Check if it's a chat notification for this specific chat
+      final chatId =
+          message.data['chatId'] ??
+          message.data['chat_id'] ??
+          message.data['ChatId'] ??
+          message.data['Chat_Id'];
+      final msgType = message.data['msg_type'] ?? message.data['type'];
+
+      print('Extracted chatId: $chatId');
+      print('Extracted msgType: $msgType');
+
+      // Check if it's a chat message
+      bool isChatMessage =
+          msgType == '11' ||
+          msgType == 'chat' ||
+          message.data.containsKey('message') ||
+          message.data.containsKey('Details');
+
+      print('Is chat message: $isChatMessage');
+      print('ChatId matches: ${chatId == widget.contact.chatUuid}');
+
+      if (isChatMessage) {
+        // If chatId matches, refresh. If no chatId in notification, refresh anyway
+        if (chatId == null ||
+            chatId.isEmpty ||
+            chatId == widget.contact.chatUuid) {
+          print('✅ Refreshing chat messages...');
+          _fetchMessagesFromApi(silent: true);
+        } else {
+          print('❌ ChatId does not match current chat');
+        }
+      } else {
+        print('❌ Not a chat message notification');
+      }
+    });
   }
 
   Future<void> _getCurrentUserName() async {
@@ -72,7 +123,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     }
   }
 
-  // Fetch messages from API only
+  // Fetch messages from API
   Future<void> _fetchMessagesFromApi({bool silent = false}) async {
     if (_isLoadingMessages && !silent) return;
 
@@ -113,6 +164,18 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
               )
               .toList();
 
+          // Check if there are new messages
+          bool hasNewMessages = false;
+          if (_messages.isNotEmpty && fetchedMessages.isNotEmpty) {
+            final lastOldMessageId =
+                _messages.last.apiMessageId ?? _messages.last.id;
+            final lastNewMessageId =
+                fetchedMessages.last.apiMessageId ?? fetchedMessages.last.id;
+            hasNewMessages = lastOldMessageId != lastNewMessageId;
+          } else if (_messages.isEmpty && fetchedMessages.isNotEmpty) {
+            hasNewMessages = true;
+          }
+
           setState(() {
             _messages = fetchedMessages;
 
@@ -134,7 +197,12 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
             widget.onMessageSent!(lastMsg.text);
           }
 
-          _scrollToBottom();
+          // Scroll to bottom if there are new messages
+          if (hasNewMessages && silent) {
+            _scrollToBottom();
+          } else if (!silent) {
+            _scrollToBottom();
+          }
         } else {
           if (!silent) {
             setState(() {
@@ -309,8 +377,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         isMe: true,
         timestamp: now,
       );
-      print("hiiiiiiiiiii");
-      print(message.isMe);
 
       setState(() {
         _messages.add(message);
@@ -767,9 +833,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     if (state == AppLifecycleState.resumed) {
       print('App resumed - fetching new messages');
       _fetchMessagesFromApi(silent: true);
-    } else if (state == AppLifecycleState.paused) {
-      print('App paused - stopping message polling');
-      _messagePollingTimer?.cancel();
     }
   }
 
@@ -782,7 +845,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            _messagePollingTimer?.cancel();
+            _foregroundMessageSubscription?.cancel();
             Navigator.pop(context);
           },
         ),
@@ -832,6 +895,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                   ),
                   Text(
                     widget.contact.isOnline ? "Online" : "Last seen recently",
+                
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.normal,

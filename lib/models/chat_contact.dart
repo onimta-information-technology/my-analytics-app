@@ -1,11 +1,10 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 class ChatContact {
-  final String id; // Keep for backward compatibility
+  final String id;
   final String chatUuid;
-  final String userUuid; // The actual user UUID for messaging
+  final String userUuid;
   final String name;
   final String firstName;
   final String lastMessage;
@@ -18,6 +17,7 @@ class ChatContact {
   final String? lastMessageSender;
   final List<String> participants;
   final DateTime createdAt;
+  final String? lastMessageSenderName;
 
   ChatContact({
     required this.id,
@@ -35,6 +35,7 @@ class ChatContact {
     this.lastMessageSender,
     required this.participants,
     required this.createdAt,
+    required this.lastMessageSenderName,
   }) : userUuid = userUuid ?? id;
 
   Map<String, dynamic> toJson() => {
@@ -53,6 +54,7 @@ class ChatContact {
     'lastMessageSender': lastMessageSender,
     'participants': participants,
     'createdAt': createdAt.millisecondsSinceEpoch,
+    'lastMessageSenderName': lastMessageSenderName,
   };
 
   static ChatContact fromJson(Map<String, dynamic> json) => ChatContact(
@@ -73,46 +75,73 @@ class ChatContact {
     lastMessageSender: json['lastMessageSender'],
     participants: List<String>.from(json['participants'] ?? []),
     createdAt: DateTime.fromMillisecondsSinceEpoch(json['createdAt']),
+    lastMessageSenderName: json['lastMessageSenderName'],
   );
 
-  // Factory constructor to create ChatContact from chat API response
+  // Fixed: Now accepts currentUserDeviceId instead of currentUserName
   static ChatContact fromChatApiJson(
     Map<String, dynamic> json,
-    String currentUserName, {
+    String currentUserDeviceId, { // Changed parameter name to be clearer
     Map<String, dynamic>? participantDetails,
   }) {
-    final List<String> participants = List<String>.from(
-      json['participants'] ?? [],
-    );
+    final List<dynamic> participantsData = json['participants'] ?? [];
 
-    // Get the other participant's name (not the current user)
-    final String otherParticipant = participants.firstWhere(
-      (participant) => participant != currentUserName,
-      orElse: () => participants.isNotEmpty ? participants[0] : 'Unknown',
-    );
+    print('=== DEBUG fromChatApiJson ===');
+    print('Current User Device ID: $currentUserDeviceId');
+    print('Participants Data: $participantsData');
+    //print('Raw isOnline value from API: ${json['email']}');
+    String otherParticipantUuid = '';
+    String otherParticipantName = '';
 
-    final String name = otherParticipant;
+    // Find the participant that is NOT the current user (by device ID)
+    for (var participant in participantsData) {
+      final String participantUuid = participant['user_uuid'] ?? '';
+      final String participantName = participant['name'] ?? '';
 
-    // Extract firstName and userUuid from participantDetails
-    String firstName = '';
-    String actualUserUuid = '';
+      print(
+        'Checking participant: UUID=$participantUuid, Name=$participantName',
+      );
 
-    if (participantDetails != null &&
-        participantDetails.containsKey(otherParticipant)) {
-      final participantData = participantDetails[otherParticipant];
-      firstName = participantData['firstName'] ?? '';
-      // Get the actual user UUID from participant details
-      actualUserUuid =
-          participantData['id'] ??
-          participantData['userUuid'] ??
-          participantData['uuid'] ??
-          '';
-
-      print('Found user UUID for $otherParticipant: $actualUserUuid');
+      // Compare with device ID, not name
+      if (participantUuid != currentUserDeviceId) {
+        otherParticipantUuid = participantUuid;
+        otherParticipantName = participantName;
+        print('Found other participant: $participantName');
+        break;
+      } else {
+        print('Skipping current user: $participantName');
+      }
     }
 
-    // If firstName is still empty, try to extract it from the name
-    if (firstName.isEmpty) {
+    // Fallback if no other participant found
+    if (otherParticipantName.isEmpty && participantsData.isNotEmpty) {
+      // Try to find any participant that's not the current user
+      for (var participant in participantsData) {
+        final String participantUuid = participant['user_uuid'] ?? '';
+        final String participantName = participant['name'] ?? '';
+
+        if (participantUuid != currentUserDeviceId) {
+          otherParticipantUuid = participantUuid;
+          otherParticipantName = participantName;
+          break;
+        }
+      }
+
+      // If still empty, use the first participant (shouldn't happen in normal cases)
+      if (otherParticipantName.isEmpty) {
+        otherParticipantUuid = participantsData[0]['user_uuid'] ?? '';
+        otherParticipantName = participantsData[0]['name'] ?? 'Unknown';
+      }
+    }
+
+    final String name = otherParticipantName.isNotEmpty
+        ? otherParticipantName
+        : 'Unknown User';
+    final String actualUserUuid = otherParticipantUuid;
+
+    // Extract firstName from the name
+    String firstName = '';
+    if (name.isNotEmpty) {
       final nameParts = name.trim().split(' ');
       if (nameParts.length > 1) {
         firstName = nameParts.last;
@@ -124,7 +153,6 @@ class ChatContact {
     final String initials = generateInitials(name);
     final Color avatarColor = generateColorFromName(name);
 
-    // Parse lastMessageTime to generate relative time
     final DateTime? lastMessageTime = json['lastMessageTime'] != null
         ? DateTime.parse(json['lastMessageTime'])
         : null;
@@ -132,22 +160,28 @@ class ChatContact {
 
     final String lastMessage = json['lastMessage'] ?? 'No messages yet';
 
+    final List<String> participantsList = participantsData
+        .map<String>((p) => p['user_uuid'] as String? ?? '')
+        .where((uuid) => uuid.isNotEmpty)
+        .toList();
+
     return ChatContact(
-      id: json['id'] ?? '', // Chat ID for backward compatibility
+      id: json['id'] ?? '',
       chatUuid: json['chatUuid'] ?? json['id'] ?? '',
-      userUuid: actualUserUuid, // Store the actual user UUID here
+      userUuid: actualUserUuid,
       name: name,
       firstName: firstName,
       lastMessage: lastMessage,
       time: timeAgo,
-      isOnline: participantDetails?[otherParticipant]?['isOnline'] ?? false,
+      isOnline: json['isOnline'] ?? false,
       avatarColor: avatarColor,
       initials: initials,
       unreadCount: json['unreadCount'] ?? 0,
       lastMessageTime: lastMessageTime,
       lastMessageSender: json['lastMessageSender'],
-      participants: participants,
+      participants: participantsList,
       createdAt: DateTime.parse(json['createdAt']),
+      lastMessageSenderName: json['lastMessageSenderName'],
     );
   }
 

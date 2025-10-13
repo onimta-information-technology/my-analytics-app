@@ -122,11 +122,6 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
     return DateFormat('dd MMM yyyy').format(date);
   }
 
-  String _timeFormat(String dateString) {
-    if (dateString == "") return "N/A";
-    final date = DateTime.parse(dateString);
-    return DateFormat('HH:mm:ss').format(date);
-  }
 
   String _formatDate2(String dateString) {
     if (dateString == "") return "N/A";
@@ -139,11 +134,6 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
     final formatter = NumberFormat('#,##0');
     String formattedNumber = formatter.format(value);
     return formattedNumber;
-  }
-
-  String _parseString(String value) {
-    if (value == "") return "N/A";
-    return value;
   }
 
   final Map<String, String> ratingImageMap = {

@@ -139,8 +139,7 @@ class AuthNotifier extends StateNotifier<AuthState?> {
       _pendingUser = user;
        _currentSessionPassword = password;
         _currentSessionusername = username;
-      // await StorageUtil.saveUserData(
-      //     user.userName, user.userLevel, user.salesCode, user.marketingCode, user.mobileNumber ?? "");
+    
       state = AuthState(user: user, isLoading: false);
     } catch (e) {
       print('Login failed: $e');

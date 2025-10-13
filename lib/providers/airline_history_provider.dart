@@ -9,23 +9,7 @@ class AirlineHistoryNotifier extends StateNotifier<List<AirlineHistory>> {
 
   AirlineHistoryNotifier(this.memberProfileRepository)
       : super([
-          // AirlineHistory(
-          //     resNo: "",
-          //     arrivalDate: "",
-          //     departureDate: "",
-          //     requestBy: "",
-          //     approvedBy: "",
-          //     airpotDrop: "",
-          //     marketinPerson: "",
-          //     airLine: "",
-          //     travelClass: "",
-          //     cost: 0.0,
-          //     sector: "",
-          //     route01: "",
-          //     route02: "",
-          //     route03: "",
-          //     remarks: "",
-          //     remarks2: "")
+        
         ]);
 
   Future<void> getAirlineHistory({
@@ -44,23 +28,7 @@ class AirlineHistoryNotifier extends StateNotifier<List<AirlineHistory>> {
 
   void reset() {
     state = [
-      // AirlineHistory(
-      //     resNo: "",
-      //     arrivalDate: "",
-      //     departureDate: "",
-      //     requestBy: "",
-      //     approvedBy: "",
-      //     airpotDrop: "",
-      //     marketinPerson: "",
-      //     airLine: "",
-      //     travelClass: "",
-      //     cost: 0.0,
-      //     sector: "",
-      //     route01: "",
-      //     route02: "",
-      //     route03: "",
-      //     remarks: "",
-      //     remarks2: "")
+     
     ];
   }
 }

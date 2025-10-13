@@ -9,18 +9,7 @@ class TripHistoryNotifier extends StateNotifier<List<TripHistory>> {
 
   TripHistoryNotifier(this.memberProfileRepository)
     : super([
-        // TripHistory(
-        //     consecutiveDates: 0.0,
-        //     arrivalDate: "",
-        //     departureDate: "",
-        //     tripDrop: 0.0,
-        //     tripCashOut: 0.0,
-        //     tripResult: 0.0,
-        //     tripCommission: 0.0,
-        //     tripActDrop: 0.0,
-        //     tripTotalCoupon: 0.0,
-        //     tripHour: 0.0,
-        //     tripMinutes: 0.0),
+    
       ]);
 
   Future<void> getTripHistory({
@@ -57,18 +46,7 @@ class TripHistoryNotifier extends StateNotifier<List<TripHistory>> {
   }
   void reset() {
     state = [
-      // TripHistory(
-      //     consecutiveDates: 0.0,
-      //     arrivalDate: "",
-      //     departureDate: "",
-      //     tripDrop: 0.0,
-      //     tripCashOut: 0.0,
-      //     tripResult: 0.0,
-      //     tripCommission: 0.0,
-      //     tripActDrop: 0.0,
-      //     tripTotalCoupon: 0.0,
-      //     tripHour: 0.0,
-      //     tripMinutes: 0.0)
+     
     ];
   }
 }

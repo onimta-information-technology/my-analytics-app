@@ -11,7 +11,7 @@ import FirebaseMessaging
   ) -> Bool {
     FirebaseApp.configure()
 
-       // Set notification delegate
+    // Set notification delegate
     if #available(iOS 10.0, *) {
       UNUserNotificationCenter.current().delegate = self
     }
@@ -28,7 +28,6 @@ import FirebaseMessaging
       }
     }
 
-     
     // Register for remote notifications
     application.registerForRemoteNotifications()
 
@@ -56,6 +55,7 @@ import FirebaseMessaging
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
+  
   // Register APNS token with Firebase
   override func application(_ application: UIApplication, 
                             didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
@@ -79,19 +79,20 @@ import FirebaseMessaging
     completionHandler(.newData)
   }
   
-  // Show notification when app is in foreground
+  // CRITICAL FIX: Don't show notification when app is in foreground
+  // Let Flutter handle it with Awesome Notifications
   override func userNotificationCenter(_ center: UNUserNotificationCenter,
                                        willPresent notification: UNNotification,
                                        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
     let userInfo = notification.request.content.userInfo
     print("Will present notification: \(userInfo)")
     
-    // Show banner + sound + badge even when app is in foreground
-    if #available(iOS 14.0, *) {
-      completionHandler([.banner, .sound, .badge])
-    } else {
-      completionHandler([.alert, .sound, .badge])
-    }
+    // ✅ CRITICAL: Return empty options to prevent iOS from showing the notification
+    // Your Flutter code will show the custom Awesome Notification instead
+    completionHandler([])
+    
+    // Note: The notification data will still be delivered to your Flutter app
+    // via FirebaseMessaging.onMessage listener, where you show the custom notification
   }
 
   // Called when user taps the notification
@@ -101,8 +102,8 @@ import FirebaseMessaging
     let userInfo = response.notification.request.content.userInfo
     print("User tapped notification: \(userInfo)")
     
-    // Handle notification tap - you can add custom logic here
-    // For example, navigate to a specific screen based on userInfo
+    // This will trigger your onMessageOpenedApp listener in Flutter
+    super.userNotificationCenter(center, didReceive: response, withCompletionHandler: completionHandler)
     
     completionHandler()
   }

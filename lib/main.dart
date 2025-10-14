@@ -290,7 +290,7 @@ class _MyAppState extends State<MyApp> {
         message.data['screen'] == 'chat' ||
         chatDetails != null) {
       // Navigate to chat screen with extracted data
-      final chatData = {
+      final notificationChatData = {
         'chatId': chatDetails?['chatId'] ?? message.data['chatId'] ?? '',
         'senderName':
             chatDetails?['senderName'] ?? message.data['senderName'] ?? '',
@@ -299,16 +299,16 @@ class _MyAppState extends State<MyApp> {
         'openChat': true,
       };
 
-      print('Navigating to chat with data: $chatData');
+      print('Navigating to chat with data: $notificationChatData');
 
       // Use a reliable delay and context check
       Future.delayed(Duration(milliseconds: 500), () {
         final currentContext = navigatorKey.currentContext;
         if (currentContext != null && currentContext.mounted) {
-          currentContext.go('/menu/chats', extra: chatData);
+          currentContext.go('/menu/chats', extra: notificationChatData);
         } else {
           // Fallback to router navigation
-          AppNavigation.router.go('/menu/chats', extra: chatData);
+          AppNavigation.router.go('/menu/chats', extra: notificationChatData);
         }
       });
     }

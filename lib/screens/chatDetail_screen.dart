@@ -43,6 +43,9 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
   DateTime? _lastFetchTime;
   String? _lastMessageId;
 
+  // Polling timer for read status updates
+  Timer? _readStatusPollTimer;
+
   StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
 
   @override
@@ -52,10 +55,12 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     _getCurrentUserName();
     _fetchMessagesFromApi();
     _setupForegroundMessageListener();
+    _startReadStatusPolling();
   }
 
   @override
   void dispose() {
+    _readStatusPollTimer?.cancel();
     _foregroundMessageSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _messageController.dispose();
@@ -63,8 +68,16 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     super.dispose();
   }
 
+  // Start polling for read status updates every 3 seconds
+  void _startReadStatusPolling() {
+    _readStatusPollTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (mounted) {
+        _fetchMessagesFromApi(silent: true, updateReadStatusOnly: true);
+      }
+    });
+  }
+
   void _setupForegroundMessageListener() {
-    // Listen for foreground messages while in this chat
     _foregroundMessageSubscription = FirebaseMessaging.onMessage.listen((
       RemoteMessage message,
     ) {
@@ -74,7 +87,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
       print('Current chat UUID: ${widget.contact.chatUuid}');
       print('========================================');
 
-      // Check if it's a chat notification for this specific chat
       final chatId =
           message.data['chatId'] ??
           message.data['chat_id'] ??
@@ -85,7 +97,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
       print('Extracted chatId: $chatId');
       print('Extracted msgType: $msgType');
 
-      // Check if it's a chat message
       bool isChatMessage =
           msgType == '11' ||
           msgType == 'chat' ||
@@ -96,7 +107,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
       print('ChatId matches: ${chatId == widget.contact.chatUuid}');
 
       if (isChatMessage) {
-        // If chatId matches, refresh. If no chatId in notification, refresh anyway
         if (chatId == null ||
             chatId.isEmpty ||
             chatId == widget.contact.chatUuid) {
@@ -122,11 +132,13 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     }
   }
 
-  // Fetch messages from API
-  Future<void> _fetchMessagesFromApi({bool silent = false}) async {
+  Future<void> _fetchMessagesFromApi({
+    bool silent = false,
+    bool updateReadStatusOnly = false,
+  }) async {
     if (_isLoadingMessages && !silent) return;
 
-    if (!silent) {
+    if (!silent && !updateReadStatusOnly) {
       setState(() {
         _isLoadingMessages = true;
       });
@@ -163,47 +175,68 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
               )
               .toList();
 
-          // Check if there are new messages
-          bool hasNewMessages = false;
-          if (_messages.isNotEmpty && fetchedMessages.isNotEmpty) {
-            final lastOldMessageId =
-                _messages.last.apiMessageId ?? _messages.last.id;
-            final lastNewMessageId =
-                fetchedMessages.last.apiMessageId ?? fetchedMessages.last.id;
-            hasNewMessages = lastOldMessageId != lastNewMessageId;
-          } else if (_messages.isEmpty && fetchedMessages.isNotEmpty) {
-            hasNewMessages = true;
-          }
+          if (updateReadStatusOnly) {
+            // Only update read status without scrolling or showing loading
+            bool hasReadStatusChanged = false;
 
-          setState(() {
-            _messages = fetchedMessages;
+            for (int i = 0; i < _messages.length; i++) {
+              final oldMessage = _messages[i];
+              final newMessage = fetchedMessages.firstWhere(
+                (msg) => msg.apiMessageId == oldMessage.apiMessageId,
+                orElse: () => oldMessage,
+              );
 
-            // Update tracking variables
-            if (_messages.isNotEmpty) {
-              _lastMessageId = _messages.last.apiMessageId ?? _messages.last.id;
-              _lastFetchTime = _messages.last.timestamp;
+              if (oldMessage.isRead != newMessage.isRead) {
+                hasReadStatusChanged = true;
+                _messages[i] = newMessage;
+              }
             }
 
-            if (!silent) {
-              _isLoadingMessages = false;
+            if (hasReadStatusChanged && mounted) {
+              setState(() {});
             }
-          });
+          } else {
+            // Normal message fetch with scroll
+            bool hasNewMessages = false;
+            if (_messages.isNotEmpty && fetchedMessages.isNotEmpty) {
+              final lastOldMessageId =
+                  _messages.last.apiMessageId ?? _messages.last.id;
+              final lastNewMessageId =
+                  fetchedMessages.last.apiMessageId ?? fetchedMessages.last.id;
+              hasNewMessages = lastOldMessageId != lastNewMessageId;
+            } else if (_messages.isEmpty && fetchedMessages.isNotEmpty) {
+              hasNewMessages = true;
+            }
 
-          await _markMessagesAsRead();
+            setState(() {
+              _messages = fetchedMessages;
 
-          if (widget.onMessageSent != null && fetchedMessages.isNotEmpty) {
-            final lastMsg = fetchedMessages.last;
-            widget.onMessageSent!(lastMsg.text);
-          }
+              if (_messages.isNotEmpty) {
+                _lastMessageId =
+                    _messages.last.apiMessageId ?? _messages.last.id;
+                _lastFetchTime = _messages.last.timestamp;
+              }
 
-          // Scroll to bottom if there are new messages
-          if (hasNewMessages && silent) {
-            _scrollToBottom();
-          } else if (!silent) {
-            _scrollToBottom();
+              if (!silent) {
+                _isLoadingMessages = false;
+              }
+            });
+
+            await _markMessagesAsRead();
+
+            if (widget.onMessageSent != null && fetchedMessages.isNotEmpty) {
+              final lastMsg = fetchedMessages.last;
+              widget.onMessageSent!(lastMsg.text);
+            }
+
+            if (hasNewMessages && silent) {
+              _scrollToBottom();
+            } else if (!silent) {
+              _scrollToBottom();
+            }
           }
         } else {
-          if (!silent) {
+          if (!silent && !updateReadStatusOnly) {
             setState(() {
               _isLoadingMessages = false;
             });
@@ -211,7 +244,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         }
       } else {
         print('Failed to fetch messages: ${response.statusCode}');
-        if (!silent) {
+        if (!silent && !updateReadStatusOnly) {
           setState(() {
             _isLoadingMessages = false;
           });
@@ -219,7 +252,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
       }
     } catch (e) {
       print('Error fetching messages from API: $e');
-      if (!silent) {
+      if (!silent && !updateReadStatusOnly) {
         setState(() {
           _isLoadingMessages = false;
         });
@@ -317,7 +350,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           "senderUuid": deviceId,
           "recipientUuid": widget.contact.userUuid,
           "message": messageText,
-          "title": "New Message from $_currentUserName",
+          "title": "$_currentUserName",
           "body": messageText,
           "chatId": widget.contact.chatUuid,
         }),
@@ -338,6 +371,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
               _messages[messageIndex] = _messages[messageIndex].copyWith(
                 apiMessageId: messageId,
                 apiChatId: chatId,
+                isRead: false, // Initially not read
               );
             }
           });
@@ -375,6 +409,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         text: messageText,
         isMe: true,
         timestamp: now,
+        isRead: false, // Initially not read
       );
 
       setState(() {
@@ -390,7 +425,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         widget.onMessageSent!(messageText);
       }
 
-      // Send to API and update with API ID
       final apiMessageId = await _sendMessageWithApi(
         messageText,
         localMessageId,
@@ -844,6 +878,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
+            _readStatusPollTimer?.cancel();
             _foregroundMessageSubscription?.cancel();
             Navigator.pop(context);
           },
@@ -894,7 +929,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                   ),
                   Text(
                     widget.contact.isOnline ? "Online" : "Last seen recently",
-
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.normal,

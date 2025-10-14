@@ -207,18 +207,15 @@ class FirebaseApiService {
     return response;
   }
 
+
   static Future<String?> getName() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('name');
   }
-
   // Create a new chat
-
   static Future<String?> createChat(String userUid) async {
     // final currentUserName = await getName();
     final deviceId = await DeviceId.get();
-   
-
     try {
       final url = '$domain${endpoints['createChat']}';
       print('Creating chat with receiver: $userUid');

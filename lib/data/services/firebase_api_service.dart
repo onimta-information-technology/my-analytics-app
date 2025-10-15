@@ -18,6 +18,8 @@ class FirebaseApiService {
     'fetchUserChats': '/api/chats/user',
     'fetchAllUsers': '/api/users/contacts',
     'markAsRead': '/api/chats',
+    'fetchMessages': '/api/chats',
+    'softDeleteMessage': '/api/chats',
   };
 
   // Helper to get Bearer token header
@@ -30,7 +32,7 @@ class FirebaseApiService {
     };
   }
 
-  //  for POST requests
+  // Helper for POST requests
   static Future<Map<String, dynamic>> postRequest(
     String url,
     Map<String, dynamic> body,
@@ -99,7 +101,7 @@ class FirebaseApiService {
     }
   }
 
-  //  GET requests
+  // Helper for GET requests
   static Future<Map<String, dynamic>> getRequest(String url) async {
     try {
       final headers = await getAuthHeaders();
@@ -155,6 +157,7 @@ class FirebaseApiService {
     }
   }
 
+  // Mark messages as read
   static Future<Map<String, dynamic>> markMessagesAsRead(
     String chatId,
     List<String> messageIds,
@@ -207,14 +210,14 @@ class FirebaseApiService {
     return response;
   }
 
-
+  // Get user name from storage
   static Future<String?> getName() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('name');
   }
+
   // Create a new chat
   static Future<String?> createChat(String userUid) async {
-    // final currentUserName = await getName();
     final deviceId = await DeviceId.get();
     try {
       final url = '$domain${endpoints['createChat']}';
@@ -256,7 +259,6 @@ class FirebaseApiService {
   // Fetch user chats
   static Future<Map<String, dynamic>> fetchUserChats() async {
     try {
-      //final userId = await StorageUtil.getUserName();
       final deviceId = await DeviceId.get();
       if (deviceId == null || deviceId.isEmpty) {
         throw Exception('deviceId not found in storage');
@@ -279,7 +281,6 @@ class FirebaseApiService {
   static Future<Map<String, dynamic>> fetchAllUsers() async {
     try {
       final deviceId = await DeviceId.get();
-
       final url = '$domain${endpoints['fetchAllUsers']}/$deviceId';
       final response = await getRequest(url);
 
@@ -291,6 +292,74 @@ class FirebaseApiService {
     } catch (e) {
       print('Error fetching all users: $e');
       throw Exception('Failed to fetch users: $e');
+    }
+  }
+
+  // Fetch messages for a specific chat
+  static Future<Map<String, dynamic>> fetchMessages(String chatId) async {
+    try {
+      final url = '$domain${endpoints['fetchMessages']}/$chatId/messages';
+      print('Fetching messages for chat: $chatId');
+
+      final response = await getRequest(url).timeout(
+        const Duration(seconds: 10),
+      );
+
+      print('Fetch messages response: $response');
+      return response;
+    } catch (e) {
+      print('Error fetching messages: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  // Send a message with notification
+  static Future<Map<String, dynamic>> sendMessage({
+    required String recipientUuid,
+    required String message,
+    required String title,
+    required String body,
+    required String chatId,
+  }) async {
+    try {
+      final deviceId = await DeviceId.get();
+      print('Sending message from deviceId: $deviceId');
+
+      final url = '$domain${endpoints['sendMessage']}';
+      final response = await postRequest(url, {
+        "senderUuid": deviceId,
+        "recipientUuid": recipientUuid,
+        "message": message,
+        "title": title,
+        "body": body,
+        "chatId": chatId,
+      });
+
+      print('Send message response: $response');
+      return response;
+    } catch (e) {
+      print('Error sending message: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  // Soft delete a message
+  static Future<Map<String, dynamic>> softDeleteMessage(
+    String chatId,
+    String messageId,
+  ) async {
+    try {
+      final url =
+          '$domain${endpoints['softDeleteMessage']}/$chatId/messages/$messageId/soft-delete';
+      print('Soft deleting message: chatId=$chatId, messageId=$messageId');
+
+      final response = await deleteRequest(url);
+
+      print('Soft delete message response: $response');
+      return response;
+    } catch (e) {
+      print('Error soft deleting message: $e');
+      return {'success': false, 'error': e.toString()};
     }
   }
 }

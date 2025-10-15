@@ -87,10 +87,12 @@ import FirebaseMessaging
     let userInfo = notification.request.content.userInfo
     print("Will present notification: \(userInfo)")
     
-    // ✅ CRITICAL: Return empty options to prevent iOS from showing the notification
-    // Your Flutter code will show the custom Awesome Notification instead
-    completionHandler([])
     
+      if #available(iOS 14.0, *) {
+        completionHandler([.banner, .sound, .badge])
+    } else {
+        completionHandler([.alert, .sound, .badge])
+    }
     // Note: The notification data will still be delivered to your Flutter app
     // via FirebaseMessaging.onMessage listener, where you show the custom notification
   }

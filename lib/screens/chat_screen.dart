@@ -835,60 +835,59 @@ class _ChatScreenState extends State<ChatScreen>
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(_selectedContactId != null ? "Select action" : "Chats"),
-              Text(
-                _selectedContactId != null
-                    ? "1 selected"
-                    : "${_contacts.length} conversations",
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.normal,
-                ),
-              ),
+              // Text(_selectedContactId != null ? "Select action" : "Chats"),
+              Text("Chats"),
+              // Text(
+              //   _selectedContactId != null
+              //       ? "1 selected"
+              //       : "${_contacts.length} conversations",
+              //   style: const TextStyle(
+              //     fontSize: 12,
+              //     fontWeight: FontWeight.normal,
+              //   ),
+              // ),
             ],
           ),
-          backgroundColor: _selectedContactId != null
-              ? Colors.red
-              : Colors.green,
+          // backgroundColor: _selectedContactId != null
+          //     ? Colors.red
+          //     : Colors.green,
+          backgroundColor: Colors.green,
           foregroundColor: Colors.white,
-          leading: _selectedContactId != null
-              ? IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () {
-                    setState(() {
-                      _selectedContactId = null;
-                    });
-                  },
-                )
-              : null,
-          actions: _selectedContactId != null
-              ? [
-                  IconButton(
-                    icon: const Icon(Icons.delete),
-                    onPressed: () {
-                      final contact = _contacts.firstWhere(
-                        (c) => c.id == _selectedContactId,
-                      );
-                      _showDeleteConfirmation(contact);
-                    },
-                  ),
-                ]
-              : [
-                  IconButton(
-                    icon: const Icon(Icons.menu),
-                    onPressed: () {
-                      context.push('/menu');
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: _fetchChatsFromApi,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.more_vert),
-                    onPressed: () {},
-                  ),
-                ],
+          // leading: _selectedContactId != null
+          //     ? IconButton(
+          //         icon: const Icon(Icons.close),
+          //         onPressed: () {
+          //           setState(() {
+          //             _selectedContactId = null;
+          //           });
+          //         },
+          //       )
+          //     : null,
+          // actions: _selectedContactId != null
+          //     ? [
+          //         IconButton(
+          //           icon: const Icon(Icons.delete),
+          //           onPressed: () {
+          //             final contact = _contacts.firstWhere(
+          //               (c) => c.id == _selectedContactId,
+          //             );
+          //             _showDeleteConfirmation(contact);
+          //           },
+          //         ),
+          //       ]
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () {
+                context.push('/menu');
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _fetchChatsFromApi,
+            ),
+            IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
+          ],
           bottom: _selectedContactId == null
               ? PreferredSize(
                   preferredSize: const Size.fromHeight(100),

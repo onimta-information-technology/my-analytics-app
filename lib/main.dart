@@ -102,15 +102,67 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _handleNotificationTap(RemoteMessage message) {
-    if (message.data['type'] == 'chat' ||
-        message.data['screen'] == 'chat' ||
-        message.data.containsKey('chat')) {
-      // Ensure we're on home first, then navigate
-      Future.delayed(Duration(milliseconds: 300), () {
-        context.go('/menu/chats');
-      });
-    }
+    // if (message.data['type'] == 'chat' ||
+    //     message.data['screen'] == 'chat' ||
+    //     message.data.containsKey('chat')) {
+    //   // Ensure we're on home first, then navigate
+    //   Future.delayed(Duration(milliseconds: 300), () {
+    //     context.go('/menu/chats');
+    //   });
+    // }
+    // print('Handling notification tap with data: ${message.data}');
     print('Handling notification tap with data: ${message.data}');
+
+    // Parse the notification data
+    Map<String, dynamic>? chatData;
+    String? detailsJson = message.data['Details'];
+
+    if (detailsJson != null) {
+      try {
+        final chatDetails = json.decode(detailsJson);
+        chatData = {
+          'chatId': chatDetails['chatId'] ?? '',
+          'senderName': chatDetails['senderName'] ?? '',
+          'senderId': chatDetails['senderId'] ?? '',
+          'openChat': true,
+        };
+        print('Extracted chat data from notification: $chatData');
+      } catch (e) {
+        print('Error parsing notification Details: $e');
+      }
+    }
+
+    // Check for direct chat data in message.data
+    if (chatData == null &&
+        (message.data['type'] == 'chat' ||
+            message.data['screen'] == 'chat' ||
+            message.data.containsKey('chatId'))) {
+      chatData = {
+        'chatId': message.data['chatId'] ?? '',
+        'senderName': message.data['senderName'] ?? '',
+        'senderId': message.data['senderId'] ?? '',
+        'openChat': true,
+      };
+    }
+
+    // Use WidgetsBinding to ensure navigation happens after frame is rendered
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Wait a bit longer to ensure the app is fully in foreground
+      Future.delayed(const Duration(milliseconds: 500), () {
+        final context = navigatorKey.currentContext;
+        if (context != null && context.mounted) {
+          if (chatData != null && chatData['chatId'] != '') {
+            print('Navigating to chat with data: $chatData');
+            context.go('/menu/chats', extra: chatData);
+          } else {
+            print('Navigating to chats list');
+            context.go('/menu/chats');
+          }
+        } else {
+          print('Context not available for navigation');
+        }
+      });
+    });
   }
 
   @override

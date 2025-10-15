@@ -1,15 +1,11 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
-
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/models/chat_message.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -33,6 +29,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _imagePicker = ImagePicker();
+  final FocusNode _messageFocusNode = FocusNode();
 
   List<ChatMessage> _messages = [];
   String? _currentUserName;
@@ -56,6 +53,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     _fetchMessagesFromApi();
     _setupForegroundMessageListener();
     _startReadStatusPolling();
+    _messageFocusNode.addListener(_onFocusChange);
   }
 
   @override
@@ -65,6 +63,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     WidgetsBinding.instance.removeObserver(this);
     _messageController.dispose();
     _scrollController.dispose();
+    _messageFocusNode.dispose();
     super.dispose();
   }
 
@@ -75,6 +74,17 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         _fetchMessagesFromApi(silent: true, updateReadStatusOnly: true);
       }
     });
+  }
+
+  void _onFocusChange() {
+    if (_messageFocusNode.hasFocus) {
+      // Keyboard is opening, scroll to bottom after delay
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          _scrollToBottom();
+        }
+      });
+    }
   }
 
   void _setupForegroundMessageListener() {
@@ -145,24 +155,13 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     }
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('Token') ?? '';
       final chatId = widget.contact.chatUuid;
 
-      final response = await http
-          .get(
-            Uri.parse(
-              'https://ballysnotifications.onimtaitsl.com/api/chats/$chatId/messages',
-            ),
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $token',
-            },
-          )
-          .timeout(const Duration(seconds: 10));
+      // Use FirebaseApiService instead of manual HTTP call
+      final response = await FirebaseApiService.fetchMessages(chatId);
 
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
+      if (response['success'] == true && response['data'] != null) {
+        final responseData = response['data'];
 
         if (responseData['success'] == true &&
             responseData['messages'] != null) {
@@ -243,7 +242,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           }
         }
       } else {
-        print('Failed to fetch messages: ${response.statusCode}');
+        print('Failed to fetch messages: ${response['error']}');
         if (!silent && !updateReadStatusOnly) {
           setState(() {
             _isLoadingMessages = false;
@@ -289,20 +288,15 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
 
   Future<void> _deleteMessageFromApi(String chatId, String messageId) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('Token') ?? '';
-
-      final response = await http.delete(
-        Uri.parse(
-          'https://ballysnotifications.onimtaitsl.com/api/chats/$chatId/messages/$messageId/soft-delete',
-        ),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
+      // Use FirebaseApiService instead of manual HTTP call
+      final response = await FirebaseApiService.softDeleteMessage(
+        chatId,
+        messageId,
       );
-      print('Deleting message from API: response ${response.body}');
-      if (response.statusCode != 200) {
+
+      print('Deleting message from API: response $response');
+
+      if (response['success'] != true) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Failed to delete message from server.'),
@@ -333,32 +327,19 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     }
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('Token') ?? '';
-      final deviceId = await DeviceId.get();
-      print('Current user deviceId : $deviceId');
-      print('Current user token : $token');
-      final response = await http.post(
-        Uri.parse(
-          'https://ballysnotifications.onimtaitsl.com/api/chat/send-message-with-notification',
-        ),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          "senderUuid": deviceId,
-          "recipientUuid": widget.contact.userUuid,
-          "message": messageText,
-          "title": "$_currentUserName",
-          "body": messageText,
-          "chatId": widget.contact.chatUuid,
-        }),
+      // Use FirebaseApiService instead of manual HTTP call
+      final response = await FirebaseApiService.sendMessage(
+        recipientUuid: widget.contact.userUuid,
+        message: messageText,
+        title: _currentUserName!,
+        body: messageText,
+        chatId: widget.contact.chatUuid,
       );
 
-      print('Sending message to API: response ${response.body}');
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
+      print('Sending message to API: response $response');
+
+      if (response['success'] == true && response['data'] != null) {
+        final responseData = response['data'];
         if (responseData['success'] == true && responseData['data'] != null) {
           final messageId = responseData['data']['messageId'];
           final chatId = responseData['data']['chatId'];
@@ -996,6 +977,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                 Expanded(
                   child: TextField(
                     controller: _messageController,
+                    focusNode: _messageFocusNode,
                     decoration: InputDecoration(
                       hintText: "Type a message",
                       border: OutlineInputBorder(
@@ -1017,6 +999,11 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                     maxLines: null,
                     textInputAction: TextInputAction.newline,
                     onSubmitted: (_) => _sendMessage(),
+                    onTap: () {
+                      Future.delayed(const Duration(milliseconds: 300), () {
+                        if (mounted) _scrollToBottom();
+                      });
+                    },
                   ),
                 ),
                 const SizedBox(width: 8),

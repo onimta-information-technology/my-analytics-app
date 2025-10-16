@@ -298,7 +298,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
       if (response['success'] != true) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Failed to delete message from server.'),
+            content: Text('Could not delete message.'),
             backgroundColor: Colors.red,
           ),
         );

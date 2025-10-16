@@ -307,13 +307,15 @@ class _ChatScreenState extends State<ChatScreen>
                     _contacts.removeWhere(
                       (c) => c.chatUuid == contact.chatUuid,
                     );
-                    _filteredContacts.removeWhere(
-                      (c) => c.chatUuid == contact.chatUuid,
-                    );
-                    _selectedContactId = null;
+                  //   _filteredContacts.removeWhere(
+                  //     (c) => c.chatUuid == contact.chatUuid,
+                  //   );
+                  //   _selectedContactId = null;
+                  _selectedContactId = null;
+                  // _fetchChatsFromApi();
                   });
 
-                  await _saveChats();
+                  // await _saveChats();
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -888,8 +890,8 @@ class _ChatScreenState extends State<ChatScreen>
             ),
             IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
           ],
-          bottom: _selectedContactId == null
-              ? PreferredSize(
+          bottom: 
+               PreferredSize(
                   preferredSize: const Size.fromHeight(100),
                   child: Container(
                     color: Colors.white,
@@ -930,7 +932,7 @@ class _ChatScreenState extends State<ChatScreen>
                     ),
                   ),
                 )
-              : null,
+             
         ),
         body: Column(
           children: [

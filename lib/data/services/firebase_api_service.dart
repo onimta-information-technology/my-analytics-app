@@ -245,13 +245,16 @@ class FirebaseApiService {
   // Delete a chat
   static Future<bool> deleteChat(String chatId) async {
     try {
-      final url = '$domain${endpoints['deleteMessage']}/$chatId';
-      final response = await deleteRequest(url);
+      final deviceId = await DeviceId.get();
+      final url = '$domain${endpoints['deleteMessage']}/$chatId/hide';
+      print('Hiding chat (deleteChat): chatId=$chatId, userId=$deviceId');
 
-      print('Delete chat response: $response');
+      final response = await postRequest(url, {'userId': deviceId});
+
+      print('Hide chat response: $response');
       return response['success'] == true;
     } catch (e) {
-      print('Error deleting chat: $e');
+      print('Error hiding chat: $e');
       return false;
     }
   }
@@ -301,9 +304,9 @@ class FirebaseApiService {
       final url = '$domain${endpoints['fetchMessages']}/$chatId/messages';
       print('Fetching messages for chat: $chatId');
 
-      final response = await getRequest(url).timeout(
-        const Duration(seconds: 10),
-      );
+      final response = await getRequest(
+        url,
+      ).timeout(const Duration(seconds: 10));
 
       print('Fetch messages response: $response');
       return response;
@@ -343,17 +346,54 @@ class FirebaseApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> deleteRequestWithBody(
+    String url,
+    Map<String, dynamic> body,
+  ) async {
+    try {
+      final headers = await getAuthHeaders();
+      print('DELETE Request to $url with body: $body');
+
+      final response = await http.delete(
+        Uri.parse(url),
+        headers: headers,
+        body: jsonEncode(body),
+      );
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body) as Map<String, dynamic>;
+        return {'success': true, 'data': responseData};
+      } else {
+        return {
+          'success': false,
+          'error': 'Server returned status code: ${response.statusCode}',
+          'statusCode': response.statusCode,
+          'responseBody': response.body,
+        };
+      }
+    } catch (e) {
+      print('Error in deleteRequestWithBody: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   // Soft delete a message
   static Future<Map<String, dynamic>> softDeleteMessage(
     String chatId,
     String messageId,
   ) async {
     try {
+      final deviceId = await DeviceId.get();
       final url =
-          '$domain${endpoints['softDeleteMessage']}/$chatId/messages/$messageId/soft-delete';
-      print('Soft deleting message: chatId=$chatId, messageId=$messageId');
+          '$domain${endpoints['softDeleteMessage']}/$chatId/messages/$messageId';
+      print(
+        'Soft deleting message: chatId=$chatId, messageId=$messageId, userId=$deviceId',
+      );
 
-      final response = await deleteRequest(url);
+      final response = await deleteRequestWithBody(url, {'userId': deviceId});
 
       print('Soft delete message response: $response');
       return response;

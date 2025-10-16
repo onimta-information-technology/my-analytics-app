@@ -277,64 +277,77 @@ class _ChatScreenState extends State<ChatScreen>
             TextButton(
               child: const Text('Delete', style: TextStyle(color: Colors.red)),
               onPressed: () async {
-                Navigator.of(context).pop();
+                final navigator = Navigator.of(context);
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
 
-                ScaffoldMessenger.of(context).showSnackBar(
+                navigator.pop();
+
+                // Clear selection FIRST
+                setState(() {
+                  _selectedContactId = null;
+                });
+
+                scaffoldMessenger.showSnackBar(
                   const SnackBar(
                     content: Row(
                       children: [
                         SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
                         ),
                         SizedBox(width: 16),
                         Text('Deleting chat...'),
                       ],
                     ),
+                    duration: Duration(seconds: 30),
                     backgroundColor: Colors.orange,
                   ),
                 );
+
+                print('=== Deleting chat: ${contact.chatUuid} ===');
 
                 final success = await FirebaseApiService.deleteChat(
                   contact.chatUuid,
                 );
 
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                scaffoldMessenger.hideCurrentSnackBar();
+
+                print('=== Delete result: $success ===');
 
                 if (success) {
-                  setState(() {
-                    _contacts.removeWhere(
-                      (c) => c.chatUuid == contact.chatUuid,
-                    );
-                  //   _filteredContacts.removeWhere(
-                  //     (c) => c.chatUuid == contact.chatUuid,
-                  //   );
-                  //   _selectedContactId = null;
-                  _selectedContactId = null;
-                  // _fetchChatsFromApi();
-                  });
-
-                  // await _saveChats();
-
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  scaffoldMessenger.showSnackBar(
                     const SnackBar(
-                      content: Text('Chat deleted successfully'),
+                      content: Text('Chat deleted successfully. Refreshing...'),
                       backgroundColor: Colors.green,
+                      duration: Duration(seconds: 2),
                     ),
                   );
+
+                  // Wait a moment for backend to process
+                  await Future.delayed(const Duration(milliseconds: 500));
+
+                  // Refresh from API
+                  print('=== Fetching updated chat list ===');
+                  await _fetchChatsFromApi();
+
+                  print(
+                    '=== Chat list after refresh: ${_contacts.length} chats ===',
+                  );
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  scaffoldMessenger.showSnackBar(
                     const SnackBar(
                       content: Text('Failed to delete chat'),
                       backgroundColor: Colors.red,
+                      duration: Duration(seconds: 3),
                     ),
                   );
                 }
-
-                setState(() {
-                  _selectedContactId = null;
-                });
               },
             ),
           ],
@@ -890,49 +903,45 @@ class _ChatScreenState extends State<ChatScreen>
             ),
             IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
           ],
-          bottom: 
-               PreferredSize(
-                  preferredSize: const Size.fromHeight(100),
-                  child: Container(
-                    color: Colors.white,
-                    child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: TextField(
-                            onChanged: _filterContacts,
-                            decoration: InputDecoration(
-                              hintText: "Search chats...",
-                              prefixIcon: const Icon(Icons.search),
-                              filled: true,
-                              fillColor: Colors.grey.shade200,
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 0,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(25),
-                                borderSide: BorderSide.none,
-                              ),
-                            ),
-                          ),
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(100),
+            child: Container(
+              color: Colors.white,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextField(
+                      onChanged: _filterContacts,
+                      decoration: InputDecoration(
+                        hintText: "Search chats...",
+                        prefixIcon: const Icon(Icons.search),
+                        filled: true,
+                        fillColor: Colors.grey.shade200,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(25),
+                          borderSide: BorderSide.none,
                         ),
-                        TabBar(
-                          controller: _tabController,
-                          indicatorColor: Colors.green,
-                          labelColor: Colors.green,
-                          unselectedLabelColor: Colors.black54,
-                          tabs: const [
-                            Tab(text: "All"),
-                            Tab(text: "Unread"),
-                            Tab(text: "Groups"),
-                            Tab(text: "Favorites"),
-                          ],
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                )
-             
+                  TabBar(
+                    controller: _tabController,
+                    indicatorColor: Colors.green,
+                    labelColor: Colors.green,
+                    unselectedLabelColor: Colors.black54,
+                    tabs: const [
+                      Tab(text: "All"),
+                      Tab(text: "Unread"),
+                      Tab(text: "Groups"),
+                      Tab(text: "Favorites"),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
         body: Column(
           children: [

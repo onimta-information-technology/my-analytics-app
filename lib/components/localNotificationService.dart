@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io'; // Import for Platform check
 import 'package:ballys_reservation_app/main.dart' show navigatorKey;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
@@ -63,7 +64,15 @@ class NotificationService {
 
   Future<void> showForegroundNotification(RemoteMessage message) async {
     try {
-      // Get title and body from data payload
+      // For iOS, skip custom notifications and let FCM handle natively
+      if (Platform.isIOS) {
+        print('iOS detected - using native FCM notifications');
+        // iOS will show notifications natively through FCM
+        // We only need to handle the tap action, not display
+        return;
+      }
+
+      // Android: Show custom notification using Awesome Notifications
       String title =
           message.data['title'] ?? message.notification?.title ?? 'New Message';
       String body = message.data['body'] ?? message.notification?.body ?? '';

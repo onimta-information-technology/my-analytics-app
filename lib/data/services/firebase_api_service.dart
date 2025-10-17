@@ -161,19 +161,19 @@ class FirebaseApiService {
   static Future<Map<String, dynamic>> markMessagesAsRead(
     String chatId,
     List<String> messageIds,
-    String userId,
   ) async {
     try {
-      print('User ID for marking as read: $userId');
+      final deviceId = await DeviceId.get();
+      print('User ID for marking as read: $deviceId');
       print('Message IDs to mark as read: $messageIds');
       final url = '$domain${endpoints['markAsRead']}/$chatId/messages/read';
       print(
-        'Marking messages as read: chatId=$chatId, messageIds=$messageIds, userId=$userId',
+        'Marking messages as read: chatId=$chatId, messageIds=$messageIds, userId=$deviceId',
       );
 
       final response = await putRequest(url, {
         'messageIds': messageIds,
-        'userId': userId,
+        'userId': deviceId,
       });
 
       print('Mark as read response: $response');

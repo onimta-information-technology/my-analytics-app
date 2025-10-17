@@ -78,10 +78,10 @@ class ChatMessage {
   // Create ChatMessage from API response
   static ChatMessage fromApiResponse(
     Map<String, dynamic> json,
-    String currentUserName,
+    String currentUserID,
   ) {
-    final senderName = json['senderName'] ?? json['senderId'] ?? '';
-    final isMe = senderName == currentUserName;
+    final senderID = json['senderId'] ?? '';
+    final isMe = senderID == currentUserID;
 
     return ChatMessage(
       id: json['id'] ?? json['messageUuid'],

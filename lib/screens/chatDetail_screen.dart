@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/models/chat_message.dart';
+import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -158,7 +159,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
 
       // Use FirebaseApiService instead of manual HTTP call
       final response = await FirebaseApiService.fetchMessages(chatId);
-
+      final deviceId = await DeviceId.get();
       if (response['success'] == true && response['data'] != null) {
         final responseData = response['data'];
 
@@ -167,10 +168,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           final List<dynamic> messagesJson = responseData['messages'];
 
           final List<ChatMessage> fetchedMessages = messagesJson
-              .map(
-                (json) =>
-                    ChatMessage.fromApiResponse(json, _currentUserName ?? ''),
-              )
+              .map((json) => ChatMessage.fromApiResponse(json, deviceId ?? ''))
               .toList();
 
           if (updateReadStatusOnly) {
@@ -274,7 +272,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
       final response = await FirebaseApiService.markMessagesAsRead(
         widget.contact.chatUuid,
         unreadMessageIds,
-        _currentUserName!,
       );
 
       if (response['success'] == true) {

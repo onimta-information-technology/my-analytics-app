@@ -16,7 +16,6 @@ class _SupportPageState extends State<SupportScreen> {
   void initState() {
     super.initState();
     _fetchAppVersion();
-    WidgetsBinding.instance.addPostFrameCallback((_) {});
   }
 
   Future<void> _fetchAppVersion() async {
@@ -59,7 +58,7 @@ class _SupportPageState extends State<SupportScreen> {
                 ),
               ),
               const SizedBox(height: 10),
-       
+
               InkWell(
                 onTap: () => _launchUrl("tel:+94759888888"),
                 child: const Row(
@@ -72,17 +71,14 @@ class _SupportPageState extends State<SupportScreen> {
                 ),
               ),
               const SizedBox(height: 10),
-               InkWell(
+              InkWell(
                 onTap: () => _launchUrl("mailto:help@onimtait.com"),
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(Icons.email, size: 30),
                     SizedBox(width: 10),
-                    Text(
-                      'help@onimtait.com',
-                      style: TextStyle(fontSize: 20),
-                    ),
+                    Text('help@onimtait.com', style: TextStyle(fontSize: 20)),
                   ],
                 ),
               ),

@@ -11,7 +11,7 @@ class GuestRepository {
   Future<List<Guest>> getGuestData(int iid, String text1) async {
     final deviceId = await DeviceId.get();
     print('Device ID guestdate used: $deviceId');
-    print('IID used: $iid');
+    print('IID used: $text1');
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [

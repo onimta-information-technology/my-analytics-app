@@ -9,8 +9,11 @@ class ApiService {
   ApiService(this.storage);
 
   Future<Map<String, dynamic>> post(
-      String endpoint, Map<String, Object?> body) async {
+    String endpoint,
+    Map<String, Object?> body,
+  ) async {
     String? accessToken = await storage.read(key: 'access_token');
+  
     try {
       final header = {
         'Content-Type': 'application/json',
@@ -29,7 +32,8 @@ class ApiService {
         print('Request failed with status: ${response.statusCode}');
         print('Response body: ${response.body}');
         throw Exception(
-            'Failed to load data: ${response.statusCode} - ${response.reasonPhrase}');
+          'Failed to load data: ${response.statusCode} - ${response.reasonPhrase}',
+        );
       }
     } on http.ClientException catch (e) {
       print('ClientException occurred: ${e.message}');

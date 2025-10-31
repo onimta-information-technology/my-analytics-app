@@ -17,7 +17,8 @@ class MemberProfileRepository {
   Future<List<MemberMainProfile>> getMemberMainProfileDetails(
     String text1,
   ) async {
-     final deviceId = await DeviceId.get();
+    print("heeeee");
+    final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -34,7 +35,8 @@ class MemberProfileRepository {
           "Para_Lenth": 100,
           "Para_Name": "@Text1",
           "Para_Type": "varchar",
-        },{
+        },
+        {
           "Para_Data": deviceId,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
@@ -119,7 +121,7 @@ class MemberProfileRepository {
     }
   }
 
-    Future<List<TripHistory>> getTripHistory2({
+  Future<List<TripHistory>> getTripHistory2({
     required String playerId,
     String? dateFrom,
     String? dateTo,
@@ -249,7 +251,7 @@ class MemberProfileRepository {
     required String dateFrom,
     required String dateTo,
   }) async {
-     final deviceId = await DeviceId.get();
+    final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -280,7 +282,8 @@ class MemberProfileRepository {
           "Para_Lenth": 100,
           "Para_Name": "@Text3",
           "Para_Type": "varchar",
-        },{
+        },
+        {
           "Para_Data": deviceId,
           "Para_Direction": "Input",
           "Para_Lenth": 100,

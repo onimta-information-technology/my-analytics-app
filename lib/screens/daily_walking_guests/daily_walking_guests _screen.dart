@@ -150,7 +150,7 @@ class _DailyWalkingGuestScreenState
                       strokeWidth: 2,
                     ),
                   )
-                : const Icon(Icons.refresh , size: 30),
+                : const Icon(Icons.refresh, size: 30),
             onPressed: _isRefreshing ? null : _refreshGuests,
           ),
         ],
@@ -246,11 +246,82 @@ class _DailyWalkingGuestScreenState
                                       ),
                                     ],
                                   ),
+
+                                  // TableRow(
+                                  //   children: [
+                                  //     Container(
+                                  //       width: double.infinity,
+                                  //       height: 180,
+                                  //       color: Constants.kPrimaryColor
+                                  //           .withAlpha(50),
+                                  //       padding: const EdgeInsets.all(8.0),
+                                  //       alignment: Alignment.centerLeft,
+                                  //       child: Text(
+                                  //         "Image",
+                                  //         style: TextStyle(
+                                  //           color: Colors.black,
+                                  //           fontSize: fontSettings.fontSize,
+                                  //           fontWeight: fontSettings.fontWeight,
+                                  //         ),
+                                  //       ),
+                                  //     ),
+                                  //     Padding(
+                                  //       padding: const EdgeInsets.all(8.0),
+                                  //       child: entry.menImage2.isNotEmpty
+                                  //           ? GestureDetector(
+                                  //               onTap: () {
+                                  //                 showDialog(
+                                  //                   context: context,
+                                  //                   barrierDismissible: true,
+                                  //                   builder: (_) => Dialog(
+                                  //                     backgroundColor:
+                                  //                         Colors.transparent,
+                                  //                     child: Image.memory(
+                                  //                       base64Decode(
+                                  //                         entry.menImage2,
+                                  //                       ),
+                                  //                       fit: BoxFit.contain,
+                                  //                     ),
+                                  //                   ),
+                                  //                 );
+                                  //               },
+                                  //               child: Image.memory(
+                                  //                 base64Decode(entry.menImage2),
+                                  //                 height: 155,
+                                  //                 width: 80,
+                                  //                 fit: BoxFit.cover,
+                                  //               ),
+                                  //             )
+                                  //           : GestureDetector(
+                                  //               onTap: () {
+                                  //                 showDialog(
+                                  //                   context: context,
+                                  //                   barrierDismissible: true,
+                                  //                   builder: (_) => Dialog(
+                                  //                     backgroundColor:
+                                  //                         Colors.transparent,
+                                  //                     child: Image.asset(
+                                  //                       'assets/images/placeholder_image.jpg',
+                                  //                       fit: BoxFit.contain,
+                                  //                     ),
+                                  //                   ),
+                                  //                 );
+                                  //               },
+                                  //               child: Image.asset(
+                                  //                 'assets/images/placeholder_image.jpg',
+                                  //                 height: 80,
+                                  //                 width: 80,
+                                  //                 fit: BoxFit.cover,
+                                  //               ),
+                                  //             ),
+                                  //     ),
+                                  //   ],
+                                  // ),
+                                  // Replace the Image TableRow (around line 220) with this code:
                                   TableRow(
                                     children: [
                                       Container(
                                         width: double.infinity,
-                                        height: 180,
                                         color: Constants.kPrimaryColor
                                             .withAlpha(50),
                                         padding: const EdgeInsets.all(8.0),
@@ -286,9 +357,7 @@ class _DailyWalkingGuestScreenState
                                                 },
                                                 child: Image.memory(
                                                   base64Decode(entry.menImage2),
-                                                  height: 155,
-                                                  width: 80,
-                                                  fit: BoxFit.cover,
+                                                  fit: BoxFit.contain,
                                                 ),
                                               )
                                             : GestureDetector(
@@ -308,9 +377,7 @@ class _DailyWalkingGuestScreenState
                                                 },
                                                 child: Image.asset(
                                                   'assets/images/placeholder_image.jpg',
-                                                  height: 80,
-                                                  width: 80,
-                                                  fit: BoxFit.cover,
+                                                  fit: BoxFit.contain,
                                                 ),
                                               ),
                                       ),

@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/components/notification_banner.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
@@ -59,8 +60,16 @@ class _ChatScreenState extends State<ChatScreen>
 
     if (state == AppLifecycleState.resumed) {
       // Refresh when app comes to foreground
-      _fetchChatsFromApi();
+      _fetchChatsFromApi();BadgeService().clearBadge();
+    } else if (state == AppLifecycleState.paused) {
+      // Update badge when app goes to background
+      final unreadCount = _getTotalUnreadCount();
+      BadgeService().updateBadge(unreadCount);
     }
+  }
+
+  int _getTotalUnreadCount() {
+    return _contacts.fold(0, (sum, contact) => sum + contact.unreadCount);
   }
 
   void _setupNotificationListener() {
@@ -134,6 +143,10 @@ class _ChatScreenState extends State<ChatScreen>
         });
 
         await _saveChats();
+        // Update badge with total unread count
+      final unreadCount = _getTotalUnreadCount();
+      await BadgeService().updateBadge(unreadCount);
+      print('📛 Badge silently updated with $unreadCount unread messages');
       }
     } catch (e) {
       print('Error in silent refresh: $e');
@@ -419,8 +432,11 @@ class _ChatScreenState extends State<ChatScreen>
           _filteredContacts = List.from(_contacts);
           if (showLoading) _isLoading = false;
         });
-
         await _saveChats();
+        // Update badge with total unread count
+        final unreadCount = _getTotalUnreadCount();
+        await BadgeService().updateBadge(unreadCount);
+        print('📛 Badge updated with $unreadCount unread messages');
       } else {
         setState(() {
           _errorMessage = 'No chats data received';

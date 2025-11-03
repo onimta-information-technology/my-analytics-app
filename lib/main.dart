@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/components/localNotificationService.dart';
 import 'package:ballys_reservation_app/navigation/app_navigation.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -24,6 +25,13 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   print('Background message received: ${message.messageId}');
   print('Title: ${message.notification?.title}');
   print('Body: ${message.notification?.body}');
+   try {
+    final badgeService = BadgeService();
+    await badgeService.initialize();
+    await badgeService.addBadge(1);
+  } catch (e) {
+    print('Error updating badge in background: $e');
+  }
 }
 
 void main() async {
@@ -38,6 +46,8 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   await NotificationService().initializeLocalNotifications();
+   // Initialize badge service
+  await BadgeService().initialize();
 
   runApp(const ProviderScope(child: MyApp()));
 }
@@ -49,15 +59,31 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver{
   final NotificationService _notificationService = NotificationService();
+  final BadgeService _badgeService = BadgeService();
 
   @override
   void initState() {
     super.initState();
+      WidgetsBinding.instance.addObserver(this);
     _initializeFirebaseMessaging();
   }
-
+ @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+    @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    if (state == AppLifecycleState.resumed) {
+      // Clear badge when app comes to foreground
+      _badgeService.clearBadge();
+      print('App resumed - badge cleared');
+    }
+  }
   Future<void> _initializeFirebaseMessaging() async {
     // Request permission for notifications
     NotificationSettings settings = await FirebaseMessaging.instance
@@ -80,6 +106,8 @@ class _MyAppState extends State<MyApp> {
 
         // Show local notification or handle as needed
         _showForegroundNotification(message);
+          // Update badge count (increment by 1)
+        _badgeService.addBadge(1);
       });
 
       // Handle notification taps when app is in background but not terminated
@@ -87,7 +115,9 @@ class _MyAppState extends State<MyApp> {
         print('Notification tapped!');
         print('Title: ${message.notification?.title}');
         print('Body: ${message.notification?.body}');
-
+ // Clear badge when notification is tapped
+        _badgeService.clearBadge();
+        
         // Navigate to specific screen if needed
         _handleNotificationTap(message);
       });
@@ -348,6 +378,8 @@ class _SplashScreenState extends State<SplashScreen> {
     // Check awesome notifications for initial action
     ReceivedAction? receivedAction = await AwesomeNotifications()
         .getInitialNotificationAction(removeFromActionEvents: true);
+           // Clear badge when app opens
+    await BadgeService().clearBadge();
     // Extract chat details from notification
     Map<String, dynamic>? notificationChatData;
 

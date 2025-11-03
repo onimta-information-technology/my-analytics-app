@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/models/chat_message.dart';
@@ -54,6 +55,9 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     _setupForegroundMessageListener();
     _startReadStatusPolling();
     _messageFocusNode.addListener(_onFocusChange);
+     
+    // Clear badge when entering chat
+    BadgeService().clearBadge();
   }
 
   @override
@@ -843,6 +847,8 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     if (state == AppLifecycleState.resumed) {
       print('App resumed - fetching new messages');
       _fetchMessagesFromApi(silent: true);
+        // Clear badge when returning to chat
+      BadgeService().clearBadge();
     }
   }
 

@@ -70,7 +70,7 @@ class NotificationService {
         print('iOS detected - using native FCM notifications');
         // iOS will show notifications natively through FCM
         // We only need to handle the tap action, not display
-           await _updateBadgeCount(1);
+        await _updateBadgeCount(1);
         return;
       }
 
@@ -107,14 +107,14 @@ class NotificationService {
       int notificationId = DateTime.now().millisecondsSinceEpoch.remainder(
         100000,
       );
-          // Get current badge count and increment
+      // Get current badge count and increment
       final badgeService = BadgeService();
       final currentBadge = await badgeService.getSavedBadgeCount();
       final newBadgeCount = currentBadge + 1;
 
       print('Creating notification with ID: $notificationId');
       print('Title: $title, Body: $body');
-     print('Badge count: $newBadgeCount');
+      print('Badge count: $newBadgeCount');
       // Update badge BEFORE creating notification
       await badgeService.updateBadge(newBadgeCount);
       // Create notification with error handling
@@ -137,7 +137,7 @@ class NotificationService {
 
       if (created) {
         print('✅ Notification created successfully');
-         // Update badge count
+        // Update badge count
         await _updateBadgeCount(1);
       } else {
         print('❌ Failed to create notification');
@@ -147,7 +147,8 @@ class NotificationService {
       print('Stack trace: ${StackTrace.current}');
     }
   }
-// Helper method to update badge count
+
+  // Helper method to update badge count
   Future<void> _updateBadgeCount(int increment) async {
     try {
       final badgeService = BadgeService();
@@ -156,6 +157,7 @@ class NotificationService {
       print('Error updating badge count: $e');
     }
   }
+
   // Notification action received (when user taps notification)
   @pragma("vm:entry-point")
   static Future<void> onActionReceivedMethod(
@@ -163,7 +165,7 @@ class NotificationService {
   ) async {
     try {
       print('Notification action received: ${receivedAction.payload}');
- // Clear badge when notification is tapped
+      // Clear badge when notification is tapped
       await BadgeService().clearBadge();
       // Navigate to specific chat
       if (receivedAction.payload != null &&
@@ -232,7 +234,7 @@ class NotificationService {
   void handleNotificationTap(RemoteMessage message) {
     try {
       print('Handling notification tap');
- // Clear badge
+      // Clear badge
       BadgeService().clearBadge();
 
       // Parse chat details
@@ -281,7 +283,7 @@ class NotificationService {
     try {
       await FirebaseMessaging.instance.deleteToken();
       print('FCM token deleted');
-         // Also clear badge on logout
+      // Also clear badge on logout
       await BadgeService().clearBadge();
     } catch (e) {
       print('Error deleting FCM token: $e');

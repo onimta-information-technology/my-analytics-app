@@ -5,6 +5,7 @@ import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/components/localNotificationService.dart';
 import 'package:ballys_reservation_app/navigation/app_navigation.dart';
+import 'package:ballys_reservation_app/utils/badge_sync_helper.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
@@ -29,6 +30,11 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     final badgeService = BadgeService();
     await badgeService.initialize();
     await badgeService.addBadge(1);
+      try {
+      await BadgeSyncHelper.syncBadgeWithServer();
+    } catch (e) {
+      print('Could not sync with server in background: $e');
+    }
   } catch (e) {
     print('Error updating badge in background: $e');
   }
@@ -378,8 +384,8 @@ class _SplashScreenState extends State<SplashScreen> {
     // Check awesome notifications for initial action
     ReceivedAction? receivedAction = await AwesomeNotifications()
         .getInitialNotificationAction(removeFromActionEvents: true);
-           // Clear badge when app opens
-    await BadgeService().clearBadge();
+ // Initialize badge service
+    await BadgeService().initialize();
     // Extract chat details from notification
     Map<String, dynamic>? notificationChatData;
 

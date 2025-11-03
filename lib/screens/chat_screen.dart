@@ -3,6 +3,7 @@ import 'package:ballys_reservation_app/components/notification_banner.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/screens/chatDetail_screen.dart';
+import 'package:ballys_reservation_app/utils/badge_sync_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:go_router/go_router.dart';
@@ -44,6 +45,7 @@ class _ChatScreenState extends State<ChatScreen>
     _tabController = TabController(length: 4, vsync: this);
     _initializeData();
     _setupNotificationListener();
+     _syncBadgeCount();
   }
 
   @override
@@ -71,7 +73,17 @@ class _ChatScreenState extends State<ChatScreen>
   int _getTotalUnreadCount() {
     return _contacts.fold(0, (sum, contact) => sum + contact.unreadCount);
   }
-
+ Future<void> _syncBadgeCount() async {
+    try {
+      final unreadCount = _getTotalUnreadCount();
+      await BadgeService().updateBadge(unreadCount);
+      print('📛 Badge synced with actual count: $unreadCount');
+       // Then sync with server for accuracy
+      await BadgeSyncHelper.syncBadgeWithServer();
+    } catch (e) {
+      print('Error syncing badge count: $e');
+    }
+  }
   void _setupNotificationListener() {
     // Listen for foreground messages
     _messageSubscription = FirebaseMessaging.onMessage.listen((
@@ -157,6 +169,8 @@ class _ChatScreenState extends State<ChatScreen>
     await _getName();
     await _fetchChatsFromApi();
     _checkAndOpenNotificationChat();
+        // Sync badge after fetching chats
+    await _syncBadgeCount();
   }
 
   void _checkAndOpenNotificationChat() {

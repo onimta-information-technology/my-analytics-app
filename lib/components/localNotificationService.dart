@@ -115,6 +115,8 @@ class NotificationService {
       print('Creating notification with ID: $notificationId');
       print('Title: $title, Body: $body');
      print('Badge count: $newBadgeCount');
+      // Update badge BEFORE creating notification
+      await badgeService.updateBadge(newBadgeCount);
       // Create notification with error handling
       bool created = await AwesomeNotifications().createNotification(
         content: NotificationContent(
@@ -129,6 +131,7 @@ class NotificationService {
           icon: 'resource://mipmap/launcher_icon',
           wakeUpScreen: true,
           category: NotificationCategory.Message,
+          badge: newBadgeCount,
         ),
       );
 

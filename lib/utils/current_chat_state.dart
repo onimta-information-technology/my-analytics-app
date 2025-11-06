@@ -1,3 +1,6 @@
+
+import 'package:shared_preferences/shared_preferences.dart';
+
 class CurrentChatState {
   static final CurrentChatState _instance = CurrentChatState._internal();
   factory CurrentChatState() => _instance;
@@ -5,26 +8,42 @@ class CurrentChatState {
 
   String? _currentChatId;
 
-  // Set the current open chat
-  void setCurrentChat(String? chatId) {
+  // ⭐ IMPORTANT: Use "flutter." prefix for iOS compatibility
+  static const String _storageKey = 'current_chat_id';
+
+  Future<void> setCurrentChat(String? chatId) async {
     _currentChatId = chatId;
-    print('📱 Current chat set to: $_currentChatId');
+    print('📱 Flutter: Setting current chat to: $_currentChatId');
+    
+    // Save to SharedPreferences (becomes UserDefaults on iOS)
+    final prefs = await SharedPreferences.getInstance();
+    if (chatId != null && chatId.isNotEmpty) {
+      await prefs.setString(_storageKey, chatId);
+      print('✅ Saved to SharedPreferences: $_storageKey = $chatId');
+    } else {
+      await prefs.remove(_storageKey);
+      print('🗑️ Removed from SharedPreferences: $_storageKey');
+    }
   }
 
-  // Get the current open chat
   String? getCurrentChat() {
     return _currentChatId;
   }
 
-  // Check if a chat ID matches the current open chat
   bool isCurrentChat(String? chatId) {
     if (chatId == null || _currentChatId == null) return false;
-    return chatId == _currentChatId;
+    final match = chatId == _currentChatId;
+    print('🔍 Checking if current chat: $chatId == $_currentChatId ? $match');
+    return match;
   }
 
-  // Clear the current chat
-  void clearCurrentChat() {
-    print('📱 Clearing current chat: $_currentChatId');
+  Future<void> clearCurrentChat() async {
+    print('📱 Flutter: Clearing current chat: $_currentChatId');
     _currentChatId = null;
+    
+    // Remove from SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_storageKey);
+    print('✅ Cleared from SharedPreferences');
   }
 }

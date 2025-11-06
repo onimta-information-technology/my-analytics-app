@@ -4,6 +4,7 @@ import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/models/chat_message.dart';
+import 'package:ballys_reservation_app/utils/current_chat_state.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
@@ -50,12 +51,13 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    CurrentChatState().setCurrentChat(widget.contact.chatUuid);
     _getCurrentUserName();
     _fetchMessagesFromApi();
     _setupForegroundMessageListener();
     _startReadStatusPolling();
     _messageFocusNode.addListener(_onFocusChange);
-     
+
     // Clear badge when entering chat
     BadgeService().clearBadge();
   }
@@ -65,6 +67,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     _readStatusPollTimer?.cancel();
     _foregroundMessageSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
+    CurrentChatState().clearCurrentChat();
     _messageController.dispose();
     _scrollController.dispose();
     _messageFocusNode.dispose();
@@ -847,7 +850,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     if (state == AppLifecycleState.resumed) {
       print('App resumed - fetching new messages');
       _fetchMessagesFromApi(silent: true);
-        // Clear badge when returning to chat
+      // Clear badge when returning to chat
       BadgeService().clearBadge();
     }
   }
@@ -863,6 +866,8 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           onPressed: () {
             _readStatusPollTimer?.cancel();
             _foregroundMessageSubscription?.cancel();
+            // ⭐ Clear current chat state
+            CurrentChatState().clearCurrentChat();
             Navigator.pop(context);
           },
         ),

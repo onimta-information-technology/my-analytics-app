@@ -45,7 +45,7 @@ class _ChatScreenState extends State<ChatScreen>
     _tabController = TabController(length: 4, vsync: this);
     _initializeData();
     _setupNotificationListener();
-     _syncBadgeCount();
+    _syncBadgeCount();
   }
 
   @override
@@ -62,7 +62,8 @@ class _ChatScreenState extends State<ChatScreen>
 
     if (state == AppLifecycleState.resumed) {
       // Refresh when app comes to foreground
-      _fetchChatsFromApi();BadgeService().clearBadge();
+      _fetchChatsFromApi();
+      BadgeService().clearBadge();
     } else if (state == AppLifecycleState.paused) {
       // Update badge when app goes to background
       final unreadCount = _getTotalUnreadCount();
@@ -73,17 +74,19 @@ class _ChatScreenState extends State<ChatScreen>
   int _getTotalUnreadCount() {
     return _contacts.fold(0, (sum, contact) => sum + contact.unreadCount);
   }
- Future<void> _syncBadgeCount() async {
+
+  Future<void> _syncBadgeCount() async {
     try {
       final unreadCount = _getTotalUnreadCount();
       await BadgeService().updateBadge(unreadCount);
       print('📛 Badge synced with actual count: $unreadCount');
-       // Then sync with server for accuracy
+      // Then sync with server for accuracy
       await BadgeSyncHelper.syncBadgeWithServer();
     } catch (e) {
       print('Error syncing badge count: $e');
     }
   }
+
   void _setupNotificationListener() {
     // Listen for foreground messages
     _messageSubscription = FirebaseMessaging.onMessage.listen((
@@ -156,9 +159,9 @@ class _ChatScreenState extends State<ChatScreen>
 
         await _saveChats();
         // Update badge with total unread count
-      final unreadCount = _getTotalUnreadCount();
-      await BadgeService().updateBadge(unreadCount);
-      print('📛 Badge silently updated with $unreadCount unread messages');
+        final unreadCount = _getTotalUnreadCount();
+        await BadgeService().updateBadge(unreadCount);
+        print('📛 Badge silently updated with $unreadCount unread messages');
       }
     } catch (e) {
       print('Error in silent refresh: $e');
@@ -169,7 +172,7 @@ class _ChatScreenState extends State<ChatScreen>
     await _getName();
     await _fetchChatsFromApi();
     _checkAndOpenNotificationChat();
-        // Sync badge after fetching chats
+    // Sync badge after fetching chats
     await _syncBadgeCount();
   }
 

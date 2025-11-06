@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io'; // Import for Platform check
 import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/main.dart' show navigatorKey;
+import 'package:ballys_reservation_app/utils/current_chat_state.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
@@ -65,6 +66,7 @@ class NotificationService {
 
   Future<void> showForegroundNotification(RemoteMessage message) async {
     try {
+      String? notificationChatId;
       // For iOS, skip custom notifications and let FCM handle natively
       if (Platform.isIOS) {
         print('iOS detected - using native FCM notifications');
@@ -86,11 +88,27 @@ class NotificationService {
       if (detailsJson != null && detailsJson.isNotEmpty) {
         try {
           chatDetails = json.decode(detailsJson);
+          notificationChatId = chatDetails?['chatId']?.toString();
         } catch (e) {
           print('Error parsing Details JSON: $e');
         }
       }
+      if (notificationChatId == null || notificationChatId.isEmpty) {
+        notificationChatId =
+            message.data['chatId']?.toString() ??
+            message.data['chat_id']?.toString();
+      }
+      if (notificationChatId != null &&
+          CurrentChatState().isCurrentChat(notificationChatId)) {
+        print(
+          '🔇 Suppressing notification - chat is currently open: $notificationChatId',
+        );
+        // Still update badge count
+        await _updateBadgeCount(1);
+        return;
+      }
 
+      print('🔔 Showing notification for chat: $notificationChatId');
       Map<String, String> payload = {
         'type': message.data['msg_type']?.toString() ?? 'chat',
         'screen': 'chat',

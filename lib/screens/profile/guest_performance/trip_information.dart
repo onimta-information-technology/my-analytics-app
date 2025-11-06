@@ -564,6 +564,13 @@ class TripInformationWidget extends ConsumerWidget {
                                                           fontSettings
                                                               .fontSize -
                                                           3,
+                                                      color:
+                                                          const Color.fromARGB(
+                                                            255,
+                                                            17,
+                                                            17,
+                                                            17,
+                                                          ),
                                                     ),
                                                   ),
                                                   Text(
@@ -573,12 +580,12 @@ class TripInformationWidget extends ConsumerWidget {
                                                           fontSettings
                                                               .fontSize -
                                                           4,
-                                                        color:
+                                                      color:
                                                           const Color.fromARGB(
                                                             255,
-                                                            83,
-                                                            82,
-                                                            82,
+                                                            17,
+                                                            17,
+                                                            17,
                                                           ),
                                                     ),
                                                   ),

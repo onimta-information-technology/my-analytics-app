@@ -64,9 +64,141 @@ class NotificationService {
     }
   }
 
+  // Future<void> showForegroundNotification(RemoteMessage message) async {
+  //   try {
+  //     String? notificationChatId;
+  //     // For iOS, skip custom notifications and let FCM handle natively
+  //     if (Platform.isIOS) {
+  //       print('iOS detected - using native FCM notifications');
+  //       // iOS will show notifications natively through FCM
+  //       // We only need to handle the tap action, not display
+  //       await _updateBadgeCount(1);
+  //       return;
+  //     }
+
+  //     // Android: Show custom notification using Awesome Notifications
+  //     String title =
+  //         message.data['title'] ?? message.notification?.title ?? 'New Message';
+  //     String body = message.data['body'] ?? message.notification?.body ?? '';
+
+  //     // Parse the Details field
+  //     String? detailsJson = message.data['Details'];
+  //     Map<String, dynamic>? chatDetails;
+
+  //     if (detailsJson != null && detailsJson.isNotEmpty) {
+  //       try {
+  //         chatDetails = json.decode(detailsJson);
+  //         notificationChatId = chatDetails?['chatId']?.toString();
+  //       } catch (e) {
+  //         print('Error parsing Details JSON: $e');
+  //       }
+  //     }
+  //     if (notificationChatId == null || notificationChatId.isEmpty) {
+  //       notificationChatId =
+  //           message.data['chatId']?.toString() ??
+  //           message.data['chat_id']?.toString();
+  //     }
+  //     if (notificationChatId != null &&
+  //         CurrentChatState().isCurrentChat(notificationChatId)) {
+  //       print(
+  //         '🔇 Suppressing notification - chat is currently open: $notificationChatId',
+  //       );
+  //       // Still update badge count
+  //       await _updateBadgeCount(1);
+  //       return;
+  //     }
+
+  //     print('🔔 Showing notification for chat: $notificationChatId');
+  //     Map<String, String> payload = {
+  //       'type': message.data['msg_type']?.toString() ?? 'chat',
+  //       'screen': 'chat',
+  //       'chatId': chatDetails?['chatId']?.toString() ?? '',
+  //       'senderId': chatDetails?['senderId']?.toString() ?? '',
+  //       'senderName': chatDetails?['senderName']?.toString() ?? '',
+  //       'hostName': chatDetails?['hostName']?.toString() ?? '',
+  //     };
+
+  //     // Get image from data payload
+  //     String? imageUrl = message.data['image_url'];
+
+  //     // Generate unique ID
+  //     int notificationId = DateTime.now().millisecondsSinceEpoch.remainder(
+  //       100000,
+  //     );
+  //     // Get current badge count and increment
+  //     final badgeService = BadgeService();
+  //     final currentBadge = await badgeService.getSavedBadgeCount();
+  //     final newBadgeCount = currentBadge + 1;
+
+  //     print('Creating notification with ID: $notificationId');
+  //     print('Title: $title, Body: $body');
+  //     print('Badge count: $newBadgeCount');
+  //     // Update badge BEFORE creating notification
+  //     await badgeService.updateBadge(newBadgeCount);
+  //     // Create notification with error handling
+  //     bool created = await AwesomeNotifications().createNotification(
+  //       content: NotificationContent(
+  //         id: notificationId,
+  //         channelKey: 'high_importance_channel',
+  //         title: title,
+  //         body: body,
+  //         notificationLayout: NotificationLayout.Default,
+  //         payload: payload,
+  //         largeIcon: imageUrl,
+  //         bigPicture: imageUrl,
+  //         icon: 'resource://mipmap/launcher_icon',
+  //         wakeUpScreen: true,
+  //         category: NotificationCategory.Message,
+  //         badge: newBadgeCount,
+  //       ),
+  //     );
+
+  //     if (created) {
+  //       print('✅ Notification created successfully');
+  //       // Update badge count
+  //       await _updateBadgeCount(1);
+  //     } else {
+  //       print('❌ Failed to create notification');
+  //     }
+  //   } catch (e) {
+  //     print('❌ Error in showForegroundNotification: $e');
+  //     print('Stack trace: ${StackTrace.current}');
+  //   }
+  // }
   Future<void> showForegroundNotification(RemoteMessage message) async {
     try {
       String? notificationChatId;
+
+      // Parse the Details field first to get chatId
+      String? detailsJson = message.data['Details'];
+      Map<String, dynamic>? chatDetails;
+
+      if (detailsJson != null && detailsJson.isNotEmpty) {
+        try {
+          chatDetails = json.decode(detailsJson);
+          notificationChatId = chatDetails?['chatId']?.toString();
+        } catch (e) {
+          print('Error parsing Details JSON: $e');
+        }
+      }
+
+      if (notificationChatId == null || notificationChatId.isEmpty) {
+        notificationChatId =
+            message.data['chatId']?.toString() ??
+            message.data['chat_id']?.toString();
+      }
+
+      // ⭐ CHECK CURRENT CHAT STATE FIRST - BEFORE iOS CHECK
+      if (notificationChatId != null &&
+          CurrentChatState().isCurrentChat(notificationChatId)) {
+        print(
+          '🔇 Suppressing notification - chat is currently open: $notificationChatId',
+        );
+        // Still update badge count
+        await _updateBadgeCount(1);
+        return; // Suppress notification for currently open chat
+      }
+
       // For iOS, skip custom notifications and let FCM handle natively
       if (Platform.isIOS) {
         print('iOS detected - using native FCM notifications');
@@ -81,34 +213,8 @@ class NotificationService {
           message.data['title'] ?? message.notification?.title ?? 'New Message';
       String body = message.data['body'] ?? message.notification?.body ?? '';
 
-      // Parse the Details field
-      String? detailsJson = message.data['Details'];
-      Map<String, dynamic>? chatDetails;
-
-      if (detailsJson != null && detailsJson.isNotEmpty) {
-        try {
-          chatDetails = json.decode(detailsJson);
-          notificationChatId = chatDetails?['chatId']?.toString();
-        } catch (e) {
-          print('Error parsing Details JSON: $e');
-        }
-      }
-      if (notificationChatId == null || notificationChatId.isEmpty) {
-        notificationChatId =
-            message.data['chatId']?.toString() ??
-            message.data['chat_id']?.toString();
-      }
-      if (notificationChatId != null &&
-          CurrentChatState().isCurrentChat(notificationChatId)) {
-        print(
-          '🔇 Suppressing notification - chat is currently open: $notificationChatId',
-        );
-        // Still update badge count
-        await _updateBadgeCount(1);
-        return;
-      }
-
       print('🔔 Showing notification for chat: $notificationChatId');
+
       Map<String, String> payload = {
         'type': message.data['msg_type']?.toString() ?? 'chat',
         'screen': 'chat',
@@ -125,6 +231,7 @@ class NotificationService {
       int notificationId = DateTime.now().millisecondsSinceEpoch.remainder(
         100000,
       );
+
       // Get current badge count and increment
       final badgeService = BadgeService();
       final currentBadge = await badgeService.getSavedBadgeCount();
@@ -133,8 +240,10 @@ class NotificationService {
       print('Creating notification with ID: $notificationId');
       print('Title: $title, Body: $body');
       print('Badge count: $newBadgeCount');
+
       // Update badge BEFORE creating notification
       await badgeService.updateBadge(newBadgeCount);
+
       // Create notification with error handling
       bool created = await AwesomeNotifications().createNotification(
         content: NotificationContent(

@@ -51,9 +51,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-   // CurrentChatState().setCurrentChat(widget.contact.chatUuid);
-    // ⭐ Set current chat asynchronously
-  _initializeChat();
+    CurrentChatState().setCurrentChat(widget.contact.chatUuid);
     _getCurrentUserName();
     _fetchMessagesFromApi();
     _setupForegroundMessageListener();
@@ -62,11 +60,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
 
     // Clear badge when entering chat
     BadgeService().clearBadge();
-  }
-
-  Future<void> _initializeChat() async {
-    await CurrentChatState().setCurrentChat(widget.contact.chatUuid);
-    print('✅ Chat initialized: ${widget.contact.chatUuid}');
   }
 
   @override
@@ -870,11 +863,11 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: ()async {
+          onPressed: () {
             _readStatusPollTimer?.cancel();
             _foregroundMessageSubscription?.cancel();
             // ⭐ Clear current chat state
-            await CurrentChatState().clearCurrentChat();
+            CurrentChatState().clearCurrentChat();
             Navigator.pop(context);
           },
         ),

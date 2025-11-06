@@ -6,7 +6,6 @@ import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/components/localNotificationService.dart';
 import 'package:ballys_reservation_app/navigation/app_navigation.dart';
 import 'package:ballys_reservation_app/utils/badge_sync_helper.dart';
-import 'package:ballys_reservation_app/utils/current_chat_state.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
@@ -27,11 +26,11 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   print('Background message received: ${message.messageId}');
   print('Title: ${message.notification?.title}');
   print('Body: ${message.notification?.body}');
-   try {
+  try {
     final badgeService = BadgeService();
     await badgeService.initialize();
     await badgeService.addBadge(1);
-      try {
+    try {
       await BadgeSyncHelper.syncBadgeWithServer();
     } catch (e) {
       print('Could not sync with server in background: $e');
@@ -53,7 +52,7 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   await NotificationService().initializeLocalNotifications();
-   // Initialize badge service
+  // Initialize badge service
   await BadgeService().initialize();
 
   runApp(const ProviderScope(child: MyApp()));
@@ -66,139 +65,76 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> with WidgetsBindingObserver{
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   final NotificationService _notificationService = NotificationService();
   final BadgeService _badgeService = BadgeService();
 
   @override
   void initState() {
     super.initState();
-      WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addObserver(this);
     _initializeFirebaseMessaging();
   }
- @override
+
+  @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
-    @override
+
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    
+
     if (state == AppLifecycleState.resumed) {
       // Clear badge when app comes to foreground
       _badgeService.clearBadge();
       print('App resumed - badge cleared');
     }
   }
-//   Future<void> _initializeFirebaseMessaging() async {
-//     // Request permission for notifications
-//     NotificationSettings settings = await FirebaseMessaging.instance
-//         .requestPermission(alert: true, badge: true, sound: true);
 
-//     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-//       print('User granted notification permission');
+  Future<void> _initializeFirebaseMessaging() async {
+    // Request permission for notifications
+    NotificationSettings settings = await FirebaseMessaging.instance
+        .requestPermission(alert: true, badge: true, sound: true);
 
-//       // Listen for token refresh
-//       FirebaseMessaging.instance.onTokenRefresh.listen((String token) {
-//         print('FCM Token refreshed: $token');
-//         // Update token on your server
-//       });
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      print('User granted notification permission');
 
-//       // Handle foreground messages
-//       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-//         print('Foreground message received!');
-//         print('Title: ${message.notification?.title}');
-//         print('Body: ${message.notification?.body}');
+      // Listen for token refresh
+      FirebaseMessaging.instance.onTokenRefresh.listen((String token) {
+        print('FCM Token refreshed: $token');
+        // Update token on your server
+      });
 
-//         // Show local notification or handle as needed
-//         _showForegroundNotification(message);
-//           // Update badge count (increment by 1)
-//         _badgeService.addBadge(1);
-//       });
+      // Handle foreground messages
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        print('Foreground message received!');
+        print('Title: ${message.notification?.title}');
+        print('Body: ${message.notification?.body}');
 
-//       // Handle notification taps when app is in background but not terminated
-//       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-//         print('Notification tapped!');
-//         print('Title: ${message.notification?.title}');
-//         print('Body: ${message.notification?.body}');
-//  // Clear badge when notification is tapped
-//         _badgeService.clearBadge();
-        
-//         // Navigate to specific screen if needed
-//         _handleNotificationTap(message);
-//       });
-//     } else {
-//       print('User declined notification permission');
-//     }
-//   }
-Future<void> _initializeFirebaseMessaging() async {
-  NotificationSettings settings = await FirebaseMessaging.instance
-      .requestPermission(alert: true, badge: true, sound: true);
-
-  if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-    print('User granted notification permission');
-
-    FirebaseMessaging.instance.onTokenRefresh.listen((String token) {
-      print('FCM Token refreshed: $token');
-    });
-
-    // ⭐ MODIFY THIS SECTION - Handle foreground messages
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print('Foreground message received!');
-      print('Title: ${message.notification?.title}');
-      print('Body: ${message.notification?.body}');
-      print('Message data: ${message.data}');
-
-      // Extract chatId from notification
-      String? notificationChatId;
-      
-      // Try to parse from Details field
-      String? detailsJson = message.data['Details'];
-      if (detailsJson != null && detailsJson.isNotEmpty) {
-        try {
-          final chatDetails = jsonDecode(detailsJson);
-          notificationChatId = chatDetails['chatId']?.toString();
-        } catch (e) {
-          print('Error parsing Details: $e');
-        }
-      }
-      
-      // Also check direct fields
-      if (notificationChatId == null || notificationChatId.isEmpty) {
-        notificationChatId = message.data['chatId']?.toString() ?? 
-                            message.data['chat_id']?.toString();
-      }
-
-      // ⭐ CHECK: Skip notification if this chat is currently open
-      if (notificationChatId != null && 
-          CurrentChatState().isCurrentChat(notificationChatId)) {
-        print('🔇 Suppressing notification - chat is currently open: $notificationChatId');
-        // Still update badge count
+        // Show local notification or handle as needed
+        _showForegroundNotification(message);
+        // Update badge count (increment by 1)
         _badgeService.addBadge(1);
-        return; // ⭐ DON'T show notification
-      }
+      });
 
-      print('🔔 Showing notification for chat: $notificationChatId');
-      
-      // Show notification (this will handle both iOS and Android)
-      _showForegroundNotification(message);
-      _badgeService.addBadge(1);
-    });
+      // Handle notification taps when app is in background but not terminated
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        print('Notification tapped!');
+        print('Title: ${message.notification?.title}');
+        print('Body: ${message.notification?.body}');
+        // Clear badge when notification is tapped
+        _badgeService.clearBadge();
 
-    // Handle notification taps (background state)
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('Notification tapped!');
-      print('Title: ${message.notification?.title}');
-      print('Body: ${message.notification?.body}');
-      
-      _badgeService.clearBadge();
-      _handleNotificationTap(message);
-    });
-  } else {
-    print('User declined notification permission');
+        // Navigate to specific screen if needed
+        _handleNotificationTap(message);
+      });
+    } else {
+      print('User declined notification permission');
+    }
   }
-}
+
   Future<void> _showForegroundNotification(RemoteMessage message) async {
     // Use NotificationService to show the notification
     await _notificationService.showForegroundNotification(message);
@@ -451,7 +387,7 @@ class _SplashScreenState extends State<SplashScreen> {
     // Check awesome notifications for initial action
     ReceivedAction? receivedAction = await AwesomeNotifications()
         .getInitialNotificationAction(removeFromActionEvents: true);
- // Initialize badge service
+    // Initialize badge service
     await BadgeService().initialize();
     // Extract chat details from notification
     Map<String, dynamic>? notificationChatData;

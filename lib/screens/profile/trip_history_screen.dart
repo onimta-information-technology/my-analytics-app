@@ -20,36 +20,28 @@ class TripHistoryScreen extends ConsumerStatefulWidget {
 }
 
 class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
-  final TextEditingController _startDateController = TextEditingController();
-  final TextEditingController _endDateController = TextEditingController();
-
-  final Map<String, dynamic> tripData = {
-    "ConsecutiveDates": 3.0,
-    "ArrivalDate": "2024-12-09T00:00:00",
-    "DepartureDate": "2024-12-11T00:00:00",
-    "Trip_Drop": 3007200.0,
-    "Trip_CashOut": 565000.0,
-    "Trip_Result": -2442200.0,
-    "Trip_Commission": 201000.0,
-    "Trip_ActDrop": 2942200.0,
-    "Trip_TotalCoupon": 2487.0,
-    "Trip_Hour": 29.0,
-    "Trip_Minutes": 34.0,
-    "DTL_desc":
-        "{\"Game_Type\":\"BACCARAT\",\"G_Date\":\"2024-12-09T00:00:00\",\"DTL\":102750}",
-  };
+  final ValueNotifier<DateTime?> startDateNotifier = ValueNotifier<DateTime?>(
+    null,
+  );
+  final ValueNotifier<DateTime?> endDateNotifier = ValueNotifier<DateTime?>(
+    null,
+  );
 
   @override
   void initState() {
     super.initState();
     _getGuestImage();
-    String formattedDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    _startDateController.text = formattedDate;
-    _endDateController.text = formattedDate;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _getTripHistory();
     });
+  }
+
+  @override
+  void dispose() {
+    startDateNotifier.dispose();
+    endDateNotifier.dispose();
+    super.dispose();
   }
 
   bool _isLoading = false;
@@ -67,15 +59,28 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
   }
 
   Future<void> _getTripHistory() async {
-   
     try {
       final guest = ref.watch(selectedGuestProvider);
       setState(() {
         _isLoading = true;
       });
 
+      // Format dates for API call
+      String? dateFrom;
+      String? dateTo;
+
+      if (startDateNotifier.value != null) {
+        dateFrom = DateFormat('yyyy-MM-dd').format(startDateNotifier.value!);
+      }
+
+      if (endDateNotifier.value != null) {
+        dateTo = DateFormat('yyyy-MM-dd').format(endDateNotifier.value!);
+      }
+
       final tripHistory = await widget.memberProfileRepository.getTripHistory2(
         playerId: guest!.mid,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
       );
 
       print(tripHistory[0].toJson());
@@ -83,6 +88,21 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
       setState(() {
         _tripHistory = tripHistory;
         _isLoading = false;
+
+        // Set date notifiers based on fetched data if not already set
+        if (_tripHistory.isNotEmpty && startDateNotifier.value == null) {
+          // Set start date to the last entry's arrival date
+          startDateNotifier.value = DateTime.parse(
+            _tripHistory.last.arrivalDate,
+          );
+        }
+
+        if (_tripHistory.isNotEmpty && endDateNotifier.value == null) {
+          // Set end date to the first entry's departure date
+          endDateNotifier.value = DateTime.parse(
+            _tripHistory.first.departureDate,
+          );
+        }
       });
     } catch (e) {
       setState(() {
@@ -117,11 +137,54 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
     }
   }
 
+  Future<void> _selectArrivalDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: startDateNotifier.value ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+
+    if (picked != null) {
+      startDateNotifier.value = picked;
+    }
+  }
+
+  Future<void> _selectDepartureDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: endDateNotifier.value ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+
+    if (picked != null) {
+      endDateNotifier.value = picked;
+    }
+  }
+
+  void _performAction() {
+    // Validate dates
+    if (startDateNotifier.value != null && endDateNotifier.value != null) {
+      if (startDateNotifier.value!.isAfter(endDateNotifier.value!)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Start date must be before end date'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+    }
+
+    // Call API with selected dates
+    _getTripHistory();
+  }
+
   String formatDate(String dateString) {
     final date = DateTime.parse(dateString);
     return DateFormat('dd MMM yyyy').format(date);
   }
-
 
   String _formatDate2(String dateString) {
     if (dateString == "") return "N/A";
@@ -178,8 +241,7 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
             onRefresh: _handleRefresh,
             color: Constants.kSecondaryColor,
             child: SingleChildScrollView(
-              physics:
-                  const AlwaysScrollableScrollPhysics(), // Enables pull-to-refresh even when content doesn't scroll
+              physics: const AlwaysScrollableScrollPhysics(),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   vertical: 10.0,
@@ -310,6 +372,114 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                         ),
                       ],
                     ),
+
+                    // Date filter section
+                    const SizedBox(height: 16.0),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ValueListenableBuilder<DateTime?>(
+                            valueListenable: startDateNotifier,
+                            builder: (context, value, child) {
+                              return TextFormField(
+                                controller: TextEditingController(
+                                  text: value != null
+                                      ? DateFormat('yyyy-MM-dd').format(value)
+                                      : '',
+                                ),
+                                readOnly: true,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                                decoration: InputDecoration(
+                                  labelText: "Start Date",
+                                  labelStyle: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
+                                  border: const OutlineInputBorder(),
+                                  suffixIcon: IconButton(
+                                    icon: const Icon(Icons.calendar_today),
+                                    onPressed: () {
+                                      _selectArrivalDate(context);
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: ValueListenableBuilder<DateTime?>(
+                            valueListenable: endDateNotifier,
+                            builder: (context, value, child) {
+                              return TextFormField(
+                                controller: TextEditingController(
+                                  text: value != null
+                                      ? DateFormat('yyyy-MM-dd').format(value)
+                                      : '',
+                                ),
+                                readOnly: true,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                                decoration: InputDecoration(
+                                  labelText: "End Date",
+                                  labelStyle: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
+                                  border: const OutlineInputBorder(),
+                                  suffixIcon: IconButton(
+                                    icon: const Icon(Icons.calendar_today),
+                                    onPressed: () {
+                                      _selectDepartureDate(context);
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _performAction,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Constants.kSecondaryColor,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 16,
+                            horizontal: 20,
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.search, size: 20),
+                            SizedBox(width: 10),
+                            Text(
+                              "Search",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Trip history table
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 16.0),
                       child: Table(
@@ -809,7 +979,7 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                         child: Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
-                                            "DTL", // Label column
+                                            "DTL",
                                             style: TextStyle(
                                               color: Colors.black,
                                               fontSize: fontSettings.fontSize,
@@ -824,7 +994,6 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                         child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.stretch,
-
                                           children: entry.dtlDesc.map((dtl) {
                                             return Card(
                                               shape: RoundedRectangleBorder(
@@ -864,6 +1033,13 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                                             fontSettings
                                                                 .fontSize -
                                                             3,
+                                                        color:
+                                                            const Color.fromARGB(
+                                                              255,
+                                                              22,
+                                                              22,
+                                                              22,
+                                                            ),
                                                       ),
                                                     ),
                                                     Text(
@@ -876,9 +1052,9 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                                         color:
                                                             const Color.fromARGB(
                                                               255,
-                                                              83,
-                                                              82,
-                                                              82,
+                                                              22,
+                                                              22,
+                                                              22,
                                                             ),
                                                       ),
                                                     ),
@@ -1010,7 +1186,6 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                       ),
                                     ],
                                   ),
-
                                   TableRow(
                                     children: [
                                       Container(

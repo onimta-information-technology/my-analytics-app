@@ -22,7 +22,7 @@ class BirthdayRepository {
       "HasReturnData": "T",
       "Parameters": [
         {
-          "Para_Data": 90049,
+          "Para_Data": 9004,
           "Para_Direction": "Input",
           "Para_Lenth": 1,
           "Para_Name": "@Iid",
@@ -34,14 +34,14 @@ class BirthdayRepository {
           "Para_Lenth": 100,
           "Para_Name": "@Text1",
           "Para_Type": "varchar",
-        },
-        {
+        }, {
           "Para_Data": deviceId,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text30",
           "Para_Type": "varchar",
         },
+        
       ],
       "SpName": "sp_CRM_Common_API",
       "con": "1",
@@ -141,56 +141,56 @@ class BirthdayRepository {
   //   //   throw Exception('Failed to send gift');
   //   // }
   // }
-  Future<String> sendWhatsappMessage({
+   Future<String> sendWhatsappMessage({
     required String mname,
     required String whatsappNumber,
     required String gift,
   }) async {
     try {
       final userName = await StorageUtil.getUserName();
-
+      
       // First, save the gift data to your API
       final response = await http.post(
         Uri.parse('${Constants.laravelAPIbaseUrl}/gift/send'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: jsonEncode({
           'whatsapp_number': whatsappNumber,
           'member_name': mname,
           'gift_value': gift,
-          'created_by': userName,
+          'created_by': userName
         }),
       );
 
       if (response.statusCode == 200) {
         // Create the WhatsApp message
-        final responseBody = jsonDecode(response.body);
-        final giftCode = responseBody['gift_code'];
+        final responseBody= jsonDecode(response.body);
+        final giftCode = responseBody['gift_code'];  
         print(giftCode);
-        String message =
-            'Congratulations! \n\n'
+        String message = 'Congratulations! \n\n'
             'You have received a gift valued at $gift! 🎁✨\n\n'
             'Enjoy this special token of appreciation, and may it bring '
             'a little extra joy to your day!\n\n'
             'Click here to claim: https://api.mkt.onimtaitsl.com/gift/$giftCode';
-
+        
         // URL encode the message
         String encodedMessage = Uri.encodeComponent(message);
-
+        
         // Ensure phone number has proper format
         String phoneNumber = whatsappNumber.trim();
         // if (!phoneNumber.startsWith('+')) {
         //   phoneNumber = '+$phoneNumber';
         // }
-
+        
         // Create WhatsApp URLs
-        String androidUrl =
-            "whatsapp://send?phone=$phoneNumber&text=$encodedMessage";
+        String androidUrl = "whatsapp://send?phone=$phoneNumber&text=$encodedMessage";
         String iosUrl = "https://wa.me/$phoneNumber?text=$encodedMessage";
         String webUrl = "https://wa.me/$phoneNumber?text=$encodedMessage";
-
+        
         // Try to launch WhatsApp with more aggressive approach
         bool launched = false;
-
+        
         // Method 1: Try app-specific URLs first without canLaunchUrl check
         try {
           if (Platform.isAndroid) {
@@ -212,7 +212,7 @@ class BirthdayRepository {
           print('App URL failed: $e');
           launched = false;
         }
-
+        
         // Method 2: If app launch failed, try web WhatsApp
         if (!launched) {
           try {
@@ -225,7 +225,7 @@ class BirthdayRepository {
             print('Web URL failed: $e');
           }
         }
-
+        
         // Method 3: Final fallback - try simple wa.me URL
         if (!launched) {
           try {
@@ -239,7 +239,7 @@ class BirthdayRepository {
             print('Fallback URL failed: $e');
           }
         }
-
+        
         if (launched) {
           EasyLoading.showSuccess('WhatsApp message sent successfully!');
           return "Success";
@@ -247,13 +247,14 @@ class BirthdayRepository {
           EasyLoading.showError('WhatsApp is not installed or available.');
           return "WhatsApp not available";
         }
+        
       } else {
         final responseBody = jsonDecode(response.body);
-        String errorMessage =
-            responseBody['message'] ?? 'Failed to save gift data';
+        String errorMessage = responseBody['message'] ?? 'Failed to save gift data';
         EasyLoading.showError('Error: $errorMessage');
         throw Exception('Failed to send gift: $errorMessage');
       }
+      
     } catch (e) {
       print("Error sending WhatsApp message: $e");
       EasyLoading.showError('Failed to send gift message');

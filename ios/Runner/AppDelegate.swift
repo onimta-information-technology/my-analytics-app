@@ -87,17 +87,65 @@ import FirebaseMessaging
     completionHandler(.newData)
   }
   
-  // Show notification when app is in foreground
+  // ⭐ UPDATED: Show notification when app is in foreground WITH CHAT CHECK
   override func userNotificationCenter(_ center: UNUserNotificationCenter,
                                        willPresent notification: UNNotification,
                                        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
     let userInfo = notification.request.content.userInfo
-    print("🔔 Will present notification: \(userInfo)")
+    print("========================================")
+    print("🔔 iOS willPresent notification")
+    print("UserInfo: \(userInfo)")
     
-    if #available(iOS 14.0, *) {
-      completionHandler([.banner, .sound, .badge])
+    // ⭐ Extract chatId from notification
+    var notificationChatId: String?
+    
+    // Method 1: Try to parse from "Details" JSON string
+    if let detailsString = userInfo["Details"] as? String {
+      print("📦 Found Details string: \(detailsString)")
+      if let detailsData = detailsString.data(using: .utf8) {
+        do {
+          if let details = try JSONSerialization.jsonObject(with: detailsData) as? [String: Any] {
+            notificationChatId = details["chatId"] as? String
+            print("✅ Parsed chatId from Details: \(notificationChatId ?? "nil")")
+          }
+        } catch {
+          print("❌ Error parsing Details JSON: \(error)")
+        }
+      }
+    }
+    
+    // Method 2: Check direct fields if Details parsing failed
+    if notificationChatId == nil {
+      notificationChatId = userInfo["chatId"] as? String ?? 
+                          userInfo["chat_id"] as? String ?? 
+                          userInfo["ChatId"] as? String
+      if notificationChatId != nil {
+        print("✅ Found chatId in direct fields: \(notificationChatId ?? "nil")")
+      }
+    }
+    
+    // ⭐ Get current open chat from SharedPreferences (UserDefaults on iOS)
+    let currentChatId = UserDefaults.standard.string(forKey: "flutter.current_chat_id")
+    print("📱 Current open chat: \(currentChatId ?? "nil")")
+    print("📬 Notification chat: \(notificationChatId ?? "nil")")
+    
+    // ⭐ Decision: Suppress or show?
+    if let notificationChat = notificationChatId, 
+       let currentChat = currentChatId, 
+       notificationChat == currentChat {
+      print("🔇 SUPPRESSING - Notification is for currently open chat")
+      print("========================================")
+      // Only update badge, NO banner or sound
+      completionHandler([.badge])
     } else {
-      completionHandler([.alert, .sound, .badge])
+      print("🔔 SHOWING - Notification is for different chat or no chat open")
+      print("========================================")
+      // Show full notification with banner, sound, and badge
+      if #available(iOS 14.0, *) {
+        completionHandler([.banner, .sound, .badge])
+      } else {
+        completionHandler([.alert, .sound, .badge])
+      }
     }
   }
 

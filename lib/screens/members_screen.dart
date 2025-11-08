@@ -135,7 +135,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
       //   },
       // );
     } catch (e) {
-      print("Error searching guests: $e");
+
     }
   }
 
@@ -271,7 +271,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                                             gName: guest.gName ?? "",
                                           ),
                                         );
-                                    print("Guest selected: ${guest.gName}");
+                                
                                     context.push("/home/profile");
                                   },
                                   child: Card(

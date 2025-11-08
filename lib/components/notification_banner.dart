@@ -36,7 +36,7 @@ class _NotificationBannerState extends State<NotificationBanner> {
   }
 
   Future<void> _dismissBanner() async {
-    print('Dismiss button tapped'); // Debug log
+  
     if (mounted) {
       setState(() {
         _showBanner = false;
@@ -78,7 +78,7 @@ class _NotificationBannerState extends State<NotificationBanner> {
         AppSettings.openAppSettings(type: AppSettingsType.notification);
       }
     } catch (e) {
-      print('Error checking permissions: $e');
+    
     } finally {
       if (mounted) {
         setState(() {
@@ -159,7 +159,7 @@ class _NotificationBannerState extends State<NotificationBanner> {
             const SizedBox(width: 8),
             InkWell(
               onTap: () {
-                print('Close tapped');
+            
                 _dismissBanner();
               },
               child: Container(

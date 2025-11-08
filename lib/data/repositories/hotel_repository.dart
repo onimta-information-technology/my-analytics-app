@@ -236,9 +236,7 @@ class HotelRepository {
               HotelCostResponse.fromJson(json);
           hotelCosts.add(hotelCostResponse);
         }
-        print("######################### hotelCosts #########################");
-        print(hotelCosts);
-        print("#########################################");
+
         return hotelCosts;
       } else {
         throw Exception('Hotel Cost API failed');

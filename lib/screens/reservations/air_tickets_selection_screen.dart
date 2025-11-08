@@ -311,7 +311,6 @@ class _AirTicketsSelectionScreenState
       costNotifier.value = flight.selectedCost;
     });
 
-    print(flight.selectedCost);
   }
 
   void _removeFlight(int index) {
@@ -484,7 +483,7 @@ class _AirTicketsSelectionScreenState
       //   },
       // );
     } catch (e) {
-      print("Error fetching airports: $e");
+   
     }
   }
 

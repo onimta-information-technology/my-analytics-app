@@ -79,8 +79,6 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
 
     if (widget.gift != null) {
       final g = widget.gift!;
-      print(" Prefilling with: $g");
-
       _memberIdController.text = g.mid ?? "";
       _memberNameController.text = g.mname ?? "";
       _fromDateController.text = _formatDateandTime(g.dateFrom) ?? "";
@@ -103,7 +101,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
       flushactdrop = g.flushActDrop;
       avgbet = g.avebet;
     } else {
-      print(" Gift is null inside ViewSpecificGiftRequest");
+    
     }
 
     Future.microtask(() {
@@ -396,7 +394,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                       setState(() {
                                         _isLoading = false;
                                       });
-                                      print("Error searching guest: $e");
+
                                     }
                                   },
                             child: _isLoading

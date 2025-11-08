@@ -134,7 +134,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
     if (currentSelectedGuest != null &&
         currentSelectedGuest.mid == _memberIdController.text) {
       // Guest data is already loaded, no need to fetch again
-      print("Guest data already loaded for MID: ${_memberIdController.text}");
+
       return;
     }
 
@@ -177,7 +177,6 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      print("Error loading guest data: $e");
       setState(() {
         _isLoading = false;
       });
@@ -200,12 +199,6 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
     );
     // _airTicketRequisition =
     //     selectedReservation.airticketReservationStatus == "T" ? "Yes" : "No";
-    print(
-      "DEBUG - airticketReservationStatus from DB: '${selectedReservation.airticketReservationStatus}'",
-    );
-    print(
-      "DEBUG - Type: ${selectedReservation.airticketReservationStatus.runtimeType}",
-    );
 
     bool hasAirTickets = false;
 
@@ -223,7 +216,6 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
         status == "1";
 
     _airTicketRequisition = hasAirTickets ? "Yes" : "No";
-    print("DEBUG - Final _airTicketRequisition value: $_airTicketRequisition");
 
     _remarksController.text = selectedReservation.remarks;
   }
@@ -393,7 +385,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
       setState(() {
         _isLoading = false;
       });
-      print("Error searching guests: $e");
+
     }
   }
 
@@ -433,7 +425,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
         },
       );
     } catch (e) {
-      print("Error searching guests: $e");
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error searching guests: $e'),
@@ -579,9 +571,6 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
     final selectedHotels = ref.watch(selectedHotelProvider);
     final selectedFlights = ref.watch(selectedFlightProvider);
 
-    print(_arrivalDate);
-    print(_departureDate);
-
     setState(() {
       _hotelError = null;
       _airTicketError = null;
@@ -645,11 +634,8 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
       setState(() {
         _isLoading = false;
       });
-
-      print(response);
       Navigator.of(context).pop(true);
     } catch (e) {
-      print("Error saving reservation: $e");
       setState(() {
         _isLoading = false;
       });
@@ -951,9 +937,6 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                                         setState(() {
                                           _isLoading = false;
                                         });
-
-                                        print("Error searching guest: $e");
-
                                         // Still allow navigation with basic info if search fails
                                         ref
                                             .read(
@@ -1566,7 +1549,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                           maxLines: 5,
                           keyboardType: TextInputType.multiline,
                           onChanged: (value) {
-                            print("Textarea content: $value");
+                  
                           },
                         ),
                         const SizedBox(height: 10.0),

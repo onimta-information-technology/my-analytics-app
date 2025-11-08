@@ -48,7 +48,7 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> {
         ref.read(appmodeSettingsProvider.notifier).setSalesCode(salesCode);
       }
     } catch (e) {
-      print('Error initializing app mode: $e');
+
     }
   }
 
@@ -66,13 +66,6 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> {
           appMode,
           salesCode!,
         );
-    print('inactiveMembers_: $inactiveMembers_');
-    print('originalMembers: $originalMembers');
-    print('selectedDateOption: $selectedDateOption');
-    print('selectedBuyInOption: $selectedBuyInOption');
-    print('appMode: $appMode');
-    print('salesCode: $salesCode');
-
     setState(() {
       originalMembers = inactiveMembers_;
       inactiveMembers = List<Guest>.from(originalMembers);
@@ -150,8 +143,6 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> {
                             itemCount: inactiveMembers.length,
                             itemBuilder: (context, index) {
                               final guest = inactiveMembers[index];
-                              print(guest.gName);
-
                               return Stack(
                                 children: [
                                   InkWell(

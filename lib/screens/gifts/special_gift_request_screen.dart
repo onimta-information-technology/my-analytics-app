@@ -201,7 +201,7 @@ class _SpecialGiftRequestScreenState
             InkWell(
               borderRadius: BorderRadius.circular(10),
               onTap: () {
-                print(" Navigating with gift: $gift");
+            
                 context.push(
                   '/gifts/special-gift-requests/view-specific-gift-request',
                   extra: {

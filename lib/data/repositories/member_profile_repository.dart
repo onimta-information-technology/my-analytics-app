@@ -17,7 +17,7 @@ class MemberProfileRepository {
   Future<List<MemberMainProfile>> getMemberMainProfileDetails(
     String text1,
   ) async {
-    print("heeeee");
+ 
     final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
@@ -57,7 +57,7 @@ class MemberProfileRepository {
 
       for (var json in tableData) {
         MemberMainProfile guestProfileDetail = MemberMainProfile.fromJson(json);
-        print(guestProfileDetail.toJson());
+      
         guestMainProfileDynamicData.add(guestProfileDetail);
       }
 
@@ -212,7 +212,7 @@ class MemberProfileRepository {
       "DateFrom": dateFrom,
       "DateTo": dateTo,
     });
-    print(response['data']);
+   
     if (response['status'] == 'SUCCESS' && response['data'] is Map) {
       final data = response['data'];
 
@@ -234,7 +234,7 @@ class MemberProfileRepository {
       "DateFrom": dateFrom,
       "DateTo": dateTo,
     });
-    print(response['data']);
+
     if (response['status'] == 'SUCCESS' && response['data'] is Map) {
       final data = response['data'];
 

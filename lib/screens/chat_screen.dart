@@ -79,11 +79,11 @@ class _ChatScreenState extends State<ChatScreen>
     try {
       final unreadCount = _getTotalUnreadCount();
       await BadgeService().updateBadge(unreadCount);
-      print('📛 Badge synced with actual count: $unreadCount');
+    
       // Then sync with server for accuracy
       await BadgeSyncHelper.syncBadgeWithServer();
     } catch (e) {
-      print('Error syncing badge count: $e');
+
     }
   }
 
@@ -92,14 +92,12 @@ class _ChatScreenState extends State<ChatScreen>
     _messageSubscription = FirebaseMessaging.onMessage.listen((
       RemoteMessage message,
     ) {
-      print('Foreground message received in ChatScreen');
+      
 
       // Check if it's a chat notification
       if (message.data['msg_type'] == '11' ||
           message.data['type'] == 'chat' ||
           message.data.containsKey('Details')) {
-        print('Chat notification received - refreshing chat list silently');
-
         // Refresh silently without showing loading indicator
         _fetchChatsFromApiSilently();
       }
@@ -161,10 +159,10 @@ class _ChatScreenState extends State<ChatScreen>
         // Update badge with total unread count
         final unreadCount = _getTotalUnreadCount();
         await BadgeService().updateBadge(unreadCount);
-        print('📛 Badge silently updated with $unreadCount unread messages');
+    
       }
     } catch (e) {
-      print('Error in silent refresh: $e');
+   
     }
   }
 
@@ -184,8 +182,6 @@ class _ChatScreenState extends State<ChatScreen>
       final chatId = widget.notificationData!['chatId'] as String?;
       final senderName = widget.notificationData!['senderName'] as String?;
       final senderId = widget.notificationData!['senderId'] as String?;
-
-      print('Processing notification: chatId=$chatId, sender=$senderName');
 
       if (chatId != null && chatId.isNotEmpty) {
         _hasProcessedNotification = true;
@@ -217,7 +213,6 @@ class _ChatScreenState extends State<ChatScreen>
     }
 
     if (targetContact != null) {
-      print('Found contact: ${targetContact.name}, navigating to chat');
 
       Navigator.of(context)
           .push(
@@ -234,7 +229,6 @@ class _ChatScreenState extends State<ChatScreen>
             _fetchChatsFromApi();
           });
     } else {
-      print('Contact not found for chatId: $chatId, sender: $senderName');
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -281,7 +275,7 @@ class _ChatScreenState extends State<ChatScreen>
         _currentUserName = userName;
       });
     } catch (e) {
-      print('Error getting current user name: $e');
+     
     }
   }
 
@@ -340,15 +334,13 @@ class _ChatScreenState extends State<ChatScreen>
                   ),
                 );
 
-                print('=== Deleting chat: ${contact.chatUuid} ===');
+
 
                 final success = await FirebaseApiService.deleteChat(
                   contact.chatUuid,
                 );
 
                 scaffoldMessenger.hideCurrentSnackBar();
-
-                print('=== Delete result: $success ===');
 
                 if (success) {
                   scaffoldMessenger.showSnackBar(
@@ -363,12 +355,8 @@ class _ChatScreenState extends State<ChatScreen>
                   await Future.delayed(const Duration(milliseconds: 500));
 
                   // Refresh from API
-                  print('=== Fetching updated chat list ===');
                   await _fetchChatsFromApi();
 
-                  print(
-                    '=== Chat list after refresh: ${_contacts.length} chats ===',
-                  );
                 } else {
                   scaffoldMessenger.showSnackBar(
                     const SnackBar(
@@ -417,7 +405,6 @@ class _ChatScreenState extends State<ChatScreen>
             // Find the participant with matching name to get the real device ID
             if (name == _currentUserName && uuid != null && uuid != name) {
               actualDeviceId = uuid;
-              print('=== Found actual device ID: $actualDeviceId ===');
               break;
             }
           }
@@ -425,7 +412,6 @@ class _ChatScreenState extends State<ChatScreen>
 
         // Use the actual device ID if found, otherwise fall back to current user name
         final String userIdentifier = actualDeviceId ?? _currentUserName ?? '';
-        print('=== Using identifier for filtering: $userIdentifier ===');
 
         Map<String, dynamic> userDetailsMap = {};
         if (userData['users'] != null) {
@@ -453,7 +439,6 @@ class _ChatScreenState extends State<ChatScreen>
         // Update badge with total unread count
         final unreadCount = _getTotalUnreadCount();
         await BadgeService().updateBadge(unreadCount);
-        print('📛 Badge updated with $unreadCount unread messages');
       } else {
         setState(() {
           _errorMessage = 'No chats data received';
@@ -506,7 +491,7 @@ class _ChatScreenState extends State<ChatScreen>
         });
       }
     } catch (e) {
-      print('Error fetching all users: $e');
+    
     }
   }
 
@@ -529,7 +514,7 @@ class _ChatScreenState extends State<ChatScreen>
           _filteredContacts = List.from(_contacts);
         });
       } catch (e) {
-        print('Error loading cached chats: $e');
+       
       }
     }
   }
@@ -596,7 +581,7 @@ class _ChatScreenState extends State<ChatScreen>
           createdAt: _contacts[index].createdAt,
           lastMessageSenderName: _contacts[index].lastMessageSenderName,
         );
-        print('Updated last message for contact $contactId: $index');
+      
         final filteredIndex = _filteredContacts.indexWhere(
           (c) => c.id == contactId,
         );
@@ -1221,11 +1206,6 @@ class _ChatScreenState extends State<ChatScreen>
                                                   } catch (e) {
                                                     scaffoldMessenger
                                                         .hideCurrentSnackBar();
-
-                                                    print(
-                                                      'Error in contact tap: $e',
-                                                    );
-
                                                     scaffoldMessenger.showSnackBar(
                                                       SnackBar(
                                                         content: Text(

@@ -53,7 +53,13 @@ class TripInformationWidget extends ConsumerWidget {
                       },
                       children: [
                         ...tripHistory
-                            .map((entry) {
+                            .asMap()
+                            .entries
+                            .map((mapEntry) {
+                              final index = mapEntry.key;
+                              final entry = mapEntry.value;
+                              final isLastEntry =
+                                  index == tripHistory.length - 1;
                               return [
                                 TableRow(
                                   decoration: const BoxDecoration(
@@ -549,8 +555,8 @@ class TripInformationWidget extends ConsumerWidget {
                                                   Text(
                                                     "DTL: ${dtl.dtl.toStringAsFixed(0)}",
                                                     style: TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
+                                                      fontWeight: fontSettings
+                                                          .fontWeight,
                                                       fontSize:
                                                           fontSettings
                                                               .fontSize -
@@ -564,13 +570,8 @@ class TripInformationWidget extends ConsumerWidget {
                                                           fontSettings
                                                               .fontSize -
                                                           3,
-                                                      color:
-                                                          const Color.fromARGB(
-                                                            255,
-                                                            17,
-                                                            17,
-                                                            17,
-                                                          ),
+                                                      fontWeight: fontSettings
+                                                          .fontWeight,
                                                     ),
                                                   ),
                                                   Text(
@@ -580,13 +581,8 @@ class TripInformationWidget extends ConsumerWidget {
                                                           fontSettings
                                                               .fontSize -
                                                           4,
-                                                      color:
-                                                          const Color.fromARGB(
-                                                            255,
-                                                            17,
-                                                            17,
-                                                            17,
-                                                          ),
+                                                      fontWeight: fontSettings
+                                                          .fontWeight,
                                                     ),
                                                   ),
                                                 ],
@@ -694,6 +690,13 @@ class TripInformationWidget extends ConsumerWidget {
                                     ),
                                   ],
                                 ),
+                                if (!isLastEntry)
+                                  TableRow(
+                                    children: [
+                                      Container(height: 10, color: Colors.red),
+                                      Container(height: 10, color: Colors.red),
+                                    ],
+                                  ),
                               ];
                             })
                             .expand((x) => x),

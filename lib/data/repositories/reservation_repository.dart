@@ -17,7 +17,7 @@ class ReservationRepository {
       DateFormat format = DateFormat('yyyy/MM/dd');
       return format.parse(dateString);
     } catch (e) {
-      print('Error parsing date: $e');
+
       return DateTime.now();
     }
   }
@@ -73,7 +73,7 @@ class ReservationRepository {
         }
       }
 
-      print(classifiedReservations);
+
 
       return classifiedReservations;
     } else {
@@ -188,9 +188,8 @@ class ReservationRepository {
       "con": "1",
     };
 
-    print("################ requestBody #####################");
     printLargeBody(jsonEncode(requestBody));
-    print("#####################################");
+
 
     final response = await apiService.post('CommonExecute', requestBody);
 
@@ -201,9 +200,7 @@ class ReservationRepository {
 
       Reservation reservationResponse = Reservation.fromJson(table);
 
-      // print("#################### reservationResponse reservationResponse");
-      // print(reservationResponse);
-      // print("####################");
+
       if (reservationResponse.reservNo != "") {
         return reservationResponse;
       }
@@ -327,9 +324,9 @@ class ReservationRepository {
       "con": "1",
     };
 
-    print("################ requestBody #####################");
+
     printLargeBody(jsonEncode(requestBody));
-    print("#####################################");
+
 
     final response = await apiService.post('CommonExecute', requestBody);
 
@@ -340,9 +337,6 @@ class ReservationRepository {
 
       Reservation reservationResponse = Reservation.fromJson(table);
 
-      // print("#################### reservationResponse reservationResponse");
-      // print(reservationResponse);
-      // print("####################");
       if (reservationResponse.reservNo != "") {
         return reservationResponse;
       }
@@ -419,15 +413,9 @@ class ReservationRepository {
       "con": "1",
     };
 
-    print("################ Approve/Reject Request #####################");
-    // print("Member ID: $memberID");
-    // print("Reservation No: $reservationNo");
-    // print("Current User: $currentUName");
-    // print("Status: $status");
-    // print("Remarks: $remarks");
-    // print("Device ID: $deviceId");
+
     printLargeBody(jsonEncode(requestBody));
-    print("#####################################");
+
 
     try {
       final response = await apiService.post('CommonExecute', requestBody);
@@ -438,7 +426,7 @@ class ReservationRepository {
         return false;
       }
     } catch (e) {
-      print('Error in approveOrRejectReservation: $e');
+    
       return false;
     }
   }
@@ -446,12 +434,7 @@ class ReservationRepository {
   void printLargeBody(String body) {
     const chunkSize = 1024;
     for (int i = 0; i < body.length; i += chunkSize) {
-      print(
-        body.substring(
-          i,
-          i + chunkSize > body.length ? body.length : i + chunkSize,
-        ),
-      );
+     
     }
   }
 

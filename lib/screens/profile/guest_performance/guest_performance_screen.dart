@@ -100,12 +100,12 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
     if (guest!.memImage2 != null) return;
 
     if (guest.memImage2 == null) {
-      print("Fetching image for guest: ${guest.mid}");
+   
       await ref
           .read(selectedGuestProvider.notifier)
           .getGuestImage(9021, guest.mid);
     } else {
-      print("Image already loaded for guest: ${guest.memImage2}");
+     
     }
   }
 
@@ -120,7 +120,7 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
       ref.read(dateFilterProvider.notifier).setDateFrom(selectedArrivalDate);
   
     }
-    print("date is ${ref.watch(dateFilterProvider).dateFrom}");
+   
   }
 
   Future<void> _selectDepartureDate(BuildContext context) async {
@@ -189,7 +189,7 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
       setState(() {
         _isLoading = false;
       });
-      print('Error fetching loyalty summary: $e');
+   
     }
   }
 
@@ -219,9 +219,7 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
               ? DateFormat('yyyy-MM-dd').format(endDateNotifier.value!)
               : '',
         );
-    print(
-      "Date from: $DateFormat('yyyy-MM-dd').format(startDateNotifier.value!), Date to: $endDateNotifier, Player ID: $mid",
-    );
+  
   }
 
   Future<void> getTripHistory2(
@@ -232,9 +230,7 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
     await ref
         .read(tripHistoryProvider.notifier)
         .getTripHistory2(playerId: mid, dateFrom: dateFrom, dateTo: dateTo);
-    print(
-      "Date from: $DateFormat('yyyy-MM-dd').format(startDateNotifier.value!), Date to: $endDateNotifier, Player ID: $mid",
-    );
+   
   }
 
   Future<void> getAirlineHistory(String mid) async {

@@ -17,7 +17,7 @@ class ReservationNotifier
     final reservations = await reservationRepository.getReservations();
 
     state = reservations;
-    print(state);
+ 
   }
 
   void addReservationToPending(Reservation newReservation) {
@@ -49,7 +49,7 @@ class ReservationNotifier
       }
       return false;
     } catch (e) {
-      print('Error in ReservationNotifier.approveOrRejectReservation: $e');
+   
       return false;
     }
   }

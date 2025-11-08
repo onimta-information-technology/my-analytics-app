@@ -86,11 +86,7 @@ class ChatContact {
   }) {
     final List<dynamic> participantsData = json['participants'] ?? [];
 
-    print('=== DEBUG fromChatApiJson ===');
-    print('Current User Device ID: $currentUserDeviceId');
-    print('Participants Data: $participantsData');
-    print('isOnline value: ${json['isOnline']}');
-    print('isOnline type: ${json['isOnline'].runtimeType}');
+   
     //print('Raw isOnline value from API: ${json['email']}');
     String otherParticipantUuid = '';
     String otherParticipantName = '';
@@ -100,18 +96,16 @@ class ChatContact {
       final String participantUuid = participant['user_uuid'] ?? '';
       final String participantName = participant['name'] ?? '';
 
-      print(
-        'Checking participant: UUID=$participantUuid, Name=$participantName',
-      );
+    
 
       // Compare with device ID, not name
       if (participantUuid != currentUserDeviceId) {
         otherParticipantUuid = participantUuid;
         otherParticipantName = participantName;
-        print('Found other participant: $participantName');
+       
         break;
       } else {
-        print('Skipping current user: $participantName');
+        
       }
     }
 

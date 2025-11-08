@@ -48,12 +48,12 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
     if (guest!.memImage2 != null) return;
 
     if (guest.memImage2 == null) {
-      print("Fetching image for guest: ${guest.mid}");
+
       await ref
           .read(selectedGuestProvider.notifier)
           .getGuestImage(9021, guest.mid);
     } else {
-      print("Image already loaded for guest: ${guest.memImage2}");
+     
     }
   }
 
@@ -114,7 +114,7 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
       setState(() {
         _isLoading = false;
       });
-      print('Error fetching member summary: $e');
+
     }
   }
 

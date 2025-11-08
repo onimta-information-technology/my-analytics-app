@@ -44,7 +44,7 @@ class MemberSearchBottomSheet extends ConsumerWidget {
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.search),
                   onPressed: () {
-                    print("Searching member: ${bottomSearchController.text}");
+                  
                   },
                 ),
               ),

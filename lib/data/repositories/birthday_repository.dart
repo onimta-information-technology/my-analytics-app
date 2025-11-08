@@ -167,7 +167,7 @@ class BirthdayRepository {
         // Create the WhatsApp message
         final responseBody= jsonDecode(response.body);
         final giftCode = responseBody['gift_code'];  
-        print(giftCode);
+
         String message = 'Congratulations! \n\n'
             'You have received a gift valued at $gift! 🎁✨\n\n'
             'Enjoy this special token of appreciation, and may it bring '
@@ -209,7 +209,7 @@ class BirthdayRepository {
             launched = true;
           }
         } catch (e) {
-          print('App URL failed: $e');
+       
           launched = false;
         }
         
@@ -222,7 +222,7 @@ class BirthdayRepository {
             );
             launched = true;
           } catch (e) {
-            print('Web URL failed: $e');
+        
           }
         }
         
@@ -236,7 +236,7 @@ class BirthdayRepository {
             );
             launched = true;
           } catch (e) {
-            print('Fallback URL failed: $e');
+        
           }
         }
         
@@ -256,7 +256,7 @@ class BirthdayRepository {
       }
       
     } catch (e) {
-      print("Error sending WhatsApp message: $e");
+   
       EasyLoading.showError('Failed to send gift message');
       return "Error: $e";
     }

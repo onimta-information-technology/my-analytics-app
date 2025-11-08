@@ -149,7 +149,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
       setState(() {
         _isLoading = false;
       });
-      print("Error searching guests: $e");
+   
     }
   }
 
@@ -188,7 +188,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
         },
       );
     } catch (e) {
-      print("Error searching guests: $e");
+    
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error searching guests: $e'),
@@ -1235,9 +1235,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                                     .lastReturnSerial;
 
                                             // Debug print to verify we have the return serial
-                                            print(
-                                              'Return Serial for PDF: $returnSerial',
-                                            );
+                                           
                                             await DirectWhatsAppPdfService.shareDirectlyToWhatsApp(
                                               memberName: _memberNameController
                                                   .text

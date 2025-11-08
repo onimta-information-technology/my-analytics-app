@@ -84,48 +84,43 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
 
   Future<void> _setupSMSAutoFill() async {
     try {
-      print('🔧 Setting up SMS auto-fill...');
-
       _appSignature = await SmsAutoFill().getAppSignature;
-      print('📱 App Signature: $_appSignature');
-
       try {
         String? phoneHint = await SmsAutoFill().hint;
-        print('📱 Phone hint: $phoneHint');
+       
       } catch (e) {
-        print('⚠️ Phone hint failed: $e');
+      
       }
 
       await SmsAutoFill().listenForCode();
-      print('👂 Started listening for SMS...');
+    
 
       _setupManualSMSListener();
     } catch (e) {
-      print('❌ Error setting up SMS auto-fill: $e');
+      
     }
   }
 
   void _setupManualSMSListener() {
     try {
       _smsSubscription = SmsAutoFill().code.listen((String receivedCode) {
-        print('📩 Manual SMS listener received: $receivedCode');
+    
         if (receivedCode.isNotEmpty) {
           _handleReceivedSMS(receivedCode);
         }
       });
     } catch (e) {
-      print('❌ Error setting up manual SMS listener: $e');
+     
     }
   }
 
   void _handleReceivedSMS(String receivedCode) {
-    print('🔍 Processing received SMS: $receivedCode');
+
 
     String extractedOTP = _extractOTPFromCode(receivedCode);
 
     if (extractedOTP.length == 5 && extractedOTP.isNotEmpty) {
-      print('✅ Extracted OTP: $extractedOTP');
-
+   
       if (_autoFillPermissionGranted == null) {
         _pendingSMSCode = extractedOTP;
         _showAutoFillPermissionDialog(extractedOTP);
@@ -135,7 +130,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
         _showInfoMessage('OTP received. Please enter manually.');
       }
     } else {
-      print('⚠️ Could not extract valid OTP from: $receivedCode');
+  
     }
   }
 
@@ -306,8 +301,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
   }
 
   String _extractOTPFromCode(String receivedCode) {
-    print('🔍 Extracting OTP from: $receivedCode');
-
     RegExp exactPattern = RegExp(r'Your OTP code is (\d{5})');
     Match? exactMatch = exactPattern.firstMatch(receivedCode);
     if (exactMatch != null) {
@@ -320,15 +313,11 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       return fallbackMatch.group(0) ?? '';
     }
 
-    print('⚠️ No valid OTP pattern found');
     return '';
   }
 
   @override
   void codeUpdated() {
-    print('📱 codeUpdated callback triggered');
-    print('📩 Received code: $code');
-
     if (code != null && code!.isNotEmpty) {
       _handleReceivedSMS(code!);
     }
@@ -353,21 +342,17 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       String fullUrl =
           '$baseUrl?q=968deddf5fd84b8&destination=$formattedPhone&message=${Uri.encodeComponent(message)}';
 
-      print('📤 Sending SMS to: $formattedPhone');
-      print('🔢 OTP: $otp');
-      print('💬 Message: $message');
-
       final response = await http.get(Uri.parse(fullUrl));
 
       if (response.statusCode == 200) {
-        print('✅ SMS sent successfully: ${response.body}');
+
         return true;
       } else {
-        print('❌ SMS send failed: ${response.statusCode} - ${response.body}');
+
         return false;
       }
     } catch (e) {
-      print('❌ Error sending SMS: $e');
+
       return false;
     }
   }
@@ -379,8 +364,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
 
     try {
       _actualOTP = _generateOTP();
-      print('🔢 Generated OTP: $_actualOTP');
-
       bool sent = await _sendOTPSMS(widget.phoneNumber, _actualOTP!);
 
       if (!sent) {
@@ -392,7 +375,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       }
     } catch (e) {
       _showErrorMessage('Failed to send OTP. Please try again.');
-      print('❌ Error in _sendInitialOTP: $e');
     } finally {
       setState(() {
         _isSendingOTP = false;
@@ -402,14 +384,13 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
 
   @override
   void dispose() {
-    print('🧹 Disposing OTP screen...');
 
     try {
       cancel();
       SmsAutoFill().unregisterListener();
       _smsSubscription?.cancel();
     } catch (e) {
-      print('❌ Error disposing SMS auto-fill: $e');
+   
     }
 
     _timer?.cancel();
@@ -454,8 +435,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
     });
 
     try {
-      print('🔍 Verifying OTP: $_currentOTP against $_actualOTP');
-
       bool isValid = await _simulateOTPVerification(_currentOTP);
 
       if (isValid) {
@@ -471,7 +450,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       }
     } catch (e) {
       _showErrorMessage('Verification failed. Please try again.');
-      print('❌ OTP verification error: $e');
+
       ref.read(authProvider.notifier).clearPendingUser();
     } finally {
       setState(() {
@@ -485,21 +464,21 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       // Check if device supports biometrics
       final isAvailable = await _biometricService.isDeviceSupported();
       if (!isAvailable) {
-        print('⚠️ Biometric not available on this device');
+    
         return;
       }
 
       // Check if biometric is already enabled
       final isEnabled = await _biometricService.isBiometricEnabled();
       if (isEnabled) {
-        print('✅ Biometric already enabled, skipping prompt');
+       
         return;
       }
 
       // Show biometric enable dialog
       await _showBiometricEnableDialog();
     } catch (e) {
-      print('❌ Error checking biometric availability: $e');
+  
     }
   }
 
@@ -636,8 +615,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
 
   Future<void> _enableBiometric() async {
     try {
-      print('🔐 Enabling biometric authentication...');
-      
+
       // Save the credentials that were used for this login
       await _biometricService.saveCredentials(
         widget.username,
@@ -645,9 +623,9 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       );
       
       _showSuccessMessage('Biometric authentication enabled successfully!');
-      print('✅ Biometric enabled with current credentials');
+
     } catch (e) {
-      print('❌ Error enabling biometric: $e');
+     
       _showErrorMessage('Failed to enable biometric authentication');
     }
   }
@@ -659,83 +637,66 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
 
   Future<void> _completeLoginProcess() async {
     try {
-      print('🚀 Starting complete login process...');
 
       await ref.read(authProvider.notifier).completeLoginAfterOTP();
 
       final authState = ref.read(authProvider);
 
       if (authState != null && authState.user != null) {
-        print('✅ Login completed successfully, processing FCM token...');
 
         final salesCode = await StorageUtil.getSalesCode();
 
         if (salesCode != null) {
           ref.read(appmodeSettingsProvider.notifier).setSalesCode(salesCode);
-          print('Sales code set in app mode provider: $salesCode');
         }
 
         final name = await StorageUtil.getUserName();
         final prefs = await SharedPreferences.getInstance();
 
         String? fcmtoken = await _getFCMTokenWithRetry();
-        print('🔥 FCM Token after OTP verification: $fcmtoken');
-
         if (fcmtoken != null) {
           await prefs.setString('FCMToken', fcmtoken);
-          print('💾 FCM Token saved to preferences');
-
+         
           if (name != null) {
             await _syncTokenWithServer(name, fcmtoken);
           }
         } else {
-          print('⚠️ FCM Token is null - will retry on token refresh');
+       
           _setupTokenRefreshListener(name);
         }
 
         if (mounted) {
-          print('🏠 Navigating to home screen...');
           context.go('/home');
         }
       } else {
         throw Exception('Authentication failed after OTP verification');
       }
     } catch (e) {
-      print('❌ Error in complete login process: $e');
       _showErrorMessage('Login completion failed. Please try again.');
       ref.read(authProvider.notifier).clearPendingUser();
     }
   }
 
   Future<String?> _getFCMTokenWithRetry({int maxRetries = 3}) async {
-    print('🔥 Attempting to get FCM token...');
-
     for (int i = 0; i < maxRetries; i++) {
       try {
         String? token = await FirebaseMessaging.instance.getToken();
         if (token != null) {
-          print('✅ FCM Token fetch attempt ${i + 1} successful');
+        
           return token;
         }
-
-        print('⚠️ FCM Token fetch attempt ${i + 1} returned null, retrying...');
         await Future.delayed(Duration(seconds: 1 + i));
       } catch (e) {
-        print('❌ FCM Token fetch attempt ${i + 1} failed: $e');
         if (i == maxRetries - 1) return null;
         await Future.delayed(Duration(seconds: 1 + i));
       }
     }
-    print('❌ All FCM token fetch attempts failed');
     return null;
   }
 
   void _setupTokenRefreshListener(String? name) {
-    print('🔄 Setting up FCM token refresh listener...');
-
     FirebaseMessaging.instance.onTokenRefresh
         .listen((String token) async {
-          print('🔄 FCM Token refreshed');
 
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('FCMToken', token);
@@ -745,23 +706,20 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
           }
         })
         .onError((err) {
-          print('❌ FCM Token refresh error: $err');
+        
         });
   }
 
   Future<void> _syncTokenWithServer(String name, String token) async {
     try {
-      print('🔄 Syncing FCM token with server for user: $name');
-
       var result = await FirebaseApiService.syncFmcToken(name, token);
 
       if (result['success'] == true) {
-        print('✅ FCM Token sent to server successfully');
+       
       } else {
-        print('❌ Failed to send FCM Token: ${result['error']}');
+      
       }
     } catch (e) {
-      print('❌ Error syncing FCM token with server: $e');
     }
   }
 
@@ -840,7 +798,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
 
     try {
       _actualOTP = _generateOTP();
-      print('🔢 New OTP generated: $_actualOTP');
 
       bool sent = await _sendOTPSMS(widget.phoneNumber, _actualOTP!);
 
@@ -853,7 +810,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       }
     } catch (e) {
       _showErrorMessage('Failed to resend OTP');
-      print('❌ Error in _resendOTP: $e');
+
     } finally {
       setState(() {
         _isSendingOTP = false;
@@ -904,10 +861,8 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
     });
 
     if (_currentOTP.length == 5 && !_isVerifying) {
-      print('🔄 Paste/Multi-input complete: $_currentOTP');
       Future.delayed(const Duration(milliseconds: 800), () {
         if (mounted && _currentOTP.length == 5 && !_isVerifying) {
-          print('✨ Auto-triggering verification for paste input');
           _verifyOTP();
         }
       });
@@ -1037,16 +992,10 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
                           });
 
                           if (_currentOTP.length == 5 && !_isVerifying) {
-                            print('🔄 Manual OTP entry complete: $_currentOTP');
-                            print('🔍 Will auto-trigger verification...');
-
                             Future.delayed(const Duration(milliseconds: 800), () {
                               if (mounted &&
                                   _currentOTP.length == 5 &&
                                   !_isVerifying) {
-                                print(
-                                  '✨ Auto-triggering verification for manual entry',
-                                );
                                 _verifyOTP();
                               }
                             });

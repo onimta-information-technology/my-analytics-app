@@ -29,17 +29,15 @@ class ApiService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        print('Request failed with status: ${response.statusCode}');
-        print('Response body: ${response.body}');
         throw Exception(
           'Failed to load data: ${response.statusCode} - ${response.reasonPhrase}',
         );
       }
     } on http.ClientException catch (e) {
-      print('ClientException occurred: ${e.message}');
+
       throw Exception('Client-side error: ${e.message}');
     } catch (e) {
-      print('Unexpected error: $e');
+
       throw Exception('API request failed with unexpected error: $e');
     }
   }

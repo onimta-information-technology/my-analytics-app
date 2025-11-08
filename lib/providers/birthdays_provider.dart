@@ -26,7 +26,7 @@ class BirthdaysNotifier extends StateNotifier<Map<String, List<Birthday>>> {
       };
       return state;
     } catch (e) {
-      print("Error fetching birthdays: $e");
+    
       state = {
         'past': [],
         'recentPast': [],
@@ -49,7 +49,6 @@ class BirthdaysNotifier extends StateNotifier<Map<String, List<Birthday>>> {
       );
       return response;
     } catch (e) {
-      print("Error fetching birthdays: $e");
       return "Error sending message";
     }
   }

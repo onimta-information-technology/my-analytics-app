@@ -18,7 +18,7 @@ class AirportsNotifier extends StateNotifier<List<Airport>> {
       allAirports = airports;
       _selectRandomAirports();
     } catch (e) {
-      print("Error fetching airports: $e");
+    
       allAirports = [];
       visibleAirports = [];
     }

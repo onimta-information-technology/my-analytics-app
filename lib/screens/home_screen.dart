@@ -29,25 +29,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     with AutomaticKeepAliveClientMixin {
   String? userName;
   bool _isLoadingData = false;
-  final bool _hasInitialized = false; // 🔹 Track if data has been loaded once
 
   // 🔹 Keep the widget alive when navigating away
   @override
   bool get wantKeepAlive => true;
 
-  // @override
-  // void initState() {
-  //   super.initState();
-  //   _loadUserName();
-  //   WidgetsBinding.instance.addPostFrameCallback((_) {
-  //     final hasInitialized = ref.read(homeScreenInitializedProvider);
-  //     if (!hasInitialized) {
-  //       ref.read(homeScreenInitializedProvider.notifier).state = true;
-  //       _initializeAppMode();
-  //       _loadGuestData();
-  //     }
-  //   });
-  // }
   @override
   void initState() {
     super.initState();
@@ -80,8 +66,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         if (guestsState.todayGuests.isEmpty &&
             guestsState.yesterdayGuests.isEmpty &&
             guestsState.monthlyGuests.isEmpty) {
-          // Data is missing, reload
-          print('Data missing after login, reloading...');
           _loadGuestData();
         }
       }
@@ -107,7 +91,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ref.read(appmodeSettingsProvider.notifier).setSalesCode(salesCode);
       }
     } catch (e) {
-      print('Error initializing app mode: $e');
+      // Handle error
     }
   }
 
@@ -130,7 +114,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     String? salesCode = await StorageUtil.getSalesCode();
 
     if (salesCode == null || salesCode.isEmpty) {
-      print('Error: sales code not found');
       _isLoadingData = false;
       return;
     }
@@ -168,36 +151,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       // 🔹 Verify mode hasn't changed during loading
       final finalMode = ref.read(appmodeSettingsProvider).appMode;
       if (currentMode != finalMode) {
-        print('App mode changed during loading, reloading...');
         _isLoadingData = false;
         _loadGuestData(); // Reload with new mode
         return;
       }
 
-      // 🔹 Update counts with current data
-      if (mounted) {
-        ref.read(guestCountsProvider.notifier).state = {
-          "today": guestsState.todayGuests
-              .where((g) => g.mid.isNotEmpty)
-              .length,
-          "yesterday": guestsState.yesterdayGuests
-              .where((g) => g.mid.isNotEmpty)
-              .length,
-          "monthly": guestsState.monthlyGuests
-              .where((g) => g.mid.isNotEmpty)
-              .length,
-        };
-      }
+      // 🔹 Update counts with current data - THIS will hide the spinner
+      ref.read(guestCountsProvider.notifier).state = {
+        "today": guestsState.todayGuests.where((g) => g.mid.isNotEmpty).length,
+        "yesterday": guestsState.yesterdayGuests
+            .where((g) => g.mid.isNotEmpty)
+            .length,
+        "monthly": guestsState.monthlyGuests
+            .where((g) => g.mid.isNotEmpty)
+            .length,
+      };
     } catch (e) {
-      print('Error loading guest data: $e');
       // Set counts to 0 on error instead of leaving as null
-      if (mounted) {
-        ref.read(guestCountsProvider.notifier).state = {
-          "today": 0,
-          "yesterday": 0,
-          "monthly": 0,
-        };
-      }
+      ref.read(guestCountsProvider.notifier).state = {
+        "today": 0,
+        "yesterday": 0,
+        "monthly": 0,
+      };
     } finally {
       _isLoadingData = false;
     }
@@ -250,7 +225,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       )
                     : Text(
                         formatter.format(count),
-                        // count.toString(),
                         style: const TextStyle(
                           fontSize: 40.0,
                           fontWeight: FontWeight.bold,
@@ -284,8 +258,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     // 🔹 Only listen for app mode changes, not navigation returns
     ref.listen<AppModeSettings>(appmodeSettingsProvider, (prev, next) {
       if (prev?.appMode != next.appMode) {
-        print('App mode changed from ${prev?.appMode} to ${next.appMode}');
-
         // Reset counts and reload data only for mode changes
         ref.read(guestCountsProvider.notifier).state = {
           "today": null,
@@ -348,9 +320,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ),
                     ),
                   ),
-                  // const SizedBox(height: 1),
 
-                  // Performance heading with loading indicator
+                  // Performance heading
                   Consumer(
                     builder: (context, ref, _) {
                       final appMode = ref
@@ -372,14 +343,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            // if (_isLoadingData) ...[
-                            //   const SizedBox(width: 8),
-                            //   const SizedBox(
-                            //     height: 16,
-                            //     width: 16,
-                            //     child: CircularProgressIndicator(strokeWidth: 2),
-                            //   ),
-                            // ],
                           ],
                         ),
                       );
@@ -499,7 +462,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
             ),
           ),
-          // const Watermark(),
         ],
       ),
     );

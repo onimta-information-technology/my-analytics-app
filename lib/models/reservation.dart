@@ -64,7 +64,7 @@ class Reservation {
             .map((item) => HotelDescip.fromJson(item))
             .toList();
       } catch (e) {
-        print("Error parsing HotelDescip: $e");
+      
         return [];
       }
     }
@@ -76,14 +76,10 @@ class Reservation {
             .map((item) => FlightBooking.fromJson(item))
             .toList();
       } catch (e) {
-        print("Error parsing AirticketDescrip: $e");
+       
         return [];
       }
     }
-
-    print(
-        "###################### json['Airticket_Descrip'] #######################");
-    print(json['Airticket_Descrip']);
 
     return Reservation(
       idNo: json['Id_No'] ?? 0,
@@ -150,7 +146,6 @@ class Reservation {
 void printLargeBody(String body) {
   const chunkSize = 1024;
   for (int i = 0; i < body.length; i += chunkSize) {
-    print(body.substring(
-        i, i + chunkSize > body.length ? body.length : i + chunkSize));
+  
   }
 }

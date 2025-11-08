@@ -19,7 +19,7 @@ class NotificationService {
   // Initialize local notifications
   Future<void> initializeLocalNotifications() async {
     if (_isInitialized) {
-      print('Notifications already initialized');
+    
       return;
     }
 
@@ -58,9 +58,9 @@ class NotificationService {
       );
 
       _isInitialized = true;
-      print('Awesome Notifications initialized successfully');
+    
     } catch (e) {
-      print('Error initializing notifications: $e');
+     
     }
   }
 
@@ -69,7 +69,6 @@ class NotificationService {
       String? notificationChatId;
       // For iOS, skip custom notifications and let FCM handle natively
       if (Platform.isIOS) {
-        print('iOS detected - using native FCM notifications');
       
         await _updateBadgeCount(1);
         return;
@@ -89,7 +88,7 @@ class NotificationService {
           chatDetails = json.decode(detailsJson);
           notificationChatId = chatDetails?['chatId']?.toString();
         } catch (e) {
-          print('Error parsing Details JSON: $e');
+       
         }
       }
       if (notificationChatId == null || notificationChatId.isEmpty) {
@@ -99,15 +98,13 @@ class NotificationService {
       }
       if (notificationChatId != null &&
           CurrentChatState().isCurrentChat(notificationChatId)) {
-        print(
-          '🔇 Suppressing notification - chat is currently open: $notificationChatId',
-        );
+       
         // Still update badge count
         await _updateBadgeCount(1);
         return;
       }
 
-      print('🔔 Showing notification for chat: $notificationChatId');
+     
       Map<String, String> payload = {
         'type': message.data['msg_type']?.toString() ?? 'chat',
         'screen': 'chat',
@@ -129,9 +126,6 @@ class NotificationService {
       final currentBadge = await badgeService.getSavedBadgeCount();
       final newBadgeCount = currentBadge + 1;
 
-      print('Creating notification with ID: $notificationId');
-      print('Title: $title, Body: $body');
-      print('Badge count: $newBadgeCount');
       // Update badge BEFORE creating notification
       await badgeService.updateBadge(newBadgeCount);
       // Create notification with error handling
@@ -153,15 +147,14 @@ class NotificationService {
       );
 
       if (created) {
-        print('✅ Notification created successfully');
+   
         // Update badge count
         await _updateBadgeCount(1);
       } else {
-        print('❌ Failed to create notification');
+     
       }
     } catch (e) {
-      print('❌ Error in showForegroundNotification: $e');
-      print('Stack trace: ${StackTrace.current}');
+     
     }
   }
 
@@ -171,7 +164,7 @@ class NotificationService {
       final badgeService = BadgeService();
       await badgeService.addBadge(increment);
     } catch (e) {
-      print('Error updating badge count: $e');
+   
     }
   }
 
@@ -181,7 +174,7 @@ class NotificationService {
     ReceivedAction receivedAction,
   ) async {
     try {
-      print('Notification action received: ${receivedAction.payload}');
+    
       // Clear badge when notification is tapped
       await BadgeService().clearBadge();
       // Navigate to specific chat
@@ -219,7 +212,7 @@ class NotificationService {
         }
       }
     } catch (e) {
-      print('Error in onActionReceivedMethod: $e');
+    
     }
   }
 
@@ -228,7 +221,7 @@ class NotificationService {
   static Future<void> onNotificationCreatedMethod(
     ReceivedNotification receivedNotification,
   ) async {
-    print('Notification created: ${receivedNotification.id}');
+  
   }
 
   // Notification displayed
@@ -236,7 +229,7 @@ class NotificationService {
   static Future<void> onNotificationDisplayedMethod(
     ReceivedNotification receivedNotification,
   ) async {
-    print('Notification displayed: ${receivedNotification.id}');
+   
   }
 
   // Notification dismissed
@@ -244,13 +237,13 @@ class NotificationService {
   static Future<void> onDismissActionReceivedMethod(
     ReceivedAction receivedAction,
   ) async {
-    print('Notification dismissed: ${receivedAction.id}');
+  
   }
 
   // Handle notification tap with chat data
   void handleNotificationTap(RemoteMessage message) {
     try {
-      print('Handling notification tap');
+   
       // Clear badge
       BadgeService().clearBadge();
 
@@ -262,7 +255,7 @@ class NotificationService {
         try {
           chatDetails = json.decode(detailsJson);
         } catch (e) {
-          print('Error parsing Details JSON: $e');
+         
         }
       }
 
@@ -281,7 +274,7 @@ class NotificationService {
         );
       }
     } catch (e) {
-      print('Error handling notification tap: $e');
+
     }
   }
 
@@ -290,7 +283,7 @@ class NotificationService {
     try {
       return await FirebaseMessaging.instance.getToken();
     } catch (e) {
-      print('Error getting FCM token: $e');
+    
       return null;
     }
   }
@@ -299,11 +292,11 @@ class NotificationService {
   Future<void> deleteFCMToken() async {
     try {
       await FirebaseMessaging.instance.deleteToken();
-      print('FCM token deleted');
+    
       // Also clear badge on logout
       await BadgeService().clearBadge();
     } catch (e) {
-      print('Error deleting FCM token: $e');
+   
     }
   }
 }

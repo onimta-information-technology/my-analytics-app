@@ -12,7 +12,7 @@ class SelectedGuestNotifier extends StateNotifier<Guest?> {
 
   void setSelectedGuest(Guest guest) {
     state = guest;
-    print(guest.gName);
+ 
   }
 
   Future<void> setSelectedGuestWithId(String memberId) async {
@@ -38,9 +38,9 @@ class SelectedGuestNotifier extends StateNotifier<Guest?> {
         state = completeGuestList.first;
       }
     } catch (e) {
-      print('Error fetching complete guest data: $e');
+     
     }
-    print(state?.memberName);
+   
   }
 
   void setSelectedGuestfilterdate() {}
@@ -56,7 +56,7 @@ class SelectedGuestNotifier extends StateNotifier<Guest?> {
       gName: state?.gName ?? "",
       memImage2: state?.memImage2 ?? "",
     );
-    print(state?.lastVisitDate);
+  
   }
 
   Future<void> getGuestImage(int iid, String text1) async {
@@ -65,7 +65,7 @@ class SelectedGuestNotifier extends StateNotifier<Guest?> {
       if (imageUrl == null) return;
       state = state?.copyWith(memImage2: imageUrl);
     } catch (e) {
-      print('Data retrivng: $e');
+   
       state = state?.copyWith(memImage2: null);
     } finally {}
   }

@@ -39,7 +39,7 @@ class FirebaseApiService {
   ) async {
     try {
       final headers = await getAuthHeaders();
-      print('POST Request to $url with body: $body');
+    
 
       final response = await http.post(
         Uri.parse(url),
@@ -47,8 +47,6 @@ class FirebaseApiService {
         body: jsonEncode(body),
       );
 
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body) as Map<String, dynamic>;
@@ -62,7 +60,6 @@ class FirebaseApiService {
         };
       }
     } catch (e) {
-      print('Error in postRequest: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -73,16 +70,11 @@ class FirebaseApiService {
   ) async {
     try {
       final headers = await getAuthHeaders();
-      print('PUT Request to $url with body: $body');
-
       final response = await http.put(
         Uri.parse(url),
         headers: headers,
         body: jsonEncode(body),
       );
-
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body) as Map<String, dynamic>;
@@ -96,7 +88,6 @@ class FirebaseApiService {
         };
       }
     } catch (e) {
-      print('Error in putRequest: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -105,12 +96,9 @@ class FirebaseApiService {
   static Future<Map<String, dynamic>> getRequest(String url) async {
     try {
       final headers = await getAuthHeaders();
-      print('GET Request to $url');
+  
 
       final response = await http.get(Uri.parse(url), headers: headers);
-
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body) as Map<String, dynamic>;
@@ -124,7 +112,7 @@ class FirebaseApiService {
         };
       }
     } catch (e) {
-      print('Error in getRequest: $e');
+   
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -133,12 +121,10 @@ class FirebaseApiService {
   static Future<Map<String, dynamic>> deleteRequest(String url) async {
     try {
       final headers = await getAuthHeaders();
-      print('DELETE Request to $url');
+   
 
       final response = await http.delete(Uri.parse(url), headers: headers);
 
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body) as Map<String, dynamic>;
@@ -152,7 +138,7 @@ class FirebaseApiService {
         };
       }
     } catch (e) {
-      print('Error in deleteRequest: $e');
+      
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -164,22 +150,19 @@ class FirebaseApiService {
   ) async {
     try {
       final deviceId = await DeviceId.get();
-      print('User ID for marking as read: $deviceId');
-      print('Message IDs to mark as read: $messageIds');
+   
       final url = '$domain${endpoints['markAsRead']}/$chatId/messages/read';
-      print(
-        'Marking messages as read: chatId=$chatId, messageIds=$messageIds, userId=$deviceId',
-      );
+     
 
       final response = await putRequest(url, {
         'messageIds': messageIds,
         'userId': deviceId,
       });
 
-      print('Mark as read response: $response');
+     
       return response;
     } catch (e) {
-      print('Error marking messages as read: $e');
+ 
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -198,7 +181,6 @@ class FirebaseApiService {
       'email': timestamp,
       'fcmToken': fcmToken,
     });
-    print('syncFmcToken response: $response');
 
     // Save user name to SharedPreferences
     final prefs = await SharedPreferences.getInstance();
@@ -221,23 +203,16 @@ class FirebaseApiService {
     final deviceId = await DeviceId.get();
     try {
       final url = '$domain${endpoints['createChat']}';
-      print('Creating chat with receiver: $userUid');
-      print('Creating chat with deviceId: $deviceId');
-
       final response = await postRequest(url, {
         "participants": [userUid, deviceId],
       });
-
-      print('Create chat response: $response');
 
       if (response['success'] == true && response['data']?['chatId'] != null) {
         return response['data']['chatId'];
       }
 
-      print('Failed to create chat');
       return null;
     } catch (e) {
-      print('Error creating chat: $e');
       return null;
     }
   }
@@ -247,14 +222,13 @@ class FirebaseApiService {
     try {
       final deviceId = await DeviceId.get();
       final url = '$domain${endpoints['deleteMessage']}/$chatId/hide';
-      print('Hiding chat (deleteChat): chatId=$chatId, userId=$deviceId');
 
       final response = await postRequest(url, {'userId': deviceId});
 
-      print('Hide chat response: $response');
+
       return response['success'] == true;
     } catch (e) {
-      print('Error hiding chat: $e');
+    
       return false;
     }
   }
@@ -275,7 +249,7 @@ class FirebaseApiService {
         throw Exception(response['error'] ?? 'Failed to fetch chats');
       }
     } catch (e) {
-      print('Error fetching user chats: $e');
+     
       throw Exception('Failed to fetch chats: $e');
     }
   }
@@ -293,7 +267,7 @@ class FirebaseApiService {
         throw Exception(response['error'] ?? 'Failed to fetch users');
       }
     } catch (e) {
-      print('Error fetching all users: $e');
+     
       throw Exception('Failed to fetch users: $e');
     }
   }
@@ -302,16 +276,15 @@ class FirebaseApiService {
   static Future<Map<String, dynamic>> fetchMessages(String chatId) async {
     try {
       final url = '$domain${endpoints['fetchMessages']}/$chatId/messages';
-      print('Fetching messages for chat: $chatId');
-
+  
       final response = await getRequest(
         url,
       ).timeout(const Duration(seconds: 10));
 
-      print('Fetch messages response: $response');
+   
       return response;
     } catch (e) {
-      print('Error fetching messages: $e');
+    
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -326,7 +299,6 @@ class FirebaseApiService {
   }) async {
     try {
       final deviceId = await DeviceId.get();
-      print('Sending message from deviceId: $deviceId');
 
       final url = '$domain${endpoints['sendMessage']}';
       final response = await postRequest(url, {
@@ -338,10 +310,10 @@ class FirebaseApiService {
         "chatId": chatId,
       });
 
-      print('Send message response: $response');
+   
       return response;
     } catch (e) {
-      print('Error sending message: $e');
+   
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -352,16 +324,12 @@ class FirebaseApiService {
   ) async {
     try {
       final headers = await getAuthHeaders();
-      print('DELETE Request to $url with body: $body');
 
       final response = await http.delete(
         Uri.parse(url),
         headers: headers,
         body: jsonEncode(body),
       );
-
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body) as Map<String, dynamic>;
@@ -375,7 +343,7 @@ class FirebaseApiService {
         };
       }
     } catch (e) {
-      print('Error in deleteRequestWithBody: $e');
+    
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -389,16 +357,14 @@ class FirebaseApiService {
       final deviceId = await DeviceId.get();
       final url =
           '$domain${endpoints['softDeleteMessage']}/$chatId/messages/$messageId';
-      print(
-        'Soft deleting message: chatId=$chatId, messageId=$messageId, userId=$deviceId',
-      );
+   
 
       final response = await deleteRequestWithBody(url, {'userId': deviceId});
 
-      print('Soft delete message response: $response');
+  
       return response;
     } catch (e) {
-      print('Error soft deleting message: $e');
+    
       return {'success': false, 'error': e.toString()};
     }
   }

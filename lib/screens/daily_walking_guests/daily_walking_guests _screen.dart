@@ -208,186 +208,249 @@ class _DailyWalkingGuestScreenState
                     ),
 
                     // Scrollable Table
+                    // Expanded(
+                    //   child: SingleChildScrollView(
+                    //     padding: const EdgeInsets.all(16.0),
+                    //     child: Table(
+                    //       border: TableBorder.all(),
+                    //       columnWidths: const {
+                    //         0: FlexColumnWidth(),
+                    //         1: FlexColumnWidth(),
+                    //       },
+                    //       children: guests
+                    //           .map(
+                    //             (entry) => [
+                    //               TableRow(
+                    //                 decoration: const BoxDecoration(
+                    //                   color: Color.fromARGB(47, 181, 225, 250),
+                    //                 ),
+                    //                 children: const [
+                    //                   Padding(
+                    //                     padding: EdgeInsets.all(8.0),
+                    //                     child: Text(
+                    //                       "",
+                    //                       style: TextStyle(
+                    //                         fontWeight: FontWeight.w900,
+                    //                       ),
+                    //                     ),
+                    //                   ),
+                    //                   Padding(
+                    //                     padding: EdgeInsets.all(8.0),
+                    //                     child: Text(
+                    //                       "Details",
+                    //                       style: TextStyle(
+                    //                         color: Colors.black,
+                    //                         fontWeight: FontWeight.w900,
+                    //                       ),
+                    //                     ),
+                    //                   ),
+                    //                 ],
+                    //               ),
+
+                    //               TableRow(
+                    //                 children: [
+                    //                   Container(
+                    //                     width: double.infinity,
+                    //                     color: Constants.kPrimaryColor
+                    //                         .withAlpha(50),
+                    //                     padding: const EdgeInsets.all(8.0),
+                    //                     alignment: Alignment.centerLeft,
+                    //                     child: Text(
+                    //                       "Image",
+                    //                       style: TextStyle(
+                    //                         color: Colors.black,
+                    //                         fontSize: fontSettings.fontSize,
+                    //                         fontWeight: fontSettings.fontWeight,
+                    //                       ),
+                    //                     ),
+                    //                   ),
+                    //                   Padding(
+                    //                     padding: const EdgeInsets.all(8.0),
+                    //                     child: entry.menImage2.isNotEmpty
+                    //                         ? GestureDetector(
+                    //                             onTap: () {
+                    //                               showDialog(
+                    //                                 context: context,
+                    //                                 barrierDismissible: true,
+                    //                                 builder: (_) => Dialog(
+                    //                                   backgroundColor:
+                    //                                       Colors.transparent,
+                    //                                   child: Image.memory(
+                    //                                     base64Decode(
+                    //                                       entry.menImage2,
+                    //                                     ),
+                    //                                     fit: BoxFit.contain,
+                    //                                   ),
+                    //                                 ),
+                    //                               );
+                    //                             },
+                    //                             child: Image.memory(
+                    //                               base64Decode(entry.menImage2),
+                    //                               fit: BoxFit.contain,
+                    //                             ),
+                    //                           )
+                    //                         : GestureDetector(
+                    //                             onTap: () {
+                    //                               showDialog(
+                    //                                 context: context,
+                    //                                 barrierDismissible: true,
+                    //                                 builder: (_) => Dialog(
+                    //                                   backgroundColor:
+                    //                                       Colors.transparent,
+                    //                                   child: Image.asset(
+                    //                                     'assets/images/placeholder_image.jpg',
+                    //                                     fit: BoxFit.contain,
+                    //                                   ),
+                    //                                 ),
+                    //                               );
+                    //                             },
+                    //                             child: Image.asset(
+                    //                               'assets/images/placeholder_image.jpg',
+                    //                               fit: BoxFit.contain,
+                    //                             ),
+                    //                           ),
+                    //                   ),
+                    //                 ],
+                    //               ),
+                    //               ..._buildGuestRows(entry, fontSettings),
+                    //             ],
+                    //           )
+                    //           .expand((x) => x)
+                    //           .toList(),
+                    //     ),
+                    //   ),
+                    // ),
                     Expanded(
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.all(16.0),
-                        child: Table(
-                          border: TableBorder.all(),
-                          columnWidths: const {
-                            0: FlexColumnWidth(),
-                            1: FlexColumnWidth(),
-                          },
-                          children: guests
-                              .map(
-                                (entry) => [
-                                  TableRow(
-                                    decoration: const BoxDecoration(
-                                      color: Color.fromARGB(47, 181, 225, 250),
-                                    ),
-                                    children: const [
-                                      Padding(
-                                        padding: EdgeInsets.all(8.0),
-                                        child: Text(
-                                          "",
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w900,
-                                          ),
-                                        ),
-                                      ),
-                                      Padding(
-                                        padding: EdgeInsets.all(8.0),
-                                        child: Text(
-                                          "Details",
-                                          style: TextStyle(
-                                            color: Colors.black,
-                                            fontWeight: FontWeight.w900,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                        child: Column(
+                          children: guests.asMap().entries.map((mapEntry) {
+                            final index = mapEntry.key;
+                            final entry = mapEntry.value;
 
-                                  // TableRow(
-                                  //   children: [
-                                  //     Container(
-                                  //       width: double.infinity,
-                                  //       height: 180,
-                                  //       color: Constants.kPrimaryColor
-                                  //           .withAlpha(50),
-                                  //       padding: const EdgeInsets.all(8.0),
-                                  //       alignment: Alignment.centerLeft,
-                                  //       child: Text(
-                                  //         "Image",
-                                  //         style: TextStyle(
-                                  //           color: Colors.black,
-                                  //           fontSize: fontSettings.fontSize,
-                                  //           fontWeight: fontSettings.fontWeight,
-                                  //         ),
-                                  //       ),
-                                  //     ),
-                                  //     Padding(
-                                  //       padding: const EdgeInsets.all(8.0),
-                                  //       child: entry.menImage2.isNotEmpty
-                                  //           ? GestureDetector(
-                                  //               onTap: () {
-                                  //                 showDialog(
-                                  //                   context: context,
-                                  //                   barrierDismissible: true,
-                                  //                   builder: (_) => Dialog(
-                                  //                     backgroundColor:
-                                  //                         Colors.transparent,
-                                  //                     child: Image.memory(
-                                  //                       base64Decode(
-                                  //                         entry.menImage2,
-                                  //                       ),
-                                  //                       fit: BoxFit.contain,
-                                  //                     ),
-                                  //                   ),
-                                  //                 );
-                                  //               },
-                                  //               child: Image.memory(
-                                  //                 base64Decode(entry.menImage2),
-                                  //                 height: 155,
-                                  //                 width: 80,
-                                  //                 fit: BoxFit.cover,
-                                  //               ),
-                                  //             )
-                                  //           : GestureDetector(
-                                  //               onTap: () {
-                                  //                 showDialog(
-                                  //                   context: context,
-                                  //                   barrierDismissible: true,
-                                  //                   builder: (_) => Dialog(
-                                  //                     backgroundColor:
-                                  //                         Colors.transparent,
-                                  //                     child: Image.asset(
-                                  //                       'assets/images/placeholder_image.jpg',
-                                  //                       fit: BoxFit.contain,
-                                  //                     ),
-                                  //                   ),
-                                  //                 );
-                                  //               },
-                                  //               child: Image.asset(
-                                  //                 'assets/images/placeholder_image.jpg',
-                                  //                 height: 80,
-                                  //                 width: 80,
-                                  //                 fit: BoxFit.cover,
-                                  //               ),
-                                  //             ),
-                                  //     ),
-                                  //   ],
-                                  // ),
-                                  // Replace the Image TableRow (around line 220) with this code:
-                                  TableRow(
-                                    children: [
-                                      Container(
-                                        width: double.infinity,
-                                        color: Constants.kPrimaryColor
-                                            .withAlpha(50),
-                                        padding: const EdgeInsets.all(8.0),
-                                        alignment: Alignment.centerLeft,
-                                        child: Text(
-                                          "Image",
-                                          style: TextStyle(
-                                            color: Colors.black,
-                                            fontSize: fontSettings.fontSize,
-                                            fontWeight: fontSettings.fontWeight,
-                                          ),
+                            return Column(
+                              children: [
+                                Table(
+                                  border: TableBorder.all(),
+                                  columnWidths: const {
+                                    0: FlexColumnWidth(),
+                                    1: FlexColumnWidth(),
+                                  },
+                                  children: [
+                                    TableRow(
+                                      decoration: const BoxDecoration(
+                                        color: Color.fromARGB(
+                                          47,
+                                          181,
+                                          225,
+                                          250,
                                         ),
                                       ),
-                                      Padding(
-                                        padding: const EdgeInsets.all(8.0),
-                                        child: entry.menImage2.isNotEmpty
-                                            ? GestureDetector(
-                                                onTap: () {
-                                                  showDialog(
-                                                    context: context,
-                                                    barrierDismissible: true,
-                                                    builder: (_) => Dialog(
-                                                      backgroundColor:
-                                                          Colors.transparent,
-                                                      child: Image.memory(
-                                                        base64Decode(
-                                                          entry.menImage2,
+                                      children: const [
+                                        Padding(
+                                          padding: EdgeInsets.all(8.0),
+                                          child: Text(
+                                            "",
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: EdgeInsets.all(8.0),
+                                          child: Text(
+                                            "Details",
+                                            style: TextStyle(
+                                              color: Colors.black,
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    TableRow(
+                                      children: [
+                                        Container(
+                                          width: double.infinity,
+                                          color: Constants.kPrimaryColor
+                                              .withAlpha(50),
+                                          padding: const EdgeInsets.all(8.0),
+                                          alignment: Alignment.centerLeft,
+                                          child: Text(
+                                            "Image",
+                                            style: TextStyle(
+                                              color: Colors.black,
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
+                                            ),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: entry.menImage2.isNotEmpty
+                                              ? GestureDetector(
+                                                  onTap: () {
+                                                    showDialog(
+                                                      context: context,
+                                                      barrierDismissible: true,
+                                                      builder: (_) => Dialog(
+                                                        backgroundColor:
+                                                            Colors.transparent,
+                                                        child: Image.memory(
+                                                          base64Decode(
+                                                            entry.menImage2,
+                                                          ),
+                                                          fit: BoxFit.contain,
                                                         ),
-                                                        fit: BoxFit.contain,
                                                       ),
+                                                    );
+                                                  },
+                                                  child: Image.memory(
+                                                    base64Decode(
+                                                      entry.menImage2,
                                                     ),
-                                                  );
-                                                },
-                                                child: Image.memory(
-                                                  base64Decode(entry.menImage2),
-                                                  fit: BoxFit.contain,
-                                                ),
-                                              )
-                                            : GestureDetector(
-                                                onTap: () {
-                                                  showDialog(
-                                                    context: context,
-                                                    barrierDismissible: true,
-                                                    builder: (_) => Dialog(
-                                                      backgroundColor:
-                                                          Colors.transparent,
-                                                      child: Image.asset(
-                                                        'assets/images/placeholder_image.jpg',
-                                                        fit: BoxFit.contain,
+                                                    fit: BoxFit.contain,
+                                                  ),
+                                                )
+                                              : GestureDetector(
+                                                  onTap: () {
+                                                    showDialog(
+                                                      context: context,
+                                                      barrierDismissible: true,
+                                                      builder: (_) => Dialog(
+                                                        backgroundColor:
+                                                            Colors.transparent,
+                                                        child: Image.asset(
+                                                          'assets/images/placeholder_image.jpg',
+                                                          fit: BoxFit.contain,
+                                                        ),
                                                       ),
-                                                    ),
-                                                  );
-                                                },
-                                                child: Image.asset(
-                                                  'assets/images/placeholder_image.jpg',
-                                                  fit: BoxFit.contain,
+                                                    );
+                                                  },
+                                                  child: Image.asset(
+                                                    'assets/images/placeholder_image.jpg',
+                                                    fit: BoxFit.contain,
+                                                  ),
                                                 ),
-                                              ),
-                                      ),
-                                    ],
+                                        ),
+                                      ],
+                                    ),
+                                    ..._buildGuestRows(entry, fontSettings),
+                                  ],
+                                ),
+                                // Red separator line after each guest table (except the last one)
+                                if (index < guests.length - 1)
+                                  Container(
+                                    height: 10,
+                                    // margin: const EdgeInsets.symmetric(
+                                    //   vertical: 16.0,
+                                    // ),
+                                    color: Colors.red,
                                   ),
-                                  ..._buildGuestRows(entry, fontSettings),
-                                ],
-                              )
-                              .expand((x) => x)
-                              .toList(),
+                              ],
+                            );
+                          }).toList(),
                         ),
                       ),
                     ),

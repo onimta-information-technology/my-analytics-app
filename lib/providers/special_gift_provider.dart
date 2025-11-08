@@ -15,8 +15,7 @@ class GiftNotifier extends StateNotifier<GiftState> {
   Future<void> getSpecialGiftData(int iid, String text1) async {
     try {
       var gifttList = await giftRepository.getSpecialGift(iid, text1);
-      print('API Response for iid $iid: $gifttList'); // <- debug here
-
+    
       switch (iid) {
         case 8890:
           state = state.copyWith(pendinggift: gifttList);
@@ -29,7 +28,7 @@ class GiftNotifier extends StateNotifier<GiftState> {
           break;
       }
     } catch (e) {
-      print('Error fetching gifts for iid $iid: $e');
+     
       // Optional: reset that specific state instead of all
       switch (iid) {
         case 8890:
@@ -64,7 +63,7 @@ class GiftNotifier extends StateNotifier<GiftState> {
       );
       state = state.copyWith(guestGiftData: giftList);
     } catch (e) {
-      print("Error fetching guest gift data: $e");
+
       state = state.copyWith(guestGiftData: []);
     }
   }
@@ -74,7 +73,7 @@ class GiftNotifier extends StateNotifier<GiftState> {
       final giftForList = await giftRepository.getGiftForList();
       state = state.copyWith(giftForList: giftForList);
     } catch (e) {
-      print("Error fetching gift for list: $e");
+   
       state = state.copyWith(giftForList: []);
     }
   }
@@ -159,7 +158,7 @@ class GiftNotifier extends StateNotifier<GiftState> {
       return apiResponse?['strRturnRes'] == true;
       
     } catch (e) {
-      print('Error in sendSpecialGiftFromUI: $e');
+  
       // Clear the response data on error
       state = state.copyWith(
         lastApiResponse: null,
@@ -174,8 +173,6 @@ class GiftNotifier extends StateNotifier<GiftState> {
       final prvgiftList = await giftRepository.getPrvGiftList(text1);
       state = state.copyWith(prvgiftList: prvgiftList);
     } catch (e, stack) {
-      print("Error fetching gift for list: $e");
-      print(stack);
       state = state.copyWith(prvgiftList: []);
     }
   }

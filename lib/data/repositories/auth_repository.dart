@@ -24,13 +24,13 @@ class AuthRepository {
         String accessToken = response['Token']['access_token'];
         // Debug print
         await storage.write(key: 'access_token', value: accessToken);
-        print('accessToken: $accessToken');
+       
         return accessToken;
       } else {
         throw Exception('Authentication failed: No token received');
       }
     } catch (e) {
-      print('Authentication failed with error: $e');
+     
       await storage.deleteAll();
       return "";
     }
@@ -38,8 +38,7 @@ class AuthRepository {
 
   Future<User> login(String text1, String text2) async {
     final deviceId = await DeviceId.get();
-    print('Device ID being used: $deviceId');
-
+  
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -83,7 +82,7 @@ class AuthRepository {
       "con": "1",
     });
 
-    print('hhhhh :$response');
+   
 
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List &&

@@ -7,12 +7,10 @@ class BadgeSyncHelper {
   /// Fetch actual unread count from server and update badge
   static Future<void> syncBadgeWithServer() async {
     try {
-      print('🔄 Syncing badge with server...');
-      
       // Get current user name
       final userName = await StorageUtil.getUserName();
       if (userName == null) {
-        print('❌ No user name found, cannot sync badge');
+       
         return;
       }
 
@@ -68,10 +66,10 @@ class BadgeSyncHelper {
 
         // Update badge with actual count
         await BadgeService().updateBadge(totalUnread);
-        print('✅ Badge synced: $totalUnread unread messages');
+        
       }
     } catch (e) {
-      print('❌ Error syncing badge with server: $e');
+     
     }
   }
 }

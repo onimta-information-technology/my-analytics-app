@@ -22,25 +22,17 @@ class MarketingNotifier extends StateNotifier<MarketingState> {
       final currentAppModeSettings = ref.read(appmodeSettingsProvider);
       final appMode = overrideAppMode ?? currentAppModeSettings.appMode;
 
-      print('=== MarketingNotifier: Starting combined data fetch ===');
-      print('IID: $iid, Sales Code: $salesCode, App Mode: $appMode');
-
       // Single API call to get both tables
       final result = await marketingRepository.getMarketingData(
         iid,
         appMode,
         salesCode!,
       );
-
-      print('MarketingNotifier - Combined API Response for iid $iid:');
-      print('Performance items: ${result.performanceData.length}');
-      print('Detailed items: ${result.detailedData.length}');
-
       if (result.performanceData.isNotEmpty) {
-        print('Sample performance data: ${result.performanceData.first}');
+     
       }
       if (result.detailedData.isNotEmpty) {
-        print('Sample detailed data: ${result.detailedData.first}');
+       
       }
 
       // Update state based on IID
@@ -75,10 +67,8 @@ class MarketingNotifier extends StateNotifier<MarketingState> {
           break;
       }
 
-      print('State updated successfully for IID $iid');
+    
     } catch (e, stackTrace) {
-      print('Error fetching marketing data for iid $iid: $e');
-      print('Stack trace: $stackTrace');
 
       // Reset specific state instead of all
       switch (iid) {
@@ -140,13 +130,9 @@ class MarketingNotifier extends StateNotifier<MarketingState> {
   Future<void> onAppModeChanged(AppMode newAppMode) async {
     // Only refresh data if a tab is currently selected
     if (state.selectedTab == -1) {
-      print('No tab selected, skipping app mode refresh');
+    
       return;
     }
-
-    print('=== App Mode Changed: $newAppMode ===');
-    print('Refreshing all tabs with new app mode: $newAppMode');
-
     // Refresh ALL tabs with the new app mode
     await refreshAllDataWithAppMode(newAppMode);
   }
@@ -165,9 +151,9 @@ class MarketingNotifier extends StateNotifier<MarketingState> {
         getMarketingData(8899, overrideAppMode: appMode), // last month
       ]);
 
-      print('All tabs refreshed successfully with app mode: $appMode');
+     
     } catch (e) {
-      print('Error refreshing all tabs with app mode $appMode: $e');
+   
     } finally {
       // Ensure loading state is turned off
       state = state.copyWith(isLoading: false);

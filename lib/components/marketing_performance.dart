@@ -58,8 +58,6 @@ class _MarketingPerformanceWidgetState
     if (_previousAppMode != null &&
         _previousAppMode != currentAppMode &&
         ref.read(marketingProvider).selectedTab != -1) {
-      print('=== App Mode Changed in MarketingPerformanceWidget ===');
-      print('Previous: $_previousAppMode, Current: $currentAppMode');
 
       // Only refresh if user has already selected a tab
       WidgetsBinding.instance.addPostFrameCallback((_) {

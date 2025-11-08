@@ -71,7 +71,7 @@ class FlightBooking {
       try {
         return DateTime.parse(dateString);
       } catch (e) {
-        print('Error parsing date: $e');
+       
         return null;
       }
     }
@@ -107,8 +107,7 @@ class FlightAirport {
       return value is Map<String, dynamic> ? value : null;
     }
 
-    // print("################ json['departure'] ##################");
-    // print(json['departure']);
+ 
 
     return FlightAirport(
       departure: safeParse(json['departure']) != null

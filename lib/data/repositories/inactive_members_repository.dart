@@ -72,16 +72,16 @@ class InactiveMembersRepository {
           if (appMode == AppMode.overallData && salesCode == 'AD001') {
             // AD001 in overall mode - show all data
             inactiveGuestList.add(guest);
-            print('Added guest overall: ${guest.memberName} with mGroup: ${guest.mGroup}');
+          
           } else {
             // Other users OR AD001 in myData mode - show only matching mGroup
             if (guest.mGroup.toString() == salesCode) {
               inactiveGuestList.add(guest);
-              print('Added guest: ${guest.memberName} with mGroup: ${guest.mGroup}');
+            
             }
           }
         }
-        print('Total inactive guests fetched: ${inactiveGuestList.length}');
+     
         return inactiveGuestList;
       } else {
         throw Exception('No inactive members found');

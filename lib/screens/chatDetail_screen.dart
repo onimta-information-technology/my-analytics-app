@@ -98,12 +98,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     _foregroundMessageSubscription = FirebaseMessaging.onMessage.listen((
       RemoteMessage message,
     ) {
-      print('========================================');
-      print('Foreground message received in IndividualChatScreen');
-      print('Message data: ${message.data}');
-      print('Current chat UUID: ${widget.contact.chatUuid}');
-      print('========================================');
-
+ 
       final chatId =
           message.data['chatId'] ??
           message.data['chat_id'] ??
@@ -111,29 +106,23 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           message.data['Chat_Id'];
       final msgType = message.data['msg_type'] ?? message.data['type'];
 
-      print('Extracted chatId: $chatId');
-      print('Extracted msgType: $msgType');
-
       bool isChatMessage =
           msgType == '11' ||
           msgType == 'chat' ||
           message.data.containsKey('message') ||
           message.data.containsKey('Details');
 
-      print('Is chat message: $isChatMessage');
-      print('ChatId matches: ${chatId == widget.contact.chatUuid}');
-
       if (isChatMessage) {
         if (chatId == null ||
             chatId.isEmpty ||
             chatId == widget.contact.chatUuid) {
-          print('✅ Refreshing chat messages...');
+         
           _fetchMessagesFromApi(silent: true);
         } else {
-          print('❌ ChatId does not match current chat');
+       
         }
       } else {
-        print('❌ Not a chat message notification');
+        
       }
     });
   }
@@ -145,7 +134,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         _currentUserName = userName;
       });
     } catch (e) {
-      print('Error getting current user name: $e');
+    
     }
   }
 
@@ -246,7 +235,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           }
         }
       } else {
-        print('Failed to fetch messages: ${response['error']}');
+     
         if (!silent && !updateReadStatusOnly) {
           setState(() {
             _isLoadingMessages = false;
@@ -254,7 +243,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         }
       }
     } catch (e) {
-      print('Error fetching messages from API: $e');
       if (!silent && !updateReadStatusOnly) {
         setState(() {
           _isLoadingMessages = false;
@@ -274,18 +262,16 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
 
       if (unreadMessageIds.isEmpty) return;
 
-      print('Marking ${unreadMessageIds.length} messages as read');
-
       final response = await FirebaseApiService.markMessagesAsRead(
         widget.contact.chatUuid,
         unreadMessageIds,
       );
 
       if (response['success'] == true) {
-        print('Successfully marked messages as read');
+    
       }
     } catch (e) {
-      print('Error marking messages as read: $e');
+     
     }
   }
 
@@ -297,8 +283,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         messageId,
       );
 
-      print('Deleting message from API: response $response');
-
       if (response['success'] != true) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -308,7 +292,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         );
       }
     } catch (e) {
-      print('Error deleting message via API: $e');
+   
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -325,7 +309,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     String localMessageId,
   ) async {
     if (_currentUserName == null) {
-      print('Current user name is null');
       return null;
     }
 
@@ -338,8 +321,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         body: messageText,
         chatId: widget.contact.chatUuid,
       );
-
-      print('Sending message to API: response $response');
 
       if (response['success'] == true && response['data'] != null) {
         final responseData = response['data'];
@@ -371,7 +352,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         );
       }
     } catch (e) {
-      print('Error sending message via API: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Error sending message. Please check your connection.'),
@@ -415,7 +395,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
       );
 
       if (apiMessageId != null) {
-        print('Message sent successfully with API ID: $apiMessageId');
       }
     }
   }
@@ -453,7 +432,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         );
       }
     } catch (e) {
-      print('Error taking photo: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error taking photo: $e'),
@@ -539,7 +517,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         );
       }
     } catch (e) {
-      print('Error picking image: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error selecting image: $e'),
@@ -583,7 +560,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         );
       }
     } catch (e) {
-      print('Error picking document: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error selecting document: $e'),
@@ -848,7 +824,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     super.didChangeAppLifecycleState(state);
 
     if (state == AppLifecycleState.resumed) {
-      print('App resumed - fetching new messages');
       _fetchMessagesFromApi(silent: true);
       // Clear badge when returning to chat
       BadgeService().clearBadge();

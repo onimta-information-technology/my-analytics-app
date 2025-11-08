@@ -66,7 +66,7 @@ class DirectWhatsAppPdfService {
         await _shareOnAndroid(file, message, memberName);
       }
     } catch (e) {
-      print('Error sharing PDF: $e');
+  
       rethrow;
     }
   }
@@ -133,7 +133,7 @@ class DirectWhatsAppPdfService {
       await file.writeAsBytes(await pdf.save());
       return fileName;
     } catch (e) {
-      print('Error saving PDF: $e');
+   
       rethrow;
     }
   }

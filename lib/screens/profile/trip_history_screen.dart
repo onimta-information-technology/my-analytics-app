@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/member_profile_repository.dart';
@@ -83,8 +82,6 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
         dateTo: dateTo,
       );
 
-      print(tripHistory[0].toJson());
-
       setState(() {
         _tripHistory = tripHistory;
         _isLoading = false;
@@ -108,7 +105,6 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
       setState(() {
         _isLoading = false;
       });
-      print('Error fetching trip history: $e');
 
       // Show error message to user
       if (mounted) {
@@ -128,13 +124,10 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
     if (guest!.memImage2 != null) return;
 
     if (guest.memImage2 == null) {
-      print("Fetching image for guest: ${guest.mid}");
       await ref
           .read(selectedGuestProvider.notifier)
           .getGuestImage(9021, guest.mid);
-    } else {
-      print("Image already loaded for guest: ${guest.memImage2}");
-    }
+    } else {}
   }
 
   Future<void> _selectArrivalDate(BuildContext context) async {
@@ -490,7 +483,14 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                         },
                         children: [
                           ..._tripHistory
-                              .map((entry) {
+                              //  .map((entry) {
+                              .asMap()
+                              .entries
+                              .map((mapEntry) {
+                                final index = mapEntry.key;
+                                final entry = mapEntry.value;
+                                final isLastEntry =
+                                    index == _tripHistory.length - 1;
                                 return [
                                   TableRow(
                                     decoration: const BoxDecoration(
@@ -1033,6 +1033,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                                             fontSettings
                                                                 .fontSize -
                                                             3,
+                                                        fontWeight: fontSettings
+                                                            .fontWeight,
                                                         color:
                                                             const Color.fromARGB(
                                                               255,
@@ -1049,6 +1051,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                                             fontSettings
                                                                 .fontSize -
                                                             4,
+                                                        fontWeight: fontSettings
+                                                            .fontWeight,
                                                         color:
                                                             const Color.fromARGB(
                                                               255,
@@ -1150,6 +1154,9 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                                                   fontSettings
                                                                       .fontSize -
                                                                   3,
+                                                              fontWeight:
+                                                                  fontSettings
+                                                                      .fontWeight,
                                                             ),
                                                           ),
                                                           Text(
@@ -1159,6 +1166,9 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                                                   fontSettings
                                                                       .fontSize -
                                                                   3,
+                                                              fontWeight:
+                                                                  fontSettings
+                                                                      .fontWeight,
                                                             ),
                                                           ),
                                                           Text(
@@ -1168,13 +1178,9 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                                                   fontSettings
                                                                       .fontSize -
                                                                   4,
-                                                              color:
-                                                                  const Color.fromARGB(
-                                                                    255,
-                                                                    83,
-                                                                    82,
-                                                                    82,
-                                                                  ),
+                                                              fontWeight:
+                                                                  fontSettings
+                                                                      .fontWeight,
                                                             ),
                                                           ),
                                                         ],
@@ -1250,6 +1256,19 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                       ),
                                     ],
                                   ),
+                                  if (!isLastEntry)
+                                    TableRow(
+                                      children: [
+                                        Container(
+                                          height: 10,
+                                          color: Colors.red,
+                                        ),
+                                        Container(
+                                          height: 10,
+                                          color: Colors.red,
+                                        ),
+                                      ],
+                                    ),
                                 ];
                               })
                               .expand((x) => x),

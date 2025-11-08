@@ -16,7 +16,6 @@ class BiometricService {
     try {
       return await _localAuth.canCheckBiometrics;
     } catch (e) {
-      print('Error checking biometrics availability: $e');
       return false;
     }
   }
@@ -30,7 +29,7 @@ class BiometricService {
       final availableBiometrics = await _localAuth.getAvailableBiometrics();
       return availableBiometrics.isNotEmpty;
     } catch (e) {
-      print('Error checking device support: $e');
+    
       return false;
     }
   }
@@ -40,7 +39,6 @@ class BiometricService {
     try {
       return await _localAuth.getAvailableBiometrics();
     } catch (e) {
-      print('Error getting available biometrics: $e');
       return [];
     }
   }
@@ -56,14 +54,8 @@ class BiometricService {
       bool isEnabled = enabled == 'true';
       bool credentialsExist = username != null && password != null;
       
-      print('🔍 BiometricService.isBiometricEnabled():');
-      print('   - Enabled flag: $isEnabled');
-      print('   - Credentials exist: $credentialsExist');
-      print('   - Final result: ${isEnabled && credentialsExist}');
-      
       return isEnabled && credentialsExist;
     } catch (e) {
-      print('Error checking biometric enabled status: $e');
       return false;
     }
   }
@@ -74,10 +66,8 @@ class BiometricService {
       await _secureStorage.write(key: _biometricEnabledKey, value: 'true');
       await _secureStorage.write(key: _usernameKey, value: username);
       await _secureStorage.write(key: _passwordKey, value: password);
-      print('✅ Biometric credentials saved');
-      print('   - Username: $username');
     } catch (e) {
-      print('❌ Error saving credentials: $e');
+
       throw Exception('Failed to save credentials');
     }
   }
@@ -87,19 +77,12 @@ class BiometricService {
     try {
       final username = await _secureStorage.read(key: _usernameKey);
       final password = await _secureStorage.read(key: _passwordKey);
-
-      print('🔐 BiometricService.getCredentials():');
-      print('   - Username: ${username != null ? '***' : 'null'}');
-      print('   - Password: ${password != null ? '***' : 'null'}');
-
       if (username != null && password != null) {
         return {'username': username, 'password': password};
       }
       
-      print('   ⚠️ Credentials missing!');
       return null;
     } catch (e) {
-      print('Error reading credentials: $e');
       return null;
     }
   }
@@ -111,7 +94,6 @@ class BiometricService {
     try {
       final isSupported = await isDeviceSupported();
       if (!isSupported) {
-        print('⚠️ Device does not support biometrics');
         return false;
       }
 
@@ -125,19 +107,19 @@ class BiometricService {
 
       return isAuthenticated;
     } on PlatformException catch (e) {
-      print('❌ Biometric authentication error: $e');
+     
       if (e.code == auth_error.notAvailable) {
-        print('Biometrics not available');
+  
       } else if (e.code == auth_error.notEnrolled) {
-        print('No biometrics enrolled');
+      
       } else if (e.code == auth_error.lockedOut) {
-        print('Too many attempts, locked out');
+      
       } else if (e.code == auth_error.permanentlyLockedOut) {
-        print('Permanently locked out');
+      
       }
       return false;
     } catch (e) {
-      print('❌ Unexpected authentication error: $e');
+  
       return false;
     }
   }
@@ -145,18 +127,14 @@ class BiometricService {
   // Disable biometric authentication (user manually disables it)
   Future<void> disableBiometric() async {
     try {
-      print('🧹 Disabling biometric authentication...');
+   
       
       await _secureStorage.delete(key: _biometricEnabledKey);
       await _secureStorage.delete(key: _usernameKey);
       await _secureStorage.delete(key: _passwordKey);
-      
-      print('✅ Biometric authentication disabled');
-      print('   - Deleted enabled flag');
-      print('   - Deleted username');
-      print('   - Deleted password');
+    
     } catch (e) {
-      print('❌ Error disabling biometric: $e');
+  
     }
   }
 

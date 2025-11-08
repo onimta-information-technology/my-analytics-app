@@ -89,11 +89,6 @@ class AuthNotifier extends StateNotifier<AuthState?> {
           key: _passwordKey,
         );
 
-        print('🔐 Backing up biometric data before clearing storage...');
-        print('   - Enabled: $biometricEnabled');
-        print('   - Username saved: ${biometricUsername != null}');
-        print('   - Password saved: ${biometricPassword != null}');
-
         await authRepository.storage.deleteAll();
         await StorageUtil.clearUserData();
 
@@ -103,29 +98,28 @@ class AuthNotifier extends StateNotifier<AuthState?> {
             key: _biometricEnabledKey,
             value: biometricEnabled,
           );
-          print('✅ Restored biometric_enabled');
+
         }
         if (biometricUsername != null) {
           await authRepository.storage.write(
             key: _usernameKey,
             value: biometricUsername,
           );
-          print('✅ Restored biometric_username');
+
         }
         if (biometricPassword != null) {
           await authRepository.storage.write(
             key: _passwordKey,
             value: biometricPassword,
           );
-          print('✅ Restored biometric_password');
         }
         await StorageUtil.saveAppVersion(currentVersion);
 
         state = AuthState(user: null, isLoading: false, error: null);
-        print('Reinstall/version change detected. Cleared old data.');
+       
       }
     } catch (e) {
-      print('Version/reinstall check failed: $e');
+  
     }
   }
 
@@ -146,7 +140,7 @@ class AuthNotifier extends StateNotifier<AuthState?> {
 
       state = AuthState(user: user, isLoading: false);
     } catch (e) {
-      print('Login failed: $e');
+     
       String errorMessage = e.toString();
       if (errorMessage.startsWith('Exception: ')) {
         errorMessage = errorMessage.substring(
@@ -176,12 +170,12 @@ class AuthNotifier extends StateNotifier<AuthState?> {
         state = AuthState(user: _pendingUser, isLoading: false);
         _pendingUser = null; // Clear pending data
 
-        print('Login completed successfully after OTP verification');
+   
       } else {
         throw Exception('No pending user data found');
       }
     } catch (e) {
-      print('Error completing login: $e');
+
       state = AuthState(
         user: null,
         isLoading: false,
@@ -217,19 +211,19 @@ class AuthNotifier extends StateNotifier<AuthState?> {
   // }
   Future<void> logout() async {
     try {
-      print('🔴 Starting logout process...');
+
     
       final prefs = await SharedPreferences.getInstance();
       final fcmToken = prefs.getString('FCMToken');
       if (fcmToken != null) {
         await FirebaseMessaging.instance.deleteToken();
-        print('FCM token deleted from device');
+     
 
         // Clear stored FCM token
         await prefs.remove('FCMToken');
-        print('✅ FCM token removed from local storage');
+    
       } else {
-        print('⚠️ No FCM token found in preferences');
+      
       }
       // Clear user data
       await StorageUtil.clearUserData();
@@ -241,10 +235,9 @@ class AuthNotifier extends StateNotifier<AuthState?> {
       // Update state
       state = AuthState(user: null, isLoading: false, error: null);
 
-      print('✅ Logout completed successfully');
+   
     } catch (e) {
-      print('❌ Error during logout: $e');
-
+   
       // Still clear local data even if server call fails
       await StorageUtil.clearUserData();
       _currentSessionPassword = null;

@@ -135,7 +135,6 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
         _isGuestLoading = false;
       });
     } catch (e) {
-      print("Error loading guest data: $e");
       setState(() {
         _isGuestLoading = false;
       });
@@ -293,7 +292,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
         throw Exception('Failed to approve reservation');
       }
     } catch (e) {
-      print("Error approving reservation: $e");
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to approve reservation: $e'),
@@ -348,7 +347,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
         throw Exception('Failed to reject reservation');
       }
     } catch (e) {
-      print("Error rejecting reservation: $e");
+   
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to reject reservation: $e'),
@@ -397,9 +396,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
           status == "1";
 
       _airTicketRequisition = hasAirTickets ? "Yes" : "No";
-      print(
-        "DEBUG - Final _airTicketRequisition value: $_airTicketRequisition",
-      );
+     
       _remarksController.text = selectedReservation.remarks;
     }
     final fontSettings = ref.watch(fontSettingsProvider);
@@ -543,7 +540,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                             setState(() {
                               _isLoading = false;
                             });
-                            print("Error searching guest: $e");
+
                           }
                         },
                         child: const Icon(Icons.person_search, size: 25),
@@ -895,7 +892,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                     maxLines: 5,
                     keyboardType: TextInputType.multiline,
                     onChanged: (value) {
-                      print("Textarea content: $value");
+                    
                     },
                   ),
                   const SizedBox(height: 16.0),

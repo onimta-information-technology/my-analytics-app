@@ -58,8 +58,7 @@ class GiftsRepository {
             Guest.withGift(mid: table['MID'], memberName: table['MNAME']),
           );
         }
-        print("hello");
-        print(giftGuestsList[0].memberName);
+ 
         return giftGuestsList;
       } else {
         return [];
@@ -579,12 +578,12 @@ class GiftsRepository {
       final resp = await apiService.post('CommonExecute', payload);
 
       // Print the full response for debugging
-      print('insertSpecialGiftRequest full response: $resp');
+     
 
       // Return the full response instead of just the boolean
       return resp;
     } catch (e) {
-      print('insertSpecialGiftRequest error: $e');
+   
       return null;
     }
   }
@@ -655,7 +654,7 @@ class GiftsRepository {
 
       return resp['strRturnRes'];
     } catch (e) {
-      print('APProve specialGiftRequest error: $e');
+   
       return false;
     }
   }
@@ -708,7 +707,7 @@ class GiftsRepository {
 
       return resp['strRturnRes'];
     } catch (e) {
-      print('APProve specialGiftRequest error: $e');
+    
       return false;
     }
   }

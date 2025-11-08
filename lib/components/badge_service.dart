@@ -20,9 +20,9 @@ class BadgeService {
       // Set initial badge
       await _setBadgeInNotification(_currentBadgeCount);
       
-      print('Badge service initialized with count: $_currentBadgeCount');
+   
     } catch (e) {
-      print('Error initializing badge service: $e');
+  
     }
   }
 
@@ -38,9 +38,9 @@ class BadgeService {
       // Update badge via Awesome Notifications
       await _setBadgeInNotification(_currentBadgeCount);
       
-      print('✅ Badge updated to: $_currentBadgeCount');
+     
     } catch (e) {
-      print('❌ Error updating badge: $e');
+    
     }
   }
 
@@ -55,7 +55,7 @@ class BadgeService {
         await AwesomeNotifications().resetGlobalBadge();
       }
     } catch (e) {
-      print('Error setting badge in notification: $e');
+     
     }
   }
 
@@ -83,7 +83,7 @@ class BadgeService {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getInt(_badgeCountKey) ?? 0;
     } catch (e) {
-      print('Error getting saved badge count: $e');
+     
       return 0;
     }
   }

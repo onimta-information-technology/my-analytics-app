@@ -42,13 +42,6 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
   void _loadMemberDetails() {
     final notifier = ref.read(marketingProvider.notifier);
     filteredMembers = notifier.getDetailedDataForSM(widget.smCode);
-
-    print('=== MarketingDetailPage ===');
-    print('SM Code: ${widget.smCode}');
-    print('SM Name: ${widget.smName}');
-    print('Tab Index: ${widget.currentTabIndex}');
-    print('Filtered members count: ${filteredMembers.length}');
-
     setState(() {});
   }
 

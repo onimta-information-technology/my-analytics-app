@@ -19,13 +19,10 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
       // 🔹 Store current mode for this operation
       _currentMode = mode;
 
-      print('Loading data for iid: $iid, mode: $mode');
-
       var guestList = await guestRepository.getGuestData(iid, text1);
 
       // 🔹 Check if mode changed during API call
       if (_currentMode != mode) {
-        print('Mode changed during API call, discarding results');
         return;
       }
 
@@ -34,30 +31,30 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
       // 🔹 Apply filtering based on mode
       if (mode == AppMode.myData && mCode != null) {
         guestList = guestList.where((guest) => guest.mGroup == mCode).toList();
-        print('Filtered ${guestList.length} guests for mCode: $mCode');
+     
       } else {
-        print('Using all ${guestList.length} guests (mode: $mode)');
+       
       }
 
       // 🔹 Update state based on iid
       switch (iid) {
         case 9009: // Today
           state = state.copyWith(todayGuests: guestList);
-          print('Updated today guests: ${guestList.length}');
+        
           break;
         case 9010: // Yesterday
           state = state.copyWith(yesterdayGuests: guestList);
-          print('Updated yesterday guests: ${guestList.length}');
+      
           break;
         case 9011: // Monthly
           state = state.copyWith(monthlyGuests: guestList);
-          print('Updated monthly guests: ${guestList.length}');
+         
           break;
         default:
-          print('Unknown iid: $iid');
+      
       }
     } catch (e) {
-      print('Error retrieving data for iid $iid: $e');
+   
 
       // 🔹 Set empty list for specific period on error
       switch (iid) {
@@ -75,7 +72,7 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
   }
 
   void resetData() {
-    print('Resetting guest data');
+  
     state = GuestsState();
     _currentMode = null;
   }

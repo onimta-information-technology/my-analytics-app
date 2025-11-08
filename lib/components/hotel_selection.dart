@@ -282,7 +282,7 @@ class _HotelAndRoomSelectionBottomSheetState
       costIndex = hotel.costIndex;
     });
 
-    print(hotel.selectedCost);
+   
   }
 
   void _removeHotel(int index) {
@@ -333,9 +333,7 @@ class _HotelAndRoomSelectionBottomSheetState
       } else {
         hotelList.add(hotel);
       }
-      print("############### hotelList #######################");
-      print(hotelList[0].toJson());
-      print("######################################");
+    
     });
 
     _clearSelection();

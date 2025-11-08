@@ -93,7 +93,7 @@ class HotelDescip {
       try {
         return DateTime.parse(dateString);
       } catch (e) {
-        print('Error parsing date: $e');
+     
         return null;
       }
     }
@@ -111,7 +111,7 @@ class HotelDescip {
 
       return DateTimeRange(start: startDate, end: endDate);
     } catch (e) {
-      print('Error parsing date range: $e');
+  
       return null;
     }
   }

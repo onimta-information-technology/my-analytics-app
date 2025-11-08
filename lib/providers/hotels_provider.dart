@@ -14,7 +14,7 @@ class HotelsNotifier extends StateNotifier<List<HotelResponse>> {
       final hotels = await hotelRepository.getAllHotels();
       state = hotels;
     } catch (e) {
-      print("Error fetching hotels: $e");
+    
       state = [];
     }
   }

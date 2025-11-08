@@ -81,9 +81,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _showErrorSnackBar('User credentials not found. Please login first.');
         return;
       }
-
-      print('🔐 Requesting $biometricName authentication to enable...');
-
       // Authenticate with biometric
       final authenticated = await _biometricService.authenticate(
         reason: 'Authenticate to enable $biometricName for login',
@@ -97,15 +94,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _isBiometricEnabled = true;
           });
           _showSuccessSnackBar('$biometricName enabled successfully');
-          print('✅ $biometricName enabled successfully');
+
         } else {
           _showErrorSnackBar('Password not found. Please login again.');
         }
       } else {
-        print('❌ Biometric authentication cancelled or failed');
+       
       }
     } catch (e) {
-      print('❌ Error enabling biometric: $e');
       _showErrorSnackBar('Failed to enable biometric authentication');
     }
   }
@@ -118,21 +114,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           .read(authProvider.notifier)
           .getCurrentSessionPassword();
       if (sessionPassword != null && sessionPassword.isNotEmpty) {
-        print('✅ Retrieved password from current session');
+
         return sessionPassword;
       }
 
       // If not in session, check if we have stored biometric credentials
       final credentials = await _biometricService.getCredentials();
       if (credentials != null && credentials['password'] != null) {
-        print('✅ Retrieved password from biometric storage');
+      
         return credentials['password'];
       }
-
-      print('⚠️ No password found in session or storage');
       return null;
     } catch (e) {
-      print('Error getting stored password: $e');
+    
       return null;
     }
   }
@@ -144,21 +138,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           .read(authProvider.notifier)
           .getCurrentSessionUsername();
       if (sessionUsername != null && sessionUsername.isNotEmpty) {
-        print('✅ Retrieved Username from current session');
         return sessionUsername;
       }
 
       // If not in session, check if we have stored biometric credentials
       final credentials = await _biometricService.getCredentials();
       if (credentials != null && credentials['username'] != null) {
-        print('✅ Retrieved username from biometric storage');
+       
         return credentials['username'];
       }
 
-      print('⚠️ No username found in session or storage');
       return null;
     } catch (e) {
-      print('Error getting stored username: $e');
+    
       return null;
     }
   }
@@ -227,7 +219,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         });
         _showSuccessSnackBar('$biometricName authentication disabled');
       } catch (e) {
-        print('Error disabling biometric: $e');
+      
         _showErrorSnackBar('Failed to disable biometric authentication');
       }
     }

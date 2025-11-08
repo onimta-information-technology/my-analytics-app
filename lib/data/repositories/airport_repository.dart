@@ -47,9 +47,7 @@ class AirportRepository {
           Airport airportResponse = Airport.fromJson(json);
           airports.add(airportResponse);
         }
-        print("######################### airports #########################");
-        print(airports);
-        print("#########################################");
+      
 
         return airports;
       } else {

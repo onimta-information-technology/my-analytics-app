@@ -29,12 +29,6 @@ class MarketingRepository {
     final actualSalesCode = await StorageUtil.getSalesCode();
     final deviceId = await DeviceId.get();
 
-    print('=== Marketing Data API Call ===');
-    print('IID: $iid');
-    print('User Sales Code (parameter): $userSalesCode');
-    print('Actual Sales Code (from storage): $actualSalesCode');
-    print('App Mode: $appMode');
-
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -64,7 +58,6 @@ class MarketingRepository {
       "con": "1",
     });
 
-    print('Full API Response: $response');
 
     List<MarketingPerformance> marketingPerformanceList = [];
     List<MarketingDetailedData> marketingDetailedList = [];
@@ -74,36 +67,28 @@ class MarketingRepository {
         response['CommonResult']['Table'] is List &&
         response['CommonResult']['Table'].isNotEmpty) {
       final tableData = response['CommonResult']['Table'];
-      print('Table Data: $tableData');
+    
 
       for (var table in tableData) {
         final performance = MarketingPerformance.fromJson(table);
-        print(
-          'Processing: ${performance.smName} (SM: ${performance.sm}, WinLost: ${performance.winLost})',
-        );
+      
 
         // Filter based on app mode and sales code
         if (actualSalesCode == 'AD001' && appMode == AppMode.overallData) {
           marketingPerformanceList.add(performance);
-          print('✅ Added (admin access): ${performance.smName}');
+
         } else {
-          print(
-            '🔍 Checking filter: SM(${performance.sm}) vs SalesCode($actualSalesCode)',
-          );
+      
           if (performance.sm.toString() == actualSalesCode) {
             marketingPerformanceList.add(performance);
-            print('✅ Added (filtered): ${performance.smName}');
+           
           } else {
-            print(
-              '❌ Filtered out: ${performance.smName} (SM: ${performance.sm} != $actualSalesCode)',
-            );
+          
           }
         }
       }
 
-      print(
-        'Total marketing performance after filtering: ${marketingPerformanceList.length}',
-      );
+     
     }
 
     // Process Table1 (Detailed Member Data)
@@ -111,31 +96,26 @@ class MarketingRepository {
         response['CommonResult']['Table1'] is List &&
         response['CommonResult']['Table1'].isNotEmpty) {
       final table1Data = response['CommonResult']['Table1'];
-      print('Table1 Data: $table1Data');
+
 
       for (var memberData in table1Data) {
         final detailed = MarketingDetailedData.fromJson(memberData);
-        print('Processing member: ${detailed.memId} (SM: ${detailed.sm})');
 
         // Apply same filtering logic as performance data
         if (actualSalesCode == 'AD001' && appMode == AppMode.overallData) {
           marketingDetailedList.add(detailed);
-          print('✅ Added detailed (admin access): ${detailed.memId}');
+      
         } else {
           if (detailed.sm.toString() == actualSalesCode) {
             marketingDetailedList.add(detailed);
-            print('✅ Added detailed (filtered): ${detailed.memId}');
+         
           } else {
-            print(
-              '❌ Filtered out detailed: ${detailed.memId} (SM: ${detailed.sm} != $actualSalesCode)',
-            );
+            
           }
         }
       }
 
-      print(
-        'Total detailed data after filtering: ${marketingDetailedList.length}',
-      );
+      
     }
 
     return MarketingApiResult(

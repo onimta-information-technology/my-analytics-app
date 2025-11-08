@@ -23,9 +23,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 // Top-level function for background message handling
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  print('Background message received: ${message.messageId}');
-  print('Title: ${message.notification?.title}');
-  print('Body: ${message.notification?.body}');
+
   try {
     final badgeService = BadgeService();
     await badgeService.initialize();
@@ -33,11 +31,10 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     try {
       await BadgeSyncHelper.syncBadgeWithServer();
     } catch (e) {
-      print('Could not sync with server in background: $e');
-    }
+}
   } catch (e) {
-    print('Error updating badge in background: $e');
-  }
+  
+ }
 }
 
 void main() async {
@@ -89,7 +86,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       // Clear badge when app comes to foreground
       _badgeService.clearBadge();
-      print('App resumed - badge cleared');
+     
     }
   }
 
@@ -99,19 +96,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         .requestPermission(alert: true, badge: true, sound: true);
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print('User granted notification permission');
+   
 
       // Listen for token refresh
       FirebaseMessaging.instance.onTokenRefresh.listen((String token) {
-        print('FCM Token refreshed: $token');
+      
         // Update token on your server
       });
 
       // Handle foreground messages
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        print('Foreground message received!');
-        print('Title: ${message.notification?.title}');
-        print('Body: ${message.notification?.body}');
+       
 
         // Show local notification or handle as needed
         _showForegroundNotification(message);
@@ -121,9 +116,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
       // Handle notification taps when app is in background but not terminated
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-        print('Notification tapped!');
-        print('Title: ${message.notification?.title}');
-        print('Body: ${message.notification?.body}');
+       
         // Clear badge when notification is tapped
         _badgeService.clearBadge();
 
@@ -131,7 +124,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         _handleNotificationTap(message);
       });
     } else {
-      print('User declined notification permission');
+     
     }
   }
 
@@ -141,17 +134,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 
   void _handleNotificationTap(RemoteMessage message) {
-    // if (message.data['type'] == 'chat' ||
-    //     message.data['screen'] == 'chat' ||
-    //     message.data.containsKey('chat')) {
-    //   // Ensure we're on home first, then navigate
-    //   Future.delayed(Duration(milliseconds: 300), () {
-    //     context.go('/menu/chats');
-    //   });
-    // }
-    // print('Handling notification tap with data: ${message.data}');
-    print('Handling notification tap with data: ${message.data}');
-
     // Parse the notification data
     Map<String, dynamic>? chatData;
     String? detailsJson = message.data['Details'];
@@ -165,9 +147,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           'senderId': chatDetails['senderId'] ?? '',
           'openChat': true,
         };
-        print('Extracted chat data from notification: $chatData');
+      
       } catch (e) {
-        print('Error parsing notification Details: $e');
+       
       }
     }
 
@@ -191,14 +173,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         final context = navigatorKey.currentContext;
         if (context != null && context.mounted) {
           if (chatData != null && chatData['chatId'] != '') {
-            print('Navigating to chat with data: $chatData');
+        
             context.go('/menu/chats', extra: chatData);
           } else {
-            print('Navigating to chats list');
+          
             context.go('/menu/chats');
           }
         } else {
-          print('Context not available for navigation');
+        
         }
       });
     });
@@ -255,14 +237,12 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<bool> _checkInternetConnectivity() async {
     try {
-      print('Starting internet connectivity check...');
-
       // First check basic connectivity
       final connectivityResult = await Connectivity().checkConnectivity();
-      print('Connectivity status: $connectivityResult');
+    
 
       if (connectivityResult == ConnectivityResult.none) {
-        print('No connectivity detected');
+
         return false;
       }
 
@@ -281,27 +261,27 @@ class _SplashScreenState extends State<SplashScreen> {
         client.close();
 
         if (response.statusCode == 204 || response.statusCode == 200) {
-          print('Internet access confirmed - HTTP 200 response');
+        
           return true;
         } else {
-          print('HTTP request failed with status: ${response.statusCode}');
+         
           return false;
         }
       } on SocketException catch (e) {
-        print('Socket exception: $e');
+    
         client.close();
         return false;
       } on TimeoutException catch (e) {
-        print('Timeout exception: $e');
+     
         client.close();
         return false;
       } on HandshakeException catch (e) {
-        print('Handshake exception: $e');
+       
         client.close();
         return false;
       }
     } catch (e) {
-      print('General error checking connectivity: $e');
+   
       return false;
     }
   }
@@ -367,19 +347,16 @@ class _SplashScreenState extends State<SplashScreen> {
 
     // Check internet connectivity first
     _hasInternet = await _checkInternetConnectivity();
-    print('Internet check result: $_hasInternet');
+  
 
     if (!_hasInternet) {
-      print('No internet detected - showing dialog');
+    
       // Show no internet dialog
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showNoInternetDialog();
       });
       return;
     }
-
-    print('Internet available - proceeding with initialization');
-
     // Check if app was opened from a terminated state via notification
     RemoteMessage? initialMessage = await FirebaseMessaging.instance
         .getInitialMessage();
@@ -393,10 +370,7 @@ class _SplashScreenState extends State<SplashScreen> {
     Map<String, dynamic>? notificationChatData;
 
     if (initialMessage != null) {
-      print(
-        'App opened from FCM notification: ${initialMessage.notification?.title}',
-      );
-
+ 
       // Parse Details from FCM notification
       String? detailsJson = initialMessage.data['Details'];
       if (detailsJson != null) {
@@ -408,14 +382,13 @@ class _SplashScreenState extends State<SplashScreen> {
             'senderId': chatDetails['senderId'] ?? '',
             'openChat': true,
           };
-          print('Extracted chat data: $notificationChatData');
+         
         } catch (e) {
-          print('Error parsing notification Details: $e');
+       
         }
       }
     } else if (receivedAction != null && receivedAction.payload != null) {
-      print('App opened from Awesome notification: ${receivedAction.payload}');
-
+      
       // Extract from Awesome Notifications payload
       notificationChatData = {
         'chatId': receivedAction.payload!['chatId'] ?? '',
@@ -423,7 +396,7 @@ class _SplashScreenState extends State<SplashScreen> {
         'senderId': receivedAction.payload!['senderId'] ?? '',
         'openChat': true,
       };
-      print('Extracted chat data: $notificationChatData');
+    
     }
 
     Future.delayed(const Duration(seconds: 3), () async {
@@ -434,7 +407,6 @@ class _SplashScreenState extends State<SplashScreen> {
           // Check if opened from notification
           if (notificationChatData != null &&
               notificationChatData['chatId'] != '') {
-            print('Navigating to chat with data: $notificationChatData');
             // Navigate directly to chat with the notification data
             context.go('/menu/chats', extra: notificationChatData);
           } else {

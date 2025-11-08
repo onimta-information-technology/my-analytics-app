@@ -8,7 +8,6 @@ class CurrentChatState {
   // Set the current open chat
   void setCurrentChat(String? chatId) {
     _currentChatId = chatId;
-    print('📱 Current chat set to: $_currentChatId');
   }
 
   // Get the current open chat
@@ -24,7 +23,6 @@ class CurrentChatState {
 
   // Clear the current chat
   void clearCurrentChat() {
-    print('📱 Clearing current chat: $_currentChatId');
     _currentChatId = null;
   }
 }

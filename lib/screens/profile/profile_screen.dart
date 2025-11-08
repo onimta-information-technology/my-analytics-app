@@ -78,12 +78,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     if (guest!.memImage2 != null) return;
 
     if (guest.memImage2 == null) {
-      print("Fetching image for guest: ${guest.mid}");
+     
       await ref
           .read(selectedGuestProvider.notifier)
           .getGuestImage(9021, guest.mid);
     } else {
-      print("Image already loaded for guest: ${guest.memImage2}");
+     
     }
   }
 
@@ -92,7 +92,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       _isLoading = true;
     });
     final guest = ref.read(selectedGuestProvider);
-    print(guest);
+   
     if (guest == null) return;
     await ref
         .read(mainProfileDetailsProvider.notifier)

@@ -57,16 +57,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _initializeBiometrics() async {
     try {
-      print('🔍 Initializing biometrics...');
-
+   
       final isAvailable = await _biometricService.isDeviceSupported();
       final isEnabled = await _biometricService.isBiometricEnabled();
       final biometrics = await _biometricService.getAvailableBiometrics();
 
-      print('📊 Biometric status:');
-      print('  - Available: $isAvailable');
-      print('  - Enabled: $isEnabled');
-      print('  - Types: ${biometrics.map((e) => e.name).join(", ")}');
 
       setState(() {
         _isBiometricAvailable = isAvailable;
@@ -77,7 +72,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       // If biometric is enabled and available, trigger login after UI is ready
       if (isEnabled && isAvailable && mounted) {
-        print('✅ Biometric is enabled and available - triggering auto-login');
+      
 
         // Add a delay to ensure UI is fully rendered
         await Future.delayed(const Duration(milliseconds: 500));
@@ -87,7 +82,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         }
       }
     } catch (e) {
-      print('❌ Error initializing biometrics: $e');
+   
       setState(() {
         _biometricCheckComplete = true;
       });
@@ -96,19 +91,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _loginWithBiometric() async {
     try {
-      print('🔐 Starting biometric login...');
 
       final biometricName = _biometricService.getBiometricTypeName(
         _availableBiometrics,
       );
 
-      print('🔐 Prompting for $biometricName authentication...');
 
       final authenticated = await _biometricService.authenticate(
         reason: 'Authenticate to login to Bally\'s',
       );
 
-      print('🔐 Biometric result: $authenticated');
 
       if (authenticated) {
         final credentials = await _biometricService.getCredentials();
@@ -117,17 +109,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           _username = credentials['username']!;
           _password = credentials['password']!;
 
-          print('✅ Credentials retrieved - performing login');
+      
           await _performLogin(showBiometricDialog: false);
         } else {
-          print('⚠️ Credentials not found in secure storage');
+       
           _showErrorSnackBar('Credentials not found. Please login manually.');
         }
       } else {
-        print('❌ Biometric authentication cancelled or failed');
+      
       }
     } catch (e) {
-      print('❌ Biometric login error: $e');
+    
       _showErrorSnackBar('Biometric authentication failed: ${e.toString()}');
     }
   }
@@ -141,7 +133,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _performLogin({required bool showBiometricDialog}) async {
-    print('Attempting login for username: $_username');
+  
 
     ref.read(authProvider.notifier).clearError();
 
@@ -158,12 +150,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
 
       if (authState.user != null) {
-        print('Login credentials validated successfully');
+      
 
         String? phoneNumber = await _getUserPhoneNumber();
 
         if (phoneNumber != null && phoneNumber.isNotEmpty) {
-          print('Phone number retrieved: $phoneNumber');
 
           try {
             await _sendOTP(phoneNumber);
@@ -197,7 +188,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         return authState.user!.mobileNumber;
       }
     } catch (e) {
-      print('Error getting phone number: $e');
+     
       return null;
     }
     return null;
@@ -205,11 +196,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _sendOTP(String phoneNumber) async {
     try {
-      print('Sending OTP to: $phoneNumber');
+   
       await Future.delayed(const Duration(seconds: 1));
-      print('OTP simulation sent successfully');
+    
     } catch (e) {
-      print('Error sending OTP: $e');
+    
       rethrow;
     }
   }

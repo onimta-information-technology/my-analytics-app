@@ -73,7 +73,7 @@ dependencies:
   awesome_notifications: ^0.10.1
   app_settings: ^5.1.1
   local_auth: ^2.3.0
-
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter

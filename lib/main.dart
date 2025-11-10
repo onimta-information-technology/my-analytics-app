@@ -27,14 +27,30 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   try {
     final badgeService = BadgeService();
     await badgeService.initialize();
-    await badgeService.addBadge(1);
+
+    // Try to read the system/global badge counter (plugin) to avoid
+    // overwriting a badge set by the OS (APNs payload). Fall back to
+    // the locally saved count.
+    int systemBadge = 0;
+    try {
+      systemBadge = await AwesomeNotifications().getGlobalBadgeCounter();
+    } catch (e) {
+      // If plugin not available in background/isolate, ignore and use saved
+    }
+
+    final savedCount = await badgeService.getSavedBadgeCount();
+    final base = systemBadge > savedCount ? systemBadge : savedCount;
+    await badgeService.updateBadge(base + 1);
+
+    // Sync with server for accurate count
     try {
       await BadgeSyncHelper.syncBadgeWithServer();
     } catch (e) {
-}
+      print('Badge sync error in background: $e');
+    }
   } catch (e) {
-
- }
+    print('Background handler error: $e');
+  }
 }
 
 void main() async {
@@ -84,15 +100,22 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     super.didChangeAppLifecycleState(state);
 
     if (state == AppLifecycleState.resumed) {
-      // Clear badge when app comes to foreground
-      _badgeService.clearBadge();
+      // Sync badge with server when app comes to foreground
+      BadgeSyncHelper.syncBadgeWithServer();
+    } else if (state == AppLifecycleState.paused) {
+      // Update badge when going to background
+      BadgeSyncHelper.syncBadgeWithServer();
     }
   }
 
   Future<void> _initializeFirebaseMessaging() async {
-    // Request permission for notifications
+    // Request permission for notifications with badge enabled
     NotificationSettings settings = await FirebaseMessaging.instance
-        .requestPermission(alert: true, badge: true, sound: true);
+        .requestPermission(
+          alert: true,
+          badge: true, // CRITICAL for iOS
+          sound: true,
+        );
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
       // Listen for token refresh
@@ -102,21 +125,29 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
       // Handle foreground messages
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        // Show local notification or handle as needed
         _showForegroundNotification(message);
-        // Update badge count (increment by 1)
+        // Increment badge
         _badgeService.addBadge(1);
       });
 
-      // Handle notification taps when app is in background but not terminated
+      // Handle notification taps when app is in background
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-        // Clear badge when notification is tapped
-        _badgeService.clearBadge();
-
-        // Navigate to specific screen if needed
+        // Sync badge with server to get accurate count
+        BadgeSyncHelper.syncBadgeWithServer();
         _handleNotificationTap(message);
       });
-    } else {}
+
+      // Handle notification tap when app was terminated
+      FirebaseMessaging.instance.getInitialMessage().then((
+        RemoteMessage? message,
+      ) {
+        if (message != null) {
+          // Sync badge with server
+          BadgeSyncHelper.syncBadgeWithServer();
+          _handleNotificationTap(message);
+        }
+      });
+    }
   }
 
   Future<void> _showForegroundNotification(RemoteMessage message) async {
@@ -247,13 +278,13 @@ class _SplashScreenState extends State<SplashScreen> {
         } else {
           return false;
         }
-      } on SocketException catch (e) {
+      } on SocketException catch (_) {
         client.close();
         return false;
-      } on TimeoutException catch (e) {
+      } on TimeoutException catch (_) {
         client.close();
         return false;
-      } on HandshakeException catch (e) {
+      } on HandshakeException catch (_) {
         client.close();
         return false;
       }

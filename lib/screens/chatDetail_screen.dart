@@ -685,15 +685,15 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         margin: const EdgeInsets.symmetric(vertical: 12),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         decoration: BoxDecoration(
-          color: const Color(0xFF202C33),
+          color: Color.fromARGB(255, 143, 143, 143),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
           _formatDateSeparator(date),
           style: const TextStyle(
-            color: Color(0xFFAEBCC4),
+            color: Color.fromARGB(255, 2, 2, 2),
             fontSize: 12,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w900,
           ),
         ),
       ),

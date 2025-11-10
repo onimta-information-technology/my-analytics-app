@@ -114,15 +114,6 @@ class _DailyWalkingGuestScreenState
     );
 
     ref.read(selectedGuestProvider.notifier).setSelectedGuest(selectedGuest);
-
-    // ref
-    //     .read(tripHistoryProvider.notifier)
-    //     .getTripHistory(
-    //       dateFrom: safeDateFrom,
-    //       dateTo: tomorrow,
-    //       playerId: guest.mId,
-    //     );
-
     context.push(
       '/home/profile/guest-performance',
       extra: {'startDateNotifier': yesterday, 'endDateNotifier': safeDateFrom},
@@ -206,120 +197,6 @@ class _DailyWalkingGuestScreenState
                         ],
                       ),
                     ),
-
-                    // Scrollable Table
-                    // Expanded(
-                    //   child: SingleChildScrollView(
-                    //     padding: const EdgeInsets.all(16.0),
-                    //     child: Table(
-                    //       border: TableBorder.all(),
-                    //       columnWidths: const {
-                    //         0: FlexColumnWidth(),
-                    //         1: FlexColumnWidth(),
-                    //       },
-                    //       children: guests
-                    //           .map(
-                    //             (entry) => [
-                    //               TableRow(
-                    //                 decoration: const BoxDecoration(
-                    //                   color: Color.fromARGB(47, 181, 225, 250),
-                    //                 ),
-                    //                 children: const [
-                    //                   Padding(
-                    //                     padding: EdgeInsets.all(8.0),
-                    //                     child: Text(
-                    //                       "",
-                    //                       style: TextStyle(
-                    //                         fontWeight: FontWeight.w900,
-                    //                       ),
-                    //                     ),
-                    //                   ),
-                    //                   Padding(
-                    //                     padding: EdgeInsets.all(8.0),
-                    //                     child: Text(
-                    //                       "Details",
-                    //                       style: TextStyle(
-                    //                         color: Colors.black,
-                    //                         fontWeight: FontWeight.w900,
-                    //                       ),
-                    //                     ),
-                    //                   ),
-                    //                 ],
-                    //               ),
-
-                    //               TableRow(
-                    //                 children: [
-                    //                   Container(
-                    //                     width: double.infinity,
-                    //                     color: Constants.kPrimaryColor
-                    //                         .withAlpha(50),
-                    //                     padding: const EdgeInsets.all(8.0),
-                    //                     alignment: Alignment.centerLeft,
-                    //                     child: Text(
-                    //                       "Image",
-                    //                       style: TextStyle(
-                    //                         color: Colors.black,
-                    //                         fontSize: fontSettings.fontSize,
-                    //                         fontWeight: fontSettings.fontWeight,
-                    //                       ),
-                    //                     ),
-                    //                   ),
-                    //                   Padding(
-                    //                     padding: const EdgeInsets.all(8.0),
-                    //                     child: entry.menImage2.isNotEmpty
-                    //                         ? GestureDetector(
-                    //                             onTap: () {
-                    //                               showDialog(
-                    //                                 context: context,
-                    //                                 barrierDismissible: true,
-                    //                                 builder: (_) => Dialog(
-                    //                                   backgroundColor:
-                    //                                       Colors.transparent,
-                    //                                   child: Image.memory(
-                    //                                     base64Decode(
-                    //                                       entry.menImage2,
-                    //                                     ),
-                    //                                     fit: BoxFit.contain,
-                    //                                   ),
-                    //                                 ),
-                    //                               );
-                    //                             },
-                    //                             child: Image.memory(
-                    //                               base64Decode(entry.menImage2),
-                    //                               fit: BoxFit.contain,
-                    //                             ),
-                    //                           )
-                    //                         : GestureDetector(
-                    //                             onTap: () {
-                    //                               showDialog(
-                    //                                 context: context,
-                    //                                 barrierDismissible: true,
-                    //                                 builder: (_) => Dialog(
-                    //                                   backgroundColor:
-                    //                                       Colors.transparent,
-                    //                                   child: Image.asset(
-                    //                                     'assets/images/placeholder_image.jpg',
-                    //                                     fit: BoxFit.contain,
-                    //                                   ),
-                    //                                 ),
-                    //                               );
-                    //                             },
-                    //                             child: Image.asset(
-                    //                               'assets/images/placeholder_image.jpg',
-                    //                               fit: BoxFit.contain,
-                    //                             ),
-                    //                           ),
-                    //                   ),
-                    //                 ],
-                    //               ),
-                    //               ..._buildGuestRows(entry, fontSettings),
-                    //             ],
-                    //           )
-                    //           .expand((x) => x)
-                    //           .toList(),
-                    //     ),
-                    //   ),
-                    // ),
                     Expanded(
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.all(16.0),
@@ -439,15 +316,9 @@ class _DailyWalkingGuestScreenState
                                     ..._buildGuestRows(entry, fontSettings),
                                   ],
                                 ),
-                                // Red separator line after each guest table (except the last one)
+
                                 if (index < guests.length - 1)
-                                  Container(
-                                    height: 10,
-                                    // margin: const EdgeInsets.symmetric(
-                                    //   vertical: 16.0,
-                                    // ),
-                                    color: Colors.red,
-                                  ),
+                                  Container(height: 10, color: Colors.red),
                               ],
                             );
                           }).toList(),
@@ -496,7 +367,6 @@ class _DailyWalkingGuestScreenState
       children: [
         Container(
           width: double.infinity,
-          //height: 66,
           height: isMemberName ? 90 : null,
           color: Constants.kPrimaryColor.withAlpha(50),
           padding: const EdgeInsets.all(8.0),

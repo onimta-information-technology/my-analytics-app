@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:intl/intl.dart';
 
 class IndividualChatScreen extends StatefulWidget {
   final ChatContact contact;
@@ -98,7 +99,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     _foregroundMessageSubscription = FirebaseMessaging.onMessage.listen((
       RemoteMessage message,
     ) {
- 
       final chatId =
           message.data['chatId'] ??
           message.data['chat_id'] ??
@@ -116,13 +116,8 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         if (chatId == null ||
             chatId.isEmpty ||
             chatId == widget.contact.chatUuid) {
-         
           _fetchMessagesFromApi(silent: true);
-        } else {
-       
         }
-      } else {
-        
       }
     });
   }
@@ -134,7 +129,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         _currentUserName = userName;
       });
     } catch (e) {
-    
+      // Handle error
     }
   }
 
@@ -235,7 +230,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           }
         }
       } else {
-     
         if (!silent && !updateReadStatusOnly) {
           setState(() {
             _isLoadingMessages = false;
@@ -268,10 +262,10 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
       );
 
       if (response['success'] == true) {
-    
+        // Success
       }
     } catch (e) {
-     
+      // Handle error
     }
   }
 
@@ -292,7 +286,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         );
       }
     } catch (e) {
-   
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -395,6 +388,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
       );
 
       if (apiMessageId != null) {
+        // Success
       }
     }
   }
@@ -582,7 +576,45 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
   }
 
   String _formatTime(DateTime timestamp) {
-    return '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')} ${timestamp.hour >= 12 ? 'PM' : 'AM'}';
+    return DateFormat('HH:mm').format(timestamp);
+  }
+
+  // NEW: Format date for separator
+  String _formatDateSeparator(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final messageDate = DateTime(date.year, date.month, date.day);
+
+    if (messageDate == today) {
+      return 'Today';
+    } else if (messageDate == yesterday) {
+      return 'Yesterday';
+    } else {
+      return DateFormat('d MMMM yyyy').format(date);
+    }
+  }
+
+  // NEW: Check if we need to show date separator
+  bool _shouldShowDateSeparator(int index) {
+    if (index == 0) return true;
+
+    final currentMessage = _messages[index];
+    final previousMessage = _messages[index - 1];
+
+    final currentDate = DateTime(
+      currentMessage.timestamp.year,
+      currentMessage.timestamp.month,
+      currentMessage.timestamp.day,
+    );
+
+    final previousDate = DateTime(
+      previousMessage.timestamp.year,
+      previousMessage.timestamp.month,
+      previousMessage.timestamp.day,
+    );
+
+    return currentDate != previousDate;
   }
 
   void _deleteMessage(String messageId) {
@@ -644,6 +676,28 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     setState(() {
       _selectedMessageId = null;
     });
+  }
+
+  // NEW: Build date separator widget
+  Widget _buildDateSeparator(DateTime date) {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFF202C33),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          _formatDateSeparator(date),
+          style: const TextStyle(
+            color: Color(0xFFAEBCC4),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildMessage(ChatMessage message) {
@@ -841,7 +895,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           onPressed: () {
             _readStatusPollTimer?.cancel();
             _foregroundMessageSubscription?.cancel();
-            // ⭐ Clear current chat state
             CurrentChatState().clearCurrentChat();
             Navigator.pop(context);
           },
@@ -931,7 +984,15 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
-                      return _buildMessage(_messages[index]);
+                      return Column(
+                        children: [
+                          // Show date separator if needed
+                          if (_shouldShowDateSeparator(index))
+                            _buildDateSeparator(_messages[index].timestamp),
+                          // Show the message
+                          _buildMessage(_messages[index]),
+                        ],
+                      );
                     },
                   ),
           ),

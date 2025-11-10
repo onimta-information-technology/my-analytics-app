@@ -685,7 +685,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         margin: const EdgeInsets.symmetric(vertical: 12),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         decoration: BoxDecoration(
-          color: Color.fromARGB(255, 143, 143, 143),
+          color: Color.fromARGB(255, 236, 236, 226),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(

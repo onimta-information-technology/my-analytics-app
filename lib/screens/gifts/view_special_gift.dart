@@ -100,9 +100,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
       tcoupon = g.mCoupon + g.flushCoupon;
       flushactdrop = g.flushActDrop;
       avgbet = g.avebet;
-    } else {
-    
-    }
+    } else {}
 
     Future.microtask(() {
       ref.read(giftProvider.notifier).getGiftForList();
@@ -292,7 +290,6 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                   horizontal: 12.0,
                                   vertical: -5.0,
                                 ),
-                             
                               ),
                               onChanged: (value) {
                                 _memberNameController.text = '';
@@ -303,7 +300,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             ),
                           ),
                           const SizedBox(width: 16.0),
-                          
+
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.black, // Black background
@@ -394,7 +391,6 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                       setState(() {
                                         _isLoading = false;
                                       });
-
                                     }
                                   },
                             child: _isLoading
@@ -428,7 +424,6 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             horizontal: 12.0,
                             vertical: -5.0,
                           ),
-                         
                         ),
                         onChanged: (value) {
                           _memberIdController.text = '';
@@ -532,8 +527,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: DataTable(
-                              dataRowMinHeight:
-                                  48,
+                              dataRowMinHeight: 48,
                               dataRowMaxHeight: 56,
                               headingRowColor: WidgetStateProperty.all(
                                 Colors.amber.shade100,
@@ -585,6 +579,10 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                           style: TextStyle(
                                             fontSize: fontSettings.fontSize,
                                             fontWeight: fontSettings.fontWeight,
+                                            fontFamily: 'monospace',
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
                                           ),
                                         ),
                                       ),

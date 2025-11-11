@@ -39,9 +39,7 @@ class GamesSummaryWidget extends ConsumerWidget {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
           ),
-          const SizedBox(
-            height: 16.0,
-          ),
+          const SizedBox(height: 16.0),
           gamesSummary.gameDetails.isEmpty
               ? Container(
                   height: 200,
@@ -120,167 +118,186 @@ class GamesSummaryWidget extends ConsumerWidget {
                   1: FractionColumnWidth(0.5),
                 },
                 children: [
-                  ...gamesSummary.gameDetails.map((entry) {
-                    return [
-                      TableRow(
-                        decoration: const BoxDecoration(
-                            color: Color.fromARGB(47, 181, 225, 250)),
-                        children: [
-                          const Padding(
-                            padding: EdgeInsets.all(8.0),
-                            child: Column(
-                              children: [
-                                Text(
-                                  "",
-                                  style: TextStyle(fontWeight: FontWeight.w900),
-                                ),
-                              ],
+                  ...gamesSummary.gameDetails
+                      .map((entry) {
+                        return [
+                          TableRow(
+                            decoration: const BoxDecoration(
+                              color: Color.fromARGB(47, 181, 225, 250),
                             ),
+                            children: [
+                              const Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      "",
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      "Details",
+                                      style: TextStyle(
+                                        color: Colors.black,
+                                        fontSize: fontSettings.fontSize,
+                                        fontWeight: fontSettings.fontWeight,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Column(
-                              children: [
-                                Text(
-                                  "Details",
+                          TableRow(
+                            decoration: BoxDecoration(
+                              color: Constants.kPrimaryColor.withAlpha(50),
+                            ),
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  "Game Type",
                                   style: TextStyle(
                                     color: Colors.black,
                                     fontSize: fontSettings.fontSize,
                                     fontWeight: fontSettings.fontWeight,
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      TableRow(
-                        decoration: BoxDecoration(
-                          color: Constants.kPrimaryColor.withAlpha(50),
-                        ),
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(
-                              "Game Type",
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: fontSettings.fontSize,
-                                fontWeight: fontSettings.fontWeight,
                               ),
-                            ),
-                          ),
-                          Container(
-                            color: Colors.white,
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(
-                                _parseString(entry.gameType),
-                                textAlign: TextAlign.end,
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: fontSettings.fontSize,
-                                  fontWeight: fontSettings.fontWeight,
+                              Container(
+                                color: Colors.white,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Text(
+                                    _parseString(entry.gameType),
+                                    textAlign: TextAlign.end,
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: fontSettings.fontSize,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
+                            ],
                           ),
-                        ],
-                      ),
-                      TableRow(
-                        children: [
-                          Container(
-                            color: Constants.kPrimaryColor.withAlpha(50),
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(
-                                "Play Time HH",
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: fontSettings.fontSize,
-                                  fontWeight: fontSettings.fontWeight,
+                          TableRow(
+                            children: [
+                              Container(
+                                color: Constants.kPrimaryColor.withAlpha(50),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Text(
+                                    "Play Time HH",
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: fontSettings.fontSize,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(
-                              _parseNumberFormat(
-                                  entry.playTime.toDouble() / 60),
-                              textAlign: TextAlign.end,
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: fontSettings.fontSize,
-                                fontWeight: fontSettings.fontWeight,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      TableRow(
-                        children: [
-                          Container(
-                            color: Constants.kPrimaryColor.withAlpha(50),
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(
-                                "Play Time MM",
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: fontSettings.fontSize,
-                                  fontWeight: fontSettings.fontWeight,
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  _parseNumberFormat(
+                                    entry.playTime.toDouble() / 60,
+                                  ),
+                                  textAlign: TextAlign.end,
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: fontSettings.fontSize,
+                                    fontWeight: fontSettings.fontWeight,
+                                    fontFamily: 'monospace',
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
+                            ],
                           ),
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(
-                              _parseNumberFormat(
-                                  entry.playTime.toDouble() % 60),
-                              textAlign: TextAlign.end,
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: fontSettings.fontSize,
-                                fontWeight: fontSettings.fontWeight,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      TableRow(
-                        children: [
-                          Container(
-                            color: Constants.kPrimaryColor.withAlpha(50),
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(
-                                "Date",
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: fontSettings.fontSize,
-                                  fontWeight: fontSettings.fontWeight,
+                          TableRow(
+                            children: [
+                              Container(
+                                color: Constants.kPrimaryColor.withAlpha(50),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Text(
+                                    "Play Time MM",
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: fontSettings.fontSize,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(
-                              _formatDate2(entry.playDate),
-                              textAlign: TextAlign.end,
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: fontSettings.fontSize,
-                                fontWeight: fontSettings.fontWeight,
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  _parseNumberFormat(
+                                    entry.playTime.toDouble() % 60,
+                                  ),
+                                  textAlign: TextAlign.end,
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: fontSettings.fontSize,
+                                    fontWeight: fontSettings.fontWeight,
+                                    fontFamily: 'monospace',
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ];
-                  }).expand((x) => x),
+                          TableRow(
+                            children: [
+                              Container(
+                                color: Constants.kPrimaryColor.withAlpha(50),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Text(
+                                    "Date",
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: fontSettings.fontSize,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  _formatDate2(entry.playDate),
+                                  textAlign: TextAlign.end,
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: fontSettings.fontSize,
+                                    fontWeight: fontSettings.fontWeight,
+                                    fontFamily: 'monospace',
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ];
+                      })
+                      .expand((x) => x),
                 ],
               ),
             ),

@@ -32,11 +32,9 @@ class HotelReservationWidget extends ConsumerWidget {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
           ),
-          const SizedBox(
-            height: 16.0,
-          ),
+          const SizedBox(height: 6.0),
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            padding: const EdgeInsets.symmetric(vertical: 5.0),
             child: hotelHistory.isEmpty
                 ? Container(
                     height: 200,
@@ -55,589 +53,653 @@ class HotelReservationWidget extends ConsumerWidget {
                         1: FractionColumnWidth(0.5),
                       },
                       children: [
-                        ...hotelHistory.map((entry) {
-                          return [
-                            TableRow(
-                              decoration: const BoxDecoration(
-                                  color: Color.fromARGB(47, 181, 225, 250)),
-                              children: [
-                                const Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Column(
-                                    children: [
-                                      Text(
-                                        "",
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.w900),
-                                      ),
-                                    ],
+                        ...hotelHistory
+                            .map((entry) {
+                              return [
+                                TableRow(
+                                  decoration: const BoxDecoration(
+                                    color: Color.fromARGB(47, 181, 225, 250),
                                   ),
+                                  children: [
+                                    const Padding(
+                                      padding: EdgeInsets.all(8.0),
+                                      child: Column(
+                                        children: [
+                                          Text(
+                                            "",
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Column(
+                                        children: [
+                                          Text(
+                                            "Details",
+                                            style: TextStyle(
+                                              color: Colors.black,
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Column(
-                                    children: [
-                                      Text(
-                                        "Details",
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Res.No",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _parseString(entry.resNo),
+                                        textAlign: TextAlign.end,
                                         style: TextStyle(
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
-                                          fontWeight: FontWeight.w900,
+                                          fontWeight: fontSettings.fontWeight,
+                                          fontFamily: 'monospace',
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
                                         ),
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Res.No",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Hotel",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    _parseString(entry.resNo),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Hotel",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _parseString(entry.hotel),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    _parseString(entry.hotel),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Check In For",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Check In For",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    _parseString(entry.checkInFor),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Check Out For",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _parseString(entry.checkInFor),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    _parseString(entry.checkOutFor),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "PayIns",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Check Out For",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    _parseString(entry.payIns),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Special",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _parseString(entry.checkOutFor),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    _parseString(entry.special),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              decoration: BoxDecoration(
-                                color: Constants.kPrimaryColor.withAlpha(50),
-                              ),
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "Remarks",
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                                Container(
-                                  color: Colors.white,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      _parseString(entry.rem),
-                                      textAlign: TextAlign.end,
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "PayIns",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Check In",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _parseString(entry.payIns),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    _formatDate2(entry.checkIn),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Check Out",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Special",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    _formatDate2(entry.checkOut),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Request By",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _parseString(entry.special),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    _parseString(entry.requestBy),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
+                                TableRow(
+                                  decoration: BoxDecoration(
+                                    color: Constants.kPrimaryColor.withAlpha(
+                                      50,
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Status",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        "Remarks",
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    _parseString(entry.status),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              decoration: BoxDecoration(
-                                color: Constants.kPrimaryColor.withAlpha(50),
-                              ),
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "Extra",
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                                Container(
-                                  color: Colors.white,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      _parseString(entry.extra),
-                                      textAlign: TextAlign.end,
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                    Container(
+                                      color: Colors.white,
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          _parseString(entry.rem),
+                                          textAlign: TextAlign.end,
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Cat Name",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Check In",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    _parseString(entry.catName),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Room Type",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _formatDate2(entry.checkIn),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                          fontFamily: 'monospace',
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    _parseString(entry.roomType),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Meal Plan",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Check Out",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    _parseString(entry.mealPlan),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Rooms",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _formatDate2(entry.checkOut),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                          fontFamily: 'monospace',
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    _parseString(entry.rooms.toString()),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Nights",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Request By",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    _parseString(entry.nights.toString()),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Container(
-                                  color: Constants.kPrimaryColor.withAlpha(50),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Adults",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _parseString(entry.requestBy),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    _parseString(entry.adults.toString()),
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Status",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _parseString(entry.status),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                TableRow(
+                                  decoration: BoxDecoration(
+                                    color: Constants.kPrimaryColor.withAlpha(
+                                      50,
                                     ),
                                   ),
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        "Extra",
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      color: Colors.white,
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          _parseString(entry.extra),
+                                          textAlign: TextAlign.end,
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          ];
-                        }).expand((x) => x),
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Cat Name",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _parseString(entry.catName),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Room Type",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _parseString(entry.roomType),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Meal Plan",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _parseString(entry.mealPlan),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Rooms",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _parseString(entry.rooms.toString()),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                          fontFamily: 'monospace',
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Nights",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _parseString(entry.nights.toString()),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                          fontFamily: 'monospace',
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                TableRow(
+                                  children: [
+                                    Container(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "Adults",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        _parseString(entry.adults.toString()),
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
+                                          fontFamily: 'monospace',
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ];
+                            })
+                            .expand((x) => x),
                       ],
                     ),
                   ),

@@ -48,13 +48,10 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
     if (guest!.memImage2 != null) return;
 
     if (guest.memImage2 == null) {
-
       await ref
           .read(selectedGuestProvider.notifier)
           .getGuestImage(9021, guest.mid);
-    } else {
-     
-    }
+    } else {}
   }
 
   Future<void> _selectArrivalDate(BuildContext context) async {
@@ -114,7 +111,6 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
       setState(() {
         _isLoading = false;
       });
-
     }
   }
 
@@ -222,18 +218,49 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                     ),
                                   ],
                                 ),
-                                child: Hero(
-                                  tag: "guest-image",
-                                  child: CircleAvatar(
-                                    radius: 70,
-                                    backgroundImage: guest.memImage2 != null
-                                        ? MemoryImage(
-                                            base64Decode(guest.memImage2!),
-                                          )
-                                        : const AssetImage(
-                                            'assets/images/placeholder_image.jpg',
+                                child: GestureDetector(
+                                  onTap: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (BuildContext context) {
+                                        return Dialog(
+                                          backgroundColor: Colors.transparent,
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Hero(
+                                                tag: "guest-image",
+                                                child: guest.memImage2 != null
+                                                    ? Image.memory(
+                                                        base64Decode(
+                                                          guest.memImage2!,
+                                                        ),
+                                                        fit: BoxFit.contain,
+                                                      )
+                                                    : Image.asset(
+                                                        'assets/images/placeholder_image.jpg',
+                                                        fit: BoxFit.contain,
+                                                      ),
+                                              ),
+                                            ],
                                           ),
-                                    backgroundColor: Colors.grey[200],
+                                        );
+                                      },
+                                    );
+                                  },
+                                  child: Hero(
+                                    tag: "guest-image",
+                                    child: CircleAvatar(
+                                      radius: 70,
+                                      backgroundImage: guest.memImage2 != null
+                                          ? MemoryImage(
+                                              base64Decode(guest.memImage2!),
+                                            )
+                                          : const AssetImage(
+                                              'assets/images/placeholder_image.jpg',
+                                            ),
+                                      backgroundColor: Colors.grey[200],
+                                    ),
                                   ),
                                 ),
                               ),
@@ -464,6 +491,10 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
                                           fontWeight: FontWeight.bold,
+                                          fontFamily: 'monospace',
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
                                         ),
                                       ),
                                     ],
@@ -492,6 +523,10 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
                                           fontWeight: FontWeight.bold,
+                                          fontFamily: 'monospace',
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
                                         ),
                                       ),
                                     ],
@@ -517,6 +552,10 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
                                           fontWeight: FontWeight.bold,
+                                          fontFamily: 'monospace',
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
                                         ),
                                       ),
                                     ],
@@ -663,6 +702,10 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                         color: Colors.black,
                                         fontSize: fontSettings.fontSize,
                                         fontWeight: fontSettings.fontWeight,
+                                        fontFamily: 'monospace',
+                                        fontFeatures: const [
+                                          FontFeature.tabularFigures(),
+                                        ],
                                       ),
                                     ),
                                   ),
@@ -675,6 +718,10 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                         color: Colors.black,
                                         fontSize: fontSettings.fontSize,
                                         fontWeight: fontSettings.fontWeight,
+                                        fontFamily: 'monospace',
+                                        fontFeatures: const [
+                                          FontFeature.tabularFigures(),
+                                        ],
                                       ),
                                     ),
                                   ),
@@ -687,6 +734,10 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                         color: Colors.black,
                                         fontSize: fontSettings.fontSize,
                                         fontWeight: fontSettings.fontWeight,
+                                        fontFamily: 'monospace',
+                                        fontFeatures: const [
+                                          FontFeature.tabularFigures(),
+                                        ],
                                       ),
                                     ),
                                   ),
@@ -699,6 +750,10 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                         color: Colors.black,
                                         fontSize: fontSettings.fontSize,
                                         fontWeight: fontSettings.fontWeight,
+                                        fontFamily: 'monospace',
+                                        fontFeatures: const [
+                                          FontFeature.tabularFigures(),
+                                        ],
                                       ),
                                     ),
                                   ),
@@ -723,6 +778,10 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                         color: Colors.black,
                                         fontSize: fontSettings.fontSize,
                                         fontWeight: fontSettings.fontWeight,
+                                        fontFamily: 'monospace',
+                                        fontFeatures: const [
+                                          FontFeature.tabularFigures(),
+                                        ],
                                       ),
                                     ),
                                   ),
@@ -735,6 +794,10 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                         color: Colors.black,
                                         fontSize: fontSettings.fontSize,
                                         fontWeight: fontSettings.fontWeight,
+                                        fontFamily: 'monospace',
+                                        fontFeatures: const [
+                                          FontFeature.tabularFigures(),
+                                        ],
                                       ),
                                     ),
                                   ),

@@ -149,7 +149,6 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
       setState(() {
         _isLoading = false;
       });
-   
     }
   }
 
@@ -188,7 +187,6 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
         },
       );
     } catch (e) {
-    
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error searching guests: $e'),
@@ -807,6 +805,10 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                                         fontSettings.fontSize,
                                                     fontWeight:
                                                         fontSettings.fontWeight,
+                                                    fontFamily: 'monospace',
+                                                    fontFeatures: const [
+                                                      FontFeature.tabularFigures(),
+                                                    ],
                                                   ),
                                                 ),
                                               ),
@@ -1235,7 +1237,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                                     .lastReturnSerial;
 
                                             // Debug print to verify we have the return serial
-                                           
+
                                             await DirectWhatsAppPdfService.shareDirectlyToWhatsApp(
                                               memberName: _memberNameController
                                                   .text

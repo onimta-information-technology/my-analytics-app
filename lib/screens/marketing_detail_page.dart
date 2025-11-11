@@ -8,6 +8,7 @@ import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'dart:ui';
 
 class MarketingDetailPage extends ConsumerStatefulWidget {
   final String smCode;
@@ -60,7 +61,9 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
 
   String _formatCurrency(double amount) {
     if (amount == 0) return 'N/A';
-    return NumberFormat("#,##0.##").format(amount);
+    return NumberFormat(
+      "#,##0",
+    ).format(amount); // CHANGED - Removed .## for consistency
   }
 
   Color _getAmountColor(double amount) {
@@ -298,6 +301,10 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
                               fontSize: fontSettings.fontSize + 2,
                               fontWeight: FontWeight.bold,
                               color: _getAmountColor(member.winLost),
+                              fontFamily: 'monospace',
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
                             ),
                           ),
                         ],
@@ -370,7 +377,7 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
     Color? valueColor,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -382,12 +389,17 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
               color: Colors.black87,
             ),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: fontSettings.fontSize,
-              fontWeight: fontSettings.fontWeight,
-              color: valueColor ?? Colors.black,
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontSize: fontSettings.fontSize,
+                fontWeight: fontSettings.fontWeight,
+                color: valueColor ?? Colors.black,
+                fontFamily: 'monospace',
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
             ),
           ),
         ],
@@ -426,6 +438,8 @@ Widget _buildSummaryItem({
             fontSize: fontSettings.fontSize + 2,
             fontWeight: FontWeight.bold,
             color: color,
+            fontFamily: 'monospace',
+            fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
       ],

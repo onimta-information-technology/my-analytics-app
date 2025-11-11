@@ -155,6 +155,10 @@ class FAndBHistoryWidget extends ConsumerWidget {
                                   style: TextStyle(
                                     color: Colors.black,
                                     fontSize: fontSettings.fontSize + 3,
+                                    fontFamily: 'monospace',
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
                                   ),
                                 ),
                               ],
@@ -272,6 +276,10 @@ class FAndBHistoryWidget extends ConsumerWidget {
                                     color: Colors.black,
                                     fontSize: fontSettings.fontSize,
                                     fontWeight: fontSettings.fontWeight,
+                                    fontFamily: 'monospace',
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
                                   ),
                                 ),
                               ),
@@ -302,6 +310,10 @@ class FAndBHistoryWidget extends ConsumerWidget {
                                     color: Colors.black,
                                     fontSize: fontSettings.fontSize,
                                     fontWeight: fontSettings.fontWeight,
+                                    fontFamily: 'monospace',
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
                                   ),
                                 ),
                               ),
@@ -332,6 +344,10 @@ class FAndBHistoryWidget extends ConsumerWidget {
                                     color: Colors.black,
                                     fontSize: fontSettings.fontSize,
                                     fontWeight: fontSettings.fontWeight,
+                                    fontFamily: 'monospace',
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
                                   ),
                                 ),
                               ),

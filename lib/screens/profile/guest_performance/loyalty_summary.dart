@@ -38,11 +38,11 @@ class LoyaltySummaryWidget extends ConsumerWidget {
     return Center(
       child: Column(
         children: [
-          const Text("Loyalty Summary",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-          const SizedBox(
-            height: 16.0,
+          const Text(
+            "Loyalty Summary",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
+          const SizedBox(height: 6.0),
           Card(
             elevation: 4,
             margin: const EdgeInsets.all(0.0),
@@ -50,7 +50,7 @@ class LoyaltySummaryWidget extends ConsumerWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(10.0),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,7 +63,7 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
-                       fontWeight: fontSettings.fontWeight,
+                          fontWeight: fontSettings.fontWeight,
                         ),
                       ),
                       Text(
@@ -71,6 +71,8 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
+                          fontFamily: 'monospace',
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
                     ],
@@ -84,7 +86,7 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
-                         fontWeight: fontSettings.fontWeight,
+                          fontWeight: fontSettings.fontWeight,
                         ),
                       ),
                       Text(
@@ -92,6 +94,8 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
+                          fontFamily: 'monospace',
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
                     ],
@@ -106,7 +110,7 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
-                     fontWeight: fontSettings.fontWeight,
+                          fontWeight: fontSettings.fontWeight,
                         ),
                       ),
                       Text(
@@ -149,7 +153,7 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
-                       fontWeight: fontSettings.fontWeight,
+                          fontWeight: fontSettings.fontWeight,
                         ),
                       ),
                       Text(
@@ -157,6 +161,8 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
+                          fontFamily: 'monospace',
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
                     ],
@@ -170,7 +176,7 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
-          fontWeight: fontSettings.fontWeight,
+                          fontWeight: fontSettings.fontWeight,
                         ),
                       ),
                       Text(
@@ -191,7 +197,7 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
-fontWeight: fontSettings.fontWeight,
+                          fontWeight: fontSettings.fontWeight,
                         ),
                       ),
                       Text(
@@ -213,7 +219,7 @@ fontWeight: fontSettings.fontWeight,
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
-                         fontWeight: fontSettings.fontWeight,
+                          fontWeight: fontSettings.fontWeight,
                         ),
                       ),
                       Text(
@@ -221,6 +227,8 @@ fontWeight: fontSettings.fontWeight,
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
+                          fontFamily: 'monospace',
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
                     ],
@@ -263,6 +271,8 @@ fontWeight: fontSettings.fontWeight,
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
+                          fontFamily: 'monospace',
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
                     ],
@@ -276,7 +286,7 @@ fontWeight: fontSettings.fontWeight,
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
-                       fontWeight: fontSettings.fontWeight,
+                          fontWeight: fontSettings.fontWeight,
                         ),
                       ),
                       Text(
@@ -284,6 +294,8 @@ fontWeight: fontSettings.fontWeight,
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
+                          fontFamily: 'monospace',
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
                     ],
@@ -305,6 +317,8 @@ fontWeight: fontSettings.fontWeight,
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
+                          fontFamily: 'monospace',
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
                     ],

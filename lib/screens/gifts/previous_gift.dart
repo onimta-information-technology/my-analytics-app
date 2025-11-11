@@ -295,6 +295,8 @@ class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
                               ? FontWeight.bold
                               : fontSettings.fontWeight,
                           color: isAmount ? Colors.black : null,
+                          fontFamily: 'monospace',
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
                     );
@@ -338,6 +340,8 @@ class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
                   : fontSettings.fontSize,
               fontWeight: isAmount ? FontWeight.bold : fontSettings.fontWeight,
               color: isAmount ? Colors.black : null,
+              fontFamily: 'monospace',
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
         ),

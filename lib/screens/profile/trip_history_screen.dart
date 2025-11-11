@@ -269,18 +269,49 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                       ),
                                     ],
                                   ),
-                                  child: Hero(
-                                    tag: "guest-image",
-                                    child: CircleAvatar(
-                                      radius: 70,
-                                      backgroundImage: guest.memImage2 != null
-                                          ? MemoryImage(
-                                              base64Decode(guest.memImage2!),
-                                            )
-                                          : const AssetImage(
-                                              'assets/images/placeholder_image.jpg',
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (BuildContext context) {
+                                          return Dialog(
+                                            backgroundColor: Colors.transparent,
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Hero(
+                                                  tag: "guest-image",
+                                                  child: guest.memImage2 != null
+                                                      ? Image.memory(
+                                                          base64Decode(
+                                                            guest.memImage2!,
+                                                          ),
+                                                          fit: BoxFit.contain,
+                                                        )
+                                                      : Image.asset(
+                                                          'assets/images/placeholder_image.jpg',
+                                                          fit: BoxFit.contain,
+                                                        ),
+                                                ),
+                                              ],
                                             ),
-                                      backgroundColor: Colors.grey[200],
+                                          );
+                                        },
+                                      );
+                                    },
+                                    child: Hero(
+                                      tag: "guest-image",
+                                      child: CircleAvatar(
+                                        radius: 70,
+                                        backgroundImage: guest.memImage2 != null
+                                            ? MemoryImage(
+                                                base64Decode(guest.memImage2!),
+                                              )
+                                            : const AssetImage(
+                                                'assets/images/placeholder_image.jpg',
+                                              ),
+                                        backgroundColor: Colors.grey[200],
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -576,6 +607,10 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             color: Colors.black,
                                             fontSize: fontSettings.fontSize,
                                             fontWeight: fontSettings.fontWeight,
+                                            fontFamily: 'monospace',
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
                                           ),
                                         ),
                                       ),
@@ -608,6 +643,10 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             color: Colors.black,
                                             fontSize: fontSettings.fontSize,
                                             fontWeight: fontSettings.fontWeight,
+                                            fontFamily: 'monospace',
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
                                           ),
                                         ),
                                       ),
@@ -640,6 +679,10 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             color: Colors.black,
                                             fontSize: fontSettings.fontSize,
                                             fontWeight: fontSettings.fontWeight,
+                                            fontFamily: 'monospace',
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
                                           ),
                                         ),
                                       ),
@@ -672,6 +715,10 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             color: Colors.black,
                                             fontSize: fontSettings.fontSize,
                                             fontWeight: fontSettings.fontWeight,
+                                            fontFamily: 'monospace',
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
                                           ),
                                         ),
                                       ),
@@ -704,6 +751,10 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             color: Colors.black,
                                             fontSize: fontSettings.fontSize,
                                             fontWeight: fontSettings.fontWeight,
+                                            fontFamily: 'monospace',
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
                                           ),
                                         ),
                                       ),
@@ -736,6 +787,10 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             color: Colors.black,
                                             fontSize: fontSettings.fontSize,
                                             fontWeight: fontSettings.fontWeight,
+                                            fontFamily: 'monospace',
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
                                           ),
                                         ),
                                       ),
@@ -770,6 +825,10 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             color: Colors.black,
                                             fontSize: fontSettings.fontSize,
                                             fontWeight: fontSettings.fontWeight,
+                                            fontFamily: 'monospace',
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
                                           ),
                                         ),
                                       ),
@@ -802,6 +861,10 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             color: Colors.black,
                                             fontSize: fontSettings.fontSize,
                                             fontWeight: fontSettings.fontWeight,
+                                            fontFamily: 'monospace',
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
                                           ),
                                         ),
                                       ),
@@ -836,6 +899,10 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             color: Colors.black,
                                             fontSize: fontSettings.fontSize,
                                             fontWeight: fontSettings.fontWeight,
+                                            fontFamily: 'monospace',
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
                                           ),
                                         ),
                                       ),
@@ -868,6 +935,10 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             color: Colors.black,
                                             fontSize: fontSettings.fontSize,
                                             fontWeight: fontSettings.fontWeight,
+                                            fontFamily: 'monospace',
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
                                           ),
                                         ),
                                       ),
@@ -900,6 +971,10 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             color: Colors.black,
                                             fontSize: fontSettings.fontSize,
                                             fontWeight: fontSettings.fontWeight,
+                                            fontFamily: 'monospace',
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
                                           ),
                                         ),
                                       ),
@@ -934,6 +1009,10 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             color: Colors.black,
                                             fontSize: fontSettings.fontSize,
                                             fontWeight: fontSettings.fontWeight,
+                                            fontFamily: 'monospace',
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
                                           ),
                                         ),
                                       ),
@@ -966,6 +1045,10 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             color: Colors.black,
                                             fontSize: fontSettings.fontSize,
                                             fontWeight: fontSettings.fontWeight,
+                                            fontFamily: 'monospace',
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
                                           ),
                                         ),
                                       ),
@@ -1016,7 +1099,7 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                                       CrossAxisAlignment.start,
                                                   children: [
                                                     Text(
-                                                      "DTL: ${dtl.dtl.toStringAsFixed(0)}",
+                                                      "DTL : ${NumberFormat('#,###').format(dtl.dtl.toInt())}",
                                                       style: TextStyle(
                                                         fontWeight: fontSettings
                                                             .fontWeight,
@@ -1251,6 +1334,10 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                             color: Colors.black,
                                             fontSize: fontSettings.fontSize,
                                             fontWeight: fontSettings.fontWeight,
+                                            fontFamily: 'monospace',
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
                                           ),
                                         ),
                                       ),

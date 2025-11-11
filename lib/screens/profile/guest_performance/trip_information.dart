@@ -31,9 +31,9 @@ class TripInformationWidget extends ConsumerWidget {
             "Trip Information",
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
-          const SizedBox(height: 16.0),
+          const SizedBox(height: 6.0),
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            padding: const EdgeInsets.symmetric(vertical: 5.0),
             child: tripHistory.isEmpty
                 ? Container(
                     height: 200,
@@ -144,6 +144,10 @@ class TripInformationWidget extends ConsumerWidget {
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
                                           fontWeight: fontSettings.fontWeight,
+                                          fontFamily: 'monospace',
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
                                         ),
                                       ),
                                     ),
@@ -176,6 +180,10 @@ class TripInformationWidget extends ConsumerWidget {
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
                                           fontWeight: fontSettings.fontWeight,
+                                          fontFamily: 'monospace',
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
                                         ),
                                       ),
                                     ),
@@ -208,6 +216,10 @@ class TripInformationWidget extends ConsumerWidget {
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
                                           fontWeight: fontSettings.fontWeight,
+                                          fontFamily: 'monospace',
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
                                         ),
                                       ),
                                     ),
@@ -240,6 +252,10 @@ class TripInformationWidget extends ConsumerWidget {
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
                                           fontWeight: fontSettings.fontWeight,
+                                          fontFamily: 'monospace',
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
                                         ),
                                       ),
                                     ),
@@ -272,6 +288,10 @@ class TripInformationWidget extends ConsumerWidget {
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
                                           fontWeight: fontSettings.fontWeight,
+                                          fontFamily: 'monospace',
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
                                         ),
                                       ),
                                     ),
@@ -304,6 +324,10 @@ class TripInformationWidget extends ConsumerWidget {
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
                                           fontWeight: fontSettings.fontWeight,
+                                          fontFamily: 'monospace',
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
                                         ),
                                       ),
                                     ),
@@ -338,6 +362,10 @@ class TripInformationWidget extends ConsumerWidget {
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
                                           fontWeight: fontSettings.fontWeight,
+                                          fontFamily: 'monospace',
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
                                         ),
                                       ),
                                     ),
@@ -370,6 +398,10 @@ class TripInformationWidget extends ConsumerWidget {
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
                                           fontWeight: fontSettings.fontWeight,
+                                          fontFamily: 'monospace',
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
                                         ),
                                       ),
                                     ),
@@ -404,6 +436,10 @@ class TripInformationWidget extends ConsumerWidget {
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
                                           fontWeight: fontSettings.fontWeight,
+                                          fontFamily: 'monospace',
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
                                         ),
                                       ),
                                     ),
@@ -436,6 +472,10 @@ class TripInformationWidget extends ConsumerWidget {
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
                                           fontWeight: fontSettings.fontWeight,
+                                          fontFamily: 'monospace',
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
                                         ),
                                       ),
                                     ),
@@ -469,6 +509,10 @@ class TripInformationWidget extends ConsumerWidget {
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
                                           fontWeight: fontSettings.fontWeight,
+                                          fontFamily: 'monospace',
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
                                         ),
                                       ),
                                     ),
@@ -503,6 +547,10 @@ class TripInformationWidget extends ConsumerWidget {
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
                                           fontWeight: fontSettings.fontWeight,
+                                          fontFamily: 'monospace',
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
                                         ),
                                       ),
                                     ),
@@ -553,7 +601,7 @@ class TripInformationWidget extends ConsumerWidget {
                                                     CrossAxisAlignment.start,
                                                 children: [
                                                   Text(
-                                                    "DTL: ${dtl.dtl.toStringAsFixed(0)}",
+                                                    "DTL : ${NumberFormat('#,###').format(dtl.dtl.toInt())}",
                                                     style: TextStyle(
                                                       fontWeight: fontSettings
                                                           .fontWeight,
@@ -564,7 +612,7 @@ class TripInformationWidget extends ConsumerWidget {
                                                     ),
                                                   ),
                                                   Text(
-                                                    "Game: ${dtl.gameType}",
+                                                    "Game : ${dtl.gameType}",
                                                     style: TextStyle(
                                                       fontSize:
                                                           fontSettings
@@ -575,7 +623,7 @@ class TripInformationWidget extends ConsumerWidget {
                                                     ),
                                                   ),
                                                   Text(
-                                                    "Date: ${dtl.gDate.split('T').first}",
+                                                    "Date : ${dtl.gDate.split('T').first}",
                                                     style: TextStyle(
                                                       fontSize:
                                                           fontSettings
@@ -621,6 +669,10 @@ class TripInformationWidget extends ConsumerWidget {
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
                                           fontWeight: fontSettings.fontWeight,
+                                          fontFamily: 'monospace',
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
                                         ),
                                       ),
                                     ),
@@ -653,6 +705,10 @@ class TripInformationWidget extends ConsumerWidget {
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
                                           fontWeight: fontSettings.fontWeight,
+                                          fontFamily: 'monospace',
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
                                         ),
                                       ),
                                     ),
@@ -685,6 +741,10 @@ class TripInformationWidget extends ConsumerWidget {
                                           color: Colors.black,
                                           fontSize: fontSettings.fontSize,
                                           fontWeight: fontSettings.fontWeight,
+                                          fontFamily: 'monospace',
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
                                         ),
                                       ),
                                     ),

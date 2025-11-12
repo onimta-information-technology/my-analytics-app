@@ -28,7 +28,9 @@ class IndividualChatScreen extends StatefulWidget {
 }
 
 class _IndividualChatScreenState extends State<IndividualChatScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _imagePicker = ImagePicker();
@@ -147,10 +149,9 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
 
     try {
       final chatId = widget.contact.chatUuid;
-
-      // Use FirebaseApiService instead of manual HTTP call
       final response = await FirebaseApiService.fetchMessages(chatId);
       final deviceId = await DeviceId.get();
+
       if (response['success'] == true && response['data'] != null) {
         final responseData = response['data'];
 
@@ -163,7 +164,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
               .toList();
 
           if (updateReadStatusOnly) {
-            // Only update read status without scrolling or showing loading
+            // Only update read status
             bool hasReadStatusChanged = false;
 
             for (int i = 0; i < _messages.length; i++) {
@@ -183,27 +184,13 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
               setState(() {});
             }
           } else {
-            // Normal message fetch with scroll
-            bool hasNewMessages = false;
-            if (_messages.isNotEmpty && fetchedMessages.isNotEmpty) {
-              final lastOldMessageId =
-                  _messages.last.apiMessageId ?? _messages.last.id;
-              final lastNewMessageId =
-                  fetchedMessages.last.apiMessageId ?? fetchedMessages.last.id;
-              hasNewMessages = lastOldMessageId != lastNewMessageId;
-            } else if (_messages.isEmpty && fetchedMessages.isNotEmpty) {
-              hasNewMessages = true;
-            }
+            // Check if there are new messages
+            final hadMessages = _messages.isNotEmpty;
+            final messageCountChanged =
+                _messages.length != fetchedMessages.length;
 
             setState(() {
               _messages = fetchedMessages;
-
-              if (_messages.isNotEmpty) {
-                _lastMessageId =
-                    _messages.last.apiMessageId ?? _messages.last.id;
-                _lastFetchTime = _messages.last.timestamp;
-              }
-
               if (!silent) {
                 _isLoadingMessages = false;
               }
@@ -211,14 +198,10 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
 
             await _markMessagesAsRead();
 
-            if (widget.onMessageSent != null && fetchedMessages.isNotEmpty) {
-              final lastMsg = fetchedMessages.last;
-              widget.onMessageSent!(lastMsg.text);
-            }
-
-            if (hasNewMessages && silent) {
-              _scrollToBottom();
-            } else if (!silent) {
+            // Only scroll on initial load or when explicitly refreshing
+            if (!hadMessages || (!silent && messageCountChanged)) {
+              // Small delay to ensure ListView is built
+              await Future.delayed(const Duration(milliseconds: 100));
               _scrollToBottom();
             }
           }
@@ -228,12 +211,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
               _isLoadingMessages = false;
             });
           }
-        }
-      } else {
-        if (!silent && !updateReadStatusOnly) {
-          setState(() {
-            _isLoadingMessages = false;
-          });
         }
       }
     } catch (e) {
@@ -366,7 +343,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         text: messageText,
         isMe: true,
         timestamp: now,
-        isRead: false, // Initially not read
+        isRead: false,
       );
 
       setState(() {
@@ -376,7 +353,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
       });
 
       _messageController.clear();
-      _scrollToBottom();
+      // Scroll is automatic with reverse: true, but you can keep it for smoothness
 
       if (widget.onMessageSent != null) {
         widget.onMessageSent!(messageText);
@@ -386,10 +363,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         messageText,
         localMessageId,
       );
-
-      if (apiMessageId != null) {
-        // Success
-      }
     }
   }
 
@@ -565,9 +538,10 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
+      if (_scrollController.hasClients &&
+          _scrollController.position.maxScrollExtent > 0) {
         _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
+          0, // Scroll to 0 for reversed list
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
@@ -748,6 +722,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                             width: 200,
                             height: 200,
                             fit: BoxFit.cover,
+                            cacheHeight: 400, // ADD THIS for better performance
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -830,25 +805,24 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                   ),
                 ),
               ),
-              if (message.isMe) ...[
+              if (message.isMe && isSelected) ...[
                 const SizedBox(width: 8),
-                if (isSelected)
-                  GestureDetector(
-                    onTap: () => _deleteMessage(message.id),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.8),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.delete,
-                        color: Colors.white,
-                        size: 18,
-                      ),
+                GestureDetector(
+                  onTap: () => _deleteMessage(message.id),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.8),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.delete,
+                      color: Colors.white,
+                      size: 18,
                     ),
                   ),
-              ] else if (isSelected) ...[
+                ),
+              ] else if (!message.isMe && isSelected) ...[
                 const SizedBox(width: 8),
                 GestureDetector(
                   onTap: () => _deleteMessage(message.id),
@@ -886,6 +860,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.green,
@@ -982,15 +957,18 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                 : ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.symmetric(vertical: 8),
+                    reverse: true, // ADD THIS - shows newest at bottom
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
+                      // Reverse the index since list is reversed
+                      final reversedIndex = _messages.length - 1 - index;
+                      final message = _messages[reversedIndex];
+
                       return Column(
                         children: [
-                          // Show date separator if needed
-                          if (_shouldShowDateSeparator(index))
-                            _buildDateSeparator(_messages[index].timestamp),
-                          // Show the message
-                          _buildMessage(_messages[index]),
+                          if (_shouldShowDateSeparator(reversedIndex))
+                            _buildDateSeparator(message.timestamp),
+                          _buildMessage(message),
                         ],
                       );
                     },

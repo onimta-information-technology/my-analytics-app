@@ -119,7 +119,14 @@ class GamesSummaryWidget extends ConsumerWidget {
                 },
                 children: [
                   ...gamesSummary.gameDetails
-                      .map((entry) {
+                      // .map((entry) {
+                       .asMap()
+                              .entries
+                              .map((mapEntry) {
+                                final index = mapEntry.key;
+                                final entry = mapEntry.value;
+                                final isLastEntry =
+                                    index == gamesSummary.gameDetails.length - 1;
                         return [
                           TableRow(
                             decoration: const BoxDecoration(
@@ -295,6 +302,19 @@ class GamesSummaryWidget extends ConsumerWidget {
                               ),
                             ],
                           ),
+                           if (!isLastEntry)
+                                    TableRow(
+                                      children: [
+                                        Container(
+                                          height: 10,
+                                          color: Colors.red,
+                                        ),
+                                        Container(
+                                          height: 10,
+                                          color: Colors.red,
+                                        ),
+                                      ],
+                                    ),
                         ];
                       })
                       .expand((x) => x),

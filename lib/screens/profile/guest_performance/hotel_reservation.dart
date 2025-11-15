@@ -54,7 +54,14 @@ class HotelReservationWidget extends ConsumerWidget {
                       },
                       children: [
                         ...hotelHistory
-                            .map((entry) {
+                          //  .map((entry) {
+                           .asMap()
+                              .entries
+                              .map((mapEntry) {
+                                final index = mapEntry.key;
+                                final entry = mapEntry.value;
+                                final isLastEntry =
+                                    index == hotelHistory.length - 1;
                               return [
                                 TableRow(
                                   decoration: const BoxDecoration(
@@ -697,6 +704,19 @@ class HotelReservationWidget extends ConsumerWidget {
                                     ),
                                   ],
                                 ),
+                                if (!isLastEntry)
+                                    TableRow(
+                                      children: [
+                                        Container(
+                                          height: 10,
+                                          color: Colors.red,
+                                        ),
+                                        Container(
+                                          height: 10,
+                                          color: Colors.red,
+                                        ),
+                                      ],
+                                    ),
                               ];
                             })
                             .expand((x) => x),

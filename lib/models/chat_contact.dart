@@ -214,22 +214,66 @@ class ChatContact {
     return colors[hash.abs() % colors.length];
   }
 
+  // static String getTimeAgo(DateTime? dateTime) {
+  //   if (dateTime == null) return 'Unknown';
+
+  //   final now = DateTime.now();
+  //   final difference = now.difference(dateTime);
+
+  //   if (difference.inMinutes < 1) {
+  //     return 'now';
+  //   } else if (difference.inMinutes < 60) {
+  //     return '${difference.inMinutes}m ago';
+  //   } else if (difference.inHours < 24) {
+  //     return '${difference.inHours}h ago';
+  //   } else if (difference.inDays < 7) {
+  //     return '${difference.inDays}d ago';
+  //   } else {
+  //     return '${(difference.inDays / 7).floor()}w ago';
+  //   }
+  // }
   static String getTimeAgo(DateTime? dateTime) {
-    if (dateTime == null) return 'Unknown';
+  if (dateTime == null) return 'Unknown';
 
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inMinutes < 1) {
-      return 'now';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays}d ago';
-    } else {
-      return '${(difference.inDays / 7).floor()}w ago';
-    }
+  final now = DateTime.now();
+  
+  // The API sends times marked as UTC but they're actually in local timezone
+  // So we parse them as UTC but then treat them as local
+  DateTime messageTime;
+  if (dateTime.isUtc) {
+    // Convert from UTC to local by treating the UTC values as local values
+    messageTime = DateTime(
+      dateTime.year,
+      dateTime.month,
+      dateTime.day,
+      dateTime.hour,
+      dateTime.minute,
+      dateTime.second,
+      dateTime.millisecond,
+    );
+  } else {
+    messageTime = dateTime;
   }
+  
+  final difference = now.difference(messageTime);
+
+  // Handle negative differences or very recent messages
+  if (difference.isNegative || difference.inSeconds < 5) {
+    return 'now';
+  }
+
+  if (difference.inSeconds < 60) {
+    return '${difference.inSeconds}s ago';
+  } else if (difference.inMinutes < 60) {
+    return '${difference.inMinutes}m ago';
+  } else if (difference.inHours < 24) {
+    return '${difference.inHours}h ago';
+  } else if (difference.inDays < 7) {
+    return '${difference.inDays}d ago';
+  } else if (difference.inDays < 30) {
+    return '${(difference.inDays / 7).floor()}w ago';
+  } else {
+    return '${(difference.inDays / 30).floor()}mo ago';
+  }
+}
 }

@@ -707,7 +707,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: message.isMe ? Colors.green : const Color.fromARGB(255, 200, 199, 199),
+                    color: message.isMe ?  Colors.green : const Color.fromARGB(255, 200, 199, 199),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Column(
@@ -947,6 +947,10 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
               valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
             ),
           Expanded(
+             child: Container(
+              decoration: const BoxDecoration(
+                  color: Color.fromARGB(255, 245, 245, 230),
+              ),
             child: _messages.isEmpty
                 ? const Center(
                     child: Text(
@@ -973,6 +977,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                       );
                     },
                   ),
+             ),
           ),
           Container(
             padding: const EdgeInsets.all(16),

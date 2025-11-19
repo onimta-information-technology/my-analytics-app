@@ -707,7 +707,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: message.isMe ? Colors.green : Colors.grey[300],
+                    color: message.isMe ? Colors.green : const Color.fromARGB(255, 200, 199, 199),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Column(

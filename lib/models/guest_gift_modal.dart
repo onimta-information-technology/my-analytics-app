@@ -7,6 +7,7 @@ class GuestGift {
   final String gName;
   final String? lvd;
   final String? gRating;
+  final String mobile;
 
   GuestGift({
     required this.mid,
@@ -17,6 +18,7 @@ class GuestGift {
     required this.gName,
      this.lvd,
      this.gRating,
+     this.mobile = "",
   });
 
   factory GuestGift.fromJson(Map<String, dynamic> json) {
@@ -29,6 +31,7 @@ class GuestGift {
       gName: json['GName'],
       lvd: json['LVD'],
       gRating: json['G_Rating'],
+      mobile: json['Mobile'] ?? "",
 
     );
   }

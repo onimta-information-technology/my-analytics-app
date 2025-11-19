@@ -243,7 +243,8 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   bool _hasInternet = true;
-  //  bool _hasInternet = true;
+  double _loadingProgress = 0.0;
+
   @override
   void initState() {
     super.initState();
@@ -346,11 +347,24 @@ class _SplashScreenState extends State<SplashScreen> {
       },
     );
   }
+   Future<void> _animateLoadingBar() async {
+    // Animate loading bar from 0 to 1 over 2.5 seconds
+    for (int i = 0; i <= 100; i++) {
+      if (mounted) {
+        setState(() {
+          _loadingProgress = i / 100;
+        });
+        await Future.delayed(Duration(milliseconds: 25));
+      }
+    }
+  }
 
   Future<void> _initializeSplash() async {
     setState(() {
       _hasInternet = true; // Assume true initially to avoid premature dialog
+      _loadingProgress = 0.0;
     });
+ _animateLoadingBar();
 
     // Check internet connectivity first
     _hasInternet = await _checkInternetConnectivity();
@@ -426,11 +440,41 @@ class _SplashScreenState extends State<SplashScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
-        child: Hero(
-          tag: 'hero-image',
-          child: Image.asset('assets/images/logo.png', width: 400, height: 400),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Hero(
+              tag: 'hero-image',
+              child: Image.asset('assets/images/logo.png', width: 400, height: 400),
+            ),
+            SizedBox(height: 40),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 60.0),
+              child: Column(
+                children: [
+                  LinearProgressIndicator(
+                    value: _loadingProgress,
+                    backgroundColor: Colors.grey[300],
+                    color: customGoldColor,
+                    minHeight: 6,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'Loading...',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
+

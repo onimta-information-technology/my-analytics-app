@@ -106,14 +106,56 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
                                   key: ValueKey(guest.mid),
                                   splashColor: Colors.transparent,
                                   highlightColor: Colors.transparent,
-                                  onTap: () {
-                                    ref
-                                        .read(selectedGuestProvider.notifier)
-                                        .setSelectedGuest(guest);
-                                    context.push(
-                                      '/gifts/event-gifts/guest-gifts/${guest.mid}',
-                                    );
-                                  },
+                                  // onTap: () {
+                                  //   ref
+                                  //       .read(selectedGuestProvider.notifier)
+                                  //       .setSelectedGuest(guest);
+                                  //   context.push(
+                                  //     '/gifts/event-gifts/guest-gifts/${guest.mid}',
+                                  //   );
+                                  // },
+                                  onTap: () async {
+  // Show loading indicator
+  setState(() {
+    _isLoading = true;
+  });
+  
+  try {
+    // Set the selected guest first
+    ref
+        .read(selectedGuestProvider.notifier)
+        .setSelectedGuest(guest);
+    
+    // Load the guest image and wait for it to complete
+    await ref
+        .read(selectedGuestProvider.notifier)
+        .getGuestImage(9021, guest.mid);
+    
+    // Hide loading
+    setState(() {
+      _isLoading = false;
+    });
+    
+    // Navigate to guest gifts screen
+    if (mounted) {
+      context.push(
+        '/gifts/event-gifts/guest-gifts/${guest.mid}',
+      );
+    }
+  } catch (e) {
+    // Hide loading on error
+    setState(() {
+      _isLoading = false;
+    });
+    
+    // Still navigate even if image loading fails
+    if (mounted) {
+      context.push(
+        '/gifts/event-gifts/guest-gifts/${guest.mid}',
+      );
+    }
+  }
+},
                                   child: Card(
                                     margin: const EdgeInsets.symmetric(
                                       vertical: 5.0,

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
 import 'package:ballys_reservation_app/models/guest_gift_modal.dart';
@@ -59,20 +61,233 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> {
     "SILVER": "assets/images/ratings/SILVER.png",
   };
 
+  void _showImagePopup(BuildContext context, Guest selectedGuest) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (BuildContext context) {
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              Navigator.of(context).pop();
+            },
+            splashColor: Colors.transparent,
+            highlightColor: Colors.transparent,
+            child: Container(
+              width: double.infinity,
+              height: double.infinity,
+              alignment: Alignment.center,
+              child: InteractiveViewer(
+                panEnabled: true,
+                minScale: 0.5,
+                maxScale: 4.0,
+                child: Container(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.9,
+                    maxHeight: MediaQuery.of(context).size.height * 0.8,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12.0),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 20,
+                        spreadRadius: 5,
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12.0),
+                    child: selectedGuest.memImage2 != null
+                        ? Image.memory(
+                            base64Decode(selectedGuest.memImage2!),
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Image.asset(
+                                'assets/images/others/profile.png',
+                                fit: BoxFit.contain,
+                              );
+                            },
+                          )
+                        : Image.asset(
+                            'assets/images/others/profile.png',
+                            fit: BoxFit.contain,
+                          ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileCard(Guest? selectedGuest, String? ratingFromGifts) {
+    final fontSettings = ref.watch(fontSettingsProvider);
+
+    if (selectedGuest == null) return const SizedBox.shrink();
+
+    String? displayRating = ratingFromGifts ?? selectedGuest.gRating;
+
+    // If rating is null, empty, or equals "NULL", set it to CLASSIC
+    if (displayRating == null ||
+        displayRating.trim().isEmpty ||
+        displayRating.toUpperCase() == "NULL") {
+      displayRating = "CLASSIC";
+    }
+    return Card(
+      elevation: 3,
+      margin: const EdgeInsets.all(16.0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Stack(
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GestureDetector(
+                  onTap: () => _showImagePopup(context, selectedGuest),
+                  child: Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8.0),
+                      border: Border.all(color: Colors.grey.shade300, width: 2),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(6.0),
+                      child: selectedGuest.memImage2 != null
+                          ? Image.memory(
+                              base64Decode(selectedGuest.memImage2!),
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, _, __) => Image.asset(
+                                'assets/images/others/profile.png',
+                              ),
+                            )
+                          : Image.asset('assets/images/others/profile.png'),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
+                        onTap: () async {
+                          final currentGuest = ref.read(selectedGuestProvider);
+
+                          // Create the new guest object with all data including the loaded image
+                          final guestToSet = Guest(
+                            mid: selectedGuest.mid,
+                            memberName: selectedGuest.memberName,
+                            country: "",
+                            lastVisitDate:
+                                inactiveMembers.first.lvd ?? "1990-01-01",
+
+                            age: 0,
+                            gRating: displayRating,
+                            mGroup: "",
+                            gName: inactiveMembers.first.gName,
+
+                            // IMPORTANT: Preserve the image from current guest if it exists
+                            memImage2: currentGuest?.memImage2,
+                          );
+
+                          // Update the provider with the new guest data (keeping the image)
+                          ref
+                              .read(selectedGuestProvider.notifier)
+                              .setSelectedGuest(guestToSet);
+
+                          // Only load image if it's not already loaded
+                          if (currentGuest?.memImage2 == null) {
+                            await ref
+                                .read(selectedGuestProvider.notifier)
+                                .getGuestImage(9021, selectedGuest.mid);
+                          }
+
+                          // Navigate to profile screen
+                          if (mounted) {
+                            context.push('/home/profile',extra: {'nogiftamount': true});
+                          }
+                        },
+                        child: Text(
+                          selectedGuest.memberName,
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize + 2,
+                            fontWeight: FontWeight.bold,
+                            //decoration: TextDecoration.underline,
+                            color: Colors.blueAccent,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.badge, size: 16, color: Colors.grey[600]),
+                          const SizedBox(width: 4),
+                          Text(
+                            'MID: ${selectedGuest.mid}',
+                            style: TextStyle(
+                              fontSize: fontSettings.fontSize,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 40), // space for rating image
+              ],
+            ),
+
+            /// ⭐ Rating image in bottom-right corner
+            if ((displayRating?.isNotEmpty ?? false) &&
+                ratingImageMap.containsKey(displayRating))
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Image.asset(
+                  ratingImageMap[displayRating]!,
+                  height: 45,
+                  width: 90,
+                  fit: BoxFit.contain,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final fontSettings = ref.watch(fontSettingsProvider);
+    final selectedGuest = ref.watch(selectedGuestProvider);
+    final ratingFromGifts = inactiveMembers.isNotEmpty
+        ? inactiveMembers.first.gRating
+        : null;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Guest Gifts')),
+      appBar: AppBar(title: Text('Guest Gifts')),
       body: Stack(
         children: [
           Column(
             children: [
+              // Profile Card at the top
+              _buildProfileCard(selectedGuest, ratingFromGifts),
+
+              // Gifts List
               Expanded(
                 child: inactiveMembers.isEmpty
                     ? const Center(child: Text("No gifts available"))
                     : Padding(
-                        padding: const EdgeInsets.all(8.0),
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
                         child: ListView.builder(
                           itemCount: inactiveMembers.length,
                           itemBuilder: (context, index) {
@@ -81,27 +296,47 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> {
                               key: ValueKey(guest.mid),
                               splashColor: Colors.transparent,
                               highlightColor: Colors.transparent,
-                              onTap: () {
+                              onTap: () async {
+                                // Get the current selected guest from provider (which should have the image)
+                                final currentGuest = ref.read(
+                                  selectedGuestProvider,
+                                );
+
+                                // Create the new guest object with all data including the loaded image
+                                final guestToSet = Guest(
+                                  mid: guest.mid,
+                                  memberName: guest.memberName,
+                                  country: "",
+                                  lastVisitDate: guest.lvd ?? "1990-01-01",
+                                  gift: NumberFormat.currency(
+                                    symbol: '',
+                                    decimalDigits: 0,
+                                  ).format(guest.amount),
+                                  age: 0,
+                                  gRating: guest.gRating,
+                                  mGroup: "",
+                                  gName: guest.gName,
+                                  mobile: guest.mobile,
+                                  // IMPORTANT: Preserve the image from current guest if it exists
+                                  memImage2: currentGuest?.memImage2,
+                                );
+
+                                // Update the provider with the new guest data (keeping the image)
                                 ref
                                     .read(selectedGuestProvider.notifier)
-                                    .setSelectedGuest(
-                                      Guest(
-                                        mid: guest.mid,
-                                        memberName: guest.memberName,
-                                        country: "",
-                                        lastVisitDate:
-                                            guest.lvd ?? "1990-01-01",
-                                        gift: NumberFormat.currency(
-                                          symbol: '',
-                                          decimalDigits: 0,
-                                        ).format(guest.amount),
-                                        age: 0,
-                                        gRating: guest.gRating ?? "",
-                                        mGroup: "",
-                                        gName: guest.gName,
-                                      ),
-                                    );
-                                context.push('/home/profile');
+                                    .setSelectedGuest(guestToSet);
+
+                                // Only load image if it's not already loaded
+                                if (currentGuest?.memImage2 == null) {
+                                  await ref
+                                      .read(selectedGuestProvider.notifier)
+                                      .getGuestImage(9021, guest.mid);
+                                }
+
+                                // Navigate to profile screen
+                                if (mounted) {
+                                  context.push('/home/profile');
+                                }
                               },
                               child: Card(
                                 margin: const EdgeInsets.symmetric(

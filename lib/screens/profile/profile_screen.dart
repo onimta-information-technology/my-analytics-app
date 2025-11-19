@@ -33,25 +33,42 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   bool _isTableExpanded = false;
   bool _isFromMarketing = false;
   String? currentLoadingMember;
+  bool _nogiftamount = false; // Add this field
+
   @override
   void initState() {
     super.initState();
-    _getGuestImage();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Extract the extra parameter
+      final extra = GoRouterState.of(context).extra;
+      if (extra != null && extra is Map<String, dynamic>) {
+        setState(() {
+          _nogiftamount = extra['nogiftamount'] == true;
+        });
+      }
       
-      // Load profile details when coming from marketing
+      final guest = ref.read(selectedGuestProvider);
+      
+      if (guest != null) {
+        // Only load image if it's not already present
+        if (guest.memImage2 == null) {
+          await ref
+              .read(selectedGuestProvider.notifier)
+              .getGuestImage(9021, guest.mid);
+        }
+        
+        // Set WhatsApp number if available and nogiftamount is not true
+        if (!_nogiftamount && 
+            guest.mobile != null && 
+            guest.mobile!.isNotEmpty) {
+          _whatsappNumberController.text = guest.mobile!;
+        }
+      }
+      
+      // Load profile details
       _getMemberMainProfileDetails();
-      // }
     });
-
-    final guest = ref.read(selectedGuestProvider);
-    if (guest?.mobile != null && guest!.mobile!.isNotEmpty) {
-      _whatsappNumberController.text = guest.mobile!;
-    }
-    if (GoRouter.of(context).routerDelegate.currentConfiguration.fullPath ==
-        '/members') {
-      _getMemberMainProfileDetails();
-    }
 
     _controller = AnimationController(
       duration: const Duration(seconds: 3),
@@ -71,20 +88,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     _controller.dispose();
     _whatsappNumberController.dispose();
     super.dispose();
-  }
-
-  Future<void> _getGuestImage() async {
-    final guest = ref.read(selectedGuestProvider);
-    if (guest!.memImage2 != null) return;
-
-    if (guest.memImage2 == null) {
-     
-      await ref
-          .read(selectedGuestProvider.notifier)
-          .getGuestImage(9021, guest.mid);
-    } else {
-     
-    }
   }
 
   Future<void> _getMemberMainProfileDetails() async {
@@ -129,6 +132,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   Widget build(BuildContext context) {
     final fontSettings = ref.watch(fontSettingsProvider);
     final guest = ref.watch(selectedGuestProvider);
+    final currentPath = GoRouter.of(context)
+        .routerDelegate
+        .currentConfiguration
+        .fullPath;
+    
+    // Determine if we should show gift-related elements
+    final bool showGiftElements = !_nogiftamount && 
+        (currentPath == '/birthdays' || currentPath == '/gifts/event-gifts');
+    
     if (guest == null) {
       return Scaffold(
         appBar: AppBar(title: const Text("Guest Profile")),
@@ -144,12 +156,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       onTap: () {
         FocusScope.of(context).unfocus();
       },
-
       child: Scaffold(
         appBar: AppBar(title: const Text("Guest Profile")),
         body: Stack(
           children: [
-            // 🔹 Watermark Layer
             PopScope(
               onPopInvokedWithResult: (bool didPop, dynamic result) {
                 ref.read(dateFilterProvider.notifier).resetDates();
@@ -170,7 +180,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                       horizontal: 15.0,
                     ),
                     child: Column(
-                      // mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       mainAxisSize: MainAxisSize.max,
                       children: [
@@ -315,27 +324,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                           ],
                         ),
 
-                        if (GoRouter.of(context)
-                                    .routerDelegate
-                                    .currentConfiguration
-                                    .fullPath ==
-                                '/birthdays' ||
-                            GoRouter.of(context)
-                                    .routerDelegate
-                                    .currentConfiguration
-                                    .fullPath ==
-                                '/gifts/event-gifts')
-                          const SizedBox(height: 20),
-                        if (GoRouter.of(context)
-                                    .routerDelegate
-                                    .currentConfiguration
-                                    .fullPath ==
-                                '/birthdays' ||
-                            GoRouter.of(context)
-                                    .routerDelegate
-                                    .currentConfiguration
-                                    .fullPath ==
-                                '/gifts/event-gifts')
+                        // Only show gift animation if showGiftElements is true
+                        if (showGiftElements) const SizedBox(height: 20),
+                        if (showGiftElements)
                           AnimatedBuilder(
                             animation: _animation,
                             builder: (context, child) {
@@ -400,6 +391,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                             },
                           ),
                         const SizedBox(height: 20),
+                        
+                        // Navigation buttons
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
@@ -501,7 +494,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                             ),
                           ),
                         ),
-                        // if (_isFromMarketing)
+                        
+                        // Profile details expandable section
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8.0),
                           child: _isLoading
@@ -513,7 +507,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                   ),
                                 )
                               : Column(
-                                  //mainAxisSize: MainAxisSize.min,
                                   children: [
                                     SizedBox(
                                       width: double.infinity,
@@ -542,7 +535,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                           mainAxisAlignment:
                                               MainAxisAlignment.spaceBetween,
                                           children: [
-                                            // 👇 Centered icon + text
                                             Expanded(
                                               child: Row(
                                                 mainAxisAlignment:
@@ -566,8 +558,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                 ],
                                               ),
                                             ),
-
-                                            // 👇 Arrow stays at right
                                             AnimatedRotation(
                                               turns: _isTableExpanded ? 0.5 : 0,
                                               duration: const Duration(
@@ -583,10 +573,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                         ),
                                       ),
                                     ),
-
                                     const SizedBox(height: 8),
-
-                                    // Expandable table content with animation
                                     AnimatedContainer(
                                       duration: const Duration(
                                         milliseconds: 400,
@@ -598,7 +585,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                           milliseconds: 300,
                                         ),
                                         opacity: _isTableExpanded ? 1.0 : 0.0,
-                                        // child: ClipRect(
                                         child: Table(
                                           border: TableBorder.all(),
                                           columnWidths: const {
@@ -670,8 +656,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                         ),
                                       ),
                                     ),
-
-                                    // Preview hint when collapsed
                                     if (!_isTableExpanded &&
                                         guestProfileDetails.isNotEmpty)
                                       Card(
@@ -714,17 +698,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                 ),
                         ),
                         const SizedBox(height: 8),
-                        if (GoRouter.of(context)
-                                    .routerDelegate
-                                    .currentConfiguration
-                                    .fullPath ==
-                                '/birthdays' ||
-                            GoRouter.of(context)
-                                    .routerDelegate
-                                    .currentConfiguration
-                                    .fullPath ==
-                                '/gifts/event-gifts')
-                         
+                        
+                        // Only show WhatsApp section if showGiftElements is true
+                        if (showGiftElements)
                           Card(
                             elevation: 5,
                             shape: RoundedRectangleBorder(
@@ -746,8 +722,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                   const SizedBox(height: 10),
                                   TextField(
                                     controller: _whatsappNumberController,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18, 
+                                    ),
                                     keyboardType: TextInputType.phone,
                                     decoration: InputDecoration(
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 12,
+                                      ),
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
                                         borderSide: const BorderSide(
@@ -771,7 +755,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                       ),
                                       hintText:
                                           "Enter WhatsApp number with country code",
-                                      //prefixText: "+",
                                       helperText: "e.g., 94712345678",
                                     ),
                                   ),
@@ -793,7 +776,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                             _whatsappNumberController.text
                                                 .trim();
 
-                                        // Basic validation
                                         if (phoneNumber.isEmpty) {
                                           ScaffoldMessenger.of(
                                             context,
@@ -806,13 +788,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                             ),
                                           );
                                           return;
-                                        }try {
-                                          // Show loading
+                                        }
+                                        
+                                        try {
                                           EasyLoading.show(
                                             status: 'Sending gift...',
                                           );
 
-                                          // Send WhatsApp message
                                           final result = await ref
                                               .read(birthdayProvider.notifier)
                                               .sendWhatsappMessage(
@@ -821,13 +803,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                 gift: guest.gift!,
                                               );
 
-                                          // Hide loading
                                           EasyLoading.dismiss();
 
                                           if (result == "Success") {
-                                            // Clear the text field on success
-                                            // _whatsappNumberController.clear();
-
                                             ScaffoldMessenger.of(
                                               context,
                                             ).showSnackBar(
@@ -851,7 +829,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                             );
                                           }
                                         } catch (e) {
-                                          // Hide loading
                                           EasyLoading.dismiss();
 
                                           ScaffoldMessenger.of(

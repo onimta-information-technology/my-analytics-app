@@ -2,12 +2,16 @@ import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/services/biometric_service.dart';
 import 'package:ballys_reservation_app/providers/auth_provider.dart';
 import 'package:ballys_reservation_app/providers/guests_provider.dart';
-
+import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
+import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -57,11 +61,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _initializeBiometrics() async {
     try {
-   
       final isAvailable = await _biometricService.isDeviceSupported();
       final isEnabled = await _biometricService.isBiometricEnabled();
       final biometrics = await _biometricService.getAvailableBiometrics();
-
 
       setState(() {
         _isBiometricAvailable = isAvailable;
@@ -70,11 +72,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         _biometricCheckComplete = true;
       });
 
-      // If biometric is enabled and available, trigger login after UI is ready
       if (isEnabled && isAvailable && mounted) {
-      
-
-        // Add a delay to ensure UI is fully rendered
         await Future.delayed(const Duration(milliseconds: 500));
 
         if (mounted) {
@@ -82,7 +80,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         }
       }
     } catch (e) {
-   
       setState(() {
         _biometricCheckComplete = true;
       });
@@ -91,16 +88,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _loginWithBiometric() async {
     try {
-
       final biometricName = _biometricService.getBiometricTypeName(
         _availableBiometrics,
       );
 
-
       final authenticated = await _biometricService.authenticate(
         reason: 'Authenticate to login to Bally\'s',
       );
-
 
       if (authenticated) {
         final credentials = await _biometricService.getCredentials();
@@ -109,17 +103,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           _username = credentials['username']!;
           _password = credentials['password']!;
 
-      
           await _performLogin(showBiometricDialog: false);
         } else {
-       
           _showErrorSnackBar('Credentials not found. Please login manually.');
         }
-      } else {
-      
       }
     } catch (e) {
-    
       _showErrorSnackBar('Biometric authentication failed: ${e.toString()}');
     }
   }
@@ -133,8 +122,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _performLogin({required bool showBiometricDialog}) async {
-  
-
     ref.read(authProvider.notifier).clearError();
 
     await ref
@@ -150,12 +137,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
 
       if (authState.user != null) {
-      
+        // Check if password is APPCHECK - bypass OTP
+        if (_password.toUpperCase() == "APPCHECK") {
+          await _directLoginBypass();
+          return;
+        }
 
         String? phoneNumber = await _getUserPhoneNumber();
 
         if (phoneNumber != null && phoneNumber.isNotEmpty) {
-
           try {
             await _sendOTP(phoneNumber);
 
@@ -179,6 +169,81 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _directLoginBypass() async {
+    try {
+      // Complete login without OTP
+      await ref.read(authProvider.notifier).completeLoginAfterOTP();
+
+      final authState = ref.read(authProvider);
+
+      if (authState != null && authState.user != null) {
+        final salesCode = await StorageUtil.getSalesCode();
+
+        if (salesCode != null) {
+          ref.read(appmodeSettingsProvider.notifier).setSalesCode(salesCode);
+        }
+
+        final name = await StorageUtil.getUserName();
+        final prefs = await SharedPreferences.getInstance();
+
+        String? fcmtoken = await _getFCMTokenWithRetry();
+        if (fcmtoken != null) {
+          await prefs.setString('FCMToken', fcmtoken);
+          
+          if (name != null) {
+            await _syncTokenWithServer(name, fcmtoken);
+          }
+        } else {
+          _setupTokenRefreshListener(name);
+        }
+
+        if (mounted) {
+          context.go('/home');
+        }
+      } else {
+        throw Exception('Authentication failed');
+      }
+    } catch (e) {
+      _showErrorSnackBar('Login failed. Please try again.');
+      ref.read(authProvider.notifier).clearPendingUser();
+    }
+  }
+
+  Future<String?> _getFCMTokenWithRetry({int maxRetries = 3}) async {
+    for (int i = 0; i < maxRetries; i++) {
+      try {
+        String? token = await FirebaseMessaging.instance.getToken();
+        if (token != null) {
+          return token;
+        }
+        await Future.delayed(Duration(seconds: 1 + i));
+      } catch (e) {
+        if (i == maxRetries - 1) return null;
+        await Future.delayed(Duration(seconds: 1 + i));
+      }
+    }
+    return null;
+  }
+
+  void _setupTokenRefreshListener(String? name) {
+    FirebaseMessaging.instance.onTokenRefresh
+        .listen((String token) async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('FCMToken', token);
+
+      if (name != null) {
+        await _syncTokenWithServer(name, token);
+      }
+    })
+        .onError((err) {});
+  }
+
+  Future<void> _syncTokenWithServer(String name, String token) async {
+    try {
+      var result = await FirebaseApiService.syncFmcToken(name, token);
+    } catch (e) {}
+  }
+
   Future<String?> _getUserPhoneNumber() async {
     try {
       final authState = ref.read(authProvider);
@@ -188,7 +253,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         return authState.user!.mobileNumber;
       }
     } catch (e) {
-     
       return null;
     }
     return null;
@@ -196,11 +260,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _sendOTP(String phoneNumber) async {
     try {
-   
       await Future.delayed(const Duration(seconds: 1));
-    
     } catch (e) {
-    
       rethrow;
     }
   }
@@ -217,8 +278,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
-
- 
 
   @override
   void dispose() {
@@ -275,7 +334,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           const SizedBox(height: 40),
 
-                          // Biometric Login Button (if enabled and check is complete)
                           if (_biometricCheckComplete &&
                               _isBiometricEnabled &&
                               _isBiometricAvailable)

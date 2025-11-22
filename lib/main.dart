@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/components/localNotificationService.dart';
+import 'package:ballys_reservation_app/data/services/versioncehck_service.dart';
 import 'package:ballys_reservation_app/navigation/app_navigation.dart';
 import 'package:ballys_reservation_app/utils/badge_sync_helper.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -15,6 +16,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:screen_protector/screen_protector.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 Color customGoldColor = const Color(0xFFDAB066);
 
@@ -347,6 +349,83 @@ class _SplashScreenState extends State<SplashScreen> {
       },
     );
   }
+ void _showUpdateDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return WillPopScope(
+          onWillPop: () async {
+            // Close app when back button is pressed
+            exit(0);
+          },
+          child: AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.system_update, color: customGoldColor, size: 28),
+                SizedBox(width: 10),
+                Text(
+                  'Update Available',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            content: Text(
+              'A new version of the app is available. Please update to continue using the app.',
+              style: TextStyle(fontSize: 16),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  // Close the app
+                  exit(0);
+                },
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final url = Uri.parse(VersionCheckService.getUpdateUrl());
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(
+                      url,
+                      mode: LaunchMode.externalApplication,
+                    );
+                  } else {
+                    // If can't launch URL, show error
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Could not open update link'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: Text(
+                  'Update',
+                  style: TextStyle(
+                    color: customGoldColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+
    Future<void> _animateLoadingBar() async {
     // Animate loading bar from 0 to 1 over 2.5 seconds
     for (int i = 0; i <= 100; i++) {
@@ -376,6 +455,15 @@ class _SplashScreenState extends State<SplashScreen> {
       });
       return;
     }
+     final versionCheck = await VersionCheckService.checkVersion();
+    if (!versionCheck['isLatest']) {
+      // Show update dialog - blocks user from proceeding
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showUpdateDialog();
+      });
+      return;
+    }
+
     // Check if app was opened from a terminated state via notification
     RemoteMessage? initialMessage = await FirebaseMessaging.instance
         .getInitialMessage();

@@ -576,11 +576,6 @@ class GiftsRepository {
       };
 
       final resp = await apiService.post('CommonExecute', payload);
-
-      // Print the full response for debugging
-     
-
-      // Return the full response instead of just the boolean
       return resp;
     } catch (e) {
    

@@ -22,7 +22,7 @@ class AuthRepository {
       if (response['Token'] != null &&
           response['Token']['access_token'] != null) {
         String accessToken = response['Token']['access_token'];
-        // Debug print
+     
         await storage.write(key: 'access_token', value: accessToken);
        
         return accessToken;

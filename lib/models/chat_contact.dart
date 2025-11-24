@@ -87,7 +87,7 @@ class ChatContact {
     final List<dynamic> participantsData = json['participants'] ?? [];
 
    
-    //print('Raw isOnline value from API: ${json['email']}');
+   
     String otherParticipantUuid = '';
     String otherParticipantName = '';
 

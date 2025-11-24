@@ -1085,8 +1085,6 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
 
                                       setState(() => _isLoading = false);
 
-                                      // print(ok);
-
                                       if (!mounted) return;
                                       if (ok) {
                                         ScaffoldMessenger.of(

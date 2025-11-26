@@ -598,46 +598,50 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
   }
 
   Future<void> _completeLoginProcess() async {
-    try {
-      await ref.read(authProvider.notifier).completeLoginAfterOTP();
+  try {
+    await ref.read(authProvider.notifier).completeLoginAfterOTP();
 
-      final authState = ref.read(authProvider);
+    final authState = ref.read(authProvider);
 
-      if (authState != null && authState.user != null) {
-        final salesCode = await StorageUtil.getSalesCode();
+    if (authState != null && authState.user != null) {
+      final salesCode = await StorageUtil.getSalesCode();
 
-        if (salesCode != null) {
-          ref.read(appmodeSettingsProvider.notifier).setSalesCode(salesCode);
-        }
+      if (salesCode != null) {
+        ref.read(appmodeSettingsProvider.notifier).setSalesCode(salesCode);
+      }
 
-        final name = await StorageUtil.getUserName();
-        final prefs = await SharedPreferences.getInstance();
+      final name = await StorageUtil.getUserName();
+      
+      // ✅ MARK USER AS LOGGED IN
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_logged_in', true);
 
-        // ✅ ADD THIS - Request notification permissions for regular flow
-        await _requestNotificationPermissions();
+      // ✅ Request notification permissions AFTER marking as logged in
+      await _requestNotificationPermissions();
 
-        String? fcmtoken = await _getFCMTokenWithRetry();
-        if (fcmtoken != null) {
-          await prefs.setString('FCMToken', fcmtoken);
+      String? fcmtoken = await _getFCMTokenWithRetry();
+      if (fcmtoken != null) {
+        await prefs.setString('FCMToken', fcmtoken);
 
-          if (name != null) {
-            await _syncTokenWithServer(name, fcmtoken);
-          }
-        } else {
-          _setupTokenRefreshListener(name);
-        }
-
-        if (mounted) {
-          context.go('/home');
+        if (name != null) {
+          await _syncTokenWithServer(name, fcmtoken);
         }
       } else {
-        throw Exception('Authentication failed after OTP verification');
+        _setupTokenRefreshListener(name);
       }
-    } catch (e) {
-      _showErrorMessage('Login completion failed. Please try again.');
-      ref.read(authProvider.notifier).clearPendingUser();
+
+      if (mounted) {
+        context.go('/home');
+      }
+    } else {
+      throw Exception('Authentication failed after OTP verification');
     }
+  } catch (e) {
+    _showErrorMessage('Login completion failed. Please try again.');
+    ref.read(authProvider.notifier).clearPendingUser();
   }
+}
+
 
   Future<void> _requestNotificationPermissions() async {
     try {

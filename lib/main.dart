@@ -18,6 +18,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:screen_protector/screen_protector.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 Color customGoldColor = const Color(0xFFDAB066);
 
@@ -61,13 +62,15 @@ void main() async {
 
   // await ScreenProtector.preventScreenshotOn();
 
-  // Initialize Firebases
+  // Initialize Firebase
   await Firebase.initializeApp();
 
   // Set up background message handler
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
+  // Initialize local notifications (WITHOUT requesting permission)
   await NotificationService().initializeLocalNotifications();
+  
   // Initialize badge service
   await BadgeService().initialize();
 
@@ -89,7 +92,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _setupFirebaseListenersOnly(); // ✅ NEW METHOD
+    _setupFirebaseListenersOnly();
   }
 
   @override
@@ -103,22 +106,35 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     super.didChangeAppLifecycleState(state);
 
     if (state == AppLifecycleState.resumed) {
-      // Sync badge with server when app comes to foreground
-      BadgeSyncHelper.syncBadgeWithServer();
+      // Check if user is logged in before syncing
+      _syncBadgeIfLoggedIn();
     } else if (state == AppLifecycleState.paused) {
-      // Update badge when going to background
-      BadgeSyncHelper.syncBadgeWithServer();
+      // Update badge when going to background (only if logged in)
+      _syncBadgeIfLoggedIn();
     }
   }
 
-  // New method: Setup listeners WITHOUT requesting permissions
+  Future<void> _syncBadgeIfLoggedIn() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final isLoggedIn = prefs.getBool('is_logged_in') ?? false;
+      
+      if (isLoggedIn) {
+        BadgeSyncHelper.syncBadgeWithServer();
+      }
+    } catch (e) {
+      print('Error checking login status: $e');
+    }
+  }
+
+  // Setup listeners WITHOUT requesting permissions
   Future<void> _setupFirebaseListenersOnly() async {
-    // Listen for token refresh
+    // Listen for token refresh (only matters after login)
     FirebaseMessaging.instance.onTokenRefresh.listen((String token) {
-      // Update token on your server
+      // Update token on your server (will be handled after login)
     });
 
-    // Handle foreground messages
+    // Handle foreground messages (only matters after login)
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _showForegroundNotification(message);
       _badgeService.addBadge(1);
@@ -139,15 +155,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         _handleNotificationTap(message);
       }
     });
-  }
-
-  Future<void> requestNotificationPermissionsAfterLogin() async {
-    NotificationSettings settings = await FirebaseMessaging.instance
-        .requestPermission(alert: true, badge: true, sound: true);
-
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print('Notification permissions granted');
-    }
   }
 
   Future<void> _showForegroundNotification(RemoteMessage message) async {
@@ -196,7 +203,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           } else {
             context.go('/menu/chats');
           }
-        } else {}
+        }
       });
     });
   }
@@ -218,16 +225,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         ),
       ),
       routerConfig: AppNavigation.router,
-
       builder: (context, child) {
-        // return DeveloperBanner(
         return MediaQuery(
-          // child: MediaQuery(
           data: MediaQuery.of(context).copyWith(
-            textScaler: TextScaler.noScaling, // This disables font scaling
+            textScaler: TextScaler.noScaling,
           ),
           child: child!,
-          //  ),
         );
       },
     );
@@ -253,19 +256,16 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<bool> _checkInternetConnectivity() async {
     try {
-      // First check basic connectivity
       final connectivityResult = await Connectivity().checkConnectivity();
 
       if (connectivityResult == ConnectivityResult.none) {
         return false;
       }
 
-      // Test actual internet access with HTTP request
       final client = HttpClient();
       client.connectionTimeout = Duration(seconds: 2);
 
       try {
-        // Try to make an actual HTTP request to a reliable server
         final request = await client
             .getUrl(Uri.parse('http://clients3.google.com/generate_204'))
             .timeout(Duration(seconds: 2));
@@ -318,7 +318,6 @@ class _SplashScreenState extends State<SplashScreen> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                // Retry checking internet connection
                 _initializeSplash();
               },
               child: Text(
@@ -331,7 +330,6 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             TextButton(
               onPressed: () {
-                // Exit the app
                 exit(0);
               },
               child: Text(
@@ -355,7 +353,6 @@ class _SplashScreenState extends State<SplashScreen> {
       builder: (BuildContext context) {
         return WillPopScope(
           onWillPop: () async {
-            // Close app when back button is pressed
             exit(0);
           },
           child: AlertDialog(
@@ -376,7 +373,6 @@ class _SplashScreenState extends State<SplashScreen> {
             actions: [
               TextButton(
                 onPressed: () {
-                  // Close the app
                   exit(0);
                 },
                 child: Text(
@@ -394,7 +390,6 @@ class _SplashScreenState extends State<SplashScreen> {
                   if (await canLaunchUrl(url)) {
                     await launchUrl(url, mode: LaunchMode.externalApplication);
                   } else {
-                    // If can't launch URL, show error
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -422,7 +417,6 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _animateLoadingBar() async {
-    // Animate loading bar from 0 to 1 over 2.5 seconds
     for (int i = 0; i <= 100; i++) {
       if (mounted) {
         setState(() {
@@ -435,7 +429,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _initializeSplash() async {
     setState(() {
-      _hasInternet = true; // Assume true initially to avoid premature dialog
+      _hasInternet = true;
       _loadingProgress = 0.0;
     });
     _animateLoadingBar();
@@ -444,15 +438,14 @@ class _SplashScreenState extends State<SplashScreen> {
     _hasInternet = await _checkInternetConnectivity();
 
     if (!_hasInternet) {
-      // Show no internet dialog
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showNoInternetDialog();
       });
       return;
     }
+    
     final versionCheck = await VersionCheckService.checkVersion();
     if (!versionCheck['isLatest']) {
-      // Show update dialog - blocks user from proceeding
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showUpdateDialog();
       });
@@ -466,13 +459,14 @@ class _SplashScreenState extends State<SplashScreen> {
     // Check awesome notifications for initial action
     ReceivedAction? receivedAction = await AwesomeNotifications()
         .getInitialNotificationAction(removeFromActionEvents: true);
+    
     // Initialize badge service
     await BadgeService().initialize();
+    
     // Extract chat details from notification
     Map<String, dynamic>? notificationChatData;
 
     if (initialMessage != null) {
-      // Parse Details from FCM notification
       String? detailsJson = initialMessage.data['Details'];
       if (detailsJson != null) {
         try {
@@ -486,7 +480,6 @@ class _SplashScreenState extends State<SplashScreen> {
         } catch (e) {}
       }
     } else if (receivedAction != null && receivedAction.payload != null) {
-      // Extract from Awesome Notifications payload
       notificationChatData = {
         'chatId': receivedAction.payload!['chatId'] ?? '',
         'senderName': receivedAction.payload!['senderName'] ?? '',
@@ -500,19 +493,31 @@ class _SplashScreenState extends State<SplashScreen> {
       if (expiry != null) {
         final expiryTime = DateTime.parse(expiry);
         if (DateTime.now().isBefore(expiryTime)) {
+          // Mark as logged in
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('is_logged_in', true);
+          
           // Check if opened from notification
           if (notificationChatData != null &&
               notificationChatData['chatId'] != '') {
-            // Navigate directly to chat with the notification data
             context.go('/menu/chats', extra: notificationChatData);
           } else {
             context.go('/home');
           }
         } else {
           await StorageUtil.clearUserData();
+          
+          // Mark as logged out
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('is_logged_in', false);
+          
           context.go('/login');
         }
       } else {
+        // Not logged in
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('is_logged_in', false);
+        
         context.go('/login');
       }
     });

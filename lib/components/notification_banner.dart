@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:app_settings/app_settings.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationBanner extends StatefulWidget {
   const NotificationBanner({super.key});
@@ -12,7 +13,8 @@ class NotificationBanner extends StatefulWidget {
 class _NotificationBannerState extends State<NotificationBanner> {
   bool _showBanner = false;
   bool _notificationsEnabled = false;
-  bool _isLoading = false; // New: For button loading state
+  bool _isLoading = false;
+  bool _hasRequestedPermission = false; // Track if we've already asked
 
   @override
   void initState() {
@@ -21,11 +23,21 @@ class _NotificationBannerState extends State<NotificationBanner> {
   }
 
   Future<void> _checkNotificationStatus() async {
+    // Check if user has permanently dismissed the banner
+    final prefs = await SharedPreferences.getInstance();
+    final isDismissed = prefs.getBool('notification_banner_dismissed') ?? false;
+    
+    if (isDismissed) {
+      setState(() {
+        _showBanner = false;
+      });
+      return;
+    }
+
     final settings = await FirebaseMessaging.instance.getNotificationSettings();
     final isEnabled =
         settings.authorizationStatus == AuthorizationStatus.authorized ||
-        settings.authorizationStatus ==
-            AuthorizationStatus.provisional; // Handle provisional on iOS
+        settings.authorizationStatus == AuthorizationStatus.provisional;
 
     if (mounted) {
       setState(() {
@@ -36,7 +48,10 @@ class _NotificationBannerState extends State<NotificationBanner> {
   }
 
   Future<void> _dismissBanner() async {
-  
+    // Save dismiss state permanently
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notification_banner_dismissed', true);
+    
     if (mounted) {
       setState(() {
         _showBanner = false;
@@ -52,10 +67,38 @@ class _NotificationBannerState extends State<NotificationBanner> {
     });
 
     try {
+      // First, try requesting permission programmatically (only works if not permanently denied)
+      if (!_hasRequestedPermission) {
+        final settings = await FirebaseMessaging.instance.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+
+        _hasRequestedPermission = true;
+
+        if (settings.authorizationStatus == AuthorizationStatus.authorized ||
+            settings.authorizationStatus == AuthorizationStatus.provisional) {
+          // Permission granted!
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Notifications enabled successfully!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+            await _dismissBanner();
+          }
+          return;
+        }
+      }
+
+      // If we reach here, permission was denied or already denied
+      // Check current status before opening settings
       await _checkNotificationStatus();
 
       if (_notificationsEnabled) {
-        // Already enabled
+        // Already enabled (edge case)
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -66,19 +109,44 @@ class _NotificationBannerState extends State<NotificationBanner> {
           await _dismissBanner();
         }
       } else {
-        // Not enabled → open app settings
+        // Permission denied - only open settings if user explicitly taps again
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please enable notifications in app settings'),
-              backgroundColor: Colors.orange,
+          // Show dialog to confirm before opening settings
+          final shouldOpenSettings = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Enable Notifications'),
+              content: const Text(
+                'Notifications are currently disabled. Would you like to open settings to enable them?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Open Settings'),
+                ),
+              ],
             ),
           );
+
+          if (shouldOpenSettings == true) {
+            await AppSettings.openAppSettings(type: AppSettingsType.notification);
+          }
         }
-        AppSettings.openAppSettings(type: AppSettingsType.notification);
       }
     } catch (e) {
-    
+      print('Error enabling notifications: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to enable notifications'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -125,9 +193,7 @@ class _NotificationBannerState extends State<NotificationBanner> {
             ),
             const SizedBox(width: 8),
             InkWell(
-              onTap: _isLoading
-                  ? null
-                  : () => _enableNotifications(), // Disable during loading
+              onTap: _isLoading ? null : _enableNotifications,
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -158,10 +224,7 @@ class _NotificationBannerState extends State<NotificationBanner> {
             ),
             const SizedBox(width: 8),
             InkWell(
-              onTap: () {
-            
-                _dismissBanner();
-              },
+              onTap: _dismissBanner,
               child: Container(
                 padding: const EdgeInsets.all(4),
                 child: Icon(

@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io'; // Import for Platform check
+import 'dart:io';
 import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/main.dart' show navigatorKey;
 import 'package:ballys_reservation_app/utils/current_chat_state.dart';
@@ -9,23 +9,23 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 class NotificationService {
-  // Singleton pattern
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
 
   bool _isInitialized = false;
 
-  // Initialize local notifications
+  /// Initialize local notifications WITHOUT requesting permission
+  /// Permission will be requested ONLY after successful login
   Future<void> initializeLocalNotifications() async {
     if (_isInitialized) {
-    
       return;
     }
 
     try {
+      // Initialize the notification channels (does NOT request permission)
       await AwesomeNotifications().initialize(
-        null, // Use default app icon
+        null,
         [
           NotificationChannel(
             channelKey: 'high_importance_channel',
@@ -42,14 +42,8 @@ class NotificationService {
         ],
       );
 
-      // Request permission
-      await AwesomeNotifications().isNotificationAllowed().then((isAllowed) {
-        if (!isAllowed) {
-          AwesomeNotifications().requestPermissionToSendNotifications();
-        }
-      });
-
-      // Listen to notification actions
+      // DO NOT request permission here - it will be done after login
+      // Just set up the listeners
       AwesomeNotifications().setListeners(
         onActionReceivedMethod: onActionReceivedMethod,
         onNotificationCreatedMethod: onNotificationCreatedMethod,
@@ -58,23 +52,43 @@ class NotificationService {
       );
 
       _isInitialized = true;
-    
+      print('✅ Notification service initialized (permission NOT requested)');
     } catch (e) {
-     
+      print('❌ Error initializing notifications: $e');
+    }
+  }
+
+  /// Call this ONLY after successful login to request permission
+  Future<bool> requestNotificationPermission() async {
+    try {
+      final isAllowed = await AwesomeNotifications().isNotificationAllowed();
+      
+      if (!isAllowed) {
+        // Request permission only if not already allowed
+        final granted = await AwesomeNotifications().requestPermissionToSendNotifications();
+        print('🔔 Notification permission requested: $granted');
+        return granted;
+      }
+      
+      print('🔔 Notification permission already granted');
+      return true;
+    } catch (e) {
+      print('❌ Error requesting notification permission: $e');
+      return false;
     }
   }
 
   Future<void> showForegroundNotification(RemoteMessage message) async {
     try {
       String? notificationChatId;
+      
       // For iOS, skip custom notifications and let FCM handle natively
       if (Platform.isIOS) {
-      
         await _updateBadgeCount(1);
         return;
       }
 
-      // Android: Show custom notification using Awesome Notifications
+      // Android: Show custom notification
       String title =
           message.data['title'] ?? message.notification?.title ?? 'New Message';
       String body = message.data['body'] ?? message.notification?.body ?? '';
@@ -88,23 +102,22 @@ class NotificationService {
           chatDetails = json.decode(detailsJson);
           notificationChatId = chatDetails?['chatId']?.toString();
         } catch (e) {
-       
+          print('Error parsing Details: $e');
         }
       }
+      
       if (notificationChatId == null || notificationChatId.isEmpty) {
         notificationChatId =
             message.data['chatId']?.toString() ??
             message.data['chat_id']?.toString();
       }
+      
       if (notificationChatId != null &&
           CurrentChatState().isCurrentChat(notificationChatId)) {
-       
-        // Still update badge count
         await _updateBadgeCount(1);
         return;
       }
 
-     
       Map<String, String> payload = {
         'type': message.data['msg_type']?.toString() ?? 'chat',
         'screen': 'chat',
@@ -114,21 +127,15 @@ class NotificationService {
         'hostName': chatDetails?['hostName']?.toString() ?? '',
       };
 
-      // Get image from data payload
       String? imageUrl = message.data['image_url'];
-
-      // Generate unique ID
-      int notificationId = DateTime.now().millisecondsSinceEpoch.remainder(
-        100000,
-      );
-      // Get current badge count and increment
+      int notificationId = DateTime.now().millisecondsSinceEpoch.remainder(100000);
+      
       final badgeService = BadgeService();
       final currentBadge = await badgeService.getSavedBadgeCount();
       final newBadgeCount = currentBadge + 1;
 
-      // Update badge BEFORE creating notification
       await badgeService.updateBadge(newBadgeCount);
-      // Create notification with error handling
+      
       bool created = await AwesomeNotifications().createNotification(
         content: NotificationContent(
           id: notificationId,
@@ -147,42 +154,33 @@ class NotificationService {
       );
 
       if (created) {
-   
-        // Update badge count
         await _updateBadgeCount(1);
-      } else {
-     
       }
     } catch (e) {
-     
+      print('Error showing notification: $e');
     }
   }
 
-  // Helper method to update badge count
   Future<void> _updateBadgeCount(int increment) async {
     try {
       final badgeService = BadgeService();
       await badgeService.addBadge(increment);
     } catch (e) {
-   
+      print('Error updating badge: $e');
     }
   }
 
-  // Notification action received (when user taps notification)
   @pragma("vm:entry-point")
   static Future<void> onActionReceivedMethod(
     ReceivedAction receivedAction,
   ) async {
     try {
-    
-      // Clear badge when notification is tapped
       await BadgeService().clearBadge();
-      // Navigate to specific chat
+      
       if (receivedAction.payload != null &&
           receivedAction.payload!.isNotEmpty) {
         final payload = receivedAction.payload!;
 
-        // Check if it's a chat notification
         if (payload['type'] == '11' ||
             payload['screen'] == 'chat' ||
             payload.containsKey('chatId')) {
@@ -191,13 +189,10 @@ class NotificationService {
           final senderId = payload['senderId'] ?? '';
           final hostName = payload['hostName'] ?? '';
 
-          // Use the global navigator key to navigate
           final context = navigatorKey.currentContext;
           if (context != null && context.mounted) {
-            // Small delay to ensure app is ready
             await Future.delayed(Duration(milliseconds: 500));
 
-            // Navigate to chat screen with specific chat data
             context.go(
               '/menu/chats',
               extra: {
@@ -212,42 +207,35 @@ class NotificationService {
         }
       }
     } catch (e) {
-    
+      print('Error in onActionReceivedMethod: $e');
     }
   }
 
-  // Notification created
   @pragma("vm:entry-point")
   static Future<void> onNotificationCreatedMethod(
     ReceivedNotification receivedNotification,
   ) async {
-  
+    print('Notification created: ${receivedNotification.id}');
   }
 
-  // Notification displayed
   @pragma("vm:entry-point")
   static Future<void> onNotificationDisplayedMethod(
     ReceivedNotification receivedNotification,
   ) async {
-   
+    print('Notification displayed: ${receivedNotification.id}');
   }
 
-  // Notification dismissed
   @pragma("vm:entry-point")
   static Future<void> onDismissActionReceivedMethod(
     ReceivedAction receivedAction,
   ) async {
-  
+    print('Notification dismissed: ${receivedAction.id}');
   }
 
-  // Handle notification tap with chat data
   void handleNotificationTap(RemoteMessage message) {
     try {
-   
-      // Clear badge
       BadgeService().clearBadge();
 
-      // Parse chat details
       String? detailsJson = message.data['Details'];
       Map<String, dynamic>? chatDetails;
 
@@ -255,11 +243,10 @@ class NotificationService {
         try {
           chatDetails = json.decode(detailsJson);
         } catch (e) {
-         
+          print('Error parsing Details: $e');
         }
       }
 
-      // Navigate to chat screen with specific chat
       final context = navigatorKey.currentContext;
       if (context != null && context.mounted) {
         context.go(
@@ -274,29 +261,25 @@ class NotificationService {
         );
       }
     } catch (e) {
-
+      print('Error handling notification tap: $e');
     }
   }
 
-  // Get current FCM token
   Future<String?> getFCMToken() async {
     try {
       return await FirebaseMessaging.instance.getToken();
     } catch (e) {
-    
+      print('Error getting FCM token: $e');
       return null;
     }
   }
 
-  // Delete FCM token (useful for logout)
   Future<void> deleteFCMToken() async {
     try {
       await FirebaseMessaging.instance.deleteToken();
-    
-      // Also clear badge on logout
       await BadgeService().clearBadge();
     } catch (e) {
-   
+      print('Error deleting FCM token: $e');
     }
   }
 }

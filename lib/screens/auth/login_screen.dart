@@ -169,48 +169,50 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  Future<void> _directLoginBypass() async {
-    try {
-      await ref.read(authProvider.notifier).completeLoginAfterOTP();
+ Future<void> _directLoginBypass() async {
+  try {
+    await ref.read(authProvider.notifier).completeLoginAfterOTP();
 
-      final authState = ref.read(authProvider);
+    final authState = ref.read(authProvider);
 
-      if (authState != null && authState.user != null) {
-        final salesCode = await StorageUtil.getSalesCode();
+    if (authState != null && authState.user != null) {
+      final salesCode = await StorageUtil.getSalesCode();
 
-        if (salesCode != null) {
-          ref.read(appmodeSettingsProvider.notifier).setSalesCode(salesCode);
-        }
+      if (salesCode != null) {
+        ref.read(appmodeSettingsProvider.notifier).setSalesCode(salesCode);
+      }
 
-        final name = await StorageUtil.getUserName();
-        final prefs = await SharedPreferences.getInstance();
+      final name = await StorageUtil.getUserName();
+      
+      // ✅ MARK USER AS LOGGED IN
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_logged_in', true);
 
-        // ✅ ADD THIS - Request notification permissions for bypass flow
-        await _requestNotificationPermissionsForBypass();
+      // ✅ Request notification permissions AFTER marking as logged in
+      await _requestNotificationPermissionsForBypass();
 
-        String? fcmtoken = await _getFCMTokenWithRetry();
-        if (fcmtoken != null) {
-          await prefs.setString('FCMToken', fcmtoken);
+      String? fcmtoken = await _getFCMTokenWithRetry();
+      if (fcmtoken != null) {
+        await prefs.setString('FCMToken', fcmtoken);
 
-          if (name != null) {
-            await _syncTokenWithServer(name, fcmtoken);
-          }
-        } else {
-          _setupTokenRefreshListener(name);
-        }
-
-        if (mounted) {
-          context.go('/home');
+        if (name != null) {
+          await _syncTokenWithServer(name, fcmtoken);
         }
       } else {
-        throw Exception('Authentication failed');
+        _setupTokenRefreshListener(name);
       }
-    } catch (e) {
-      _showErrorSnackBar('Login failed. Please try again.');
-      ref.read(authProvider.notifier).clearPendingUser();
-    }
-  }
 
+      if (mounted) {
+        context.go('/home');
+      }
+    } else {
+      throw Exception('Authentication failed');
+    }
+  } catch (e) {
+    _showErrorSnackBar('Login failed. Please try again.');
+    ref.read(authProvider.notifier).clearPendingUser();
+  }
+}
   Future<void> _requestNotificationPermissionsForBypass() async {
     try {
       // Small delay so user sees they've logged in successfully

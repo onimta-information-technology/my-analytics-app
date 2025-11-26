@@ -234,7 +234,7 @@ class AuthNotifier extends StateNotifier<AuthState?> {
 
       // Update state
       state = AuthState(user: null, isLoading: false, error: null);
-
+await prefs.setBool('is_logged_in', false);
    
     } catch (e) {
    

@@ -59,7 +59,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await ScreenProtector.preventScreenshotOn();
+  // await ScreenProtector.preventScreenshotOn();
 
   // Initialize Firebases
   await Firebase.initializeApp();
@@ -89,7 +89,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _initializeFirebaseMessaging();
+    _setupFirebaseListenersOnly(); // ✅ NEW METHOD
   }
 
   @override
@@ -111,45 +111,42 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _initializeFirebaseMessaging() async {
-    // Request permission for notifications with badge enabled
-    NotificationSettings settings = await FirebaseMessaging.instance
-        .requestPermission(
-          alert: true,
-          badge: true, // CRITICAL for iOS
-          sound: true,
-        );
+  // New method: Setup listeners WITHOUT requesting permissions
+  Future<void> _setupFirebaseListenersOnly() async {
+    // Listen for token refresh
+    FirebaseMessaging.instance.onTokenRefresh.listen((String token) {
+      // Update token on your server
+    });
 
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      // Listen for token refresh
-      FirebaseMessaging.instance.onTokenRefresh.listen((String token) {
-        // Update token on your server
-      });
+    // Handle foreground messages
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      _showForegroundNotification(message);
+      _badgeService.addBadge(1);
+    });
 
-      // Handle foreground messages
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        _showForegroundNotification(message);
-        // Increment badge
-        _badgeService.addBadge(1);
-      });
+    // Handle notification taps when app is in background
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      BadgeSyncHelper.syncBadgeWithServer();
+      _handleNotificationTap(message);
+    });
 
-      // Handle notification taps when app is in background
-      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-        // Sync badge with server to get accurate count
+    // Handle notification tap when app was terminated
+    FirebaseMessaging.instance.getInitialMessage().then((
+      RemoteMessage? message,
+    ) {
+      if (message != null) {
         BadgeSyncHelper.syncBadgeWithServer();
         _handleNotificationTap(message);
-      });
+      }
+    });
+  }
 
-      // Handle notification tap when app was terminated
-      FirebaseMessaging.instance.getInitialMessage().then((
-        RemoteMessage? message,
-      ) {
-        if (message != null) {
-          // Sync badge with server
-          BadgeSyncHelper.syncBadgeWithServer();
-          _handleNotificationTap(message);
-        }
-      });
+  Future<void> requestNotificationPermissionsAfterLogin() async {
+    NotificationSettings settings = await FirebaseMessaging.instance
+        .requestPermission(alert: true, badge: true, sound: true);
+
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      print('Notification permissions granted');
     }
   }
 
@@ -223,14 +220,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       routerConfig: AppNavigation.router,
 
       builder: (context, child) {
-         return DeveloperBanner(
-        //return MediaQuery(
-           child: MediaQuery(
+        // return DeveloperBanner(
+        return MediaQuery(
+          // child: MediaQuery(
           data: MediaQuery.of(context).copyWith(
             textScaler: TextScaler.noScaling, // This disables font scaling
           ),
           child: child!,
-           ),
+          //  ),
         );
       },
     );
@@ -350,7 +347,8 @@ class _SplashScreenState extends State<SplashScreen> {
       },
     );
   }
- void _showUpdateDialog() {
+
+  void _showUpdateDialog() {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -394,10 +392,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 onPressed: () async {
                   final url = Uri.parse(VersionCheckService.getUpdateUrl());
                   if (await canLaunchUrl(url)) {
-                    await launchUrl(
-                      url,
-                      mode: LaunchMode.externalApplication,
-                    );
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
                   } else {
                     // If can't launch URL, show error
                     if (mounted) {
@@ -426,8 +421,7 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 
-
-   Future<void> _animateLoadingBar() async {
+  Future<void> _animateLoadingBar() async {
     // Animate loading bar from 0 to 1 over 2.5 seconds
     for (int i = 0; i <= 100; i++) {
       if (mounted) {
@@ -444,7 +438,7 @@ class _SplashScreenState extends State<SplashScreen> {
       _hasInternet = true; // Assume true initially to avoid premature dialog
       _loadingProgress = 0.0;
     });
- _animateLoadingBar();
+    _animateLoadingBar();
 
     // Check internet connectivity first
     _hasInternet = await _checkInternetConnectivity();
@@ -456,7 +450,7 @@ class _SplashScreenState extends State<SplashScreen> {
       });
       return;
     }
-     final versionCheck = await VersionCheckService.checkVersion();
+    final versionCheck = await VersionCheckService.checkVersion();
     if (!versionCheck['isLatest']) {
       // Show update dialog - blocks user from proceeding
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -534,7 +528,11 @@ class _SplashScreenState extends State<SplashScreen> {
           children: [
             Hero(
               tag: 'hero-image',
-              child: Image.asset('assets/images/logo.png', width: 400, height: 400),
+              child: Image.asset(
+                'assets/images/logo.png',
+                width: 400,
+                height: 400,
+              ),
             ),
             SizedBox(height: 40),
             Padding(
@@ -566,4 +564,3 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 }
-

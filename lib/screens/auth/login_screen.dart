@@ -171,7 +171,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _directLoginBypass() async {
     try {
-      // Complete login without OTP
       await ref.read(authProvider.notifier).completeLoginAfterOTP();
 
       final authState = ref.read(authProvider);
@@ -186,10 +185,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         final name = await StorageUtil.getUserName();
         final prefs = await SharedPreferences.getInstance();
 
+        // ✅ ADD THIS - Request notification permissions for bypass flow
+        await _requestNotificationPermissionsForBypass();
+
         String? fcmtoken = await _getFCMTokenWithRetry();
         if (fcmtoken != null) {
           await prefs.setString('FCMToken', fcmtoken);
-          
+
           if (name != null) {
             await _syncTokenWithServer(name, fcmtoken);
           }
@@ -206,6 +208,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } catch (e) {
       _showErrorSnackBar('Login failed. Please try again.');
       ref.read(authProvider.notifier).clearPendingUser();
+    }
+  }
+
+  Future<void> _requestNotificationPermissionsForBypass() async {
+    try {
+      // Small delay so user sees they've logged in successfully
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      NotificationSettings settings = await FirebaseMessaging.instance
+          .requestPermission(alert: true, badge: true, sound: true);
+
+      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+        print('Notification permissions granted (bypass flow)');
+      } else if (settings.authorizationStatus == AuthorizationStatus.denied) {
+        print('Notification permissions denied (bypass flow)');
+        // Don't show error or redirect - continue normally
+      }
+    } catch (e) {
+      print('Error requesting notification permissions: $e');
+      // Don't show error to user - just continue
     }
   }
 
@@ -228,13 +250,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void _setupTokenRefreshListener(String? name) {
     FirebaseMessaging.instance.onTokenRefresh
         .listen((String token) async {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('FCMToken', token);
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('FCMToken', token);
 
-      if (name != null) {
-        await _syncTokenWithServer(name, token);
-      }
-    })
+          if (name != null) {
+            await _syncTokenWithServer(name, token);
+          }
+        })
         .onError((err) {});
   }
 

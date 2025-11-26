@@ -87,40 +87,28 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       _appSignature = await SmsAutoFill().getAppSignature;
       try {
         String? phoneHint = await SmsAutoFill().hint;
-       
-      } catch (e) {
-      
-      }
+      } catch (e) {}
 
       await SmsAutoFill().listenForCode();
-    
 
       _setupManualSMSListener();
-    } catch (e) {
-      
-    }
+    } catch (e) {}
   }
 
   void _setupManualSMSListener() {
     try {
       _smsSubscription = SmsAutoFill().code.listen((String receivedCode) {
-    
         if (receivedCode.isNotEmpty) {
           _handleReceivedSMS(receivedCode);
         }
       });
-    } catch (e) {
-     
-    }
+    } catch (e) {}
   }
 
   void _handleReceivedSMS(String receivedCode) {
-
-
     String extractedOTP = _extractOTPFromCode(receivedCode);
 
     if (extractedOTP.length == 5 && extractedOTP.isNotEmpty) {
-   
       if (_autoFillPermissionGranted == null) {
         _pendingSMSCode = extractedOTP;
         _showAutoFillPermissionDialog(extractedOTP);
@@ -129,9 +117,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       } else {
         _showInfoMessage('OTP received. Please enter manually.');
       }
-    } else {
-  
-    }
+    } else {}
   }
 
   Future<void> _showAutoFillPermissionDialog(String otp) async {
@@ -345,14 +331,11 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       final response = await http.get(Uri.parse(fullUrl));
 
       if (response.statusCode == 200) {
-
         return true;
       } else {
-
         return false;
       }
     } catch (e) {
-
       return false;
     }
   }
@@ -384,14 +367,11 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
 
   @override
   void dispose() {
-
     try {
       cancel();
       SmsAutoFill().unregisterListener();
       _smsSubscription?.cancel();
-    } catch (e) {
-   
-    }
+    } catch (e) {}
 
     _timer?.cancel();
     for (var controller in _otpControllers) {
@@ -420,8 +400,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
     });
   }
 
- 
-
   Future<void> _verifyOTP() async {
     if (_currentOTP.length != 5) {
       _showErrorMessage('Please enter complete OTP');
@@ -439,10 +417,10 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
 
       if (isValid) {
         _showSuccessMessage('OTP verified successfully!');
-        
+
         // Check if biometric should be offered
         await _checkAndOfferBiometric();
-        
+
         await _completeLoginProcess();
       } else {
         _showErrorMessage('Invalid OTP. Please try again.');
@@ -464,37 +442,34 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       // Check if device supports biometrics
       final isAvailable = await _biometricService.isDeviceSupported();
       if (!isAvailable) {
-    
         return;
       }
 
       // Check if biometric is already enabled
       final isEnabled = await _biometricService.isBiometricEnabled();
       if (isEnabled) {
-       
         return;
       }
 
       // Show biometric enable dialog
       await _showBiometricEnableDialog();
-    } catch (e) {
-  
-    }
+    } catch (e) {}
   }
 
   Future<void> _showBiometricEnableDialog() async {
     if (!mounted) return;
 
-    final availableBiometrics = await _biometricService.getAvailableBiometrics();
-    final biometricName = _biometricService.getBiometricTypeName(availableBiometrics);
+    final availableBiometrics = await _biometricService
+        .getAvailableBiometrics();
+    final biometricName = _biometricService.getBiometricTypeName(
+      availableBiometrics,
+    );
 
     final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
             Container(
@@ -541,19 +516,12 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
               ),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: Colors.blue[700],
-                    size: 20,
-                  ),
+                  Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Your credentials will be stored securely on your device',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.blue[700],
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.blue[700]),
                     ),
                   ),
                 ],
@@ -615,17 +583,11 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
 
   Future<void> _enableBiometric() async {
     try {
-
       // Save the credentials that were used for this login
-      await _biometricService.saveCredentials(
-        widget.username,
-        widget.password,
-      );
-      
-      _showSuccessMessage('Biometric authentication enabled successfully!');
+      await _biometricService.saveCredentials(widget.username, widget.password);
 
+      _showSuccessMessage('Biometric authentication enabled successfully!');
     } catch (e) {
-     
       _showErrorMessage('Failed to enable biometric authentication');
     }
   }
@@ -637,13 +599,11 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
 
   Future<void> _completeLoginProcess() async {
     try {
-
       await ref.read(authProvider.notifier).completeLoginAfterOTP();
 
       final authState = ref.read(authProvider);
 
       if (authState != null && authState.user != null) {
-
         final salesCode = await StorageUtil.getSalesCode();
 
         if (salesCode != null) {
@@ -653,15 +613,17 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
         final name = await StorageUtil.getUserName();
         final prefs = await SharedPreferences.getInstance();
 
+        // ✅ ADD THIS - Request notification permissions for regular flow
+        await _requestNotificationPermissions();
+
         String? fcmtoken = await _getFCMTokenWithRetry();
         if (fcmtoken != null) {
           await prefs.setString('FCMToken', fcmtoken);
-         
+
           if (name != null) {
             await _syncTokenWithServer(name, fcmtoken);
           }
         } else {
-       
           _setupTokenRefreshListener(name);
         }
 
@@ -677,12 +639,31 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
     }
   }
 
+  Future<void> _requestNotificationPermissions() async {
+    try {
+      // Small delay so user sees successful verification
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      NotificationSettings settings = await FirebaseMessaging.instance
+          .requestPermission(alert: true, badge: true, sound: true);
+
+      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+        print('Notification permissions granted');
+      } else if (settings.authorizationStatus == AuthorizationStatus.denied) {
+        print('Notification permissions denied');
+        // Don't show error or redirect - continue normally
+      }
+    } catch (e) {
+      print('Error requesting notification permissions: $e');
+      // Don't show error to user - just continue
+    }
+  }
+
   Future<String?> _getFCMTokenWithRetry({int maxRetries = 3}) async {
     for (int i = 0; i < maxRetries; i++) {
       try {
         String? token = await FirebaseMessaging.instance.getToken();
         if (token != null) {
-        
           return token;
         }
         await Future.delayed(Duration(seconds: 1 + i));
@@ -697,7 +678,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
   void _setupTokenRefreshListener(String? name) {
     FirebaseMessaging.instance.onTokenRefresh
         .listen((String token) async {
-
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('FCMToken', token);
 
@@ -705,9 +685,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
             await _syncTokenWithServer(name, token);
           }
         })
-        .onError((err) {
-        
-        });
+        .onError((err) {});
   }
 
   Future<void> _syncTokenWithServer(String name, String token) async {
@@ -715,12 +693,8 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       var result = await FirebaseApiService.syncFmcToken(name, token);
 
       if (result['success'] == true) {
-       
-      } else {
-      
-      }
-    } catch (e) {
-    }
+      } else {}
+    } catch (e) {}
   }
 
   void _clearOTPFields() {
@@ -810,7 +784,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
       }
     } catch (e) {
       _showErrorMessage('Failed to resend OTP');
-
     } finally {
       setState(() {
         _isSendingOTP = false;
@@ -992,13 +965,16 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
                           });
 
                           if (_currentOTP.length == 5 && !_isVerifying) {
-                            Future.delayed(const Duration(milliseconds: 800), () {
-                              if (mounted &&
-                                  _currentOTP.length == 5 &&
-                                  !_isVerifying) {
-                                _verifyOTP();
-                              }
-                            });
+                            Future.delayed(
+                              const Duration(milliseconds: 800),
+                              () {
+                                if (mounted &&
+                                    _currentOTP.length == 5 &&
+                                    !_isVerifying) {
+                                  _verifyOTP();
+                                }
+                              },
+                            );
                           }
                         },
                         onTap: () {

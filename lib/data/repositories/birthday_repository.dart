@@ -141,15 +141,250 @@ class BirthdayRepository {
   //   //   throw Exception('Failed to send gift');
   //   // }
   // }
-   Future<String> sendWhatsappMessage({
+
+   Future<void> saveGiftData({
+    required String salesCode,
+    required String memberName,
+    required String memberMobile,
+    required String whatsappNumber,
+    required String giftValue,
+    required String deviceId,
+    required String userName,
+    required String mid,
+    required String mCode,
+  }) async {
+    try {
+      print('salesCode: $salesCode, memberName: $memberName, memberMobile: $memberMobile, whatsappNumber: $whatsappNumber, giftValue: $giftValue, deviceId: $deviceId, userName: $userName, mid: $mid , mcode: $mCode' );
+      await apiService.post('CommonExecute', {
+        "HasReturnData": "T",
+        "Parameters": [
+          {
+            "Para_Data": 9050,
+            "Para_Direction": "Input",
+            "Para_Lenth": 1,
+            "Para_Name": "@Iid",
+            "Para_Type": "int",
+          },
+          {
+            "Para_Data": mid,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text1",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": memberName,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text2",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": memberMobile,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text3",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": whatsappNumber,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text4",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": giftValue,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text5",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": salesCode,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text6",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": mCode,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text7",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": userName,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text8",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": deviceId,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text30",
+            "Para_Type": "varchar",
+          },
+        ],
+        "SpName": "sp_CRM_Common_API",
+        "con": "1",
+      });
+      // No need to check response, just call the API
+    } catch (e) {
+      // Log error but don't throw - we still want to proceed with WhatsApp
+      print('Error saving gift data: $e');
+    }
+  }
+  //  Future<String> sendWhatsappMessage({
+  //   required String mname,
+  //   required String whatsappNumber,
+  //   required String gift,
+  // }) async {
+  //   try {
+  //     final userName = await StorageUtil.getUserName();
+      
+  //     // First, save the gift data to your API
+  //     final response = await http.post(
+  //       Uri.parse('${Constants.laravelAPIbaseUrl}/gift/send'),
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: jsonEncode({
+  //         'whatsapp_number': whatsappNumber,
+  //         'member_name': mname,
+  //         'gift_value': gift,
+  //         'created_by': userName
+  //       }),
+  //     );
+
+  //     if (response.statusCode == 200) {
+  //       // Create the WhatsApp message
+  //       final responseBody= jsonDecode(response.body);
+  //       final giftCode = responseBody['gift_code'];  
+
+  //       String message = 'Congratulations! \n\n'
+  //           'You have received a gift valued at $gift! 🎁✨\n\n'
+  //           'Enjoy this special token of appreciation, and may it bring '
+  //           'a little extra joy to your day!\n\n'
+  //           'Click here to claim: https://api.mkt.onimtaitsl.com/gift/$giftCode';
+        
+  //       // URL encode the message
+  //       String encodedMessage = Uri.encodeComponent(message);
+        
+  //       // Ensure phone number has proper format
+  //       String phoneNumber = whatsappNumber.trim();
+  //       // if (!phoneNumber.startsWith('+')) {
+  //       //   phoneNumber = '+$phoneNumber';
+  //       // }
+        
+  //       // Create WhatsApp URLs
+  //       String androidUrl = "whatsapp://send?phone=$phoneNumber&text=$encodedMessage";
+  //       String iosUrl = "https://wa.me/$phoneNumber?text=$encodedMessage";
+  //       String webUrl = "https://wa.me/$phoneNumber?text=$encodedMessage";
+        
+  //       // Try to launch WhatsApp with more aggressive approach
+  //       bool launched = false;
+        
+  //       // Method 1: Try app-specific URLs first without canLaunchUrl check
+  //       try {
+  //         if (Platform.isAndroid) {
+  //           // Try Android app URL directly
+  //           await launchUrl(
+  //             Uri.parse(androidUrl),
+  //             mode: LaunchMode.externalApplication,
+  //           );
+  //           launched = true;
+  //         } else if (Platform.isIOS) {
+  //           // Try iOS app URL directly
+  //           await launchUrl(
+  //             Uri.parse(iosUrl),
+  //             mode: LaunchMode.externalApplication,
+  //           );
+  //           launched = true;
+  //         }
+  //       } catch (e) {
+       
+  //         launched = false;
+  //       }
+        
+  //       // Method 2: If app launch failed, try web WhatsApp
+  //       if (!launched) {
+  //         try {
+  //           await launchUrl(
+  //             Uri.parse(webUrl),
+  //             mode: LaunchMode.externalApplication,
+  //           );
+  //           launched = true;
+  //         } catch (e) {
+        
+  //         }
+  //       }
+        
+  //       // Method 3: Final fallback - try simple wa.me URL
+  //       if (!launched) {
+  //         try {
+  //           String fallbackUrl = "https://wa.me/$phoneNumber";
+  //           await launchUrl(
+  //             Uri.parse(fallbackUrl),
+  //             mode: LaunchMode.externalApplication,
+  //           );
+  //           launched = true;
+  //         } catch (e) {
+        
+  //         }
+  //       }
+        
+  //       if (launched) {
+  //         EasyLoading.showSuccess('WhatsApp message sent successfully!');
+  //         return "Success";
+  //       } else {
+  //         EasyLoading.showError('WhatsApp is not installed or available.');
+  //         return "WhatsApp not available";
+  //       }
+        
+  //     } else {
+  //       final responseBody = jsonDecode(response.body);
+  //       String errorMessage = responseBody['message'] ?? 'Failed to save gift data';
+  //       EasyLoading.showError('Error: $errorMessage');
+  //       throw Exception('Failed to send gift: $errorMessage');
+  //     }
+      
+  //   } catch (e) {
+   
+  //     EasyLoading.showError('Failed to send gift message');
+  //     return "Error: $e";
+  //   }
+  // }
+  Future<String> sendWhatsappMessage({
     required String mname,
     required String whatsappNumber,
     required String gift,
+    required String mid,
+    required String memberMobile,
   }) async {
     try {
       final userName = await StorageUtil.getUserName();
-      
-      // First, save the gift data to your API
+      final salesCode = await StorageUtil.getSalesCode();
+      final deviceId = await DeviceId.get();
+      final mCode = await StorageUtil.getMarketingCode();
+
+      // First, save gift data via sp_CRM_Common_API
+      await saveGiftData(
+        salesCode: salesCode ?? '',
+        memberName: mname,
+        memberMobile: memberMobile,
+        whatsappNumber: whatsappNumber,
+        giftValue: gift,
+        deviceId: deviceId,
+        userName: userName ?? '',
+        mid: mid,
+        mCode: mCode ?? '',
+      );
+
+      // Then proceed with the Laravel API call and WhatsApp
       final response = await http.post(
         Uri.parse('${Constants.laravelAPIbaseUrl}/gift/send'),
         headers: {
@@ -164,44 +399,33 @@ class BirthdayRepository {
       );
 
       if (response.statusCode == 200) {
-        // Create the WhatsApp message
-        final responseBody= jsonDecode(response.body);
-        final giftCode = responseBody['gift_code'];  
+        final responseBody = jsonDecode(response.body);
+        final giftCode = responseBody['gift_code'];
 
         String message = 'Congratulations! \n\n'
             'You have received a gift valued at $gift! 🎁✨\n\n'
             'Enjoy this special token of appreciation, and may it bring '
             'a little extra joy to your day!\n\n'
             'Click here to claim: https://api.mkt.onimtaitsl.com/gift/$giftCode';
-        
-        // URL encode the message
+
         String encodedMessage = Uri.encodeComponent(message);
-        
-        // Ensure phone number has proper format
         String phoneNumber = whatsappNumber.trim();
-        // if (!phoneNumber.startsWith('+')) {
-        //   phoneNumber = '+$phoneNumber';
-        // }
-        
-        // Create WhatsApp URLs
-        String androidUrl = "whatsapp://send?phone=$phoneNumber&text=$encodedMessage";
+
+        String androidUrl =
+            "whatsapp://send?phone=$phoneNumber&text=$encodedMessage";
         String iosUrl = "https://wa.me/$phoneNumber?text=$encodedMessage";
         String webUrl = "https://wa.me/$phoneNumber?text=$encodedMessage";
-        
-        // Try to launch WhatsApp with more aggressive approach
+
         bool launched = false;
-        
-        // Method 1: Try app-specific URLs first without canLaunchUrl check
+
         try {
           if (Platform.isAndroid) {
-            // Try Android app URL directly
             await launchUrl(
               Uri.parse(androidUrl),
               mode: LaunchMode.externalApplication,
             );
             launched = true;
           } else if (Platform.isIOS) {
-            // Try iOS app URL directly
             await launchUrl(
               Uri.parse(iosUrl),
               mode: LaunchMode.externalApplication,
@@ -209,11 +433,9 @@ class BirthdayRepository {
             launched = true;
           }
         } catch (e) {
-       
           launched = false;
         }
-        
-        // Method 2: If app launch failed, try web WhatsApp
+
         if (!launched) {
           try {
             await launchUrl(
@@ -221,12 +443,9 @@ class BirthdayRepository {
               mode: LaunchMode.externalApplication,
             );
             launched = true;
-          } catch (e) {
-        
-          }
+          } catch (e) {}
         }
-        
-        // Method 3: Final fallback - try simple wa.me URL
+
         if (!launched) {
           try {
             String fallbackUrl = "https://wa.me/$phoneNumber";
@@ -235,11 +454,9 @@ class BirthdayRepository {
               mode: LaunchMode.externalApplication,
             );
             launched = true;
-          } catch (e) {
-        
-          }
+          } catch (e) {}
         }
-        
+
         if (launched) {
           EasyLoading.showSuccess('WhatsApp message sent successfully!');
           return "Success";
@@ -247,18 +464,17 @@ class BirthdayRepository {
           EasyLoading.showError('WhatsApp is not installed or available.');
           return "WhatsApp not available";
         }
-        
       } else {
         final responseBody = jsonDecode(response.body);
-        String errorMessage = responseBody['message'] ?? 'Failed to save gift data';
+        String errorMessage =
+            responseBody['message'] ?? 'Failed to save gift data';
         EasyLoading.showError('Error: $errorMessage');
         throw Exception('Failed to send gift: $errorMessage');
       }
-      
     } catch (e) {
-   
       EasyLoading.showError('Failed to send gift message');
       return "Error: $e";
     }
   }
+
 }

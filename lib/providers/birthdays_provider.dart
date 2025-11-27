@@ -40,12 +40,16 @@ class BirthdaysNotifier extends StateNotifier<Map<String, List<Birthday>>> {
   Future<String> sendWhatsappMessage(
       {required String mname,
       required String whatsappNumber,
-      required String gift}) async {
+      required String gift,
+        required String mid,
+    required String memberMobile,}) async {
     try {
       final response = await birthdayRepository.sendWhatsappMessage(
         gift: gift,
         mname: mname,
         whatsappNumber: whatsappNumber,
+        mid: mid,
+        memberMobile: memberMobile,
       );
       return response;
     } catch (e) {

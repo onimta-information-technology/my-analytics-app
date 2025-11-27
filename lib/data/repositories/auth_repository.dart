@@ -1,5 +1,6 @@
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../services/api_service.dart';
 import '../../models/user_model.dart';
@@ -37,8 +38,10 @@ class AuthRepository {
   }
 
   Future<User> login(String text1, String text2) async {
+    final packageInfo = await PackageInfo.fromPlatform();
+      final currentVersion = packageInfo.version;
     final deviceId = await DeviceId.get();
-  
+  print(deviceId);
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -77,12 +80,20 @@ class AuthRepository {
           "Para_Name": "@Text4",
           "Para_Type": "varchar",
         },
+          {
+          "Para_Data": currentVersion,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text29",
+          "Para_Type": "varchar",
+        },
+
       ],
       "SpName": "sp_CRM_Common_API",
       "con": "1",
     });
-
-   
+print("hellooo");
+   print(response);
 
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List &&

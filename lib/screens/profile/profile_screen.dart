@@ -801,6 +801,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                 mname: guest.memberName,
                                                 whatsappNumber: phoneNumber,
                                                 gift: guest.gift!,
+                                                 mid: guest.mid,
+          memberMobile: guest.mobile ?? '',
                                               );
 
                                           EasyLoading.dismiss();

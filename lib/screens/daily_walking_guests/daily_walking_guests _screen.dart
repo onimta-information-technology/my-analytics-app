@@ -246,11 +246,16 @@ class _DailyWalkingGuestScreenState
                                       ],
                                     ),
                                     TableRow(
+                                      decoration: BoxDecoration(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                    ),
                                       children: [
                                         Container(
                                           width: double.infinity,
-                                          color: Constants.kPrimaryColor
-                                              .withAlpha(50),
+                                          // color: Constants.kPrimaryColor
+                                          //     .withAlpha(50),
                                           padding: const EdgeInsets.all(8.0),
                                           alignment: Alignment.centerLeft,
                                           child: Text(
@@ -263,7 +268,10 @@ class _DailyWalkingGuestScreenState
                                             ),
                                           ),
                                         ),
-                                        Padding(
+                                         Container(
+                                        color: Colors.white,
+                                        
+                                       child: Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: entry.menImage2.isNotEmpty
                                               ? GestureDetector(
@@ -311,6 +319,7 @@ class _DailyWalkingGuestScreenState
                                                   ),
                                                 ),
                                         ),
+                                         ),
                                       ],
                                     ),
                                     ..._buildGuestRows(entry, fontSettings),
@@ -364,11 +373,16 @@ class _DailyWalkingGuestScreenState
   }) {
     bool isMemberName = label == "Member Name";
     return TableRow(
+      decoration: BoxDecoration(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                    ),
       children: [
         Container(
           width: double.infinity,
-          height: isMemberName ? 90 : null,
-          color: Constants.kPrimaryColor.withAlpha(50),
+         /// height: isMemberName ? 90 : null,
+         // color: Constants.kPrimaryColor.withAlpha(50),
           padding: const EdgeInsets.all(8.0),
           child: Text(
             label,
@@ -379,7 +393,9 @@ class _DailyWalkingGuestScreenState
             ),
           ),
         ),
-        Padding(
+         Container(
+                                        color: Colors.white,
+        child: Padding(
           padding: const EdgeInsets.all(8.0),
           child: isPhone && value.isNotEmpty
               ? GestureDetector(
@@ -419,6 +435,7 @@ class _DailyWalkingGuestScreenState
                   ),
                 ),
         ),
+         ),
       ],
     );
   }

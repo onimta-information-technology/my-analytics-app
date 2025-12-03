@@ -557,11 +557,14 @@ class TripInformationWidget extends ConsumerWidget {
                                   ],
                                 ),
                                 TableRow(
-                                  children: [
-                                    Container(
+                                   decoration: BoxDecoration(
                                       color: Constants.kPrimaryColor.withAlpha(
                                         50,
                                       ),
+                                    ),
+                                  children: [
+                                    Container(
+                                     
                                       child: Padding(
                                         padding: const EdgeInsets.all(8.0),
                                         child: Text(
@@ -574,9 +577,22 @@ class TripInformationWidget extends ConsumerWidget {
                                         ),
                                       ),
                                     ),
-                                    Padding(
+                                      Container(
+                                        color: Colors.white,
+                                      child:Padding(
                                       padding: const EdgeInsets.all(8.0),
-                                      child: Column(
+                                      child: (entry.dtlDesc.isEmpty)
+                                         ? Text(
+                                                  "N/A",
+                                                  textAlign: TextAlign.end,
+                                                  style: TextStyle(
+                                                    fontSize:
+                                                        fontSettings.fontSize,
+                                                    fontWeight:
+                                                        fontSettings.fontWeight,
+                                                  ),
+                                                )
+                                      : Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.stretch,
                                         children: entry.dtlDesc.map((dtl) {
@@ -640,6 +656,7 @@ class TripInformationWidget extends ConsumerWidget {
                                         }).toList(),
                                       ),
                                     ),
+                                      ),
                                   ],
                                 ),
                                 TableRow(

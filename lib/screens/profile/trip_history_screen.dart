@@ -1055,10 +1055,14 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                     ],
                                   ),
                                   TableRow(
+                                    decoration: BoxDecoration(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                    ),
                                     children: [
                                       Container(
-                                        color: Constants.kPrimaryColor
-                                            .withAlpha(50),
+                                        //color: Constants.kPrimaryColor.withAlpha(50),
                                         child: Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
@@ -1072,93 +1076,124 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                           ),
                                         ),
                                       ),
-                                      Padding(
-                                        padding: const EdgeInsets.all(8.0),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.stretch,
-                                          children: entry.dtlDesc.map((dtl) {
-                                            return Card(
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                side: BorderSide(
-                                                  color: Colors.grey.shade300,
-                                                  width: 1,
-                                                ),
-                                              ),
-                                              margin: const EdgeInsets.only(
-                                                bottom: 8,
-                                              ),
-                                              child: Padding(
-                                                padding: const EdgeInsets.all(
-                                                  8.0,
-                                                ),
-                                                child: Column(
+                                      Container(
+                                        color: Colors.white,
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: (entry.dtlDesc.isEmpty)
+                                              ? Text(
+                                                  "N/A",
+                                                  textAlign: TextAlign.end,
+                                                  style: TextStyle(
+                                                    fontSize:
+                                                        fontSettings.fontSize,
+                                                    fontWeight:
+                                                        fontSettings.fontWeight,
+                                                  ),
+                                                )
+                                              : Column(
                                                   crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      "DTL : ${NumberFormat('#,###').format(dtl.dtl.toInt())}",
-                                                      style: TextStyle(
-                                                        fontWeight: fontSettings
-                                                            .fontWeight,
-                                                        fontSize:
-                                                            fontSettings
-                                                                .fontSize -
-                                                            2,
-                                                      ),
-                                                    ),
-                                                    Text(
-                                                      "Game: ${dtl.gameType}",
-                                                      style: TextStyle(
-                                                        fontSize:
-                                                            fontSettings
-                                                                .fontSize -
-                                                            3,
-                                                        fontWeight: fontSettings
-                                                            .fontWeight,
-                                                        color:
-                                                            const Color.fromARGB(
-                                                              255,
-                                                              22,
-                                                              22,
-                                                              22,
+                                                      CrossAxisAlignment
+                                                          .stretch,
+                                                  children: entry.dtlDesc.map((
+                                                    dtl,
+                                                  ) {
+                                                    return Card(
+                                                      shape: RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              8,
                                                             ),
+                                                        side: BorderSide(
+                                                          color: Colors
+                                                              .grey
+                                                              .shade300,
+                                                          width: 1,
+                                                        ),
                                                       ),
-                                                    ),
-                                                    Text(
-                                                      "Date: ${dtl.gDate.split('T').first}",
-                                                      style: TextStyle(
-                                                        fontSize:
-                                                            fontSettings
-                                                                .fontSize -
-                                                            4,
-                                                        fontWeight: fontSettings
-                                                            .fontWeight,
-                                                        color:
-                                                            const Color.fromARGB(
-                                                              255,
-                                                              22,
-                                                              22,
-                                                              22,
+                                                      margin:
+                                                          const EdgeInsets.only(
+                                                            bottom: 8,
+                                                          ),
+                                                      child: Padding(
+                                                        padding:
+                                                            const EdgeInsets.all(
+                                                              8.0,
                                                             ),
+                                                        child: Column(
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment
+                                                                  .start,
+                                                          children: [
+                                                            Text(
+                                                              "DTL : ${NumberFormat('#,###').format(dtl.dtl.toInt())}",
+                                                              style: TextStyle(
+                                                                fontWeight:
+                                                                    fontSettings
+                                                                        .fontWeight,
+                                                                fontSize:
+                                                                    fontSettings
+                                                                        .fontSize -
+                                                                    2,
+                                                              ),
+                                                            ),
+                                                            Text(
+                                                              "Game: ${dtl.gameType}",
+                                                              style: TextStyle(
+                                                                fontSize:
+                                                                    fontSettings
+                                                                        .fontSize -
+                                                                    3,
+                                                                fontWeight:
+                                                                    fontSettings
+                                                                        .fontWeight,
+                                                                color:
+                                                                    const Color.fromARGB(
+                                                                      255,
+                                                                      22,
+                                                                      22,
+                                                                      22,
+                                                                    ),
+                                                              ),
+                                                            ),
+                                                            Text(
+                                                              "Date: ${dtl.gDate.split('T').first}",
+                                                              style: TextStyle(
+                                                                fontSize:
+                                                                    fontSettings
+                                                                        .fontSize -
+                                                                    4,
+                                                                fontWeight:
+                                                                    fontSettings
+                                                                        .fontWeight,
+                                                                color:
+                                                                    const Color.fromARGB(
+                                                                      255,
+                                                                      22,
+                                                                      22,
+                                                                      22,
+                                                                    ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
                                                       ),
-                                                    ),
-                                                  ],
+                                                    );
+                                                  }).toList(),
                                                 ),
-                                              ),
-                                            );
-                                          }).toList(),
                                         ),
                                       ),
                                     ],
                                   ),
+
                                   TableRow(
+                                    decoration: BoxDecoration(
+                                      color: Constants.kPrimaryColor.withAlpha(
+                                        50,
+                                      ),
+                                    ),
                                     children: [
                                       Container(
-                                        color: Constants.kPrimaryColor
-                                            .withAlpha(50),
                                         child: Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
@@ -1172,107 +1207,111 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                           ),
                                         ),
                                       ),
-                                      Padding(
-                                        padding: const EdgeInsets.all(8.0),
-                                        child: (entry.exGift.isEmpty)
-                                            ? Text(
-                                                "N/A",
-                                                textAlign: TextAlign.end,
-                                                style: TextStyle(
-                                                  fontSize:
-                                                      fontSettings.fontSize,
-                                                  fontWeight:
-                                                      fontSettings.fontWeight,
-                                                ),
-                                              )
-                                            : Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.stretch,
-                                                children: entry.exGift.map((
-                                                  exgift,
-                                                ) {
-                                                  return Card(
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            8,
-                                                          ),
-                                                      side: BorderSide(
-                                                        color: Colors
-                                                            .grey
-                                                            .shade300,
-                                                        width: 1,
-                                                      ),
-                                                    ),
-                                                    margin:
-                                                        const EdgeInsets.only(
-                                                          bottom: 8,
+                                      Container(
+                                        color: Colors.white,
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: (entry.exGift.isEmpty)
+                                              ? Text(
+                                                  "N/A",
+                                                  textAlign: TextAlign.end,
+                                                  style: TextStyle(
+                                                    fontSize:
+                                                        fontSettings.fontSize,
+                                                    fontWeight:
+                                                        fontSettings.fontWeight,
+                                                  ),
+                                                )
+                                              : Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment
+                                                          .stretch,
+                                                  children: entry.exGift.map((
+                                                    exgift,
+                                                  ) {
+                                                    return Card(
+                                                      shape: RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              8,
+                                                            ),
+                                                        side: BorderSide(
+                                                          color: Colors
+                                                              .grey
+                                                              .shade300,
+                                                          width: 1,
                                                         ),
-                                                    child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                            8.0,
-                                                          ),
-                                                      child: Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          Text(
-                                                            //"Amount: ${exgift.amount}",
-                                                            "Amount: ${NumberFormat('#,###').format(exgift.amount)}",
-                                                            style: TextStyle(
-                                                              fontWeight:
-                                                                  fontSettings
-                                                                      .fontWeight,
-                                                              fontSize:
-                                                                  fontSettings
-                                                                      .fontSize -
-                                                                  2,
-                                                            ),
-                                                          ),
-                                                          Text(
-                                                            "Gift type: ${exgift.giftType}",
-                                                            style: TextStyle(
-                                                              fontSize:
-                                                                  fontSettings
-                                                                      .fontSize -
-                                                                  3,
-                                                              fontWeight:
-                                                                  fontSettings
-                                                                      .fontWeight,
-                                                            ),
-                                                          ),
-                                                          Text(
-                                                            "Remark: ${exgift.remark}",
-                                                            style: TextStyle(
-                                                              fontSize:
-                                                                  fontSettings
-                                                                      .fontSize -
-                                                                  3,
-                                                              fontWeight:
-                                                                  fontSettings
-                                                                      .fontWeight,
-                                                            ),
-                                                          ),
-                                                          Text(
-                                                            "Date: ${exgift.trDate.split('T').first}",
-                                                            style: TextStyle(
-                                                              fontSize:
-                                                                  fontSettings
-                                                                      .fontSize -
-                                                                  4,
-                                                              fontWeight:
-                                                                  fontSettings
-                                                                      .fontWeight,
-                                                            ),
-                                                          ),
-                                                        ],
                                                       ),
-                                                    ),
-                                                  );
-                                                }).toList(),
-                                              ),
+                                                      margin:
+                                                          const EdgeInsets.only(
+                                                            bottom: 8,
+                                                          ),
+                                                      child: Padding(
+                                                        padding:
+                                                            const EdgeInsets.all(
+                                                              8.0,
+                                                            ),
+                                                        child: Column(
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment
+                                                                  .start,
+                                                          children: [
+                                                            Text(
+                                                              //"Amount: ${exgift.amount}",
+                                                              "Amount: ${NumberFormat('#,###').format(exgift.amount)}",
+                                                              style: TextStyle(
+                                                                fontWeight:
+                                                                    fontSettings
+                                                                        .fontWeight,
+                                                                fontSize:
+                                                                    fontSettings
+                                                                        .fontSize -
+                                                                    2,
+                                                              ),
+                                                            ),
+                                                            Text(
+                                                              "Gift type: ${exgift.giftType}",
+                                                              style: TextStyle(
+                                                                fontSize:
+                                                                    fontSettings
+                                                                        .fontSize -
+                                                                    3,
+                                                                fontWeight:
+                                                                    fontSettings
+                                                                        .fontWeight,
+                                                              ),
+                                                            ),
+                                                            Text(
+                                                              "Remark: ${exgift.remark}",
+                                                              style: TextStyle(
+                                                                fontSize:
+                                                                    fontSettings
+                                                                        .fontSize -
+                                                                    3,
+                                                                fontWeight:
+                                                                    fontSettings
+                                                                        .fontWeight,
+                                                              ),
+                                                            ),
+                                                            Text(
+                                                              "Date: ${exgift.trDate.split('T').first}",
+                                                              style: TextStyle(
+                                                                fontSize:
+                                                                    fontSettings
+                                                                        .fontSize -
+                                                                    4,
+                                                                fontWeight:
+                                                                    fontSettings
+                                                                        .fontWeight,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    );
+                                                  }).toList(),
+                                                ),
+                                        ),
                                       ),
                                     ],
                                   ),

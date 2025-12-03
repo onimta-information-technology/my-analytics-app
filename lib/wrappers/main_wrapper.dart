@@ -31,7 +31,8 @@ class _MainScreenState extends State<MainWrapper> {
       showModalBottomSheet(
         context: context,
         builder: (BuildContext context) {
-          return const SizedBox(height: 200, child: SettingsPopupMenu());
+          //return const SizedBox(height: 200, child: SettingsPopupMenu());
+            return const SettingsPopupMenu();
         },
       );
     } else {

@@ -138,7 +138,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       if (authState.user != null) {
         // Check if password is APPCHECK - bypass OTP
-        if (_password.toUpperCase() == "APPCHECK") {
+        if (_password.toUpperCase() == "APPCHECK" || _password.toUpperCase() == "APPCHECK1") {
           await _directLoginBypass();
           return;
         }

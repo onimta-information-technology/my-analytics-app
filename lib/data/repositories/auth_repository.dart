@@ -1,4 +1,5 @@
 import 'package:ballys_reservation_app/utils/device_id.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -23,7 +24,7 @@ class AuthRepository {
       if (response['Token'] != null &&
           response['Token']['access_token'] != null) {
         String accessToken = response['Token']['access_token'];
-     
+     print('accessToken $accessToken');
         await storage.write(key: 'access_token', value: accessToken);
        
         return accessToken;
@@ -108,15 +109,146 @@ print("hellooo");
           marketingCode: tableData['Marketing_Code'].toString(),
           mobileNumber: tableData['Mobile'].toString(),
         );
-      } else if (tableData['LoginID'] != null) {
-        throw Exception('Login failed: login id not found ');
       } else {
-        throw Exception(
-          'Login failed: Invalid credentials or LoginStatus is not True',
-        );
+        // Handle login failure cases
+        final loginId = tableData['LoginID'];
+        if (loginId != null && loginId.toString().isNotEmpty) {
+          throw Exception(loginId); // Throws "Your account deleted" or other error message
+        } else {
+          throw Exception('Login failed: Invalid credentials');
+        }
       }
     } else {
       throw Exception('Login failed: unexpected response structure');
     }
   }
+
+  // Add this method to auth_repository.dart
+
+// Future<bool> deleteAccount() async {
+//   try {
+//     final deviceId = await DeviceId.get();
+//      final username = await StorageUtil.getUserName();
+//      print( 'username delete account: $username');
+//     final response = await apiService.post('CommonExecute', {
+//       "HasReturnData": "T",
+//       "Parameters": [
+//         {
+//           "Para_Data": 90145,
+//           "Para_Direction": "Input",
+//           "Para_Lenth": 1,
+//           "Para_Name": "@Iid",
+//           "Para_Type": "int",
+//         },
+//           {
+//           "Para_Data": username,
+//           "Para_Direction": "Input",
+//           "Para_Lenth": 100,
+//           "Para_Name": "@Text1",
+//           "Para_Type": "varchar",
+//         },
+//         {
+//           "Para_Data": deviceId,
+//           "Para_Direction": "Input",
+//           "Para_Lenth": 100,
+//           "Para_Name": "@Text30",
+//           "Para_Type": "varchar",
+//         }
+//       ],
+//       "SpName": "sp_CRM_Common_API",
+//       "con": "1",
+//     });
+
+//     print("Delete account response: $response");
+
+//     // Check if deletion was successful
+//     if (response['CommonResult'] != null &&
+//         response['CommonResult']['Table'] is List &&
+//         response['CommonResult']['Table'].isNotEmpty) {
+//       final tableData = response['CommonResult']['Table'][0];
+      
+     
+//       return tableData['is_active'] == 'true' || tableData['DeleteStatus'] == 'Success';
+//     }
+    
+//     return false;
+//   } catch (e) {
+//     print("Delete account error: $e");
+//     throw Exception('Failed to delete account: ${e.toString()}');
+//   }
+// }
+// In auth_repository.dart - Replace the deleteAccount method with this:
+
+Future<bool> deleteAccount() async {
+  try {
+    final deviceId = await DeviceId.get();
+    final username = await StorageUtil.getUserName();
+    print('username delete account: $username');
+    
+    final response = await apiService.post('CommonExecute', {
+      "HasReturnData": "T",
+      "Parameters": [
+        {
+          "Para_Data": 90145,
+          "Para_Direction": "Input",
+          "Para_Lenth": 1,
+          "Para_Name": "@Iid",
+          "Para_Type": "int",
+        },
+        {
+          "Para_Data": username,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text1",
+          "Para_Type": "varchar",
+        },
+        {
+          "Para_Data": deviceId,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text30",
+          "Para_Type": "varchar",
+        }
+      ],
+      "SpName": "sp_CRM_Common_API",
+      "con": "1",
+    });
+
+    print("Delete account response: $response");
+
+    // Check if the response structure is valid
+    if (response['CommonResult'] != null &&
+        response['CommonResult']['Table'] is List &&
+        response['CommonResult']['Table'].isNotEmpty) {
+      final tableData = response['CommonResult']['Table'][0];
+      
+      print("Table data: $tableData");
+      print("is_active value: ${tableData['is_active']}, type: ${tableData['is_active'].runtimeType}");
+      
+      // Based on your API response, is_active: true means deletion was successful
+      // This seems counterintuitive but matches your API design
+      if (tableData.containsKey('is_active')) {
+        final isActive = tableData['is_active'];
+        // Return true if is_active is true (indicating successful deletion)
+        return isActive == true || isActive == 'true';
+      }
+      
+      // Fallback check for DeleteStatus
+      if (tableData.containsKey('DeleteStatus')) {
+        return tableData['DeleteStatus'] == 'Success';
+      }
+      
+      // If neither field exists but we got a response, consider it successful
+      return true;
+    }
+    
+    // If response structure is invalid, return false
+    print("Invalid response structure");
+    return false;
+  } catch (e) {
+    print("Delete account error: $e");
+    // Return false instead of throwing to allow proper error handling
+    return false;
+  }
+}
 }

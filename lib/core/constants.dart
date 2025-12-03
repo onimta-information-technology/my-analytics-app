@@ -9,7 +9,7 @@ class Constants {
   static const versionCheckUrl = "https://api.ballyscolombo.com/api/Ballys/ApiVersion_CRM";
   
   // Update URL
-  static const updateUrl = "https://www.onimtait.com/";
+  static const updateUrl = "https://apps.apple.com/lk/app/my-analytics/id6752925402";
 
     // Platform IDs for version check
   static const int androidPlatformId = 3;

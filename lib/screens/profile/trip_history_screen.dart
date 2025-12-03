@@ -1219,7 +1219,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                                                 .start,
                                                         children: [
                                                           Text(
-                                                            "Amount: ${exgift.amount}",
+                                                            //"Amount: ${exgift.amount}",
+                                                            "Amount: ${NumberFormat('#,###').format(exgift.amount)}",
                                                             style: TextStyle(
                                                               fontWeight:
                                                                   fontSettings

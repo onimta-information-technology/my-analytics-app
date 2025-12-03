@@ -245,7 +245,37 @@ await prefs.setBool('is_logged_in', false);
       state = AuthState(user: null, isLoading: false, error: null);
     }
   }
+// Add this method to the AuthNotifier class
 
+Future<bool> deleteAccount() async {
+  try {
+    state = AuthState(user: state?.user, isLoading: true);
+
+    final success = await authRepository.deleteAccount();
+
+    if (success) {
+      // Reuse logout logic
+      await logout();
+      return true;
+    } else {
+      state = AuthState(
+        user: state?.user,
+        isLoading: false,
+        error: 'Account deletion failed',
+      );
+      return false;
+    }
+  } catch (e) {
+    print("Delete account error: $e");
+    await logout(); // Force logout even on error
+    state = AuthState(
+      user: null,
+      isLoading: false,
+      error: 'Failed to delete account: ${e.toString()}',
+    );
+    return false;
+  }
+}
   void clearPendingUser() {
     _pendingUser = null;
     state = AuthState(user: null, isLoading: false);

@@ -8,7 +8,8 @@ class SettingsPopupMenu extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
+      return SafeArea(
+    child : Container(
       padding: const EdgeInsets.all(16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -39,6 +40,7 @@ class SettingsPopupMenu extends ConsumerWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }

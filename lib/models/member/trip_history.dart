@@ -40,16 +40,26 @@ class ExGift {
       trDate: json['TrDate'],
     );
   }
-  static int _parseToInt(dynamic value) {
+  // static int _parseToInt(dynamic value) {
+  //   if (value == null) return 0;
+  //   if (value is int) return value;
+  //   if (value is String) {
+  //     return int.tryParse(value) ?? 0;
+  //   }
+  //   if (value is double) return value.toInt();
+  //   return 0;
+  // }
+static int _parseToInt(dynamic value) {
     if (value == null) return 0;
     if (value is int) return value;
     if (value is String) {
-      return int.tryParse(value) ?? 0;
+      // Remove commas and trim whitespace before parsing
+      String cleanValue = value.replaceAll(',', '').trim();
+      return int.tryParse(cleanValue) ?? 0;
     }
     if (value is double) return value.toInt();
     return 0;
   }
-
   Map<String, dynamic> toJson() {
     return {
       'GiftType': giftType,

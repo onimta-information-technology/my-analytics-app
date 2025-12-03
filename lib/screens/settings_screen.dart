@@ -225,33 +225,150 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  Future<void> _handleLogout() async {
-    final shouldLogout = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+  // Future<void> _handleLogout() async {
+  //   final shouldLogout = await showDialog<bool>(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: const Text('Logout'),
+  //       content: const Text('Are you sure you want to logout?'),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context, false),
+  //           child: const Text('Cancel'),
+  //         ),
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context, true),
+  //           child: const Text('Logout'),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+
+  //   if (shouldLogout == true && mounted) {
+  //     await ref.read(authProvider.notifier).logout();
+  //     if (mounted) {
+  //       context.go('/login');
+  //     }
+  //   }
+  // }
+Future<void> _handleDeleteAccount() async {
+  final shouldDelete = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        children: [
+          Icon(
+            Icons.warning_rounded,
+            color: Colors.red[700],
+            size: 28,
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Logout'),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              'Delete Account',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
+      content: const Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'This action cannot be undone!',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.red,
+            ),
+          ),
+          SizedBox(height: 12),
+          Text(
+            'Are you sure you want to delete your account? All your data will be permanently removed.',
+            style: TextStyle(fontSize: 15),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          ),
+          child: const Text('Cancel', style: TextStyle(fontSize: 16)),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, true),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red[700],
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: const Text(
+            'Delete',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  if (shouldDelete == true && mounted) {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => WillPopScope(
+        onWillPop: () async => false,
+        child: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      ),
     );
 
-    if (shouldLogout == true && mounted) {
-      await ref.read(authProvider.notifier).logout();
+    try {
+      final success = await ref.read(authProvider.notifier).deleteAccount();
+      
       if (mounted) {
-        context.go('/login');
+        // Close loading dialog
+        Navigator.of(context, rootNavigator: true).pop();
+        
+        if (success) {
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Account deleted successfully'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+          
+          // Wait for snackbar to show briefly
+          await Future.delayed(const Duration(milliseconds: 500));
+          
+          if (mounted) {
+            // Use GoRouter's go method to navigate to login with replacement
+            // This clears the entire navigation stack
+            context.go('/login');
+          }
+        } else {
+          _showErrorSnackBar('Failed to delete account. Please try again.');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        // Close loading dialog
+        Navigator.of(context, rootNavigator: true).pop();
+        _showErrorSnackBar('Failed to delete account: ${e.toString()}');
       }
     }
   }
-
+}
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -427,14 +544,37 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ],
                 const Spacer(),
                 // Logout Button
+                // Center(
+                //   child: ElevatedButton.icon(
+                //     onPressed: _handleLogout,
+                //     icon: const Icon(Icons.logout, size: 18),
+                //     label: const Text('Logout', style: TextStyle(fontSize: 14)),
+                //     style: ElevatedButton.styleFrom(
+                //       backgroundColor: Colors.red,
+                //       foregroundColor: Colors.white,
+                //       padding: const EdgeInsets.symmetric(
+                //         vertical: 10,
+                //         horizontal: 16,
+                //       ),
+                //       shape: RoundedRectangleBorder(
+                //         borderRadius: BorderRadius.circular(8),
+                //       ),
+                //     ),
+                //   ),
+                // ),
+                // const SizedBox(height: 12),
+                // // Delete Account Button
                 Center(
-                  child: ElevatedButton.icon(
-                    onPressed: _handleLogout,
-                    icon: const Icon(Icons.logout, size: 18),
-                    label: const Text('Logout', style: TextStyle(fontSize: 14)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
+                  child: OutlinedButton.icon(
+                    onPressed: _handleDeleteAccount,
+                    icon: const Icon(Icons.delete_forever, size: 18),
+                    label: const Text(
+                      'Delete Account',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red[700],
+                      side: BorderSide(color: Colors.red[700]!, width: 1.5),
                       padding: const EdgeInsets.symmetric(
                         vertical: 10,
                         horizontal: 16,
@@ -445,7 +585,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 16),
               ],
             ),

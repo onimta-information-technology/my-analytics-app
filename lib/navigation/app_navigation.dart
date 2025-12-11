@@ -6,6 +6,7 @@ import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/main.dart';
 import 'package:ballys_reservation_app/models/gift/special_gift_request.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
+import 'package:ballys_reservation_app/screens/approve_reject_show_screen.dart';
 import 'package:ballys_reservation_app/screens/auth/login_screen.dart';
 import 'package:ballys_reservation_app/screens/auth/otpVerification_screen.dart';
 import 'package:ballys_reservation_app/screens/birthday_screen.dart';
@@ -28,6 +29,7 @@ import 'package:ballys_reservation_app/screens/profile/member_summary_screen.dar
 import 'package:ballys_reservation_app/screens/profile/profile_screen.dart';
 import 'package:ballys_reservation_app/screens/menu_screen.dart';
 import 'package:ballys_reservation_app/screens/profile/trip_history_screen.dart';
+import 'package:ballys_reservation_app/screens/report_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/air_tickets_selection_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/new_reservation_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/reservation_screen.dart';
@@ -551,7 +553,7 @@ class AppNavigation {
                 ],
               ),
               GoRoute(
-                path: 'special-gift-requests',
+                path: '/special-gift-requests',
                 pageBuilder: (context, state) => CustomTransitionPage(
                   fullscreenDialog: false,
                   key: state.pageKey,
@@ -700,6 +702,10 @@ class AppNavigation {
                   },
             ),
           ),
+          GoRoute(
+            path: '/reports',
+            builder: (context, state) => const ReportsScreen(),
+          ),
         ],
       ),
       // GoRoute(path: '/menu', builder: (context, state) => const MenuScreen()),
@@ -757,8 +763,221 @@ class AppNavigation {
               );
             },
           ),
+          GoRoute(
+            path:
+                'approve-reject', // ✅ Changed from '/approve-reject' to 'approve-reject'
+            builder: (context, state) => const ApproveScreen(),
+            routes: [
+              GoRoute(
+                path:
+                    '/reservations', // ✅ Changed from '/reservations' to 'reservations'
+                pageBuilder: (context, state) => CustomTransitionPage(
+                  fullscreenDialog: true,
+                  key: state.pageKey,
+                  child: const ReservationScreen(hideAddButton: true),
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                        return FadeTransition(
+                          opacity: CurveTween(
+                            curve: Curves.easeInOutCirc,
+                          ).animate(animation),
+                          child: child,
+                        );
+                      },
+                ),
+                routes: [
+                  GoRoute(
+                    path: 'new-reservation',
+                    pageBuilder: (context, state) {
+                      return CustomTransitionPage(
+                        fullscreenDialog: false,
+                        key: state.pageKey,
+                        child: const NewReservationScreen(),
+                        transitionsBuilder:
+                            (context, animation, secondaryAnimation, child) {
+                              return FadeTransition(
+                                opacity: CurveTween(
+                                  curve: Curves.easeInOutCirc,
+                                ).animate(animation),
+                                child: child,
+                              );
+                            },
+                      );
+                    },
+                    routes: [
+                      GoRoute(
+                        path: 'air-tickets-selection',
+                        pageBuilder: (context, state) {
+                          final Map<String, dynamic> data =
+                              state.extra as Map<String, dynamic>;
+                          final arrivalDate = data['arrivalDate'] ?? '';
+                          final departureDate = data['departureDate'] ?? '';
+                          return CustomTransitionPage(
+                            fullscreenDialog: false,
+                            key: state.pageKey,
+                            child: AirTicketsSelectionScreen(
+                              AirportRepository(
+                                ApiService(const FlutterSecureStorage()),
+                              ),
+                              arrivalDate: arrivalDate,
+                              departureDate: departureDate,
+                            ),
+                            transitionsBuilder:
+                                (
+                                  context,
+                                  animation,
+                                  secondaryAnimation,
+                                  child,
+                                ) {
+                                  return FadeTransition(
+                                    opacity: CurveTween(
+                                      curve: Curves.easeInOutCirc,
+                                    ).animate(animation),
+                                    child: child,
+                                  );
+                                },
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'reservation-view',
+                    pageBuilder: (context, state) {
+                      return CustomTransitionPage(
+                        fullscreenDialog: false,
+                        key: state.pageKey,
+                        child: const ReservationViewScreen(),
+                        transitionsBuilder:
+                            (context, animation, secondaryAnimation, child) {
+                              return FadeTransition(
+                                opacity: CurveTween(
+                                  curve: Curves.easeInOutCirc,
+                                ).animate(animation),
+                                child: child,
+                              );
+                            },
+                      );
+                    },
+                  ),
+                ],
+              ),
+              GoRoute(
+            path: '/special-gift-requests',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              fullscreenDialog: false,
+              key: state.pageKey,
+              child: SpecialGiftRequestScreen(
+                giftsRepository: GiftsRepository(
+                  ApiService(const FlutterSecureStorage()),
+                ),
+                   hideAddButton: true, 
+              ),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                    return FadeTransition(
+                      opacity: CurveTween(
+                        curve: Curves.easeInOutCirc,
+                      ).animate(animation),
+                      child: child,
+                    );
+                  },
+            ),
+            routes: [
+              GoRoute(
+                path: 'new-gift-request',
+                pageBuilder: (context, state) => CustomTransitionPage(
+                  fullscreenDialog: false,
+                  key: state.pageKey,
+                  child: NewGiftRequest(
+                    giftsRepository: GiftsRepository(
+                      ApiService(const FlutterSecureStorage()),
+                    ),
+                  ),
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                        return FadeTransition(
+                          opacity: CurveTween(
+                            curve: Curves.easeInOutCirc,
+                          ).animate(animation),
+                          child: child,
+                        );
+                      },
+                ),
+              ),
+              GoRoute(
+                path: 'prv-gifts/:mid',
+                pageBuilder: (context, state) {
+                  final String mid = state.pathParameters['mid']!;
+                  return CustomTransitionPage(
+                    fullscreenDialog: false,
+                    key: state.pageKey,
+                    child: PrvGiftScreen(
+                      memberId: mid,
+                      giftsRepository: GiftsRepository(
+                        ApiService(const FlutterSecureStorage()),
+                      ),
+                    ),
+                    transitionsBuilder:
+                        (context, animation, secondaryAnimation, child) {
+                          return FadeTransition(
+                            opacity: CurvedAnimation(
+                              parent: animation,
+                              curve: Curves.easeInOutCirc,
+                            ),
+                            child: child,
+                          );
+                        },
+                  );
+                },
+              ),
+              // GoRoute(
+              //   path: 'view-specific-gift-request',
+              //   pageBuilder: (context, state) => CustomTransitionPage(
+              //     fullscreenDialog: false,
+              //     key: state.pageKey,
+              //     child: ViewSpecificGiftRequest(
+              //       giftsRepository: GiftsRepository(
+              //         ApiService(const FlutterSecureStorage()),
+              //       ),
+              //     ),
+              //     transitionsBuilder:
+              //         (context, animation, secondaryAnimation, child) {
+              //           return FadeTransition(
+              //             opacity: CurveTween(
+              //               curve: Curves.easeInOutCirc,
+              //             ).animate(animation),
+              //             child: child,
+              //           );
+              //         },
+              //   ),
+              // ),
+              GoRoute(
+                path: 'view-specific-gift-request',
+                builder: (context, state) {
+                  // Expecting state.extra to be a Map<String, dynamic>
+                  final extra = state.extra as Map<String, dynamic>? ?? {};
+                  final gift = extra['gift'] as SpecialGiftRequest?;
+                  final isPending =
+                      extra['isPending'] as bool? ?? false; // ✅ read flag
+
+                  return ViewSpecificGiftRequest(
+                    giftsRepository: GiftsRepository(
+                      ApiService(const FlutterSecureStorage()),
+                    ),
+                    gift: gift,
+                    isPending: isPending, // ✅ pass it to widget
+                  );
+                },
+              ),
+            ],
+          ),
+            ],
+          ),
+          
         ],
       ),
+
       // GoRoute(
       //   path: '/menu',
       //   pageBuilder: (context, state) => CustomTransitionPage(

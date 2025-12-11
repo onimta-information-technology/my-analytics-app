@@ -9,7 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class ReservationScreen extends ConsumerStatefulWidget {
-  const ReservationScreen({super.key});
+   final bool hideAddButton;
+  const ReservationScreen({super.key,this.hideAddButton = false});
 
   @override
   ConsumerState<ReservationScreen> createState() => _ReservationScreenState();
@@ -76,6 +77,7 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
               await _loadReservationData();
             },
           ),
+          if (!widget.hideAddButton)
           IconButton(
             icon: const Icon(Icons.add_rounded, size: 35),
             onPressed: () async {

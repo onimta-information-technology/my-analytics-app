@@ -12,8 +12,8 @@ import 'package:intl/intl.dart';
 
 class SpecialGiftRequestScreen extends ConsumerStatefulWidget {
   final GiftsRepository giftsRepository;
-
-  const SpecialGiftRequestScreen({super.key, required this.giftsRepository});
+ final bool hideAddButton; 
+  const SpecialGiftRequestScreen({super.key, required this.giftsRepository, this.hideAddButton = false});
 
   @override
   ConsumerState<SpecialGiftRequestScreen> createState() =>
@@ -143,7 +143,8 @@ class _SpecialGiftRequestScreenState
           const Watermark(),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: widget.hideAddButton 
+    ? null: FloatingActionButton(
         onPressed: () async {
           final result = await context.push(
             '/gifts/special-gift-requests/new-gift-request',

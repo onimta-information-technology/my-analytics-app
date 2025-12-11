@@ -87,7 +87,8 @@ class _SupportPageState extends State<SupportScreen> {
                 "Version: ${_packageInfo.version} ${_packageInfo.buildNumber}",
                 style: const TextStyle(
                   fontSize: 14,
-                  color: Color.fromARGB(117, 124, 124, 124),
+                  fontWeight: FontWeight.w400,
+                  color: Color.fromARGB(117, 33, 33, 33),
                 ),
               ),
             ],

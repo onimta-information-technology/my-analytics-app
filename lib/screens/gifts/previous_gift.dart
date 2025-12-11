@@ -66,15 +66,15 @@ class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
 
   List<Map<String, String>> _getGiftData(dynamic gift) {
     return [
-      {"field": "Mkt Person", "value": _parseString(gift.mktPer)},
+      {"field": "Marketing Person", "value": _parseString(gift.mktPer)},
       {"field": "Date From", "value": _formatDateAndTime(gift.dateFrom)},
       {"field": "Date To", "value": _formatDateAndTime(gift.dateTo)},
       {"field": "Arrival Date", "value": _formatDate(gift.arrDate)},
-      {"field": "Departure date", "value": _formatDate(gift.dptDate)},
+      {"field": "Departure Date", "value": _formatDate(gift.dptDate)},
       {"field": "Gift", "value": _parseString(gift.cashierPayType)},
-      {"field": "cashier pay Type", "value": _parseString(gift.cashierPayType)},
+      {"field": "Cashier Pay Type", "value": _parseString(gift.cashierPayType)},
       {
-        "field": "Chip type",
+        "field": "Chip Type",
         "value": _parseString(gift.chipType?.replaceAll("_", " ")),
       },
       {"field": "Category", "value": _parseString(gift.giftCategory)},
@@ -184,16 +184,66 @@ class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
     );
   }
 
-  Widget _buildVerticalView(List<dynamic> prvgifts, FontSettings fontSettings) {
+  // Widget _buildVerticalView(List<dynamic> prvgifts, FontSettings fontSettings) {
+  //   return ListView.builder(
+  //     padding: const EdgeInsets.all(12.0),
+  //     itemCount: prvgifts.length,
+  //     itemBuilder: (context, index) {
+  //       final gift = prvgifts[index];
+  //       final giftData = _getGiftData(gift);
+
+  //       return Padding(
+  //         padding: const EdgeInsets.only(bottom: 16.0),
+  //         child: Table(
+  //           border: TableBorder.all(),
+  //           columnWidths: const {
+  //             0: FractionColumnWidth(0.5),
+  //             1: FractionColumnWidth(0.5),
+  //           },
+  //           children: [
+  //             const TableRow(
+  //               decoration: BoxDecoration(
+  //                 color: Color.fromARGB(47, 181, 225, 250),
+  //               ),
+  //               children: [
+  //                 Padding(
+  //                   padding: EdgeInsets.all(8.0),
+  //                   child: Text(
+  //                     "Field",
+  //                     style: TextStyle(fontWeight: FontWeight.bold),
+  //                   ),
+  //                 ),
+  //                 Padding(
+  //                   padding: EdgeInsets.all(8.0),
+  //                   child: Text(
+  //                     "Details",
+  //                     style: TextStyle(fontWeight: FontWeight.bold),
+  //                     textAlign: TextAlign.end,
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //             ...giftData.map(
+  //               (data) =>
+  //                   _buildRow(data["field"]!, data["value"]!, fontSettings),
+  //             ),
+  //           ],
+  //         ),
+  //       );
+  //     },
+  //   );
+  // }
+Widget _buildVerticalView(List<dynamic> prvgifts, FontSettings fontSettings) {
     return ListView.builder(
-      padding: const EdgeInsets.all(12.0),
+     padding: const EdgeInsets.all(12.0),
       itemCount: prvgifts.length,
       itemBuilder: (context, index) {
         final gift = prvgifts[index];
         final giftData = _getGiftData(gift);
+        final isLastEntry = index == prvgifts.length - 1;
 
         return Padding(
-          padding: const EdgeInsets.only(bottom: 16.0),
+          padding: const EdgeInsets.only(bottom: 0.0),
           child: Table(
             border: TableBorder.all(),
             columnWidths: const {
@@ -227,14 +277,101 @@ class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
                 (data) =>
                     _buildRow(data["field"]!, data["value"]!, fontSettings),
               ),
+              if (!isLastEntry)
+                TableRow(
+                  children: [
+                    Container(
+                      height: 10,
+                      color: Colors.red,
+                    ),
+                    Container(
+                      height: 10,
+                      color: Colors.red,
+                    ),
+                  ],
+                ),
             ],
           ),
         );
       },
     );
   }
+  // Widget _buildHorizontalView(
+  //   List<dynamic> prvgifts,
+  //   FontSettings fontSettings,
+  // ) {
+  //   if (prvgifts.isEmpty) return const SizedBox();
 
-  Widget _buildHorizontalView(
+  //   final allGiftData = prvgifts.map((gift) => _getGiftData(gift)).toList();
+  //   final fieldNames = allGiftData.first.map((data) => data["field"]!).toList();
+
+  //   return SingleChildScrollView(
+  //     scrollDirection: Axis.horizontal,
+  //     child: SingleChildScrollView(
+  //       child: Padding(
+  //         padding: const EdgeInsets.all(12.0),
+  //         child: Table(
+  //           border: TableBorder.all(),
+  //           defaultColumnWidth: const IntrinsicColumnWidth(),
+  //           children: [
+  //             // Header row with field names as columns
+  //             TableRow(
+  //               decoration: const BoxDecoration(
+  //                 color: Color.fromARGB(47, 181, 225, 250),
+  //               ),
+  //               children: fieldNames.map((fieldName) {
+  //                 final isAmount = fieldName == "Amount";
+  //                 return Container(
+  //                   color: isAmount ? const Color(0xFFCCFFCC) : null,
+  //                   padding: const EdgeInsets.all(8.0),
+  //                   child: Text(
+  //                     fieldName,
+  //                     style: TextStyle(
+  //                       fontSize: fontSettings.fontSize,
+  //                       fontWeight: FontWeight.bold,
+  //                     ),
+  //                     textAlign: TextAlign.center,
+  //                   ),
+  //                 );
+  //               }).toList(),
+  //             ),
+  //             // Data rows - each gift as a row
+  //             ...allGiftData.map((giftData) {
+  //               return TableRow(
+  //                 children: giftData.map((data) {
+  //                   final fieldName = data["field"]!;
+  //                   final value = data["value"]!;
+  //                   final isAmount = fieldName == "Amount";
+
+  //                   return Container(
+  //                     color: isAmount ? const Color(0xFFCCFFCC) : null,
+  //                     padding: const EdgeInsets.all(8.0),
+  //                     child: Text(
+  //                       value,
+  //                       textAlign: TextAlign.center,
+  //                       style: TextStyle(
+  //                         fontSize: isAmount
+  //                             ? fontSettings.fontSize + 4
+  //                             : fontSettings.fontSize,
+  //                         fontWeight: isAmount
+  //                             ? FontWeight.bold
+  //                             : fontSettings.fontWeight,
+  //                         color: isAmount ? Colors.black : null,
+  //                         fontFamily: 'monospace',
+  //                         fontFeatures: const [FontFeature.tabularFigures()],
+  //                       ),
+  //                     ),
+  //                   );
+  //                 }).toList(),
+  //               );
+  //             }),
+  //           ],
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
+Widget _buildHorizontalView(
     List<dynamic> prvgifts,
     FontSettings fontSettings,
   ) {
@@ -243,93 +380,106 @@ class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
     final allGiftData = prvgifts.map((gift) => _getGiftData(gift)).toList();
     final fieldNames = allGiftData.first.map((data) => data["field"]!).toList();
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Table(
-            border: TableBorder.all(),
-            defaultColumnWidth: const IntrinsicColumnWidth(),
-            children: [
-              // Header row with field names as columns
-              TableRow(
-                decoration: const BoxDecoration(
-                  color: Color.fromARGB(47, 181, 225, 250),
-                ),
-                children: fieldNames.map((fieldName) {
-                  final isAmount = fieldName == "Amount";
-                  return Container(
-                    color: isAmount ? const Color(0xFFCCFFCC) : null,
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      fieldName,
-                      style: TextStyle(
-                        fontSize: fontSettings.fontSize,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
+    return Center(
+      child: RotatedBox(
+        quarterTurns: 1, // Rotate 90 degrees clockwise
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Table(
+                border: TableBorder.all(),
+                defaultColumnWidth: const IntrinsicColumnWidth(),
+                children: [
+                  // Header row with field names as columns
+                  TableRow(
+                    decoration: const BoxDecoration(
+                      color: Color.fromARGB(47, 181, 225, 250),
                     ),
-                  );
-                }).toList(),
-              ),
-              // Data rows - each gift as a row
-              ...allGiftData.map((giftData) {
-                return TableRow(
-                  children: giftData.map((data) {
-                    final fieldName = data["field"]!;
-                    final value = data["value"]!;
-                    final isAmount = fieldName == "Amount";
-
-                    return Container(
-                      color: isAmount ? const Color(0xFFCCFFCC) : null,
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(
-                        value,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: isAmount
-                              ? fontSettings.fontSize + 4
-                              : fontSettings.fontSize,
-                          fontWeight: isAmount
-                              ? FontWeight.bold
-                              : fontSettings.fontWeight,
-                          color: isAmount ? Colors.black : null,
-                          fontFamily: 'monospace',
-                          fontFeatures: const [FontFeature.tabularFigures()],
+                    children: fieldNames.map((fieldName) {
+                      final isAmount = fieldName == "Amount" || fieldName == "Gift Type" || fieldName == "Category"|| fieldName == "Chip Type"|| fieldName == "Cashier Pay Type"|| fieldName == "Gift";
+                      return Container(
+                        color: isAmount ? const Color(0xFFCCFFCC) : null,
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          fieldName,
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                      ),
+                      );
+                    }).toList(),
+                  ),
+                  // Data rows - each gift as a row
+                  ...allGiftData.map((giftData) {
+                    return TableRow(
+                     
+                      children: giftData.map((data) {
+                        final fieldName = data["field"]!;
+                        final value = data["value"]!;
+                        final isAmount = fieldName == "Amount" || fieldName == "Gift Type" || fieldName == "Category"|| fieldName == "Chip Type"|| fieldName == "Cashier Pay Type"|| fieldName == "Gift";
+                        //final isSpecialRow = fieldName == "Amount" || fieldName == "Gift Type" || fieldName == "Category"|| fieldName == "Chip type"|| fieldName == "cashier pay Type"|| fieldName == "Gift";
+                        
+                        return Container(
+                          color: isAmount ? const Color(0xFFCCFFCC) : null,
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            value,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: isAmount
+                                  ? fontSettings.fontSize + 4
+                                  : fontSettings.fontSize,
+                              fontWeight: isAmount
+                                  ? FontWeight.bold
+                                  : fontSettings.fontWeight,
+                              color: isAmount ? Colors.black : null,
+                              fontFamily: 'monospace',
+                              fontFeatures: const [FontFeature.tabularFigures()],
+                            ),
+                          ),
+                        );
+                      }).toList(),
                     );
-                  }).toList(),
-                );
-              }),
-            ],
+                  }),
+                ],
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  TableRow _buildRow(String label, String value, FontSettings fontSettings) {
-    final isAmount = label == "Amount";
 
+  TableRow _buildRow(String label, String value, FontSettings fontSettings) {
+    final isSpecialRow = label == "Amount" || label == "Gift Type" || label == "Category"|| label == "Chip Type"|| label == "Cashier Pay Type"|| label == "Gift";
+  final isAmount = label == "Amount";
     return TableRow(
-      decoration: isAmount
+      decoration: isSpecialRow
           ? const BoxDecoration(color: Color(0xFFCCFFCC))
-          : null,
+          :  BoxDecoration(color :Constants.kPrimaryColor.withAlpha(50),
+),
       children: [
+        
         Container(
-          color: Constants.kPrimaryColor.withAlpha(50),
+         // color: Constants.kPrimaryColor.withAlpha(50),
+           //  color: Colors.white,
           padding: const EdgeInsets.all(8.0),
           child: Text(
             label,
             style: TextStyle(
-              fontSize: fontSettings.fontSize,
+              fontSize: fontSettings.fontSize-1,
               fontWeight: FontWeight.bold,
             ),
           ),
         ),
-        Padding(
+         Container(
+            color:isSpecialRow ?  Color(0xFFCCFFCC) : Colors.white ,
+       child : Padding(
           padding: const EdgeInsets.all(8.0),
           child: Text(
             value,
@@ -345,6 +495,7 @@ class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
             ),
           ),
         ),
+         ),
       ],
     );
   }

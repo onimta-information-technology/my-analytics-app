@@ -60,7 +60,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await ScreenProtector.preventScreenshotOn();
+  //await ScreenProtector.preventScreenshotOn();
 
   // Initialize Firebase
   await Firebase.initializeApp();
@@ -226,14 +226,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       ),
       routerConfig: AppNavigation.router,
       builder: (context, child) {
-       // return DeveloperBanner(
-       //child :MediaQuery(
-      return MediaQuery(
+        //return DeveloperBanner(
+      // child :MediaQuery(
+     return MediaQuery(
           data: MediaQuery.of(context).copyWith(
             textScaler: TextScaler.noScaling,
           ),
           child: child!,
-      // ),
+       //),
         );
       },
     );

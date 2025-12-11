@@ -72,6 +72,13 @@ class VersionCheckService {
 
   /// Get the update URL
   static String getUpdateUrl() {
-    return Constants.updateUrl;
+    if (Platform.isAndroid) {
+      return Constants.androidUpdateUrl;
+    } else if (Platform.isIOS) {
+      return Constants.iosUpdateUrl;
+    } else {
+      // Fallback to iOS URL for other platforms
+      return Constants.iosUpdateUrl;
+    }
   }
 }

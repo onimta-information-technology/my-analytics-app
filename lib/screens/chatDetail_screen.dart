@@ -278,6 +278,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     String messageText,
     String localMessageId,
   ) async {
+   
     if (_currentUserName == null) {
       return null;
     }
@@ -861,7 +862,8 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return Scaffold(
+    return SafeArea(
+      child: Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
@@ -1043,6 +1045,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
             ),
           ),
         ],
+      ),
       ),
     );
   }

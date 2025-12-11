@@ -37,33 +37,58 @@ class _MenuScreenState extends State<MenuScreen>
 
   bool get _isReservationsBlocked => _salesCode == "CD001";
 
-  void _handleReservationsTap() {
-    if (_isReservationsBlocked) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: const [
-              Icon(Icons.block, color: Colors.white),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Access denied: Reservations not available for your account',
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.all(16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-      );
-    } else {
-      context.go('/reservations');
-    }
-  }
-
+  // void _handleReservationsTap() {
+  //   if (_isReservationsBlocked) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //         content: Row(
+  //           children: const [
+  //             Icon(Icons.block, color: Colors.white),
+  //             SizedBox(width: 8),
+  //             Expanded(
+  //               child: Text(
+  //                 'Access denied: Reservations not available for your account',
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //         backgroundColor: Colors.red,
+  //         duration: const Duration(seconds: 3),
+  //         behavior: SnackBarBehavior.floating,
+  //         margin: const EdgeInsets.all(16),
+  //         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+  //       ),
+  //     );
+  //   } else {
+  //     context.go('/reservations');
+  //   }
+  // }
+// void _handleApproveTap() {
+//     if (_isReservationsBlocked) {
+//       ScaffoldMessenger.of(context).showSnackBar(
+//         SnackBar(
+//           content: Row(
+//             children: const [
+//               Icon(Icons.block, color: Colors.white),
+//               SizedBox(width: 8),
+//               Expanded(
+//                 child: Text(
+//                   'Access denied: Approve tab not available for your account',
+//                 ),
+//               ),
+//             ],
+//           ),
+//           backgroundColor: Colors.red,
+//           duration: const Duration(seconds: 3),
+//           behavior: SnackBarBehavior.floating,
+//           margin: const EdgeInsets.all(16),
+//           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+//         ),
+//       );
+//     } else {
+//       context.go('/menu/approve-reject');
+//     }
+//   }
   @override
   void dispose() {
     _controller.dispose();
@@ -122,85 +147,85 @@ class _MenuScreenState extends State<MenuScreen>
                         ),
                       ),
                     ),
-                    // SizedBox(width: 16),
-                    // Expanded(
-                    //   child: InkWell(
-                    //     onTap: () {
-                    //       context.go('/reservations');
-                    //     },
-                    //     child: Card(
-                    //       color: Colors.orange[700],
-                    //       child: const Padding(
-                    //         padding: EdgeInsets.symmetric(vertical: 30),
-                    //         child: Column(
-                    //           children: [
-                    //             Icon(
-                    //               Icons.luggage,
-                    //               size: 60,
-                    //               color: Colors.white,
-                    //             ),
-                    //             Text(
-                    //               'Reservations',
-                    //               style: TextStyle(
-                    //                 fontSize: 16.0,
-                    //                 fontWeight: FontWeight.normal,
-                    //                 color: Colors.white,
-                    //               ),
-                    //             ),
-                    //           ],
-                    //         ),
-                    //       ),
-                    //     ),
-                    //   ),
-                    // ),
+                   // SizedBox(width: 16),
                     Expanded(
-                      child: Opacity(
-                        opacity: _isReservationsBlocked ? 0.5 : 1.0,
-                        child: InkWell(
-                          onTap: _handleReservationsTap,
-                          child: Card(
-                            color: _isReservationsBlocked
-                                ? Colors.grey
-                                : Colors.orange[700],
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 30),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Column(
-                                    children: [
-                                      Icon(
-                                        Icons.luggage,
-                                        size: 60,
-                                        color: Colors.white,
-                                      ),
-                                      const Text(
-                                        'Reservations',
-                                        style: TextStyle(
-                                          fontSize: 16.0,
-                                          fontWeight: FontWeight.normal,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ],
+                      child: InkWell(
+                        onTap: () {
+                          context.go('/reservations');
+                        },
+                        child: Card(
+                          color: Colors.orange[700],
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 30),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.luggage,
+                                  size: 60,
+                                  color: Colors.white,
+                                ),
+                                Text(
+                                  'Reservations',
+                                  style: TextStyle(
+                                    fontSize: 16.0,
+                                    fontWeight: FontWeight.normal,
+                                    color: Colors.white,
                                   ),
-                                  if (_isReservationsBlocked)
-                                    Positioned(
-                                      top: 8,
-                                      right: 8,
-                                      child: Icon(
-                                        Icons.lock,
-                                        size: 24,
-                                        color: Colors.white.withOpacity(0.8),
-                                      ),
-                                    ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ),
                     ),
+                    // Expanded(
+                    //   child: Opacity(
+                    //     opacity: _isReservationsBlocked ? 0.5 : 1.0,
+                    //     child: InkWell(
+                    //       onTap: _handleReservationsTap,
+                    //       child: Card(
+                    //         color: _isReservationsBlocked
+                    //             ? Colors.grey
+                    //             : Colors.orange[700],
+                    //         child: Padding(
+                    //           padding: const EdgeInsets.symmetric(vertical: 30),
+                    //           child: Stack(
+                    //             alignment: Alignment.center,
+                    //             children: [
+                    //               Column(
+                    //                 children: [
+                    //                   Icon(
+                    //                     Icons.luggage,
+                    //                     size: 60,
+                    //                     color: Colors.white,
+                    //                   ),
+                    //                   const Text(
+                    //                     'Reservations',
+                    //                     style: TextStyle(
+                    //                       fontSize: 16.0,
+                    //                       fontWeight: FontWeight.normal,
+                    //                       color: Colors.white,
+                    //                     ),
+                    //                   ),
+                    //                 ],
+                    //               ),
+                    //               if (_isReservationsBlocked)
+                    //                 Positioned(
+                    //                   top: 8,
+                    //                   right: 8,
+                    //                   child: Icon(
+                    //                     Icons.lock,
+                    //                     size: 24,
+                    //                     color: Colors.white.withOpacity(0.8),
+                    //                   ),
+                    //                 ),
+                    //             ],
+                    //           ),
+                    //         ),
+                    //       ),
+                    //     ),
+                    //   ),
+                    // ),
                   ],
                 ),
 
@@ -208,7 +233,9 @@ class _MenuScreenState extends State<MenuScreen>
                   children: [
                     Expanded(
                       child: GestureDetector(
-                        onTap: () {},
+                        onTap: () {
+                           context.go('/reports');
+                        },
                         child: const Card(
                           color: Color.fromARGB(255, 4, 158, 143),
                           child: Padding(
@@ -234,6 +261,84 @@ class _MenuScreenState extends State<MenuScreen>
                         ),
                       ),
                     ),
+                     Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                           context.go('/menu/approve-reject');
+                        },
+                        child: const Card(
+                          color: Color.fromARGB(255, 201, 185, 8),
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 30),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.check,
+                                  size: 60,
+                                  color: Colors.white,
+                                ),
+                                Text(
+                                  'Approve',
+                                  style: TextStyle(
+                                    fontSize: 16.0,
+                                    fontWeight: FontWeight.normal,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    //  Expanded(
+                    //   child: Opacity(
+                    //     opacity: _isReservationsBlocked ? 0.5 : 1.0,
+                    //     child: InkWell(
+                    //       onTap: _handleApproveTap,
+                    //       child: Card(
+                    //         color: _isReservationsBlocked
+                    //             ? Colors.grey
+                    //             :Color.fromARGB(255, 201, 185, 8),
+                    //         child: Padding(
+                    //           padding: const EdgeInsets.symmetric(vertical: 30),
+                    //           child: Stack(
+                    //             alignment: Alignment.center,
+                    //             children: [
+                    //               Column(
+                    //                 children: [
+                    //                   Icon(
+                    //                     Icons.check,
+                    //                     size: 60,
+                    //                     color: Colors.white,
+                    //                   ),
+                    //                   const Text(
+                    //                     'Approve',
+                    //                     style: TextStyle(
+                    //                       fontSize: 16.0,
+                    //                       fontWeight: FontWeight.normal,
+                    //                       color: Colors.white,
+                    //                     ),
+                    //                   ),
+                    //                 ],
+                    //               ),
+                    //               if (_isReservationsBlocked)
+                    //                 Positioned(
+                    //                   top: 8,
+                    //                   right: 8,
+                    //                   child: Icon(
+                    //                     Icons.lock,
+                    //                     size: 24,
+                    //                     color: Colors.white.withOpacity(0.8),
+                    //                   ),
+                    //                 ),
+                    //             ],
+                    //           ),
+                    //         ),
+                    //       ),
+                    //     ),
+                    //   ),
+                    // ),
                   ],
                 ),
                 Row(
@@ -346,7 +451,7 @@ class _MenuScreenState extends State<MenuScreen>
                                   size: 60,
                                   color: Colors.white,
                                 ),
-                                SizedBox(height: 10),
+                             //   SizedBox(height: 10),
                                 Text(
                                   'Gifts',
                                   style: TextStyle(

@@ -13,7 +13,7 @@ import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sms_autofill/sms_autofill.dart';
+//import 'package:sms_autofill/sms_autofill.dart';
 
 class OTPVerificationScreen extends ConsumerStatefulWidget {
   final String phoneNumber;
@@ -32,11 +32,11 @@ class OTPVerificationScreen extends ConsumerStatefulWidget {
       _OTPVerificationScreenState();
 }
 
-class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
-    with CodeAutoFill {
+class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>{
+    // with CodeAutoFill {
   String? _actualOTP;
   bool _isSendingOTP = false;
-  String? _appSignature;
+  //String? _appSignature;
   final _biometricService = BiometricService();
 
   final List<TextEditingController> _otpControllers = List.generate(
@@ -69,7 +69,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
   }
 
   Future<void> _initializeOTPFlow() async {
-    await _setupSMSAutoFill();
+    //await _setupSMSAutoFill();
     _startResendTimer();
     await _sendInitialOTP();
 
@@ -82,192 +82,192 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
     });
   }
 
-  Future<void> _setupSMSAutoFill() async {
-    try {
-      _appSignature = await SmsAutoFill().getAppSignature;
-      try {
-        String? phoneHint = await SmsAutoFill().hint;
-      } catch (e) {}
+  // Future<void> _setupSMSAutoFill() async {
+  //   try {
+  //     _appSignature = await SmsAutoFill().getAppSignature;
+  //     try {
+  //       String? phoneHint = await SmsAutoFill().hint;
+  //     } catch (e) {}
 
-      await SmsAutoFill().listenForCode();
+  //     await SmsAutoFill().listenForCode();
 
-      _setupManualSMSListener();
-    } catch (e) {}
-  }
+  //     _setupManualSMSListener();
+  //   } catch (e) {}
+  // }
 
-  void _setupManualSMSListener() {
-    try {
-      _smsSubscription = SmsAutoFill().code.listen((String receivedCode) {
-        if (receivedCode.isNotEmpty) {
-          _handleReceivedSMS(receivedCode);
-        }
-      });
-    } catch (e) {}
-  }
+  // void _setupManualSMSListener() {
+  //   try {
+  //     _smsSubscription = SmsAutoFill().code.listen((String receivedCode) {
+  //       if (receivedCode.isNotEmpty) {
+  //         _handleReceivedSMS(receivedCode);
+  //       }
+  //     });
+  //   } catch (e) {}
+  // }
 
-  void _handleReceivedSMS(String receivedCode) {
-    String extractedOTP = _extractOTPFromCode(receivedCode);
+  // void _handleReceivedSMS(String receivedCode) {
+  //   String extractedOTP = _extractOTPFromCode(receivedCode);
 
-    if (extractedOTP.length == 5 && extractedOTP.isNotEmpty) {
-      if (_autoFillPermissionGranted == null) {
-        _pendingSMSCode = extractedOTP;
-        _showAutoFillPermissionDialog(extractedOTP);
-      } else if (_autoFillPermissionGranted == true) {
-        _fillOTPFields(extractedOTP);
-      } else {
-        _showInfoMessage('OTP received. Please enter manually.');
-      }
-    } else {}
-  }
+  //   if (extractedOTP.length == 5 && extractedOTP.isNotEmpty) {
+  //     if (_autoFillPermissionGranted == null) {
+  //       _pendingSMSCode = extractedOTP;
+  //       _showAutoFillPermissionDialog(extractedOTP);
+  //     } else if (_autoFillPermissionGranted == true) {
+  //       _fillOTPFields(extractedOTP);
+  //     } else {
+  //       _showInfoMessage('OTP received. Please enter manually.');
+  //     }
+  //   } else {}
+  // }
 
-  Future<void> _showAutoFillPermissionDialog(String otp) async {
-    if (!mounted) return;
+  // Future<void> _showAutoFillPermissionDialog(String otp) async {
+  //   if (!mounted) return;
 
-    bool? result = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.sms, color: Colors.orange[700], size: 24),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  'OTP Auto-fill',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'We detected an OTP in your SMS:',
-                style: TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey[300]!),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: otp
-                      .split('')
-                      .map(
-                        (digit) => Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            digit,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.orange,
-                            ),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Would you like to automatically fill this OTP for you?',
-                style: TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'You can change this preference anytime in settings.',
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-              ),
-            ],
-          ),
-          actions: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    'Deny',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    'Allow',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        );
-      },
-    );
+  //   bool? result = await showDialog<bool>(
+  //     context: context,
+  //     barrierDismissible: false,
+  //     builder: (BuildContext context) {
+  //       return AlertDialog(
+  //         shape: RoundedRectangleBorder(
+  //           borderRadius: BorderRadius.circular(16),
+  //         ),
+  //         title: Row(
+  //           children: [
+  //             Container(
+  //               padding: const EdgeInsets.all(8),
+  //               decoration: BoxDecoration(
+  //                 color: Colors.orange.withOpacity(0.1),
+  //                 borderRadius: BorderRadius.circular(8),
+  //               ),
+  //               child: Icon(Icons.sms, color: Colors.orange[700], size: 24),
+  //             ),
+  //             const SizedBox(width: 12),
+  //             const Expanded(
+  //               child: Text(
+  //                 'OTP Auto-fill',
+  //                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //         content: Column(
+  //           mainAxisSize: MainAxisSize.min,
+  //           crossAxisAlignment: CrossAxisAlignment.start,
+  //           children: [
+  //             const Text(
+  //               'We detected an OTP in your SMS:',
+  //               style: TextStyle(fontSize: 16),
+  //             ),
+  //             const SizedBox(height: 12),
+  //             Container(
+  //               padding: const EdgeInsets.all(12),
+  //               decoration: BoxDecoration(
+  //                 color: Colors.grey[100],
+  //                 borderRadius: BorderRadius.circular(8),
+  //                 border: Border.all(color: Colors.grey[300]!),
+  //               ),
+  //               child: Row(
+  //                 mainAxisAlignment: MainAxisAlignment.center,
+  //                 children: otp
+  //                     .split('')
+  //                     .map(
+  //                       (digit) => Container(
+  //                         margin: const EdgeInsets.symmetric(horizontal: 4),
+  //                         padding: const EdgeInsets.symmetric(
+  //                           horizontal: 8,
+  //                           vertical: 4,
+  //                         ),
+  //                         decoration: BoxDecoration(
+  //                           color: Colors.orange.withOpacity(0.1),
+  //                           borderRadius: BorderRadius.circular(6),
+  //                         ),
+  //                         child: Text(
+  //                           digit,
+  //                           style: const TextStyle(
+  //                             fontSize: 18,
+  //                             fontWeight: FontWeight.bold,
+  //                             color: Colors.orange,
+  //                           ),
+  //                         ),
+  //                       ),
+  //                     )
+  //                     .toList(),
+  //               ),
+  //             ),
+  //             const SizedBox(height: 16),
+  //             const Text(
+  //               'Would you like to automatically fill this OTP for you?',
+  //               style: TextStyle(fontSize: 16),
+  //             ),
+  //             const SizedBox(height: 8),
+  //             Text(
+  //               'You can change this preference anytime in settings.',
+  //               style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+  //             ),
+  //           ],
+  //         ),
+  //         actions: [
+  //           Row(
+  //             mainAxisAlignment: MainAxisAlignment.end,
+  //             children: [
+  //               ElevatedButton(
+  //                 onPressed: () => Navigator.of(context).pop(false),
+  //                 style: ElevatedButton.styleFrom(
+  //                   backgroundColor: Colors.red,
+  //                   foregroundColor: Colors.white,
+  //                   padding: const EdgeInsets.symmetric(
+  //                     horizontal: 20,
+  //                     vertical: 12,
+  //                   ),
+  //                   shape: RoundedRectangleBorder(
+  //                     borderRadius: BorderRadius.circular(8),
+  //                   ),
+  //                 ),
+  //                 child: const Text(
+  //                   'Deny',
+  //                   style: TextStyle(fontWeight: FontWeight.w600),
+  //                 ),
+  //               ),
+  //               const SizedBox(width: 12),
+  //               ElevatedButton(
+  //                 onPressed: () => Navigator.of(context).pop(true),
+  //                 style: ElevatedButton.styleFrom(
+  //                   backgroundColor: Colors.green,
+  //                   foregroundColor: Colors.white,
+  //                   padding: const EdgeInsets.symmetric(
+  //                     horizontal: 20,
+  //                     vertical: 12,
+  //                   ),
+  //                   shape: RoundedRectangleBorder(
+  //                     borderRadius: BorderRadius.circular(8),
+  //                   ),
+  //                 ),
+  //                 child: const Text(
+  //                   'Allow',
+  //                   style: TextStyle(fontWeight: FontWeight.w600),
+  //                 ),
+  //               ),
+  //             ],
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
 
-    if (mounted) {
-      setState(() {
-        _autoFillPermissionGranted = result ?? false;
-      });
+  //   if (mounted) {
+  //     setState(() {
+  //       _autoFillPermissionGranted = result ?? false;
+  //     });
 
-      if (result == true && _pendingSMSCode != null) {
-        _fillOTPFields(_pendingSMSCode!);
-      } else if (result == false) {
-        _showInfoMessage('OTP received. Please enter manually.');
-      }
+  //     if (result == true && _pendingSMSCode != null) {
+  //       _fillOTPFields(_pendingSMSCode!);
+  //     } else if (result == false) {
+  //       _showInfoMessage('OTP received. Please enter manually.');
+  //     }
 
-      _pendingSMSCode = null;
-    }
-  }
+  //     _pendingSMSCode = null;
+  //   }
+  // }
 
   void _fillOTPFields(String otp) {
     for (int i = 0; i < 5; i++) {
@@ -302,12 +302,12 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
     return '';
   }
 
-  @override
-  void codeUpdated() {
-    if (code != null && code!.isNotEmpty) {
-      _handleReceivedSMS(code!);
-    }
-  }
+  // @override
+  // void codeUpdated() {
+  //   if (code != null && code!.isNotEmpty) {
+  //     _handleReceivedSMS(code!);
+  //   }
+  // }
 
   Future<bool> _sendOTPSMS(String phoneNumber, String otp) async {
     try {
@@ -321,9 +321,9 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
 
       String message =
           'Your OTP code is $otp. Do not share this code with anyone.';
-      if (_appSignature != null && _appSignature!.isNotEmpty) {
-        message += '\u200B$_appSignature';
-      }
+      // if (_appSignature != null && _appSignature!.isNotEmpty) {
+      //   message += '\u200B$_appSignature';
+      // }
 
       String fullUrl =
           '$baseUrl?q=968deddf5fd84b8&destination=$formattedPhone&message=${Uri.encodeComponent(message)}';
@@ -368,8 +368,8 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
   @override
   void dispose() {
     try {
-      cancel();
-      SmsAutoFill().unregisterListener();
+      // cancel();
+      // SmsAutoFill().unregisterListener();
       _smsSubscription?.cancel();
     } catch (e) {}
 
@@ -927,12 +927,14 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>
                       child: TextFormField(
                         controller: _otpControllers[index],
                         focusNode: _otpFocusNodes[index],
+                         autofillHints: const [AutofillHints.oneTimeCode],
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF333333),
                         ),
+                        
                         keyboardType: TextInputType.number,
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,

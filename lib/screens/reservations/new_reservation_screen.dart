@@ -664,6 +664,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
+          
           backgroundColor: !_isEditMode ? Colors.white : Colors.green,
           foregroundColor: !_isEditMode ? Colors.black : Colors.white,
           title: Text(

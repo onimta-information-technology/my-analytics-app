@@ -105,36 +105,45 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Birthdays', style: TextStyle(fontSize: 20.0)),
-        actions: [
-          IconButton(
-            icon: _isRefreshing
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.0,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Color.fromARGB(255, 114, 6, 100),
-                      ),
-                    ),
-                  )
-                : const Icon(Icons.refresh, size: 30),
-            onPressed: _isRefreshing ? null : _refreshBirthdays,
-          ),
-        ],
-
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Constants.kPrimaryColor,
-          tabs: const [
-            Tab(child: Text('Past', style: TextStyle(fontSize: 16.0))),
-            Tab(child: Text('Recent', style: TextStyle(fontSize: 16.0))),
-            Tab(child: Text('Upcoming', style: TextStyle(fontSize: 16.0))),
-          ],
-        ),
-      ),
+      appBar:AppBar(
+  leading: IconButton(
+    icon: const Icon(Icons.arrow_back),
+     onPressed: () {
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/menu'); // Fallback to home if can't pop
+      }
+    },
+  ),
+  title: const Text('Birthdays', style: TextStyle(fontSize: 20.0)),
+  actions: [
+    IconButton(
+      icon: _isRefreshing
+          ? const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.0,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  Color.fromARGB(255, 114, 6, 100),
+                ),
+              ),
+            )
+          : const Icon(Icons.refresh, size: 30),
+      onPressed: _isRefreshing ? null : _refreshBirthdays,
+    ),
+  ],
+  bottom: TabBar(
+    controller: _tabController,
+    indicatorColor: Constants.kPrimaryColor,
+    tabs: const [
+      Tab(child: Text('Past', style: TextStyle(fontSize: 16.0))),
+      Tab(child: Text('Recent', style: TextStyle(fontSize: 16.0))),
+      Tab(child: Text('Upcoming', style: TextStyle(fontSize: 16.0))),
+    ],
+  ),
+),
       body: Stack(
         children: [
           TabBarView(

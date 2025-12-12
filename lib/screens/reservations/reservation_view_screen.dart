@@ -402,6 +402,16 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
     final fontSettings = ref.watch(fontSettingsProvider);
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+    icon: const Icon(Icons.arrow_back),
+    onPressed: () {
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/MenuScreen');
+      }
+    },
+  ),
         title: Text(
           "Reservation - ${selectedReservation != null ? selectedReservation.reservNo : ''}",
           style: const TextStyle(fontSize: 18),

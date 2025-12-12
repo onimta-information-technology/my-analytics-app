@@ -233,7 +233,16 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
         FocusScope.of(context).unfocus();
       },
       child: Scaffold(
-        appBar: AppBar(title: const Text('Members')),
+        appBar: AppBar(title: const Text('Members'),leading: IconButton(
+    icon: const Icon(Icons.arrow_back),
+    onPressed: () {
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/menu');
+      }
+    },
+  ),),
         body: Stack(
           children: [
             SingleChildScrollView(

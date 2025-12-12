@@ -363,7 +363,16 @@ class _GiftsMainScreenState extends ConsumerState<GiftsMainScreen> {
   Widget build(BuildContext context) {
     ref.watch(fontSettingsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Gifts')),
+      appBar: AppBar(title: const Text('Gifts'),leading: IconButton(
+    icon: const Icon(Icons.arrow_back),
+    onPressed: () {
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/menu');
+      }
+    },
+  ),),
       body: Stack(
         children: [
           Padding(

@@ -209,6 +209,16 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+    icon: const Icon(Icons.arrow_back),
+    onPressed: () {
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/home');
+      }
+    },
+  ),
         title: Text(
           'Special Gift Request',
           style: TextStyle(

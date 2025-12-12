@@ -95,7 +95,19 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> {
         FocusScope.of(context).unfocus();
       },
       child: Scaffold(
-        appBar: AppBar(title: const Text('Inactive Members')),
+        
+        appBar: AppBar(title: const Text('Inactive Members'),
+        leading: IconButton(
+    icon: const Icon(Icons.arrow_back),
+    onPressed: () {
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/menu');
+      }
+    },
+  ),),
+        
         body: Stack(
           children: [
             Column(

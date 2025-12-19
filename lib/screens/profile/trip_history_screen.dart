@@ -68,7 +68,7 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
       String? dateFrom;
       String? dateTo;
 
-      if (startDateNotifier.value != null) {
+      if (startDateNotifier.value != null) { 
         dateFrom = DateFormat('yyyy-MM-dd').format(startDateNotifier.value!);
       }
 

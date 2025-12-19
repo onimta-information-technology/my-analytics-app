@@ -1,4 +1,5 @@
 import 'package:ballys_reservation_app/components/marketing_performance.dart';
+import 'package:ballys_reservation_app/components/snow.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
@@ -17,7 +18,7 @@ final guestCountsProvider = StateProvider<Map<String, int?>>(
   (ref) => {"today": null, "yesterday": null, "monthly": null},
 );
 final homeScreenInitializedProvider = StateProvider<bool>((ref) => false);
-
+final eventShownProvider = StateProvider<bool>((ref) => false);
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -29,6 +30,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     with AutomaticKeepAliveClientMixin {
   String? userName;
   bool _isLoadingData = false;
+bool _showEvent = false;
 
   // 🔹 Keep the widget alive when navigating away
   @override
@@ -38,6 +40,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   void initState() {
     super.initState();
     _loadUserName();
+
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // 🔹 Check if user is actually logged in
       final userName = await StorageUtil.getUserName();
@@ -60,6 +63,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ref.read(homeScreenInitializedProvider.notifier).state = true;
         _initializeAppMode();
         _loadGuestData();
+         _checkAndShowEvent();
       } else {
         // 🔹 Even if initialized, verify data exists
         final guestsState = ref.read(guestsProvider);
@@ -70,6 +74,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         }
       }
     });
+  }
+  void _checkAndShowEvent() {
+    final now = DateTime.now();
+    final hasShownEvent = ref.read(eventShownProvider);
+    
+  
+    if (now.month == 12 && !hasShownEvent) {
+      setState(() {
+        _showEvent = true;
+      });
+      
+
+      ref.read(eventShownProvider.notifier).state = true;
+   
+      Future.delayed(const Duration(seconds: 5), () {
+        if (mounted) {
+          setState(() {
+            _showEvent = false;
+          });
+        }
+      });
+    }
   }
 
   // 🔹 Override didChangeDependencies to prevent auto-refresh on return
@@ -462,6 +488,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
             ),
           ),
+    // if (_showEvent)
+    //   Positioned(
+    //     top: 0,
+    //     left: 0,
+    //     right: 0,
+    //     bottom: 0,
+    //     child: IgnorePointer(
+    //       ignoring: true, 
+    //       child: Event(isShow: true),
+    //     ),
+    //   ),
+          Event(isShow: _showEvent),
         ],
       ),
     );

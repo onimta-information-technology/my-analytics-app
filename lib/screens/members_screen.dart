@@ -275,7 +275,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                                             country: "",
                                             lastVisitDate: guest.lvd.toString(),
                                             age: 0,
-                                            gRating: "",
+                                            gRating: guest.gRating ?? "",
                                             mGroup: "",
                                             gName: guest.gName ?? "",
                                           ),

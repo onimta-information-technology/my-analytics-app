@@ -58,7 +58,27 @@ class SelectedGuestNotifier extends StateNotifier<Guest?> {
     );
   
   }
-
+void updateGuestGift({required String gift, required String mobile}) {
+    if (state != null) {
+      state = Guest(
+        mid: state!.mid,
+        memberName: state!.memberName,
+        country: state!.country,
+        lastVisitDate: state!.lastVisitDate,
+        age: state!.age,
+        gRating: state!.gRating,
+        mGroup: state!.mGroup,
+        gName: state!.gName,
+        memImage2: state!.memImage2,
+        gift: gift,
+        mDrop: state!.mDrop,
+        mobile: mobile,
+      );
+    }
+  }
+  void clearGuest() {
+    state = null;
+  }
   Future<void> getGuestImage(int iid, String text1) async {
     try {
       final imageUrl = await guestRepository.fetchGuestImage(iid, text1);

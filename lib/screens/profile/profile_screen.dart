@@ -39,7 +39,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   @override
   void initState() {
     super.initState();
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // Extract the extra parameter
       final extra = GoRouterState.of(context).extra;
@@ -48,9 +48,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           _nogiftamount = extra['nogiftamount'] == true;
         });
       }
-      
+
       final guest = ref.read(selectedGuestProvider);
-      
+
       if (guest != null) {
         // Only load image if it's not already present
         if (guest.memImage2 == null) {
@@ -58,15 +58,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               .read(selectedGuestProvider.notifier)
               .getGuestImage(9021, guest.mid);
         }
-        
+
         // Set WhatsApp number if available and nogiftamount is not true
-        if (!_nogiftamount && 
-            guest.mobile != null && 
+        if (!_nogiftamount &&
+            guest.mobile != null &&
             guest.mobile!.isNotEmpty) {
           _whatsappNumberController.text = guest.mobile!;
         }
       }
-      
+
       // Load profile details
       _getMemberMainProfileDetails();
     });
@@ -96,7 +96,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       _isLoading = true;
     });
     final guest = ref.read(selectedGuestProvider);
-   
+
     if (guest == null) return;
     await ref
         .read(mainProfileDetailsProvider.notifier)
@@ -133,17 +133,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   Widget build(BuildContext context) {
     final fontSettings = ref.watch(fontSettingsProvider);
     final guest = ref.watch(selectedGuestProvider);
-    final currentPath = GoRouter.of(context)
-        .routerDelegate
-        .currentConfiguration
-        .fullPath;
-    
+    final currentPath = GoRouter.of(
+      context,
+    ).routerDelegate.currentConfiguration.fullPath;
 
     final birthdayGiftState = ref.watch(birthdayGiftProvider);
     // Determine if we should show gift-related elements
-    final bool showGiftElements = !_nogiftamount && 
-        (currentPath == '/birthdays' || currentPath == '/gifts/event-gifts' || guest?.gift != null);
-    
+    final bool showGiftElements =
+        !_nogiftamount &&
+        (currentPath == '/birthdays' ||
+            currentPath == '/gifts/event-gifts' ||
+            guest?.gift != null);
+
     if (guest == null) {
       return Scaffold(
         appBar: AppBar(title: const Text("Guest Profile")),
@@ -394,7 +395,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                             },
                           ),
                         const SizedBox(height: 20),
-                        
+
                         // Navigation buttons
                         SizedBox(
                           width: double.infinity,
@@ -497,7 +498,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                             ),
                           ),
                         ),
-                        
+
                         // Profile details expandable section
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -589,132 +590,222 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                         ),
                                         opacity: _isTableExpanded ? 1.0 : 0.0,
                                         child: Table(
-  border: TableBorder.all(),
-  columnWidths: const {
-    0: FractionColumnWidth(0.5),
-    1: FractionColumnWidth(0.5),
-  },
-  children: [
-    ...guestProfileDetails.map((entry) {
-      final isBirthday = entry.details['Name']?.toLowerCase() == 'birthday';
-      
-      return TableRow(
-        decoration: BoxDecoration(
-          color: Constants.kPrimaryColor.withAlpha(50),
-        ),
-        children: [
-          InkWell(
-            onTap: isBirthday ? () async {
-              // Show loading
-              EasyLoading.show(status: 'Loading gift...');
-              
-              try {
-                // Fetch birthday gift data
-                await ref
-                    .read(birthdayGiftProvider.notifier)
-                    .fetchGiftData(guest.mid);
-                
-                EasyLoading.dismiss();
-                
-                final giftState = ref.read(birthdayGiftProvider);
-                
-                if (giftState.giftData != null) {
-                  // Update the guest with gift information
-                  ref.read(selectedGuestProvider.notifier).updateGuestGift(
-                    gift: giftState.giftData!.gift,
-                    mobile: giftState.giftData!.mobile,
-                  );
-                  
-                  // Update WhatsApp number field
-                  if (giftState.giftData!.mobile.isNotEmpty) {
-                    _whatsappNumberController.text = giftState.giftData!.mobile;
-                  }
-                  
-                  // Show success message
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Gift loaded: ${giftState.giftData!.gift}',
-                      ),
-                      backgroundColor: Colors.green,
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('No gift data available'),
-                      backgroundColor: Colors.orange,
-                    ),
-                  );
-                }
-              } catch (e) {
-                EasyLoading.dismiss();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error loading gift: $e'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            } : null,
-            child: Container(
-              color: isBirthday ? Colors.blue.withOpacity(0.1) : null,
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        entry.details['Name']!,
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: fontSettings.fontSize,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    if (isBirthday)
-                      Row(
-                        children: const [
-                          Icon(
-                            Icons.touch_app,
-                            size: 16,
-                            color: Colors.blue,
-                          ),
-                          SizedBox(width: 4),
-                          Icon(
-                            Icons.card_giftcard,
-                            size: 16,
-                            color: Colors.green,
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Container(
-            color: Colors.white,
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(
-                entry.details['Detail']!,
-                textAlign: TextAlign.end,
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: fontSettings.fontSize,
-                  fontWeight: fontSettings.fontWeight,
-                ),
-              ),
-            ),
-          ),
-        ],
-      );
-    }).expand((x) => [x]),
-  ],
-),
+                                          border: TableBorder.all(),
+                                          columnWidths: const {
+                                            0: FractionColumnWidth(0.5),
+                                            1: FractionColumnWidth(0.5),
+                                          },
+                                          children: [
+                                            ...guestProfileDetails
+                                                .map((entry) {
+                                                  final isBirthday =
+                                                      entry.details['Name']
+                                                          ?.toLowerCase() ==
+                                                      'birthday';
+
+                                                  return TableRow(
+                                                    decoration: BoxDecoration(
+                                                      color: Constants
+                                                          .kPrimaryColor
+                                                          .withAlpha(50),
+                                                    ),
+                                                    children: [
+                                                      InkWell(
+                                                        onTap: isBirthday
+                                                            ? () async {
+                                                                // Show loading
+                                                                EasyLoading.show(
+                                                                  status:
+                                                                      'Loading gift...',
+                                                                );
+
+                                                                try {
+                                                                  // Fetch birthday gift data
+                                                                  await ref
+                                                                      .read(
+                                                                        birthdayGiftProvider
+                                                                            .notifier,
+                                                                      )
+                                                                      .fetchGiftData(
+                                                                        guest
+                                                                            .mid,
+                                                                      );
+
+                                                                  EasyLoading.dismiss();
+
+                                                                  final giftState =
+                                                                      ref.read(
+                                                                        birthdayGiftProvider,
+                                                                      );
+
+                                                                  if (giftState
+                                                                          .giftData !=
+                                                                      null) {
+                                                                    // Update the guest with gift information
+                                                                    ref
+                                                                        .read(
+                                                                          selectedGuestProvider
+                                                                              .notifier,
+                                                                        )
+                                                                        .updateGuestGift(
+                                                                          gift: giftState
+                                                                              .giftData!
+                                                                              .gift,
+                                                                          mobile: giftState
+                                                                              .giftData!
+                                                                              .mobile,
+                                                                        );
+
+                                                                    // Update WhatsApp number field
+                                                                    if (giftState
+                                                                        .giftData!
+                                                                        .mobile
+                                                                        .isNotEmpty) {
+                                                                      _whatsappNumberController
+                                                                          .text = giftState
+                                                                          .giftData!
+                                                                          .mobile;
+                                                                    }
+
+                                                                    // Show success message
+                                                                    ScaffoldMessenger.of(
+                                                                      context,
+                                                                    ).showSnackBar(
+                                                                      SnackBar(
+                                                                        content:
+                                                                            Text(
+                                                                              'Gift loaded: ${giftState.giftData!.gift}',
+                                                                            ),
+                                                                        backgroundColor:
+                                                                            Colors.green,
+                                                                        duration: const Duration(
+                                                                          seconds:
+                                                                              2,
+                                                                        ),
+                                                                      ),
+                                                                    );
+                                                                  } else {
+                                                                    ScaffoldMessenger.of(
+                                                                      context,
+                                                                    ).showSnackBar(
+                                                                      const SnackBar(
+                                                                        content:
+                                                                            Text(
+                                                                              'No gift data available',
+                                                                            ),
+                                                                        backgroundColor:
+                                                                            Colors.orange,
+                                                                      ),
+                                                                    );
+                                                                  }
+                                                                } catch (e) {
+                                                                  EasyLoading.dismiss();
+                                                                  ScaffoldMessenger.of(
+                                                                    context,
+                                                                  ).showSnackBar(
+                                                                    SnackBar(
+                                                                      content: Text(
+                                                                        'Error loading gift: $e',
+                                                                      ),
+                                                                      backgroundColor:
+                                                                          Colors
+                                                                              .red,
+                                                                    ),
+                                                                  );
+                                                                }
+                                                              }
+                                                            : null,
+                                                        child: Container(
+                                                          color: isBirthday
+                                                              ? Colors.blue
+                                                                    .withOpacity(
+                                                                      0.1,
+                                                                    )
+                                                              : null,
+                                                          child: Padding(
+                                                            padding:
+                                                                const EdgeInsets.all(
+                                                                  8.0,
+                                                                ),
+                                                            child: Row(
+                                                              children: [
+                                                                Expanded(
+                                                                  child: Text(
+                                                                    entry
+                                                                        .details['Name']!,
+                                                                    style: TextStyle(
+                                                                      color: Colors
+                                                                          .black,
+                                                                      fontSize:
+                                                                          fontSettings
+                                                                              .fontSize,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                                if (isBirthday)
+                                                                  Row(
+                                                                    children: const [
+                                                                      Icon(
+                                                                        Icons
+                                                                            .touch_app,
+                                                                        size:
+                                                                            16,
+                                                                        color: Colors
+                                                                            .blue,
+                                                                      ),
+                                                                      SizedBox(
+                                                                        width:
+                                                                            4,
+                                                                      ),
+                                                                      Icon(
+                                                                        Icons
+                                                                            .card_giftcard,
+                                                                        size:
+                                                                            16,
+                                                                        color: Colors
+                                                                            .green,
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      Container(
+                                                        color: Colors.white,
+                                                        child: Padding(
+                                                          padding:
+                                                              const EdgeInsets.all(
+                                                                8.0,
+                                                              ),
+                                                          child: Text(
+                                                            entry
+                                                                .details['Detail']!,
+                                                            textAlign:
+                                                                TextAlign.end,
+                                                            style: TextStyle(
+                                                              color:
+                                                                  Colors.black,
+                                                              fontSize:
+                                                                  fontSettings
+                                                                      .fontSize,
+                                                              fontWeight:
+                                                                  fontSettings
+                                                                      .fontWeight,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  );
+                                                })
+                                                .expand((x) => [x]),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                     if (!_isTableExpanded &&
@@ -759,7 +850,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                 ),
                         ),
                         const SizedBox(height: 8),
-                        
+
                         // Only show WhatsApp section if showGiftElements is true
                         if (showGiftElements)
                           Card(
@@ -780,19 +871,32 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
+                                   if (guest.gift != null && guest.gift!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Text(
+                "Gift Amount: ${guest.gift}",
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color.fromARGB(255, 0, 0, 0),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
                                   const SizedBox(height: 10),
                                   TextField(
                                     controller: _whatsappNumberController,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 18, 
+                                      fontSize: 18,
                                     ),
                                     keyboardType: TextInputType.phone,
                                     decoration: InputDecoration(
-                                      contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 12,
-                                      ),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 12,
+                                          ),
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
                                         borderSide: const BorderSide(
@@ -850,7 +954,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                           );
                                           return;
                                         }
-                                        
+
                                         try {
                                           EasyLoading.show(
                                             status: 'Sending gift...',
@@ -862,8 +966,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                 mname: guest.memberName,
                                                 whatsappNumber: phoneNumber,
                                                 gift: guest.gift!,
-                                                 mid: guest.mid,
-          memberMobile: guest.mobile ?? '',
+                                                mid: guest.mid,
+                                                memberMobile:
+                                                    guest.mobile ?? '',
                                               );
 
                                           EasyLoading.dismiss();
@@ -949,3 +1054,4 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     );
   }
 }
+

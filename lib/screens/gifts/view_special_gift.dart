@@ -365,7 +365,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                                     guestResponse.lvd
                                                         ?.toString() ??
                                                     "",
-                                                gift: "",
+                                             
                                                 age: 0,
                                                 gRating:
                                                     guestResponse.gRating ?? "",

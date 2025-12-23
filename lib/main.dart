@@ -226,14 +226,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       ),
       routerConfig: AppNavigation.router,
       builder: (context, child) {
-        //return DeveloperBanner(
+      // return DeveloperBanner(
       // child :MediaQuery(
      return MediaQuery(
           data: MediaQuery.of(context).copyWith(
             textScaler: TextScaler.noScaling,
           ),
           child: child!,
-       //),
+      // ),
         );
       },
     );

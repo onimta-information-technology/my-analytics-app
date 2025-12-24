@@ -12,8 +12,12 @@ import 'package:intl/intl.dart';
 
 class SpecialGiftRequestScreen extends ConsumerStatefulWidget {
   final GiftsRepository giftsRepository;
- final bool hideAddButton; 
-  const SpecialGiftRequestScreen({super.key, required this.giftsRepository, this.hideAddButton = false});
+  final bool hideAddButton;
+  const SpecialGiftRequestScreen({
+    super.key,
+    required this.giftsRepository,
+    this.hideAddButton = false,
+  });
 
   @override
   ConsumerState<SpecialGiftRequestScreen> createState() =>
@@ -93,11 +97,10 @@ class _SpecialGiftRequestScreenState
 
     return Scaffold(
       appBar: AppBar(
-        
         title: const Text('Special Gift Request'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh ,size: 30),
+            icon: const Icon(Icons.refresh, size: 30),
             onPressed: () async {
               String? salesCode = await StorageUtil.getSalesCode();
               if (salesCode != null && salesCode.isNotEmpty) {
@@ -144,23 +147,27 @@ class _SpecialGiftRequestScreenState
           const Watermark(),
         ],
       ),
-      floatingActionButton: widget.hideAddButton 
-    ? null: FloatingActionButton(
-        onPressed: () async {
-          final result = await context.push(
-            '/gifts/special-gift-requests/new-gift-request',
-          );
-          if (result == true) {
-            String? salesCode = await StorageUtil.getSalesCode();
-            if (salesCode != null && salesCode.isNotEmpty) {
-              _loadSpGiftData(salesCode);
-            }
-          }
-        },
-        backgroundColor: Colors.red,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add, color: Color.fromARGB(255, 255, 255, 255)),
-      ),
+      floatingActionButton: widget.hideAddButton
+          ? null
+          : FloatingActionButton(
+              onPressed: () async {
+                final result = await context.push(
+                  '/gifts/special-gift-requests/new-gift-request',
+                );
+                if (result == true) {
+                  String? salesCode = await StorageUtil.getSalesCode();
+                  if (salesCode != null && salesCode.isNotEmpty) {
+                    _loadSpGiftData(salesCode);
+                  }
+                }
+              },
+              backgroundColor: Colors.red,
+              shape: const CircleBorder(),
+              child: const Icon(
+                Icons.add,
+                color: Color.fromARGB(255, 255, 255, 255),
+              ),
+            ),
     );
   }
 
@@ -184,68 +191,210 @@ class _SpecialGiftRequestScreenState
     );
   }
 
-  Widget _buildGiftList(
-    List<SpecialGiftRequest> gifts, {
-    required bool isPending,
-  }) {
-    final fontSettings = ref.watch(fontSettingsProvider);
+  // Widget _buildGiftList(
+  //   List<SpecialGiftRequest> gifts, {
+  //   required bool isPending,
+  // }) {
+  //   final fontSettings = ref.watch(fontSettingsProvider);
 
-    if (gifts.isEmpty) {
-      return const Center(child: Text("No gifts found"));
-    }
+  //   if (gifts.isEmpty) {
+  //     return const Center(child: Text("No gifts found"));
+  //   }
 
-    return ListView.builder(
-      itemCount: gifts.length,
-      itemBuilder: (context, index) {
-        final gift = gifts[index];
-        return Stack(
-          children: [
-            InkWell(
-              borderRadius: BorderRadius.circular(10),
-              onTap: () {
-            
-                context.push(
-                  '/gifts/special-gift-requests/view-specific-gift-request',
-                  extra: {
-                    'gift': gift, // the SpecialGiftRequest object
-                    'isPending': isPending, // mark it as pending
-                  }, // pass the whole object
-                );
-              },
-              child: Card(
-                margin: const EdgeInsets.symmetric(
-                  vertical: 10,
+  //   return ListView.builder(
+  //     itemCount: gifts.length,
+  //     itemBuilder: (context, index) {
+  //       final gift = gifts[index];
+  //       return Stack(
+  //         children: [
+  //           InkWell(
+  //             borderRadius: BorderRadius.circular(10),
+  //             onTap: () async {
+  //               final result =await context.push(
+  //                 '/gifts/special-gift-requests/view-specific-gift-request',
+  //                 extra: {
+  //                   'gift': gift, // the SpecialGiftRequest object
+  //                   'isPending': isPending, // mark it as pending
+  //                 }, // pass the whole object
+  //               );
+  //               if (result == true) {
+  //                 String? salesCode = await StorageUtil.getSalesCode();
+  //                 if (salesCode != null && salesCode.isNotEmpty) {
+  //                   _loadSpGiftData(salesCode);
+  //                 }
+  //               }
+  //             },
+  //             child: Card(
+  //               margin: const EdgeInsets.symmetric(
+  //                 vertical: 10,
+  //                 horizontal: 16,
+  //               ),
+  //               elevation: 4,
+  //               shape: RoundedRectangleBorder(
+  //                 borderRadius: BorderRadius.circular(10),
+  //               ),
+  //               child: ListTile(
+  //                 contentPadding: const EdgeInsets.symmetric(
+  //                   vertical: 14,
+  //                   horizontal: 16,
+  //                 ),
+  //                 title: Text(
+  //                   '${gift.mid} - ${gift.mname}',
+  //                   style: TextStyle(
+  //                     color: Colors.black,
+  //                     fontSize: fontSettings.fontSize,
+  //                     fontWeight: fontSettings.fontWeight,
+  //                   ),
+  //                 ),
+  //                 subtitle: Column(
+  //                   crossAxisAlignment: CrossAxisAlignment.start,
+  //                   children: [
+  //                     Row(
+  //                       children: [
+  //                         const Icon(
+  //                           Icons.card_giftcard,
+  //                           color: Colors.pink,
+  //                           size: 18,
+  //                         ),
+  //                         const SizedBox(width: 6),
+  //                         Text(
+  //                           gift.cashierPayType.replaceAll("_", " "),
+  //                           style: TextStyle(
+  //                             color: Colors.black,
+  //                             fontSize: fontSettings.fontSize,
+  //                             fontWeight: fontSettings.fontWeight,
+  //                           ),
+  //                         ),
+  //                       ],
+  //                     ),
+  //                     const SizedBox(height: 6),
+  //                     Row(
+  //                       children: [
+  //                         const Icon(
+  //                           Icons.access_time,
+  //                           color: Colors.grey,
+  //                           size: 16,
+  //                         ),
+  //                         const SizedBox(width: 6),
+  //                         Text(
+  //                           _formatDate(gift.insertDate),
+  //                           style: TextStyle(
+  //                             color: const Color.fromARGB(255, 2, 2, 2),
+  //                             fontSize: fontSettings.fontSize - 1,
+  //                           ),
+  //                         ),
+  //                       ],
+  //                     ),
+  //                   ],
+  //                 ),
+  //               ),
+  //             ),
+  //           ),
+  //           Positioned(
+  //             top: 10,
+  //             right: 15,
+  //             child: SizedBox(
+  //               width: 90,
+  //               height: 30,
+  //               child: Image.asset(
+  //                 ratingImageMap[gift.gRating] ??
+  //                     "assets/images/ratings/CLASSIC.png",
+  //                 fit: BoxFit.contain,
+  //               ),
+  //             ),
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
+Widget _buildGiftList(
+  List<SpecialGiftRequest> gifts, {
+  required bool isPending,
+}) {
+  final fontSettings = ref.watch(fontSettingsProvider);
+
+  if (gifts.isEmpty) {
+    return const Center(child: Text("No gifts found"));
+  }
+
+  return ListView.builder(
+    itemCount: gifts.length,
+    itemBuilder: (context, index) {
+      final gift = gifts[index];
+      
+      // Determine approval/rejection info based on status
+      String? actionBy;
+      String? actionLabel;
+      Color? actionColor;
+      
+      if (!isPending) {
+        // Check if it's approved or rejected
+        if (gift.firstAppBy != null && gift.firstAppBy!.isNotEmpty) {
+          actionBy = gift.firstAppBy;
+          actionLabel = 'Approved By';
+          actionColor = Colors.green;
+        } else if (gift.deleteUser != null && gift.deleteUser!.isNotEmpty) {
+          actionBy = gift.deleteUser;
+          actionLabel = 'Rejected By';
+          actionColor = Colors.red;
+        }
+      }
+      
+      return Stack(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () async {
+              final result = await context.push(
+                '/gifts/special-gift-requests/view-specific-gift-request',
+                extra: {
+                  'gift': gift,
+                  'isPending': isPending,
+                },
+              );
+              if (result == true) {
+                String? salesCode = await StorageUtil.getSalesCode();
+                if (salesCode != null && salesCode.isNotEmpty) {
+                  _loadSpGiftData(salesCode);
+                }
+              }
+            },
+            child: Card(
+              margin: const EdgeInsets.symmetric(
+                vertical: 10,
+                horizontal: 16,
+              ),
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 14,
                   horizontal: 16,
                 ),
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                title: Text(
+                  '${gift.mid} - ${gift.mname}',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: fontSettings.fontSize,
+                    fontWeight: fontSettings.fontWeight,
+                  ),
                 ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    vertical: 14,
-                    horizontal: 16,
-                  ),
-                  title: Text(
-                    '${gift.mid} - ${gift.mname}',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: fontSettings.fontSize,
-                      fontWeight: fontSettings.fontWeight,
-                    ),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.card_giftcard,
-                            color: Colors.pink,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.card_giftcard,
+                          color: Colors.pink,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
                             gift.cashierPayType.replaceAll("_", " "),
                             style: TextStyle(
                               color: Colors.black,
@@ -253,50 +402,115 @@ class _SpecialGiftRequestScreenState
                               fontWeight: fontSettings.fontWeight,
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.access_time,
+                          color: Colors.grey,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          _formatDate(gift.insertDate),
+                          style: TextStyle(
+                            color: const Color.fromARGB(255, 2, 2, 2),
+                            fontSize: fontSettings.fontSize - 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    // Requested By
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.person_outline,
+                          color: Colors.blue,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Requested By: ',
+                          style: TextStyle(
+                           
+                            fontSize: fontSettings.fontSize - 1,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            gift.reqBy.isNotEmpty ? gift.reqBy : 'N/A',
+                            style: TextStyle(
+                              color: Colors.black87,
+                              fontSize: fontSettings.fontSize - 1,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Approved By or Rejected By (only for non-pending items)
+                    if (actionBy != null && actionLabel != null) ...[
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(
-                            Icons.access_time,
-                            color: Colors.grey,
+                          Icon(
+                            actionLabel == 'Approved By' 
+                                ? Icons.check_circle_outline 
+                                : Icons.cancel_outlined,
+                            color: actionColor,
                             size: 16,
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            _formatDate(gift.insertDate),
+                            '$actionLabel: ',
                             style: TextStyle(
-                              color: const Color.fromARGB(255, 2, 2, 2),
+                             
                               fontSize: fontSettings.fontSize - 1,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              actionBy,
+                              style: TextStyle(
+                                color: actionColor,
+                                fontSize: fontSettings.fontSize - 1,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
                     ],
-                  ),
+                  ],
                 ),
               ),
             ),
-            Positioned(
-              top: 10,
-              right: 15,
-              child: SizedBox(
-                width: 90,
-                height: 30,
-                child: Image.asset(
-                  ratingImageMap[gift.gRating] ??
-                      "assets/images/ratings/CLASSIC.png",
-                  fit: BoxFit.contain,
-                ),
+          ),
+          Positioned(
+            top: 10,
+            right: 15,
+            child: SizedBox(
+              width: 90,
+              height: 30,
+              child: Image.asset(
+                ratingImageMap[gift.gRating] ??
+                    "assets/images/ratings/CLASSIC.png",
+                fit: BoxFit.contain,
               ),
             ),
-          ],
-        );
-      },
-    );
-  }
-
+          ),
+        ],
+      );
+    },
+  );
+}
   Color _getStatusColor(String status) {
     switch (status) {
       case 'Approved':

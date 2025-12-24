@@ -155,7 +155,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
       children: [
         // Prefix Dropdown
         Container(
-          height: 56, // Match TextFormField height
+          height: 50, // Match TextFormField height
           decoration: BoxDecoration(
             border: Border.all(color: Colors.grey),
             borderRadius: const BorderRadius.only(
@@ -174,7 +174,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                     child: Text(
                       prefix,
                       style: const TextStyle(
-                        fontSize: 16,
+                        fontSize: 20,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -200,11 +200,13 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
         Expanded(
           child: TextFormField(
             keyboardType: const TextInputType.numberWithOptions(),
+            style: const TextStyle(fontSize: 22),
             autofocus: false,
             focusNode: memberIdFocusNode,
             controller: _memberIdController,
             decoration: InputDecoration(
               labelText: "Member ID",
+             labelStyle: const TextStyle(fontSize: 18,color: Colors.black),
               //hintText: "001, 003, 0002...",
               border: const OutlineInputBorder(
                 borderRadius: BorderRadius.only(
@@ -212,6 +214,11 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                   bottomRight: Radius.circular(4),
                 ),
               ),
+              contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 12.0,
+                                              vertical: -5.0,
+                                            ),
               suffixIcon: IconButton(
                 icon: const Icon(Icons.search),
                 onPressed: () {

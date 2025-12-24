@@ -335,6 +335,13 @@ class DirectWhatsAppPdfService {
 
   // ✅ New Guest Data Section (always visible + bold values)
   static pw.Widget _buildGuestDataSection(Map<String, dynamic> guestData) {
+    final highlightedFields = {
+    'Actual Drop (Est)',
+    'Result (Est)',
+    'Coupons (Est)',
+    'Points (Est)',
+    'Avg Bet (Est)',
+  };
     final fields = {
       'Drop (Est)': _formatNumericValue(guestData['guestDrop']),
       'Cash Out (Est)': _formatNumericValue(guestData['tmpCashout']),
@@ -391,12 +398,20 @@ class DirectWhatsAppPdfService {
       );
     } else {
       fields.forEach((label, value) {
+         final isHighlighted = highlightedFields.contains(label);
         rows.add(
           pw.TableRow(
+            decoration: isHighlighted
+              ? const pw.BoxDecoration(color: PdfColors.yellow100)
+              : null,
             children: [
               pw.Padding(
                 padding: const pw.EdgeInsets.all(8),
-                child: pw.Text(label, style: const pw.TextStyle(fontSize: 11)),
+                child: pw.Text(label, style: pw.TextStyle(fontSize: 11,
+                  fontWeight: isHighlighted ? pw.FontWeight.bold : pw.FontWeight.normal,
+                  color: isHighlighted ? PdfColors.red800 : PdfColors.black,
+                ),
+),
               ),
               pw.Padding(
                 padding: const pw.EdgeInsets.all(8),
@@ -404,8 +419,8 @@ class DirectWhatsAppPdfService {
                   value,
                   textAlign: pw.TextAlign.right,
                   style: pw.TextStyle(
-                    fontWeight: pw.FontWeight.bold, // ✅ Bold Values
-                    fontSize: 11,
+                    fontWeight: pw.FontWeight.bold, 
+                    fontSize: 11,color: isHighlighted ? PdfColors.red800 : PdfColors.black,
                   ),
                 ),
               ),

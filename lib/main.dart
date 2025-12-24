@@ -233,7 +233,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             textScaler: TextScaler.noScaling,
           ),
           child: child!,
-      // ),
+       //),
         );
       },
     );

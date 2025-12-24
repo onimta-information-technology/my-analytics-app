@@ -777,7 +777,19 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                         ),
                                       ],
                                       rows: rows.map((row) {
+                                        final shouldHighlight = [
+                                          "Actual Drop (Est)",
+                                          "Result (Est)",
+                                          "Coupons (Est)",
+                                          "Points (Est)",
+                                          "Avg Bet (Est)",
+                                        ].contains(row["Field"]);
                                         return DataRow(
+                                          color: shouldHighlight
+                                              ? WidgetStateProperty.all(
+                                                  Color(0xFFCCFFCC),
+                                                )
+                                              : null,
                                           cells: [
                                             DataCell(
                                               Align(
@@ -787,8 +799,10 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                                   style: TextStyle(
                                                     fontSize:
                                                         fontSettings.fontSize,
-                                                    fontWeight:
-                                                        fontSettings.fontWeight,
+                                                    fontWeight: shouldHighlight
+                                                        ? FontWeight.bold
+                                                        : fontSettings
+                                                              .fontWeight,
                                                   ),
                                                 ),
                                               ),
@@ -803,8 +817,10 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                                   style: TextStyle(
                                                     fontSize:
                                                         fontSettings.fontSize,
-                                                    fontWeight:
-                                                        fontSettings.fontWeight,
+                                                    fontWeight: shouldHighlight
+                                                        ? FontWeight.bold
+                                                        : fontSettings
+                                                              .fontWeight,
                                                     fontFamily: 'monospace',
                                                     fontFeatures: const [
                                                       FontFeature.tabularFigures(),
@@ -1264,35 +1280,6 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                               guestData: guestDataMap,
                                               returnSerial: returnSerial ?? "",
                                             );
-
-                                            //     if (mounted) {
-                                            //       ScaffoldMessenger.of(
-                                            //         context,
-                                            //       ).showSnackBar(
-                                            //         const SnackBar(
-                                            //           content: Text(
-                                            //             "PDF ready! Select WhatsApp from the share options.",
-                                            //           ),
-                                            //           duration: Duration(seconds: 3),
-                                            //         ),
-                                            //       );
-                                            //     }
-                                            //   } catch (e) {
-                                            //     if (mounted) {
-                                            //       ScaffoldMessenger.of(
-                                            //         context,
-                                            //       ).showSnackBar(
-                                            //         SnackBar(
-                                            //           content: Text(
-                                            //             "Error sharing PDF: $e",
-                                            //           ),
-                                            //           backgroundColor: Colors.red,
-                                            //           duration: Duration(seconds: 4),
-                                            //         ),
-                                            //       );
-                                            //     }
-                                            //   }
-                                            // }
                                             if (mounted) {
                                               final serialInfo =
                                                   returnSerial != null &&

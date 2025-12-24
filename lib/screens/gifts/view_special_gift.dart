@@ -87,7 +87,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
       _departureDateController.text = _formatDate(g.dptDate);
       _selectedGift = g.cashierPayType ?? "";
       _chipController.text = g.chipType.replaceAll("_", " ");
-      _amountController.text = g.giftDesc.toString() ?? "";
+      _amountController.text = formatNumber(g.giftDesc.toString()) ?? "";
       _remarksController.text = g.giftCategory ?? "";
       drop = g.mdrop;
       cashout = g.cashout;
@@ -191,7 +191,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
 
   TextStyle _inputTextStylefroammount(FontSettings fontSettings) {
     return TextStyle(
-      fontSize: fontSettings.fontSize + 3,
+      fontSize: fontSettings.fontSize + 5,
       fontWeight: FontWeight.bold,
     );
   }
@@ -210,15 +210,15 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-    icon: const Icon(Icons.arrow_back),
-    onPressed: () {
-      if (context.canPop()) {
-        context.pop();
-      } else {
-        context.go('/home');
-      }
-    },
-  ),
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+          },
+        ),
         title: Text(
           'Special Gift Request',
           style: TextStyle(
@@ -365,7 +365,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                                     guestResponse.lvd
                                                         ?.toString() ??
                                                     "",
-                                             
+
                                                 age: 0,
                                                 gRating:
                                                     guestResponse.gRating ?? "",
@@ -467,9 +467,9 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                               },
                               icon: const Icon(Icons.card_giftcard),
                               label: Text(
-                                "PrvGift",
+                                "Previous Gift",
                                 style: TextStyle(
-                                  fontSize: fontSettings.fontSize,
+                                  fontSize: fontSettings.fontSize + 2,
                                   fontWeight: fontSettings.fontWeight,
                                 ),
                               ),
@@ -480,7 +480,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
+                                  vertical: 12,
                                 ),
                               ),
                             ),
@@ -566,7 +566,19 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                 ),
                               ],
                               rows: rows.map((row) {
+                                final shouldHighlight = [
+                                  "Actual Drop (Est)",
+                                  "Result (Est)",
+                                  "Coupons (Est)",
+                                  "Points (Est)",
+                                  "Avg Bet (Est)",
+                                ].contains(row["Field"]);
                                 return DataRow(
+                                  color: shouldHighlight
+                                      ? WidgetStateProperty.all(
+                                          Color(0xFFCCFFCC),
+                                        )
+                                      : null,
                                   cells: [
                                     DataCell(
                                       Align(
@@ -576,7 +588,9 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
 
                                           style: TextStyle(
                                             fontSize: fontSettings.fontSize,
-                                            fontWeight: fontSettings.fontWeight,
+                                            fontWeight: shouldHighlight
+                                                ? FontWeight.bold
+                                                : fontSettings.fontWeight,
                                           ),
                                         ),
                                       ),
@@ -588,7 +602,9 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                           formatNumber(row["Value"]),
                                           style: TextStyle(
                                             fontSize: fontSettings.fontSize,
-                                            fontWeight: fontSettings.fontWeight,
+                                            fontWeight: shouldHighlight
+                                                ? FontWeight.bold
+                                                : fontSettings.fontWeight,
                                             fontFamily: 'monospace',
                                             fontFeatures: const [
                                               FontFeature.tabularFigures(),
@@ -730,7 +746,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             decoration: InputDecoration(
                               labelText: "Amount",
                               labelStyle: TextStyle(
-                                fontSize: fontSettings.fontSize,
+                                fontSize: fontSettings.fontSize + 2,
                                 fontWeight: fontSettings.fontWeight,
                               ),
                               border: const OutlineInputBorder(),
@@ -825,6 +841,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                           ),
                                         ),
                                       );
+                                      
                                       Navigator.of(context).pop(true);
                                     } else {
                                       ScaffoldMessenger.of(
@@ -898,6 +915,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                           ),
                                         ),
                                       );
+                                       await ref.read(giftProvider.notifier).getGiftForList();
                                       Navigator.of(context).pop(true);
                                       // go back after approval
                                     } else {

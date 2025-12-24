@@ -114,10 +114,11 @@ class _DailyWalkingGuestScreenState
     );
 
     ref.read(selectedGuestProvider.notifier).setSelectedGuest(selectedGuest);
-    context.push(
-      '/home/profile/guest-performance',
-      extra: {'startDateNotifier': yesterday, 'endDateNotifier': safeDateFrom},
-    );
+    // context.push(
+    //   '/home/profile/guest-performance',
+    //   extra: {'startDateNotifier': yesterday, 'endDateNotifier': safeDateFrom},
+    // );
+    context.push('/home/profile');
   }
 
   @override
@@ -247,10 +248,9 @@ class _DailyWalkingGuestScreenState
                                     ),
                                     TableRow(
                                       decoration: BoxDecoration(
-                                      color: Constants.kPrimaryColor.withAlpha(
-                                        50,
+                                        color: Constants.kPrimaryColor
+                                            .withAlpha(50),
                                       ),
-                                    ),
                                       children: [
                                         Container(
                                           width: double.infinity,
@@ -268,58 +268,62 @@ class _DailyWalkingGuestScreenState
                                             ),
                                           ),
                                         ),
-                                         Container(
-                                        color: Colors.white,
-                                        
-                                       child: Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: entry.menImage2.isNotEmpty
-                                              ? GestureDetector(
-                                                  onTap: () {
-                                                    showDialog(
-                                                      context: context,
-                                                      barrierDismissible: true,
-                                                      builder: (_) => Dialog(
-                                                        backgroundColor:
-                                                            Colors.transparent,
-                                                        child: Image.memory(
-                                                          base64Decode(
-                                                            entry.menImage2,
+                                        Container(
+                                          color: Colors.white,
+
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(8.0),
+                                            child: entry.menImage2.isNotEmpty
+                                                ? GestureDetector(
+                                                    onTap: () {
+                                                      showDialog(
+                                                        context: context,
+                                                        barrierDismissible:
+                                                            true,
+                                                        builder: (_) => Dialog(
+                                                          backgroundColor:
+                                                              Colors
+                                                                  .transparent,
+                                                          child: Image.memory(
+                                                            base64Decode(
+                                                              entry.menImage2,
+                                                            ),
+                                                            fit: BoxFit.contain,
                                                           ),
-                                                          fit: BoxFit.contain,
                                                         ),
+                                                      );
+                                                    },
+                                                    child: Image.memory(
+                                                      base64Decode(
+                                                        entry.menImage2,
                                                       ),
-                                                    );
-                                                  },
-                                                  child: Image.memory(
-                                                    base64Decode(
-                                                      entry.menImage2,
+                                                      fit: BoxFit.contain,
                                                     ),
-                                                    fit: BoxFit.contain,
-                                                  ),
-                                                )
-                                              : GestureDetector(
-                                                  onTap: () {
-                                                    showDialog(
-                                                      context: context,
-                                                      barrierDismissible: true,
-                                                      builder: (_) => Dialog(
-                                                        backgroundColor:
-                                                            Colors.transparent,
-                                                        child: Image.asset(
-                                                          'assets/images/placeholder_image.jpg',
-                                                          fit: BoxFit.contain,
+                                                  )
+                                                : GestureDetector(
+                                                    onTap: () {
+                                                      showDialog(
+                                                        context: context,
+                                                        barrierDismissible:
+                                                            true,
+                                                        builder: (_) => Dialog(
+                                                          backgroundColor:
+                                                              Colors
+                                                                  .transparent,
+                                                          child: Image.asset(
+                                                            'assets/images/placeholder_image.jpg',
+                                                            fit: BoxFit.contain,
+                                                          ),
                                                         ),
-                                                      ),
-                                                    );
-                                                  },
-                                                  child: Image.asset(
-                                                    'assets/images/placeholder_image.jpg',
-                                                    fit: BoxFit.contain,
+                                                      );
+                                                    },
+                                                    child: Image.asset(
+                                                      'assets/images/placeholder_image.jpg',
+                                                      fit: BoxFit.contain,
+                                                    ),
                                                   ),
-                                                ),
+                                          ),
                                         ),
-                                         ),
                                       ],
                                     ),
                                     ..._buildGuestRows(entry, fontSettings),
@@ -373,16 +377,13 @@ class _DailyWalkingGuestScreenState
   }) {
     bool isMemberName = label == "Member Name";
     return TableRow(
-      decoration: BoxDecoration(
-                                      color: Constants.kPrimaryColor.withAlpha(
-                                        50,
-                                      ),
-                                    ),
+      decoration: BoxDecoration(color: Constants.kPrimaryColor.withAlpha(50)),
       children: [
         Container(
           width: double.infinity,
-         /// height: isMemberName ? 90 : null,
-         // color: Constants.kPrimaryColor.withAlpha(50),
+
+          /// height: isMemberName ? 90 : null,
+          // color: Constants.kPrimaryColor.withAlpha(50),
           padding: const EdgeInsets.all(8.0),
           child: Text(
             label,
@@ -393,49 +394,72 @@ class _DailyWalkingGuestScreenState
             ),
           ),
         ),
-         Container(
-                                        color: Colors.white,
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: isPhone && value.isNotEmpty
-              ? GestureDetector(
-                  onTap: () => _launchPhone(value),
-                  child: Text(
-                    value,
+        Container(
+          color: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: isPhone && value.isNotEmpty
+                ? InkWell(
+                    onTap: () => _launchPhone(value),
+                    borderRadius: BorderRadius.circular(4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Icon(
+                          Icons.phone,
+                          size: 22,
+                          color: const Color.fromARGB(255, 254, 2, 2),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          value,
+                          style: TextStyle(
+                            color: Colors.blue,
+
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: fontSettings.fontWeight,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : isMemberId && value.isNotEmpty
+                ? InkWell(
+                    onTap: () {
+                      if (guest != null) _goToGuestPerformance(guest);
+                    },
+                    borderRadius: BorderRadius.circular(4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Icon(
+                          Icons.person_search,
+                          size: 25,
+                          color: const Color.fromARGB(255, 224, 6, 6),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          value,
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: fontSettings.fontWeight,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : Text(
+                    value.isEmpty ? "N/A" : value,
                     textAlign: TextAlign.end,
                     style: TextStyle(
-                      color: Colors.blue,
+                      color: Colors.black,
                       fontSize: fontSettings.fontSize,
                       fontWeight: fontSettings.fontWeight,
                     ),
                   ),
-                )
-              : isMemberId && value.isNotEmpty
-              ? GestureDetector(
-                  onTap: () {
-                    if (guest != null) _goToGuestPerformance(guest);
-                  },
-                  child: Text(
-                    value,
-                    textAlign: TextAlign.end,
-                    style: TextStyle(
-                      color: Colors.blue,
-                      fontSize: fontSettings.fontSize,
-                      fontWeight: fontSettings.fontWeight,
-                    ),
-                  ),
-                )
-              : Text(
-                  value.isEmpty ? "N/A" : value,
-                  textAlign: TextAlign.end,
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSettings.fontSize,
-                    fontWeight: fontSettings.fontWeight,
-                  ),
-                ),
+          ),
         ),
-         ),
       ],
     );
   }

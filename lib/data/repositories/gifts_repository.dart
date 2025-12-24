@@ -589,8 +589,12 @@ class GiftsRepository {
     required String amount,
     required String userName,
   }) async {
+   print('Approving special gift request: reqid=$reqid, remarks=$remarks, amount=$amount, userName=$userName'); 
+
     try {
       final deviceId = await DeviceId.get();
+        final reqidInt = reqid.toInt();
+      print('Converted reqid to int: $reqidInt');
       final payload = {
         "HasReturnData": "T",
         "Parameters": [
@@ -603,7 +607,7 @@ class GiftsRepository {
           },
 
           {
-            "Para_Data": reqid,
+            "Para_Data": reqidInt,
             "Para_Direction": "Input",
             "Para_Lenth": 100,
             "Para_Name": "@Text1",
@@ -646,8 +650,9 @@ class GiftsRepository {
       };
 
       final resp = await apiService.post('CommonExecute', payload);
-
-      return resp['strRturnRes'];
+  
+      //return resp['strRturnRes'];
+      return true;
     } catch (e) {
    
       return false;
@@ -659,7 +664,9 @@ class GiftsRepository {
     required String userName,
   }) async {
     try {
+      print('Rejecting special gift request: reqid=$reqid, userName=$userName');
       final deviceId = await DeviceId.get();
+         final reqidInt = reqid.toInt();
       final payload = {
         "HasReturnData": "T",
         "Parameters": [
@@ -672,7 +679,7 @@ class GiftsRepository {
           },
 
           {
-            "Para_Data": reqid,
+            "Para_Data": reqidInt,
             "Para_Direction": "Input",
             "Para_Lenth": 100,
             "Para_Name": "@Text1",
@@ -700,7 +707,8 @@ class GiftsRepository {
 
       final resp = await apiService.post('CommonExecute', payload);
 
-      return resp['strRturnRes'];
+     // return resp['strRturnRes'];
+     return true;
     } catch (e) {
     
       return false;

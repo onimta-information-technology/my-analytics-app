@@ -14,7 +14,23 @@ class MainProfileDetailsNotifier
             MemberMainProfile(details: {"Name": "", "Detail": ""})
           ],
         );
-
+void updatePhoneNumber(String newPhoneNumber) {
+    // Find the Phone1 entry and update it
+    state = state.map((entry) {
+      if (entry.details['Name']?.toLowerCase() == 'phone1') {
+        // Create a new map with updated detail
+        final updatedDetails = Map<String, String>.from(entry.details);
+        updatedDetails['Detail'] = newPhoneNumber;
+        
+        // Return new instance with updated details
+        return MemberMainProfile(
+          details: updatedDetails,
+          // Add other properties if your model has them
+        );
+      }
+      return entry;
+    }).toList();
+  }
   Future<void> getMemberMainProfileDetails(String playerId) async {
     try {
       final profileDetails =

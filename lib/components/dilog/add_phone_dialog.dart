@@ -1,7 +1,11 @@
+import 'package:ballys_reservation_app/providers/phone_provider.dart';
+import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+import 'package:ballys_reservation_app/providers/main_profile_details_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:country_picker/country_picker.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class AddPhoneDialog extends StatefulWidget {
+class AddPhoneDialog extends ConsumerStatefulWidget {
   final String memberId;
   final Function(String)? onPhoneAdded;
 
@@ -12,23 +16,23 @@ class AddPhoneDialog extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<AddPhoneDialog> createState() => _AddPhoneDialogState();
+  ConsumerState<AddPhoneDialog> createState() => _AddPhoneDialogState();
 }
 
-class _AddPhoneDialogState extends State<AddPhoneDialog> {
+class _AddPhoneDialogState extends ConsumerState<AddPhoneDialog> {
   final TextEditingController phoneController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   Country selectedCountry = Country(
-    phoneCode: "1",
-    countryCode: "US",
+    phoneCode: "91",
+    countryCode: "IN",
     e164Sc: 0,
     geographic: true,
     level: 1,
-    name: "United States",
-    example: "2012345678",
-    displayName: "United States (US) [+1]",
-    displayNameNoCountryCode: "United States (US)",
+    name: "India",
+    example: "9123456789",
+    displayName: "India (IN) [+91]",
+    displayNameNoCountryCode: "India (IN)",
     e164Key: "",
   );
 
@@ -61,41 +65,107 @@ class _AddPhoneDialogState extends State<AddPhoneDialog> {
     );
   }
 
-  void _handleSubmit() {
+  Future<void> _handleSubmit() async {
     if (_formKey.currentState!.validate()) {
       final phone = phoneController.text.trim();
       final fullPhoneNumber = '+${selectedCountry.phoneCode}$phone';
 
-      // TODO: Add API call to save new phone number
-      // await ref.read(yourProvider.notifier).addPhoneNumber(widget.memberId, fullPhoneNumber);
-
-      if (widget.onPhoneAdded != null) {
-        widget.onPhoneAdded!(fullPhoneNumber);
+      // Get guest information
+      final guest = ref.read(selectedGuestProvider);
+      
+      if (guest == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Guest information not found'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Phone number added: $fullPhoneNumber'),
-          backgroundColor: Colors.green,
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
         ),
       );
-      Navigator.pop(context);
+
+      try {
+        // Call API to add phone number
+        final success = await ref.read(phoneProvider.notifier).addPhoneNumber(
+              memberId: widget.memberId,
+              phoneNumber: fullPhoneNumber,
+              memberName: guest.memberName,
+            );
+
+        // Close loading dialog
+        if (mounted) Navigator.pop(context);
+
+        if (success) {
+          final phoneResponse = ref.read(phoneProvider).phoneResponse;
+          final addedPhone = phoneResponse?.phone1 ?? fullPhoneNumber;
+          
+          // Update the profile details in provider with the new phone number
+          ref.read(mainProfileDetailsProvider.notifier)
+              .updatePhoneNumber(addedPhone);
+          
+          if (widget.onPhoneAdded != null) {
+            widget.onPhoneAdded!(addedPhone);
+          }
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Phone number added: $addedPhone'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+            Navigator.pop(context);
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Failed to add phone number: ${ref.read(phoneProvider).error ?? "Unknown error"}',
+                ),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        // Close loading dialog
+        if (mounted) Navigator.pop(context);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
-    double dialogWidth = screenWidth * 0.95; // Increased from 0.99 to 0.95 for better margins
+    double dialogWidth = screenWidth * 0.95;
 
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 10), // Reduced from default
+      insetPadding: const EdgeInsets.symmetric(horizontal: 10),
       child: Container(
         width: dialogWidth,
-        padding: const EdgeInsets.all(15.0), // Increased from 10.0 to 20.0
+        padding: const EdgeInsets.all(15.0),
         child: Form(
           key: _formKey,
           child: Column(
@@ -116,11 +186,11 @@ class _AddPhoneDialogState extends State<AddPhoneDialog> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Country Selector
-                   GestureDetector(
+                  GestureDetector(
                     onTap: _showCountryPicker,
                     child: Container(
                       width: 60,
-                      height: 56, // Match TextFormField height (14 vertical padding * 2 + content)
+                      height: 56,
                       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey),
@@ -147,7 +217,7 @@ class _AddPhoneDialogState extends State<AddPhoneDialog> {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  
+
                   // Phone Input
                   Expanded(
                     child: TextFormField(
@@ -160,7 +230,10 @@ class _AddPhoneDialogState extends State<AddPhoneDialog> {
                         hintText: 'Enter phone number',
                         hintStyle: TextStyle(color: Colors.grey.shade400),
                         border: const OutlineInputBorder(),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 14.0),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12.0,
+                          vertical: 14.0,
+                        ),
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
@@ -172,7 +245,7 @@ class _AddPhoneDialogState extends State<AddPhoneDialog> {
                         return null;
                       },
                       onChanged: (value) {
-                        setState(() {}); // Update full number preview
+                        setState(() {});
                       },
                     ),
                   ),
@@ -218,7 +291,10 @@ class _AddPhoneDialogState extends State<AddPhoneDialog> {
                     onPressed: () => Navigator.pop(context),
                     style: TextButton.styleFrom(
                       foregroundColor: Colors.grey.shade700,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
                     ),
                     child: const Text(
                       'Cancel',
@@ -234,7 +310,10 @@ class _AddPhoneDialogState extends State<AddPhoneDialog> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
                       elevation: 0,
                     ),
                     child: const Text(

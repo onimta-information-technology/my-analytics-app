@@ -326,7 +326,7 @@ class _LocationSelectorWidgetState extends State<LocationSelectorWidget> {
               child: Text(
                 _currentLocation!.name,
                 style: const TextStyle(
-                  fontSize: 13,
+                  fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: Colors.orange,
                 ),

@@ -4,8 +4,13 @@ import 'package:ballys_reservation_app/components/snow.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
+import 'package:ballys_reservation_app/providers/birthdays_provider.dart';
+import 'package:ballys_reservation_app/providers/daily_walking_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/guests_provider.dart';
+import 'package:ballys_reservation_app/providers/marketing_provider.dart';
+import 'package:ballys_reservation_app/providers/reservation_provider.dart';
+import 'package:ballys_reservation_app/providers/special_gift_provider.dart';
 import 'package:ballys_reservation_app/screens/member_visits.dart';
 import 'package:ballys_reservation_app/screens/member_visits/sales_persons.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -324,21 +329,126 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               child: Column(
                 children: [
                   // 🔹 LocationSelector moved here (outside AppBar)
-                  
-                  // Card(
-                  //   elevation: 2,
-                  //   margin: const EdgeInsets.only(bottom: 8.0),
-                //  Padding(
-                     // padding: const EdgeInsets.all(12.0),
-                 LocationSelectorWidget(
-                        onLocationChanged: () {
-                          // Refresh data when location changes
-                          _manualRefresh();
-                        },
-                      // ),
-                   // ),
+                 
+                //   Card(
+                //     elevation: 2,
+                //     margin: const EdgeInsets.only(bottom: 8.0),
+                // child: Padding(
+                //      padding: const EdgeInsets.all(12.0),
+                //  child :LocationSelectorWidget(
+                //         onLocationChanged: () {
+                //           // Refresh data when location changes
+                //           _manualRefresh();
+                //             ref.read(reservationProvider.notifier).clearReservations();
+                //              ref.read(giftProvider.notifier).clearGifts();
+                //                ref.read(birthdayProvider.notifier).clearBirthdays();
+                //                  ref.read(dailyWalkingProvider.notifier).clearDailyWalkingGuests();
+                //                  ref.read(marketingProvider.notifier).clearMarketing();
+                //         },
+                //       ),
+                //    ),
+                //   ),
+// FutureBuilder<bool>(
+//   future: StorageUtil.isAdmin(),
+//   builder: (context, snapshot) {
+//     // Only show the card if user is admin
+//     if (snapshot.hasData && snapshot.data == true) {
+//       return Card(
+//         elevation: 2,
+//         margin: const EdgeInsets.only(bottom: 12.0),
+//         child: Padding(
+//           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+          
+//           child: LocationSelectorWidget(
+//             onLocationChanged: () {
+//               // Refresh data when location changes
+//               _manualRefresh();
+//               ref.read(reservationProvider.notifier).clearReservations();
+//               ref.read(giftProvider.notifier).clearGifts();
+//               ref.read(birthdayProvider.notifier).clearBirthdays();
+//               ref.read(dailyWalkingProvider.notifier).clearDailyWalkingGuests();
+//               ref.read(marketingProvider.notifier).clearMarketing();
+//             },
+//           ),
+//         ),
+        
+//       );
+//     }
+//     // Return empty container for non-admin users
+//     return const SizedBox.shrink();
+//   },
+// ),
+FutureBuilder<bool>(
+  future: StorageUtil.isAdmin(),
+  builder: (context, snapshot) {
+    // Only show the card if user is admin
+    if (snapshot.hasData && snapshot.data == true) {
+      return Container(
+        width: double.infinity, // Full width
+        margin: const EdgeInsets.only(bottom: 12.0),
+        child: Card(
+          elevation: 2,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 16.0),
+            child: Row(
+              children: [
+                // Bally's Logo
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE52522), // Bally's red color
+                    shape: BoxShape.circle,
                   ),
-
+                  child: Center(
+                    child: Text(
+                      'B',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                
+                // Location Dropdown - Takes remaining space
+                Expanded(
+                  child: LocationSelectorWidget(
+                    onLocationChanged: () {
+                      // Refresh data when location changes
+                      _manualRefresh();
+                      ref.read(reservationProvider.notifier).clearReservations();
+                      ref.read(giftProvider.notifier).clearGifts();
+                      ref.read(birthdayProvider.notifier).clearBirthdays();
+                      ref.read(dailyWalkingProvider.notifier).clearDailyWalkingGuests();
+                      ref.read(marketingProvider.notifier).clearMarketing();
+                    },
+                  ),
+                ),
+                
+                // Settings Icon
+                // IconButton(
+                //   icon: const Icon(
+                //     Icons.tune,
+                //     color: Colors.black54,
+                //     size: 26,
+                //   ),
+                //   onPressed: () {
+                //     // Handle settings action
+                //   },
+                // ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    // Return empty container for non-admin users
+    return const SizedBox.shrink();
+  },
+),
                   // Date display section
                   Card(
                     elevation: 2,

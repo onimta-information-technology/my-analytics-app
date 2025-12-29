@@ -11,7 +11,18 @@ class GiftNotifier extends StateNotifier<GiftState> {
   final GiftsRepository giftRepository;
 
   GiftNotifier(this.giftRepository) : super(GiftState());
-
+void clearGifts() {
+    state = GiftState(
+      pendinggift: [],
+      approvedgift: [],
+      rejectgift: [],
+      guestGiftData: [],
+      giftForList: [],
+      prvgiftList: [],
+      lastApiResponse: null,
+      lastReturnSerial: null,
+    );
+  }
   Future<void> getSpecialGiftData(int iid, String text1) async {
     try {
       var gifttList = await giftRepository.getSpecialGift(iid, text1);

@@ -1,9 +1,17 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+
+// Import the LocationConfig class
+import 'package:ballys_reservation_app/data/services/device_config_service.dart';
 
 class StorageUtil {
   static const _storage = FlutterSecureStorage();
   static const _keyAppVersion = 'app_version';
+  static const _keyCurrentApiUrl = 'current_api_url';
+  static const _keyCurrentLocation = 'current_location';
+  static const _keyIsAdmin = 'is_admin';
+  static const _keyLocations = 'locations';
 
   static Future<void> saveUserData(
       String userName, String userLevel, String salesCode, String marketingCode, String mobileNumber) async {
@@ -63,10 +71,67 @@ class StorageUtil {
 
   
   static Future<bool> hasUserData() async {
-  final prefs = await SharedPreferences.getInstance();
-  return prefs.containsKey('userName') || prefs.containsKey('userLevel');
-}
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.containsKey('userName') || prefs.containsKey('userLevel');
+  }
 
   Future getToken() async {}
 
+  // ===== NEW LOCATION MANAGEMENT METHODS =====
+
+  /// Save current location and API URL
+  static Future<void> saveCurrentLocation(LocationConfig location) async {
+    await _storage.write(key: _keyCurrentApiUrl, value: location.apiUrl);
+    await _storage.write(key: _keyCurrentLocation, value: jsonEncode(location.toJson()));
+  }
+
+  /// Get current API URL
+  static Future<String?> getCurrentApiUrl() async {
+    return await _storage.read(key: _keyCurrentApiUrl);
+  }
+
+  /// Get current location
+  static Future<LocationConfig?> getCurrentLocation() async {
+    final locationJson = await _storage.read(key: _keyCurrentLocation);
+    if (locationJson != null) {
+      return LocationConfig.fromJson(jsonDecode(locationJson));
+    }
+    return null;
+  }
+
+  /// Save admin status
+  static Future<void> saveAdminStatus(bool isAdmin) async {
+    await _storage.write(key: _keyIsAdmin, value: isAdmin.toString());
+  }
+
+  /// Check if user is admin
+  static Future<bool> isAdmin() async {
+    final isAdminStr = await _storage.read(key: _keyIsAdmin);
+    return isAdminStr == 'true';
+  }
+
+  /// Save all locations (for admin)
+  static Future<void> saveLocations(List<LocationConfig> locations) async {
+    final locationsJson = jsonEncode(locations.map((loc) => loc.toJson()).toList());
+    await _storage.write(key: _keyLocations, value: locationsJson);
+    await saveAdminStatus(true);
+  }
+
+  /// Get all locations (for admin)
+  static Future<List<LocationConfig>> getLocations() async {
+    final locationsJson = await _storage.read(key: _keyLocations);
+    if (locationsJson != null) {
+      final List<dynamic> decoded = jsonDecode(locationsJson);
+      return decoded.map((json) => LocationConfig.fromJson(json)).toList();
+    }
+    return [];
+  }
+
+  /// Clear location data (on logout)
+  static Future<void> clearLocationData() async {
+    await _storage.delete(key: _keyCurrentApiUrl);
+    await _storage.delete(key: _keyCurrentLocation);
+    await _storage.delete(key: _keyIsAdmin);
+    await _storage.delete(key: _keyLocations);
+  }
 }

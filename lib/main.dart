@@ -228,12 +228,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       builder: (context, child) {
       // return DeveloperBanner(
       // child :MediaQuery(
-     return MediaQuery(
+ return MediaQuery(
           data: MediaQuery.of(context).copyWith(
             textScaler: TextScaler.noScaling,
           ),
           child: child!,
-       //),
+      // ),
         );
       },
     );

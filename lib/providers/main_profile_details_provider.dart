@@ -14,13 +14,53 @@ class MainProfileDetailsNotifier
             MemberMainProfile(details: {"Name": "", "Detail": ""})
           ],
         );
-void updatePhoneNumber(String newPhoneNumber) {
-    // Find the Phone1 entry and update it
+// void updatePhoneNumber(String newPhoneNumber) {
+//     // Find the Phone1 entry and update it
+//     state = state.map((entry) {
+//       if (entry.details['Name']?.toLowerCase() == 'phone1') {
+//         // Create a new map with updated detail
+//         final updatedDetails = Map<String, String>.from(entry.details);
+//         updatedDetails['Detail'] = newPhoneNumber;
+        
+//         // Return new instance with updated details
+//         return MemberMainProfile(
+//           details: updatedDetails,
+//           // Add other properties if your model has them
+//         );
+//       }
+//       return entry;
+//     }).toList();
+//   }
+ void updatePhoneNumber(String newPhoneNumber, String phoneFieldName) {
+    // phoneFieldName will be "Phone1", "Phone2", or "Phone3"
+    // Find the corresponding entry and update it
     state = state.map((entry) {
-      if (entry.details['Name']?.toLowerCase() == 'phone1') {
+      final fieldName = entry.details['Name']?.toLowerCase();
+      
+      if (fieldName == phoneFieldName.toLowerCase()) {
         // Create a new map with updated detail
         final updatedDetails = Map<String, String>.from(entry.details);
         updatedDetails['Detail'] = newPhoneNumber;
+        
+        // Return new instance with updated details
+        return MemberMainProfile(
+          details: updatedDetails,
+          // Add other properties if your model has them
+        );
+      }
+      return entry;
+    }).toList();
+  }
+  void updateEmail(String newEmail, String emailFieldName) {
+    // emailFieldName will be "Email1" or "Email2"
+    // Find the corresponding entry and update it
+    state = state.map((entry) {
+      final fieldName = entry.details['Name']?.toLowerCase();
+      
+      if (fieldName == emailFieldName.toLowerCase()) {
+        // Create a new map with updated detail
+        final updatedDetails = Map<String, String>.from(entry.details);
+        updatedDetails['Detail'] = newEmail;
         
         // Return new instance with updated details
         return MemberMainProfile(

@@ -1,22 +1,28 @@
+import 'package:ballys_reservation_app/providers/email_provider.dart';
+import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+import 'package:ballys_reservation_app/providers/main_profile_details_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class AddEmailDialog extends StatefulWidget {
+class AddEmailDialog extends ConsumerStatefulWidget {
   final String memberId;
+  final int emailType; // 1 for Email1, 2 for Email2
   final String? currentEmail;
   final Function(String)? onEmailAdded;
 
   const AddEmailDialog({
     Key? key,
     required this.memberId,
+    required this.emailType,
     this.currentEmail,
     this.onEmailAdded,
   }) : super(key: key);
 
   @override
-  State<AddEmailDialog> createState() => _AddEmailDialogState();
+  ConsumerState<AddEmailDialog> createState() => _AddEmailDialogState();
 }
 
-class _AddEmailDialogState extends State<AddEmailDialog> {
+class _AddEmailDialogState extends ConsumerState<AddEmailDialog> {
   final TextEditingController emailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
@@ -36,50 +42,120 @@ class _AddEmailDialogState extends State<AddEmailDialog> {
     return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
   }
 
-  void _handleSubmit() {
+  Future<void> _handleSubmit() async {
     if (_formKey.currentState!.validate()) {
       final email = emailController.text.trim();
 
-      // TODO: Add API call to save email
-      // await ref.read(yourProvider.notifier).updateEmail(widget.memberId, email);
-
-      if (widget.onEmailAdded != null) {
-        widget.onEmailAdded!(email);
+      // Get guest information
+      final guest = ref.read(selectedGuestProvider);
+      
+      if (guest == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Guest information not found'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Email updated: $email'),
-          backgroundColor: Colors.green,
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
         ),
       );
 
-      Navigator.pop(context);
+      try {
+        // Call API to add/update email
+        final success = await ref.read(emailProvider.notifier).addOrUpdateEmail(
+              memberId: widget.memberId,
+              email: email,
+              memberName: guest.memberName,
+              emailType: widget.emailType,
+            );
+
+        // Close loading dialog
+        if (mounted) Navigator.pop(context);
+
+        if (success) {
+          final emailResponse = ref.read(emailProvider).emailResponse;
+          final addedEmail = emailResponse?.email ?? email;
+          final emailFieldName = emailResponse?.emailFieldName ?? 'email${widget.emailType}';
+          
+          // Update the profile details in provider with the new email
+          ref.read(mainProfileDetailsProvider.notifier)
+              .updateEmail(addedEmail, emailFieldName);
+          
+          if (widget.onEmailAdded != null) {
+            widget.onEmailAdded!(addedEmail);
+          }
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Email updated: $addedEmail'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+            Navigator.pop(context);
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Failed to update email: ${ref.read(emailProvider).error ?? "Unknown error"}',
+                ),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        // Close loading dialog
+        if (mounted) Navigator.pop(context);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
-    double dialogWidth = screenWidth * 0.95; // Increased from 0.99 to 0.95 for better margins
+    double dialogWidth = screenWidth * 0.95;
+    
+    // Determine the title based on emailType
+    String title = 'Add/Update Email ${widget.emailType}';
 
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 10), // Reduced from default
+      insetPadding: const EdgeInsets.symmetric(horizontal: 10),
       child: Container(
         width: dialogWidth,
-        padding: const EdgeInsets.all(20.0), // Increased from 16.0 to 20.0
+        padding: const EdgeInsets.all(20.0),
         child: Form(
           key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Add Email Address',
-                style: TextStyle(
+              Text(
+                title,
+                style: const TextStyle(
                   fontSize: 20.0,
                   fontWeight: FontWeight.bold,
                 ),
@@ -88,7 +164,7 @@ class _AddEmailDialogState extends State<AddEmailDialog> {
 
               // Email Input
               TextFormField(
-               // controller: emailController,
+                controller: emailController,
                 keyboardType: TextInputType.emailAddress,
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
                 decoration: InputDecoration(
@@ -98,7 +174,10 @@ class _AddEmailDialogState extends State<AddEmailDialog> {
                   hintStyle: TextStyle(color: Colors.grey.shade400),
                   prefixIcon: const Icon(Icons.email),
                   border: const OutlineInputBorder(),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 14.0),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12.0,
+                    vertical: 14.0,
+                  ),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -108,6 +187,9 @@ class _AddEmailDialogState extends State<AddEmailDialog> {
                     return 'Please enter a valid email address';
                   }
                   return null;
+                },
+                onChanged: (value) {
+                  setState(() {});
                 },
               ),
               const SizedBox(height: 12),
@@ -126,8 +208,8 @@ class _AddEmailDialogState extends State<AddEmailDialog> {
                     Expanded(
                       child: Text(
                         emailController.text.isEmpty
-                            ? 'Email will be Add for member ${widget.memberId}'
-                            : 'Add email to: ${emailController.text}',
+                            ? 'Email will be added for member ${widget.memberId}'
+                            : 'Email to add: ${emailController.text}',
                         style: TextStyle(
                           fontSize: 13,
                           color: emailController.text.isEmpty
@@ -150,7 +232,10 @@ class _AddEmailDialogState extends State<AddEmailDialog> {
                     onPressed: () => Navigator.pop(context),
                     style: TextButton.styleFrom(
                       foregroundColor: Colors.grey.shade700,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
                     ),
                     child: const Text(
                       'Cancel',
@@ -166,7 +251,10 @@ class _AddEmailDialogState extends State<AddEmailDialog> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
                       elevation: 0,
                     ),
                     child: const Text(

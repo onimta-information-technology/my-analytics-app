@@ -1,16 +1,17 @@
 import 'package:ballys_reservation_app/providers/phone_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/providers/main_profile_details_provider.dart';
+import 'package:ballys_reservation_app/providers/whatsapp_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class AddPhoneDialog extends ConsumerStatefulWidget {
+class AddwhatsappPhoneDialog extends ConsumerStatefulWidget {
   final String memberId;
-  final int phoneType; // 1 for Phone1, 2 for Phone2, 3 for Phone3
+  final int phoneType; 
   final Function(String)? onPhoneAdded;
 
-  const AddPhoneDialog({
+  const AddwhatsappPhoneDialog({
     Key? key,
     required this.memberId,
     required this.phoneType,
@@ -18,10 +19,10 @@ class AddPhoneDialog extends ConsumerStatefulWidget {
   }) : super(key: key);
 
   @override
-  ConsumerState<AddPhoneDialog> createState() => _AddPhoneDialogState();
+  ConsumerState<AddwhatsappPhoneDialog> createState() => _AddwhatsappPhoneDialogState();
 }
 
-class _AddPhoneDialogState extends ConsumerState<AddPhoneDialog> {
+class _AddwhatsappPhoneDialogState extends ConsumerState<AddwhatsappPhoneDialog> {
   final TextEditingController phoneController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
@@ -96,7 +97,7 @@ class _AddPhoneDialogState extends ConsumerState<AddPhoneDialog> {
 
       try {
         // Call API to add phone number
-        final success = await ref.read(phoneProvider.notifier).addPhoneNumber(
+        final success = await ref.read(whatsappProvider.notifier).addWhatsAppNumber(
               memberId: widget.memberId,
               phoneNumber: fullPhoneNumber,
               memberName: guest.memberName,
@@ -107,9 +108,9 @@ class _AddPhoneDialogState extends ConsumerState<AddPhoneDialog> {
         if (mounted) Navigator.pop(context);
 
         if (success) {
-          final phoneResponse = ref.read(phoneProvider).phoneResponse;
-          final addedPhone = phoneResponse?.phoneNumber ?? fullPhoneNumber;
-          final phoneFieldName = phoneResponse?.phoneFieldName ?? 'phone${widget.phoneType}';
+          final whatsappResponse = ref.read(whatsappProvider).whatsappResponse;
+          final addedPhone = whatsappResponse?.phoneNumber ?? fullPhoneNumber;
+          final phoneFieldName = whatsappResponse?.phoneFieldName ?? 'phone${widget.phoneType}';
           
           // Update the profile details in provider with the new phone number
           ref.read(mainProfileDetailsProvider.notifier)
@@ -134,7 +135,7 @@ class _AddPhoneDialogState extends ConsumerState<AddPhoneDialog> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  'Failed to add phone number: ${ref.read(phoneProvider).error ?? "Unknown error"}',
+                  'Failed to add phone number: ${ref.read(whatsappProvider).error ?? "Unknown error"}',
                 ),
                 backgroundColor: Colors.red,
               ),
@@ -163,7 +164,7 @@ class _AddPhoneDialogState extends ConsumerState<AddPhoneDialog> {
     double dialogWidth = screenWidth * 0.95;
     
     // Determine the title based on phoneType
-    String title = 'Add Phone ${widget.phoneType}';
+    String title = 'Add WhatsApp ${widget.phoneType}';
 
     return Dialog(
       shape: RoundedRectangleBorder(

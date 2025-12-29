@@ -1,37 +1,37 @@
 import 'dart:convert';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
-import 'package:ballys_reservation_app/models/add_phone/phone_response.dart';
+import 'package:ballys_reservation_app/models/add_phone/whatsApp_response.dart';
 
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 
-class PhoneRepository {
+class WhatsappNumberRepository {
   final ApiService apiService;
 
-  PhoneRepository(this.apiService);
+  WhatsappNumberRepository(this.apiService);
 
-  Future<PhoneResponse?> addPhoneNumber({
+  Future<WhatsappResponse?> addWhatsAppNumber({
     required String memberId,
     required String phoneNumber,
     required String memberName,
-    required int phoneType, // 1 for Phone1, 2 for Phone2, 3 for Phone3
+    required int phoneType,
   }) async {
     final deviceId = await DeviceId.get();
-       final name = await StorageUtil.getUserName();
+     final name = await StorageUtil.getUserName();
     // Determine Iid based on phoneType
     int iid;
     switch (phoneType) {
       case 1:
-        iid = 8030; // Phone1
+        iid = 8035; // Phone1
         break;
       case 2:
-        iid = 8031; // Phone2
+        iid = 8036; // Phone2
         break;
       case 3:
-        iid = 8032; // Phone3
+        iid = 8037; // Phone3
         break;
       default:
-        iid = 8030; // Default to Phone1
+        iid = 8035; // Default to Phone1
     }
     
     final requestBody = {
@@ -80,7 +80,7 @@ class PhoneRepository {
           response['CommonResult']['Table'] is List &&
           response['CommonResult']['Table'].isNotEmpty) {
         final table = response['CommonResult']['Table'][0];
-        return PhoneResponse.fromJson(table, phoneType);
+        return WhatsappResponse.fromJson(table, phoneType);
       }
       return null;
     } catch (e) {

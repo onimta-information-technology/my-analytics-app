@@ -1,65 +1,65 @@
-import 'package:ballys_reservation_app/data/repositories/phone_repository.dart';
+import 'package:ballys_reservation_app/data/repositories/email_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
-import 'package:ballys_reservation_app/models/add_phone/phone_response.dart';
+import 'package:ballys_reservation_app/models/add_phone/email_response.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-class PhoneState {
+class EmailState {
   final bool isLoading;
-  final PhoneResponse? phoneResponse;
+  final EmailResponse? emailResponse;
   final String? error;
 
-  PhoneState({
+  EmailState({
     this.isLoading = false,
-    this.phoneResponse,
+    this.emailResponse,
     this.error,
   });
 
-  PhoneState copyWith({
+  EmailState copyWith({
     bool? isLoading,
-    PhoneResponse? phoneResponse,
+    EmailResponse? emailResponse,
     String? error,
   }) {
-    return PhoneState(
+    return EmailState(
       isLoading: isLoading ?? this.isLoading,
-      phoneResponse: phoneResponse ?? this.phoneResponse,
+      emailResponse: emailResponse ?? this.emailResponse,
       error: error ?? this.error,
     );
   }
 }
 
-class PhoneNotifier extends StateNotifier<PhoneState> {
-  final PhoneRepository phoneRepository;
+class EmailNotifier extends StateNotifier<EmailState> {
+  final EmailRepository emailRepository;
 
-  PhoneNotifier(this.phoneRepository) : super(PhoneState());
+  EmailNotifier(this.emailRepository) : super(EmailState());
 
-  Future<bool> addPhoneNumber({
+  Future<bool> addOrUpdateEmail({
     required String memberId,
-    required String phoneNumber,
+    required String email,
     required String memberName,
-    required int phoneType, // 1 for Phone1, 2 for Phone2, 3 for Phone3
+    required int emailType, // 1 for Email1, 2 for Email2
   }) async {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final response = await phoneRepository.addPhoneNumber(
+      final response = await emailRepository.addOrUpdateEmail(
         memberId: memberId,
-        phoneNumber: phoneNumber,
+        email: email,
         memberName: memberName,
-        phoneType: phoneType,
+        emailType: emailType,
       );
 
       if (response != null) {
         state = state.copyWith(
           isLoading: false,
-          phoneResponse: response,
+          emailResponse: response,
         );
         return true;
       } else {
         state = state.copyWith(
           isLoading: false,
-          error: 'Failed to add phone number',
+          error: 'Failed to add/update email',
         );
         return false;
       }
@@ -73,19 +73,19 @@ class PhoneNotifier extends StateNotifier<PhoneState> {
   }
 
   void reset() {
-    state = PhoneState();
+    state = EmailState();
   }
 }
 
 // Providers
-final phoneRepositoryProvider = Provider((ref) {
+final emailRepositoryProvider = Provider((ref) {
   final apiService = ref.read(apiServiceProvider);
-  return PhoneRepository(apiService);
+  return EmailRepository(apiService);
 });
 
-final phoneProvider = StateNotifierProvider<PhoneNotifier, PhoneState>((ref) {
-  final phoneRepository = ref.read(phoneRepositoryProvider);
-  return PhoneNotifier(phoneRepository);
+final emailProvider = StateNotifierProvider<EmailNotifier, EmailState>((ref) {
+  final emailRepository = ref.read(emailRepositoryProvider);
+  return EmailNotifier(emailRepository);
 });
 
 // Note: Make sure apiServiceProvider is available in your project

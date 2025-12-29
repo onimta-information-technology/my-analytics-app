@@ -1,7 +1,8 @@
 import 'dart:convert';
 
-import 'package:ballys_reservation_app/components/dilog/UpdateEmailDialog.dart';
+import 'package:ballys_reservation_app/components/dilog/add_EmailDialog.dart';
 import 'package:ballys_reservation_app/components/dilog/add_phone_dialog.dart';
+import 'package:ballys_reservation_app/components/dilog/add_whatsapp_dialog.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/providers/airline_history_provider.dart';
@@ -122,49 +123,93 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     }
   }
 
-  void _showAddPhoneDialog(BuildContext context, String memberId) {
+  // void _showAddPhoneDialog(BuildContext context, String memberId) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (BuildContext context) {
+  //       return AddPhoneDialog(
+  //         memberId: memberId,
+  //         onPhoneAdded: (phone) {
+  //           // Optional: Refresh profile details after adding phone
+  //           // _getMemberMainProfileDetails();
+  //         },
+  //       );
+  //     },
+  //   );
+  // }
+  void _showAddPhoneDialog(
+    BuildContext context,
+    String memberId,
+    int phoneType,
+  ) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AddPhoneDialog(
           memberId: memberId,
+          phoneType: phoneType, // Pass the phone type
           onPhoneAdded: (phone) {
-            // Optional: Refresh profile details after adding phone
-            // _getMemberMainProfileDetails();
+            // Optional: Handle after phone is added
           },
         );
       },
     );
   }
-void _showAdd2PhoneDialog(BuildContext context, String memberId) {
+
+  void _showAddWhatsAppDialog(
+    BuildContext context,
+    String memberId,
+    int phoneType,
+  ) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AddPhoneDialog(
+        return AddwhatsappPhoneDialog(
           memberId: memberId,
+          phoneType: phoneType, // Pass the phone type
           onPhoneAdded: (phone) {
-            // Optional: Refresh profile details after adding phone
-            // _getMemberMainProfileDetails();
+            // Optional: Handle after phone is added
           },
         );
       },
     );
   }
+
   // Method to show Update Email Dialog
+  // void _showUpdateEmailDialog(
+  //   BuildContext context,
+  //   String memberId,
+  //   String currentEmail,
+  // ) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (BuildContext context) {
+  //       return AddEmailDialog(
+  //         memberId: memberId,
+  //         currentEmail: currentEmail,
+  //         onEmailAdded: (email) {
+  //           // Optional: Refresh profile details after updating email
+  //           // _getMemberMainProfileDetails();
+  //         },
+  //       );
+  //     },
+  //   );
+  // }
   void _showUpdateEmailDialog(
     BuildContext context,
     String memberId,
     String currentEmail,
+    int emailType, // Add this parameter
   ) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AddEmailDialog(
           memberId: memberId,
+          emailType: emailType, // Pass email type (1 or 2)
           currentEmail: currentEmail,
           onEmailAdded: (email) {
-            // Optional: Refresh profile details after updating email
-            // _getMemberMainProfileDetails();
+            // Optional: Handle after email is updated
           },
         );
       },
@@ -646,7 +691,7 @@ void _showAdd2PhoneDialog(BuildContext context, String memberId) {
                                             0: FractionColumnWidth(0.5),
                                             1: FractionColumnWidth(0.5),
                                           },
-                                          children: [                                 
+                                          children: [
                                             ...guestProfileDetails
                                                 .map((entry) {
                                                   final isBirthday =
@@ -661,11 +706,31 @@ void _showAdd2PhoneDialog(BuildContext context, String memberId) {
                                                       entry.details['Name']
                                                           ?.toLowerCase() ==
                                                       'phone2';
+                                                  final isPhone3 =
+                                                      entry.details['Name']
+                                                          ?.toLowerCase() ==
+                                                      'phone3';
                                                   final isEmail =
                                                       entry.details['Name']
                                                           ?.toLowerCase() ==
                                                       'email1';
+                                                  final isEmail2 =
+                                                      entry.details['Name']
+                                                          ?.toLowerCase() ==
+                                                      'email2';
 
+                                                  final iswhatsapp =
+                                                      entry.details['Name']
+                                                          ?.toLowerCase() ==
+                                                      'whatsapp';
+                                                  final iswhatsapp2 =
+                                                      entry.details['Name']
+                                                          ?.toLowerCase() ==
+                                                      'whatsapp1';
+                                                  final iswhatsapp3 =
+                                                      entry.details['Name']
+                                                          ?.toLowerCase() ==
+                                                      'whatsapp2';
                                                   return TableRow(
                                                     decoration: BoxDecoration(
                                                       color: isBirthday
@@ -841,6 +906,7 @@ void _showAdd2PhoneDialog(BuildContext context, String memberId) {
                                                                         context,
                                                                         guest
                                                                             .mid,
+                                                                        1,
                                                                       ),
                                                                   child: Container(
                                                                     padding:
@@ -874,13 +940,178 @@ void _showAdd2PhoneDialog(BuildContext context, String memberId) {
                                                                     ),
                                                                   ),
                                                                 ),
-                                                                   if (isPhone2)
+                                                              if (isPhone2)
                                                                 InkWell(
                                                                   onTap: () =>
-                                                                      _showAdd2PhoneDialog(
+                                                                      _showAddPhoneDialog(
                                                                         context,
                                                                         guest
                                                                             .mid,
+                                                                        2,
+                                                                      ),
+                                                                  child: Container(
+                                                                    padding:
+                                                                        const EdgeInsets.all(
+                                                                          4,
+                                                                        ),
+                                                                    decoration: BoxDecoration(
+                                                                      color:
+                                                                          const Color.fromARGB(
+                                                                            255,
+                                                                            230,
+                                                                            0,
+                                                                            0,
+                                                                          ),
+                                                                      borderRadius:
+                                                                          BorderRadius.circular(
+                                                                            6,
+                                                                          ),
+                                                                    ),
+                                                                    child: const Icon(
+                                                                      Icons
+                                                                          .add_call,
+                                                                      size: 22,
+                                                                      color:
+                                                                          const Color.fromARGB(
+                                                                            255,
+                                                                            255,
+                                                                            255,
+                                                                            255,
+                                                                          ),
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              if (isPhone3)
+                                                                InkWell(
+                                                                  onTap: () =>
+                                                                      _showAddPhoneDialog(
+                                                                        context,
+                                                                        guest
+                                                                            .mid,
+                                                                        3,
+                                                                      ),
+                                                                  child: Container(
+                                                                    padding:
+                                                                        const EdgeInsets.all(
+                                                                          4,
+                                                                        ),
+                                                                    decoration: BoxDecoration(
+                                                                      color:
+                                                                          const Color.fromARGB(
+                                                                            255,
+                                                                            230,
+                                                                            0,
+                                                                            0,
+                                                                          ),
+                                                                      borderRadius:
+                                                                          BorderRadius.circular(
+                                                                            6,
+                                                                          ),
+                                                                    ),
+                                                                    child: const Icon(
+                                                                      Icons
+                                                                          .add_call,
+                                                                      size: 22,
+                                                                      color:
+                                                                          const Color.fromARGB(
+                                                                            255,
+                                                                            255,
+                                                                            255,
+                                                                            255,
+                                                                          ),
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              if (iswhatsapp)
+                                                                InkWell(
+                                                                  onTap: () =>
+                                                                      _showAddWhatsAppDialog(
+                                                                        context,
+                                                                        guest
+                                                                            .mid,
+                                                                        1,
+                                                                      ),
+                                                                  child: Container(
+                                                                    padding:
+                                                                        const EdgeInsets.all(
+                                                                          4,
+                                                                        ),
+                                                                    decoration: BoxDecoration(
+                                                                      color:
+                                                                          const Color.fromARGB(
+                                                                            255,
+                                                                            230,
+                                                                            0,
+                                                                            0,
+                                                                          ),
+                                                                      borderRadius:
+                                                                          BorderRadius.circular(
+                                                                            6,
+                                                                          ),
+                                                                    ),
+                                                                    child: const Icon(
+                                                                      Icons
+                                                                          .add_call,
+                                                                      size: 22,
+                                                                      color:
+                                                                          const Color.fromARGB(
+                                                                            255,
+                                                                            255,
+                                                                            255,
+                                                                            255,
+                                                                          ),
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              if (iswhatsapp2)
+                                                                InkWell(
+                                                                  onTap: () =>
+                                                                      _showAddWhatsAppDialog(
+                                                                        context,
+                                                                        guest
+                                                                            .mid,
+                                                                        2,
+                                                                      ),
+                                                                  child: Container(
+                                                                    padding:
+                                                                        const EdgeInsets.all(
+                                                                          4,
+                                                                        ),
+                                                                    decoration: BoxDecoration(
+                                                                      color:
+                                                                          const Color.fromARGB(
+                                                                            255,
+                                                                            230,
+                                                                            0,
+                                                                            0,
+                                                                          ),
+                                                                      borderRadius:
+                                                                          BorderRadius.circular(
+                                                                            6,
+                                                                          ),
+                                                                    ),
+                                                                    child: const Icon(
+                                                                      Icons
+                                                                          .add_call,
+                                                                      size: 22,
+                                                                      color:
+                                                                          const Color.fromARGB(
+                                                                            255,
+                                                                            255,
+                                                                            255,
+                                                                            255,
+                                                                          ),
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              if (iswhatsapp3)
+                                                                InkWell(
+                                                                  onTap: () =>
+                                                                      _showAddWhatsAppDialog(
+                                                                        context,
+                                                                        guest
+                                                                            .mid,
+                                                                        3,
                                                                       ),
                                                                   child: Container(
                                                                     padding:
@@ -923,6 +1154,50 @@ void _showAdd2PhoneDialog(BuildContext context, String memberId) {
                                                                             .mid,
                                                                         entry
                                                                             .details['Detail']!,
+                                                                        1,
+                                                                      ),
+                                                                  child: Container(
+                                                                    padding:
+                                                                        const EdgeInsets.all(
+                                                                          4,
+                                                                        ),
+                                                                    decoration: BoxDecoration(
+                                                                      color:
+                                                                          const Color.fromARGB(
+                                                                            255,
+                                                                            230,
+                                                                            0,
+                                                                            0,
+                                                                          ),
+                                                                      borderRadius:
+                                                                          BorderRadius.circular(
+                                                                            6,
+                                                                          ),
+                                                                    ),
+                                                                    child: const Icon(
+                                                                      Icons
+                                                                          .email,
+                                                                      size: 22,
+                                                                      color:
+                                                                          Color.fromARGB(
+                                                                            255,
+                                                                            255,
+                                                                            255,
+                                                                            255,
+                                                                          ),
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              if (isEmail2)
+                                                                InkWell(
+                                                                  onTap: () =>
+                                                                      _showUpdateEmailDialog(
+                                                                        context,
+                                                                        guest
+                                                                            .mid,
+                                                                        entry
+                                                                            .details['Detail']!,
+                                                                        2,
                                                                       ),
                                                                   child: Container(
                                                                     padding:
@@ -1156,7 +1431,7 @@ void _showAdd2PhoneDialog(BuildContext context, String memberId) {
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                               
+
                                   if (guest.gift != null &&
                                       guest.gift!.isNotEmpty)
                                     Container(

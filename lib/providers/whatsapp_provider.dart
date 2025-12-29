@@ -1,40 +1,42 @@
-import 'package:ballys_reservation_app/data/repositories/phone_repository.dart';
+
+import 'package:ballys_reservation_app/data/repositories/whatsapp_number_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
-import 'package:ballys_reservation_app/models/add_phone/phone_response.dart';
+
+import 'package:ballys_reservation_app/models/add_phone/whatsApp_response.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-class PhoneState {
+class WhatsappState {
   final bool isLoading;
-  final PhoneResponse? phoneResponse;
+  final WhatsappResponse? whatsappResponse;
   final String? error;
 
-  PhoneState({
+  WhatsappState({
     this.isLoading = false,
-    this.phoneResponse,
+    this.whatsappResponse,
     this.error,
   });
 
-  PhoneState copyWith({
+  WhatsappState copyWith({
     bool? isLoading,
-    PhoneResponse? phoneResponse,
+    WhatsappResponse? whatsappResponse,
     String? error,
   }) {
-    return PhoneState(
+    return WhatsappState(
       isLoading: isLoading ?? this.isLoading,
-      phoneResponse: phoneResponse ?? this.phoneResponse,
+      whatsappResponse: whatsappResponse ?? this.whatsappResponse,
       error: error ?? this.error,
     );
   }
 }
 
-class PhoneNotifier extends StateNotifier<PhoneState> {
-  final PhoneRepository phoneRepository;
+class WhatsappNotifier extends StateNotifier<WhatsappState> {
+  final WhatsappNumberRepository whatsappRepository;
 
-  PhoneNotifier(this.phoneRepository) : super(PhoneState());
+  WhatsappNotifier(this.whatsappRepository) : super(WhatsappState());
 
-  Future<bool> addPhoneNumber({
+  Future<bool> addWhatsAppNumber({
     required String memberId,
     required String phoneNumber,
     required String memberName,
@@ -43,7 +45,7 @@ class PhoneNotifier extends StateNotifier<PhoneState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final response = await phoneRepository.addPhoneNumber(
+      final response = await whatsappRepository.addWhatsAppNumber(
         memberId: memberId,
         phoneNumber: phoneNumber,
         memberName: memberName,
@@ -53,7 +55,7 @@ class PhoneNotifier extends StateNotifier<PhoneState> {
       if (response != null) {
         state = state.copyWith(
           isLoading: false,
-          phoneResponse: response,
+          whatsappResponse: response,
         );
         return true;
       } else {
@@ -73,19 +75,19 @@ class PhoneNotifier extends StateNotifier<PhoneState> {
   }
 
   void reset() {
-    state = PhoneState();
+    state = WhatsappState();
   }
 }
 
 // Providers
-final phoneRepositoryProvider = Provider((ref) {
+final whatsappRepositoryProvider = Provider((ref) {
   final apiService = ref.read(apiServiceProvider);
-  return PhoneRepository(apiService);
+  return WhatsappNumberRepository(apiService);
 });
 
-final phoneProvider = StateNotifierProvider<PhoneNotifier, PhoneState>((ref) {
-  final phoneRepository = ref.read(phoneRepositoryProvider);
-  return PhoneNotifier(phoneRepository);
+final whatsappProvider = StateNotifierProvider<WhatsappNotifier, WhatsappState>((ref) {
+  final whatsappRepository = ref.read(whatsappRepositoryProvider);
+  return WhatsappNotifier(whatsappRepository);
 });
 
 // Note: Make sure apiServiceProvider is available in your project

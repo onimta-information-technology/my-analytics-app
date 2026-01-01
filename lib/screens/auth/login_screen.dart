@@ -1,6 +1,5 @@
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/services/biometric_service.dart';
-import 'package:ballys_reservation_app/data/services/device_config_service.dart';
 import 'package:ballys_reservation_app/providers/auth_provider.dart';
 import 'package:ballys_reservation_app/providers/guests_provider.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
@@ -88,141 +87,39 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _loginWithBiometric() async {
-  try {
-    final biometricName = _biometricService.getBiometricTypeName(
-      _availableBiometrics,
-    );
+    try {
+      final biometricName = _biometricService.getBiometricTypeName(
+        _availableBiometrics,
+      );
 
-    final authenticated = await _biometricService.authenticate(
-      reason: 'Authenticate to login to Bally\'s',
-    );
+      final authenticated = await _biometricService.authenticate(
+        reason: 'Authenticate to login to Bally\'s',
+      );
 
-    if (authenticated) {
-      final credentials = await _biometricService.getCredentials();
+      if (authenticated) {
+        final credentials = await _biometricService.getCredentials();
 
-      if (credentials != null) {
-        _username = credentials['username']!;
-        _password = credentials['password']!;
-
-        // Show loading dialog
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => const Center(
-            child: Card(
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Checking device configuration...'),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-
-        try {
-          // Fetch device configuration
-          final configResult = await DeviceConfigService.fetchDeviceConfig();
-
-          // Close loading dialog
-          if (mounted) Navigator.of(context).pop();
-
-          if (!configResult.isConfigured) {
-            _showErrorSnackBar(
-              configResult.errorMessage ?? 'Device is not registered',
-            );
-            return;
-          }
-
-          if (configResult.isAdmin) {
-            await StorageUtil.saveAdminStatus(true);
-          }
+        if (credentials != null) {
+          _username = credentials['username']!;
+          _password = credentials['password']!;
 
           await _performLogin(showBiometricDialog: false);
-          
-        } catch (e) {
-          if (mounted && Navigator.of(context).canPop()) {
-            Navigator.of(context).pop();
-          }
-          _showErrorSnackBar(
-            'Failed to fetch device configuration: ${e.toString()}',
-          );
+        } else {
+          _showErrorSnackBar('Credentials not found. Please login manually.');
         }
-      } else {
-        _showErrorSnackBar('Credentials not found. Please login manually.');
       }
-    }
-  } catch (e) {
-    _showErrorSnackBar('Biometric authentication failed: ${e.toString()}');
-  }
-}
-
-void _onLogin() async {
-  FocusScope.of(context).unfocus();
-  if (_formKey.currentState!.validate()) {
-    _formKey.currentState!.save();
-    
-    // Show loading dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: Card(
-          child: Padding(
-            padding: EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Checking device configuration...'),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-
-    try {
-      // Fetch device configuration first
-      final configResult = await DeviceConfigService.fetchDeviceConfig();
-
-      // Close loading dialog
-      if (mounted) Navigator.of(context).pop();
-
-      if (!configResult.isConfigured) {
-        // Device not registered
-        _showErrorSnackBar(
-          configResult.errorMessage ?? 'Device is not registered',
-        );
-        return;
-      }
-
-      // Save admin status if applicable
-      if (configResult.isAdmin) {
-        await StorageUtil.saveAdminStatus(true);
-      }
-
-      // Device is configured, proceed with login
-      await _performLogin(showBiometricDialog: true);
-      
     } catch (e) {
-      // Close loading dialog if still open
-      if (mounted && Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
-      
-      _showErrorSnackBar(
-        'Failed to fetch device configuration: ${e.toString()}',
-      );
+      _showErrorSnackBar('Biometric authentication failed: ${e.toString()}');
     }
   }
-}
+
+  void _onLogin() async {
+    FocusScope.of(context).unfocus();
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+      await _performLogin(showBiometricDialog: true);
+    }
+  }
 
   Future<void> _performLogin({required bool showBiometricDialog}) async {
     ref.read(authProvider.notifier).clearError();

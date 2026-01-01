@@ -1,4 +1,3 @@
-import 'package:ballys_reservation_app/components/location_selector_widget.dart';
 import 'package:ballys_reservation_app/components/marketing_performance.dart';
 import 'package:ballys_reservation_app/components/snow.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
@@ -20,7 +19,6 @@ final guestCountsProvider = StateProvider<Map<String, int?>>(
 );
 final homeScreenInitializedProvider = StateProvider<bool>((ref) => false);
 final eventShownProvider = StateProvider<bool>((ref) => false);
-
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -32,7 +30,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     with AutomaticKeepAliveClientMixin {
   String? userName;
   bool _isLoadingData = false;
-  bool _showEvent = false;
+bool _showEvent = false;
 
   // 🔹 Keep the widget alive when navigating away
   @override
@@ -65,7 +63,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ref.read(homeScreenInitializedProvider.notifier).state = true;
         _initializeAppMode();
         _loadGuestData();
-        _checkAndShowEvent();
+         _checkAndShowEvent();
       } else {
         // 🔹 Even if initialized, verify data exists
         final guestsState = ref.read(guestsProvider);
@@ -77,18 +75,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       }
     });
   }
-
   void _checkAndShowEvent() {
     final now = DateTime.now();
     final hasShownEvent = ref.read(eventShownProvider);
-
+    
+  
     if (now.month == 12 && !hasShownEvent) {
       setState(() {
         _showEvent = true;
       });
+      
 
       ref.read(eventShownProvider.notifier).state = true;
-
+   
       Future.delayed(const Duration(seconds: 5), () {
         if (mounted) {
           setState(() {
@@ -207,14 +206,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   // 🔹 Manual refresh method for explicit user action
   Future<void> _manualRefresh() async {
-    if (!mounted) return;
     if (_isLoadingData) return;
 
-    if (mounted) {
-      setState(() {
-        userName = null;
-      });
-    }
+    setState(() {
+      userName = null;
+    });
 
     // Reset counts immediately
     ref.read(guestCountsProvider.notifier).state = {
@@ -304,7 +300,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          userName != null ? 'Welcome, $userName' : 'Loading...',
+          userName != null ? 'Welcome, $userName ' : 'Loading...',
           style: const TextStyle(fontSize: 16),
         ),
         actions: [
@@ -323,22 +319,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
-                  // 🔹 LocationSelector moved here (outside AppBar)
-                  
-                  // Card(
-                  //   elevation: 2,
-                  //   margin: const EdgeInsets.only(bottom: 8.0),
-                //  Padding(
-                     // padding: const EdgeInsets.all(12.0),
-                 LocationSelectorWidget(
-                        onLocationChanged: () {
-                          // Refresh data when location changes
-                          _manualRefresh();
-                        },
-                      // ),
-                   // ),
-                  ),
-
                   // Date display section
                   Card(
                     elevation: 2,
@@ -508,6 +488,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
             ),
           ),
+    // if (_showEvent)
+    //   Positioned(
+    //     top: 0,
+    //     left: 0,
+    //     right: 0,
+    //     bottom: 0,
+    //     child: IgnorePointer(
+    //       ignoring: true, 
+    //       child: Event(isShow: true),
+    //     ),
+    //   ),
           Event(isShow: _showEvent),
         ],
       ),

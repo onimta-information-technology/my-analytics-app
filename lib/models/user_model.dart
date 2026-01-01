@@ -5,6 +5,7 @@ class User {
   final String marketingCode;
   final String? loginId;
   final String? mobileNumber;
+  final bool? memProfSH;
 
   User(
       {required this.userName,
@@ -12,7 +13,8 @@ class User {
       required this.salesCode,
       required this.marketingCode,
       this.mobileNumber,
-       this.loginId});
+       this.loginId,
+         this.memProfSH});
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
@@ -22,6 +24,7 @@ class User {
       marketingCode: json['Marketing_Code'],
       mobileNumber: json['Mobile'],
       loginId: json['LoginID']?.toString(),
+       memProfSH: json['Mem_Prof_SH'], 
     );
   }
 }

@@ -38,6 +38,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   bool _isFromMarketing = false;
   String? currentLoadingMember;
   bool _nogiftamount = false; // Add this field
+  bool? _memProfSH;
+  String? _userMarketingCode;
 
   @override
   void initState() {

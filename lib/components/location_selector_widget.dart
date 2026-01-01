@@ -307,37 +307,83 @@ class _LocationSelectorWidgetState extends State<LocationSelectorWidget> {
       return const SizedBox.shrink();
     }
 
-    return GestureDetector(
-      onTap: _showLocationSelector,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.orange.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.orange, width: 1.5),
+  //   return GestureDetector(
+  //     onTap: _showLocationSelector,
+  //     child: Container(
+  //       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+  //       decoration: BoxDecoration(
+  //         color: Colors.orange.withOpacity(0.1),
+  //         borderRadius: BorderRadius.circular(20),
+  //         border: Border.all(color: Colors.orange, width: 1.5),
+  //       ),
+  //       child: Row(
+  //         mainAxisSize: MainAxisSize.min,
+  //         children: [
+  //           const Icon(Icons.location_on, size: 16, color: Color.fromARGB(255, 0, 0, 0)),
+  //           const SizedBox(width: 6),
+  //           ConstrainedBox(
+  //             constraints: const BoxConstraints(maxWidth: 150),
+  //             child: Text(
+  //               _currentLocation!.name,
+  //               style: const TextStyle(
+  //                 fontSize: 16,
+  //                 fontWeight: FontWeight.bold,
+  //                 color: Color.fromARGB(255, 0, 0, 0),
+  //               ),
+  //               overflow: TextOverflow.ellipsis,
+  //             ),
+  //           ),
+  //           const SizedBox(width: 6),
+  //           const Icon(Icons.arrow_drop_down, size: 22, color: Color.fromARGB(255, 0, 0, 0)),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
+  return GestureDetector(
+  onTap: _showLocationSelector,
+  child: Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    decoration: BoxDecoration(
+      color: Colors.orange.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: Colors.orange, width: 1.5),
+    ),
+    child: Row(
+      children: [
+        // LEFT ICON
+        const Icon(
+          Icons.location_on,
+          size: 16,
+          color: Colors.black,
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.location_on, size: 16, color: Colors.orange),
-            const SizedBox(width: 6),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 150),
-              child: Text(
-                _currentLocation!.name,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.orange,
-                ),
-                overflow: TextOverflow.ellipsis,
+
+        // CENTER TEXT
+        Expanded(
+          child: Center(
+            child: Text(
+              _currentLocation!.name,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
               ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
-            const SizedBox(width: 4),
-            const Icon(Icons.arrow_drop_down, size: 18, color: Colors.orange),
-          ],
+          ),
         ),
-      ),
-    );
+
+        // RIGHT ICON
+        const Icon(
+          Icons.arrow_drop_down,
+          size: 22,
+          color: Colors.black,
+        ),
+      ],
+    ),
+  ),
+);
+
   }
 }

@@ -118,12 +118,13 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                 memberName: guestResponse.mName ?? _memberNameController.text,
                 country: "",
                 lastVisitDate: guestResponse.lvd?.toString() ?? "",
-                gift: "",
+               
                 age: 0,
                 gRating: guestResponse.gRating ?? "",
-                mGroup: "",
+                mGroup: guestResponse.mGroup,
                 gName: guestResponse.gName ?? "",
                 memImage2: guestResponse.memImage2,
+              
               ),
             );
       }

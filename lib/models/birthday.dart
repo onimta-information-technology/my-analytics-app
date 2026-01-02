@@ -12,6 +12,7 @@ class Birthday {
   final String gift;
   final String? gName;
   final String? mobile;
+  final String? mGroup;
 
   Birthday({
     required this.mid,
@@ -27,6 +28,7 @@ class Birthday {
     required this.gift,
     this.gName,
     this.mobile,
+    this.mGroup,
   });
 
   factory Birthday.fromJson(Map<String, dynamic> json) {
@@ -44,6 +46,7 @@ class Birthday {
       gift: json['GIFT'],
       gName: json['GName'],
       mobile: json['Mobile'],
+      mGroup: json['mGroup']
     );
   }
 
@@ -62,6 +65,7 @@ class Birthday {
       'GIFT': gift,
       'GName': gName,
       'Mobile': mobile,
+      'mGroup': mGroup,
     };
   }
 }

@@ -55,7 +55,8 @@ class InactiveMembersRepository {
       "SpName": "sp_CRM_Common_API",
       "con": "1"
     });
-
+    print("hiii");
+print( response);
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List &&
         response['CommonResult']['Table'].isNotEmpty) {

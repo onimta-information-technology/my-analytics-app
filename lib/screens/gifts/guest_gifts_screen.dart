@@ -190,7 +190,7 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> {
 
                             age: 0,
                             gRating: displayRating,
-                            mGroup: "",
+                            mGroup:  inactiveMembers.first.mGroup,
                             gName: inactiveMembers.first.gName,
 
                             // IMPORTANT: Preserve the image from current guest if it exists
@@ -314,7 +314,7 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> {
                                   ).format(guest.amount),
                                   age: 0,
                                   gRating: guest.gRating,
-                                  mGroup: "",
+                                  mGroup: guest.mGroup,
                                   gName: guest.gName,
                                   mobile: guest.mobile,
                                   // IMPORTANT: Preserve the image from current guest if it exists

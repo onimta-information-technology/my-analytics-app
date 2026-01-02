@@ -106,7 +106,7 @@ class _DailyWalkingGuestScreenState
       lastVisitDate: safeDateFrom,
       age: 0,
       gRating: guest.gName,
-      mGroup: null,
+      mGroup: guest.mgroup,
       gName: guest.gName,
       memImage2: guest.menImage2,
       gift: null,

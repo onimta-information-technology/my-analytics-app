@@ -26,6 +26,7 @@ class SelectedGuestNotifier extends StateNotifier<Guest?> {
       gRating: "",
       mGroup: "",
       gName: "",
+
     );
 
     // Fetch complete data

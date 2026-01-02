@@ -10,6 +10,7 @@ class GuestSearchResponse {
   DateTime? lvd;
   final String? gName;
   final String? gRating;
+ final String? mGroup;
 
   GuestSearchResponse({
     required this.mid,
@@ -19,6 +20,7 @@ class GuestSearchResponse {
     this.lvd,
     this.gName,
     this.gRating,
+    this.mGroup,
   });
 
   factory GuestSearchResponse.fromJson(Map<String, dynamic> json) {
@@ -30,6 +32,7 @@ class GuestSearchResponse {
       lvd: DateTime.parse(json['LVD']),
       gName: json["GName"],
       gRating: json["G_Rating"],
+      mGroup: json["mGroup"],
     );
   }
 
@@ -42,6 +45,7 @@ class GuestSearchResponse {
       "LVD": lvd?.toIso8601String(),
       "GName": gName,
       "G_Rating": gRating,
+      "mGroup": mGroup,
     };
   }
 

@@ -18,6 +18,7 @@ import 'package:ballys_reservation_app/providers/member_summary_provider.dart';
 import 'package:ballys_reservation_app/providers/profile_date_filter_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/providers/trip_information_provider.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -46,6 +47,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      _memProfSH = await StorageUtil.getMemProfSH();
+      _userMarketingCode = await StorageUtil.getMarketingCode();
       // Extract the extra parameter
       final extra = GoRouterState.of(context).extra;
       if (extra != null && extra is Map<String, dynamic>) {
@@ -82,6 +85,61 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     )..repeat();
 
     _animation = Tween<double>(begin: 0.0, end: 1.0).animate(_controller);
+  }
+
+  bool _hasPermissionToViewProfile() {
+    final guest = ref.read(selectedGuestProvider);
+ debugPrint('Guest mGroup: ${guest?.mGroup}');
+  debugPrint('User marketing code: $_userMarketingCode');
+  debugPrint('memProfSH: $_memProfSH');
+
+    // If memProfSH is true or null, allow access
+    if (_memProfSH == null || _memProfSH == true || guest?.mGroup == "W") {
+      return true;
+    }
+    // If memProfSH is false, check if marketingCode matches mGroup
+    if (_memProfSH == false) {
+      if (_userMarketingCode != null &&
+          guest?.mGroup != null &&
+          _userMarketingCode == guest!.mGroup) {
+        return true;
+      }
+      return false;
+    }
+
+    return true;
+  }
+
+  // Add this method to show permission dialog
+  void _showPermissionDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.lock, color: Colors.red),
+              SizedBox(width: 8),
+              Text("Access Denied"),
+            ],
+          ),
+          content: const Text(
+            "You don't have permission to view this guest's profile details. "
+            "You can only view profiles of guests in your marketing group.",
+            style: TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                "OK",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   final TextEditingController _whatsappNumberController =
@@ -613,11 +671,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                     SizedBox(
                                       width: double.infinity,
                                       child: ElevatedButton(
+                                        //  onPressed: () {
+                                        //     setState(() {
+                                        //       _isTableExpanded =
+                                        //           !_isTableExpanded;
+                                        //     });
+                                        //   },
                                         onPressed: () {
-                                          setState(() {
-                                            _isTableExpanded =
-                                                !_isTableExpanded;
-                                          });
+                                          // Check permission before expanding
+                                          if (_hasPermissionToViewProfile()) {
+                                            setState(() {
+                                              _isTableExpanded =
+                                                  !_isTableExpanded;
+                                            });
+                                          } else {
+                                            _showPermissionDialog();
+                                          }
                                         },
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor:

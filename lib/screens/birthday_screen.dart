@@ -312,7 +312,7 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                                     lastVisitDate: birthday.lvd.toString(),
                                     age: birthday.age,
                                     gRating: birthday.gRating,
-                                    mGroup: "",
+                                    mGroup: birthday.mGroup,
                                     gName: birthday.gName,
                                     gift: birthday.gift,
                                     mobile: birthday.mobile,

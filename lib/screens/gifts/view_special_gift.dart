@@ -369,7 +369,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                                 age: 0,
                                                 gRating:
                                                     guestResponse.gRating ?? "",
-                                                mGroup: "",
+                                                mGroup: guestResponse.mGroup,
                                                 gName:
                                                     guestResponse.gName ?? "",
                                               ),

@@ -240,7 +240,9 @@ class FirebaseApiService {
       if (deviceId == null || deviceId.isEmpty) {
         throw Exception('deviceId not found in storage');
       }
+     
       final url = '$domain${endpoints['fetchUserChats']}/$deviceId';
+       print('Fetching chats for deviceId: $url');
       final response = await getRequest(url);
 
       if (response['success'] == true) {
@@ -259,8 +261,10 @@ class FirebaseApiService {
     try {
       final deviceId = await DeviceId.get();
       final url = '$domain${endpoints['fetchAllUsers']}/$deviceId';
+      //final url = '$domain${endpoints['api/users/contacts']}/$deviceId';
+      print('Fetching users from URL: $url');
       final response = await getRequest(url);
-
+print('Fetch users response: $response');
       if (response['success'] == true) {
         return response['data'] ?? {};
       } else {
@@ -298,6 +302,7 @@ class FirebaseApiService {
     required String chatId,
   }) async {
     try {
+      print('sendMessage called with recipientUuid: $recipientUuid, chatId: $chatId, message: $message');
       final deviceId = await DeviceId.get();
 
       final url = '$domain${endpoints['sendMessage']}';
@@ -310,7 +315,7 @@ class FirebaseApiService {
         "chatId": chatId,
       });
 
-   
+   print('sendMessage response: $response');
       return response;
     } catch (e) {
    

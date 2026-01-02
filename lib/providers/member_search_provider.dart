@@ -24,7 +24,7 @@ class MemberSearchNotifier extends StateNotifier<Guest> {
       lastVisitDate: state.lastVisitDate,
       age: 0,
       gRating: state.gRating,
-      mGroup: "",
+      mGroup: state.mGroup,
       gName: state.gName,
     );
   }

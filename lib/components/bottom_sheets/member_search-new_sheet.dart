@@ -136,7 +136,7 @@ class _MembernewSearchBottomSheetState extends ConsumerState<MemberNewSearchBott
                                   lastVisitDate: guest.lvd.toString(),
                                   age: 0,
                                   gRating: guest.gRating,
-                                  mGroup: "",
+                                  mGroup: guest.mGroup,
                                   gName: guest.gName,
                                   memImage2:guest.memImage2,
                                 ),

@@ -111,36 +111,167 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   }
 
   // Add this method to show permission dialog
-  void _showPermissionDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.lock, color: Colors.red),
-              SizedBox(width: 8),
-              Text("Access Denied"),
+  // void _showPermissionDialog() {
+  //   showDialog(
+  //     context: context,
+  //     builder: (BuildContext context) {
+  //       return AlertDialog(
+  //         title: const Row(
+  //           children: [
+  //             Icon(Icons.lock, color: Colors.red),
+  //             SizedBox(width: 8),
+  //             Text("Access Denied"),
+  //           ],
+  //         ),
+  //         content: const Text(
+  //           "You don't have permission to view this guest's profile details. "
+  //           "You can only view profiles of guests in your marketing group.",
+  //           style: TextStyle(fontSize: 16),
+  //         ),
+  //         actions: [
+  //           TextButton(
+  //             onPressed: () => Navigator.of(context).pop(),
+  //             child: const Text(
+  //               "OK",
+  //               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+  //             ),
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
+void _showPermissionDialog() {
+  showDialog(
+    context: context,
+    barrierDismissible: true,
+    builder: (BuildContext context) {
+      return Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
             ],
           ),
-          content: const Text(
-            "You don't have permission to view this guest's profile details. "
-            "You can only view profiles of guests in your marketing group.",
-            style: TextStyle(fontSize: 16),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
-                "OK",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Animated Icon
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.lock_outline,
+                  size: 50,
+                  color: Colors.red.shade400,
+                ),
               ),
-            ),
-          ],
-        );
-      },
-    );
-  }
+              const SizedBox(height: 20),
+              
+              // Title
+              const Text(
+                "Access Denied",
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2C3E50),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              
+              // Message
+              // Text(
+              //   "You don't have permission to view this guest's profile details.",
+              //   style: TextStyle(
+              //     fontSize: 16,
+              //     color: Colors.grey.shade700,
+              //     height: 1.5,
+              //   ),
+              //   textAlign: TextAlign.center,
+              // ),
+              // const SizedBox(height: 8),
+              
+              // Additional Info Box
+              // Container(
+              //   padding: const EdgeInsets.all(12),
+              //   decoration: BoxDecoration(
+              //     color: Colors.blue.shade50,
+              //     borderRadius: BorderRadius.circular(12),
+              //     border: Border.all(
+              //       color: Colors.blue.shade200,
+              //       width: 1,
+              //     ),
+              //   ),
+              //   child: Row(
+              //     children: [
+              //       Icon(
+              //         Icons.info_outline,
+              //         color: Colors.blue.shade700,
+              //         size: 20,
+              //       ),
+              //       const SizedBox(width: 10),
+              //       Expanded(
+              //         child: Text(
+              //           "You can only view profiles in your marketing group",
+              //           style: TextStyle(
+              //             fontSize: 14,
+              //             color: Colors.blue.shade900,
+              //             fontWeight: FontWeight.w500,
+              //           ),
+              //         ),
+              //       ),
+              //     ],
+              //   ),
+              // ),
+            //  const SizedBox(height: 24),
+              
+              // Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Constants.kPrimaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    "Got It",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
 
   final TextEditingController _whatsappNumberController =
       TextEditingController();

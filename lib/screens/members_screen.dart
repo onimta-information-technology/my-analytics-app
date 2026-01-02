@@ -114,6 +114,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
     });
 
     try {
+   
       guests = await guestRepository.searchGuest(iid, searchTerm);
 
       setState(() {
@@ -283,7 +284,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                                             lastVisitDate: guest.lvd.toString(),
                                             age: 0,
                                             gRating: guest.gRating ?? "",
-                                            mGroup: "",
+                                            mGroup: guest.mGroup,
                                             gName: guest.gName ?? "",
                                           ),
                                         );

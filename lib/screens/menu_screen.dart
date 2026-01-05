@@ -248,7 +248,7 @@ class _MenuScreenState extends State<MenuScreen>
                                   color: Colors.white,
                                 ),
                                 Text(
-                                  'Reports',
+                                  'Package Guest',
                                   style: TextStyle(
                                     fontSize: 16.0,
                                     fontWeight: FontWeight.normal,

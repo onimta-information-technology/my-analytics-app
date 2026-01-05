@@ -166,12 +166,12 @@ class _AddEmailDialogState extends ConsumerState<AddEmailDialog> {
               TextFormField(
                 controller: emailController,
                 keyboardType: TextInputType.emailAddress,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 decoration: InputDecoration(
                   labelText: 'Email Address *',
-                  labelStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
+                  labelStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   hintText: 'Enter email address',
-                  hintStyle: TextStyle(color: Colors.grey.shade400),
+                  hintStyle: TextStyle(color: const Color.fromARGB(255, 0, 0, 0)),
                   prefixIcon: const Icon(Icons.email),
                   border: const OutlineInputBorder(),
                   contentPadding: const EdgeInsets.symmetric(
@@ -211,11 +211,11 @@ class _AddEmailDialogState extends ConsumerState<AddEmailDialog> {
                             ? 'Email will be added for member ${widget.memberId}'
                             : 'Email to add: ${emailController.text}',
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 15,
                           color: emailController.text.isEmpty
-                              ? Colors.grey.shade500
-                              : Colors.grey.shade700,
-                          fontWeight: FontWeight.w400,
+                              ? const Color.fromARGB(255, 0, 0, 0)
+                              : const Color.fromARGB(255, 0, 0, 0),
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
@@ -231,7 +231,7 @@ class _AddEmailDialogState extends ConsumerState<AddEmailDialog> {
                   TextButton(
                     onPressed: () => Navigator.pop(context),
                     style: TextButton.styleFrom(
-                      foregroundColor: Colors.grey.shade700,
+                      foregroundColor: const Color.fromARGB(255, 0, 0, 0),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 20,
                         vertical: 12,
@@ -239,7 +239,7 @@ class _AddEmailDialogState extends ConsumerState<AddEmailDialog> {
                     ),
                     child: const Text(
                       'Cancel',
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ),
                   const SizedBox(width: 12),

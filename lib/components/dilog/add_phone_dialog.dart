@@ -208,14 +208,14 @@ class _AddPhoneDialogState extends ConsumerState<AddPhoneDialog> {
                         children: [
                           Text(
                             selectedCountry.flagEmoji,
-                            style: const TextStyle(fontSize: 10),
+                            style: const TextStyle(fontSize: 11),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             '+${selectedCountry.phoneCode}',
                             style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                           const Icon(Icons.arrow_drop_down, size: 20),
@@ -230,10 +230,10 @@ class _AddPhoneDialogState extends ConsumerState<AddPhoneDialog> {
                     child: TextFormField(
                       controller: phoneController,
                       keyboardType: TextInputType.phone,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       decoration: InputDecoration(
                         labelText: 'Phone Number *',
-                        labelStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
+                        labelStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         hintText: 'Enter phone number',
                         hintStyle: TextStyle(color: Colors.grey.shade400),
                         border: const OutlineInputBorder(),
@@ -269,7 +269,7 @@ class _AddPhoneDialogState extends ConsumerState<AddPhoneDialog> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.phone, size: 16, color: Colors.grey.shade600),
+                    Icon(Icons.phone, size: 18, color: const Color.fromARGB(255, 0, 0, 0)),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -277,11 +277,11 @@ class _AddPhoneDialogState extends ConsumerState<AddPhoneDialog> {
                             ? 'Full number will appear here'
                             : 'Full number: +${selectedCountry.phoneCode} ${phoneController.text}',
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 15,
                           color: phoneController.text.isEmpty
-                              ? Colors.grey.shade500
-                              : Colors.grey.shade700,
-                          fontWeight: FontWeight.w400,
+                              ? const Color.fromARGB(255, 0, 0, 0)
+                              : const Color.fromARGB(255, 0, 0, 0),
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
@@ -297,7 +297,7 @@ class _AddPhoneDialogState extends ConsumerState<AddPhoneDialog> {
                   TextButton(
                     onPressed: () => Navigator.pop(context),
                     style: TextButton.styleFrom(
-                      foregroundColor: Colors.grey.shade700,
+                      foregroundColor: const Color.fromARGB(255, 0, 0, 0),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 20,
                         vertical: 12,
@@ -305,7 +305,7 @@ class _AddPhoneDialogState extends ConsumerState<AddPhoneDialog> {
                     ),
                     child: const Text(
                       'Cancel',
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ),
                   const SizedBox(width: 12),

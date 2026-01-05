@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/components/guest_details_card.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 
 import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
@@ -100,11 +101,66 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
       tcoupon = g.mCoupon + g.flushCoupon;
       flushactdrop = g.flushActDrop;
       avgbet = g.avebet;
-    } else {}
-
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadGuestDataForCard();
+      });
+    }
+    // } else {}
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //       _loadGuestDataForCard();
+    //     });
+    //   }
     Future.microtask(() {
       ref.read(giftProvider.notifier).getGiftForList();
     });
+  }
+
+  Future<void> _loadGuestDataForCard() async {
+    if (_memberIdController.text.isEmpty) return;
+
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      GuestRepository guestRepository = GuestRepository(
+        ApiService(const FlutterSecureStorage()),
+      );
+
+      List<GuestSearchResponse> guests = await guestRepository.searchGuest(
+        9021, // Using 9021 as the search type for MID lookup
+        _memberIdController.text,
+      );
+
+      if (guests.isNotEmpty) {
+        final guestResponse = guests.first;
+        ref
+            .read(selectedGuestProvider.notifier)
+            .setSelectedGuest(
+              Guest(
+                mid: guestResponse.mid ?? _memberIdController.text,
+                memberName: guestResponse.mName ?? _memberNameController.text,
+                country: "",
+                lastVisitDate: guestResponse.lvd?.toString() ?? "",
+      
+                age: 0,
+                gRating: guestResponse.gRating ?? "",
+                mGroup: guestResponse.mGroup,
+                gName: guestResponse.gName ?? "",
+                memImage2: guestResponse.memImage2,
+              ),
+            );
+      }
+
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      print("Error loading guest data: $e");
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _loadUserCredentials() async {
@@ -313,8 +369,8 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
 
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.black, // Black background
-                              foregroundColor: Colors.white, // White text/icon
+                              backgroundColor: Colors.black,
+                              foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
                                 vertical: 14,
@@ -323,6 +379,20 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             onPressed: _isLoading
                                 ? null
                                 : () async {
+                                    // Check if guest data is already loaded
+                                    final selectedGuest = ref.read(
+                                      selectedGuestProvider,
+                                    );
+
+                                    if (selectedGuest != null &&
+                                        selectedGuest.mid ==
+                                            _memberIdController.text) {
+                                      // Guest data already loaded, just navigate
+                                      context.push('/home/profile');
+                                      return;
+                                    }
+
+                                    // Guest data not loaded, fetch it
                                     try {
                                       setState(() {
                                         _isLoading = true;
@@ -372,6 +442,8 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                                 mGroup: guestResponse.mGroup,
                                                 gName:
                                                     guestResponse.gName ?? "",
+                                                memImage2:
+                                                    guestResponse.memImage2,
                                               ),
                                             );
                                         context.push('/home/profile');
@@ -388,7 +460,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                                     _memberNameController.text,
                                                 country: "",
                                                 lastVisitDate: "1990-01-01",
-                                                gift: "",
+
                                                 age: 0,
                                                 gRating: "",
                                                 mGroup: "",
@@ -439,6 +511,18 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                           _memberIdController.text = '';
                           ref.read(memberSearchProvider.notifier).resetState();
                         },
+                      ),
+                      // const SizedBox(height: 16.0),
+                      const SizedBox(height: 10.0),
+                      GuestDisplayCard(
+                        memberIdText: _memberIdController.text,
+                        memberNameText: _memberNameController.text,
+                        showCard:
+                            _memberIdController.text.isNotEmpty &&
+                            _memberNameController.text.isNotEmpty,
+                        isLoading: _isLoading,
+                        showLastVisitDate:
+                            true, // Enable last visit date display
                       ),
                       const SizedBox(height: 16.0),
                       Row(
@@ -841,7 +925,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                           ),
                                         ),
                                       );
-                                      
+
                                       Navigator.of(context).pop(true);
                                     } else {
                                       ScaffoldMessenger.of(
@@ -915,7 +999,9 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                           ),
                                         ),
                                       );
-                                       await ref.read(giftProvider.notifier).getGiftForList();
+                                      await ref
+                                          .read(giftProvider.notifier)
+                                          .getGiftForList();
                                       Navigator.of(context).pop(true);
                                       // go back after approval
                                     } else {

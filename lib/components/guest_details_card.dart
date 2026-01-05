@@ -4,24 +4,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+import 'package:intl/intl.dart';
 
 class GuestDisplayCard extends ConsumerWidget {
   final String memberIdText;
   final String memberNameText;
   final bool showCard;
-  final bool isLoading; // Add loading state
+  final bool isLoading;
   final VoidCallback? onImageTap;
+  final bool showLastVisitDate; // New parameter
 
   const GuestDisplayCard({
     super.key,
     required this.memberIdText,
     required this.memberNameText,
     required this.showCard,
-    this.isLoading = false, // Default to false
+    this.isLoading = false,
     this.onImageTap,
+    this.showLastVisitDate = false, // Default to false for backward compatibility
   });
 
-  // Rating image map - can be moved to constants if used elsewhere
   static const Map<String, String> ratingImageMap = {
     "CLASSIC": "assets/images/ratings/CLASSIC.png",
     "DIAMOND": "assets/images/ratings/DIAMOND.png",
@@ -56,16 +58,16 @@ class GuestDisplayCard extends ConsumerWidget {
     }
   }
 
-  // void _showFullScreenImage(BuildContext context, Guest selectedGuest) {
-  //   if (selectedGuest.memImage2 == null || selectedGuest.memImage2!.isEmpty) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(
-  //         content: Text('No image available'),
-  //         duration: Duration(seconds: 2),
-  //       ),
-  //     );
-  //     return;
-  //   }
+  String _formatLastVisitDate(String? dateString) {
+    if (dateString == null || dateString.isEmpty) return "N/A";
+    try {
+      final date = DateTime.parse(dateString);
+      return DateFormat('yyyy-MM-dd').format(date);
+    } catch (_) {
+      return dateString;
+    }
+  }
+
   void _showFullScreenImage(BuildContext context, Guest selectedGuest) {
     if (selectedGuest.memImage2 == null || selectedGuest.memImage2!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -77,101 +79,9 @@ class GuestDisplayCard extends ConsumerWidget {
       return;
     }
 
-    //   showDialog(
-    //     context: context,
-    //      barrierDismissible: true,
-    //     barrierColor: Colors.black87,
-    //     builder: (BuildContext context) {
-    //       return Dialog(
-    //         backgroundColor: Colors.transparent,
-    //         child: Stack(
-    //           children: [
-    //             // Center(
-    //             //   child: Container(
-    //             //     constraints: BoxConstraints(
-    //             //       maxHeight: MediaQuery.of(context).size.height * 0.8,
-    //             //       maxWidth: MediaQuery.of(context).size.width * 0.9,
-    //             //     ),
-    //             //     child: ClipRRect(
-    //             //       borderRadius: BorderRadius.circular(12),
-    //             //       child: Image.memory(
-    //             //         base64Decode(selectedGuest.memImage2!),
-    //             //         fit: BoxFit.contain,
-    //             //         errorBuilder: (context, error, stackTrace) {
-    //             //           return Container(
-    //             //             height: 200,
-    //             //             width: 200,
-    //             //             color: Colors.grey.shade300,
-    //             //             child: const Icon(
-    //             //               Icons.error,
-    //             //               size: 50,
-    //             //               color: Colors.red,
-    //             //             ),
-    //             //           );
-    //             //         },
-    //             //       ),
-    //             //     ),
-    //             //   ),
-    //             // ),
-    //             // Positioned(
-    //             //   top: 40,
-    //             //   right: 20,
-    //             //   child: GestureDetector(
-    //             //     onTap: () => Navigator.of(context).pop(),
-    //             //     child: Container(
-    //             //       padding: const EdgeInsets.all(8),
-    //             //       decoration: const BoxDecoration(
-    //             //         color: Colors.black54,
-    //             //         shape: BoxShape.circle,
-    //             //       ),
-    //             //       child: const Icon(
-    //             //         Icons.close,
-    //             //         color: Colors.white,
-    //             //         size: 24,
-    //             //       ),
-    //             //     ),
-    //             //   ),
-    //             // ),
-    //             Center(
-    //               child: GestureDetector(
-    //                 onTap: () =>
-    //                     Navigator.of(context).pop(), // close on image tap
-    //                 child: Container(
-    //                   constraints: BoxConstraints(
-    //                     maxHeight: MediaQuery.of(context).size.height * 0.8,
-    //                     maxWidth: MediaQuery.of(context).size.width * 0.9,
-    //                   ),
-    //                   child: ClipRRect(
-    //                     borderRadius: BorderRadius.circular(12),
-    //                     child: Image.memory(
-    //                       base64Decode(selectedGuest.memImage2!),
-    //                       fit: BoxFit.contain,
-    //                       errorBuilder: (context, error, stackTrace) {
-    //                         return Container(
-    //                           height: 200,
-    //                           width: 200,
-    //                           color: Colors.grey.shade300,
-    //                           child: const Icon(
-    //                             Icons.error,
-    //                             size: 50,
-    //                             color: Colors.red,
-    //                           ),
-    //                         );
-    //                       },
-    //                     ),
-    //                   ),
-    //                 ),
-    //               ),
-    //             ),
-    //           ],
-    //         ),
-    //       );
-    //     },
-    //   );
-    // }
     showGeneralDialog(
       context: context,
-      barrierDismissible: true, // tap outside will close
+      barrierDismissible: true,
       barrierLabel: "Close",
       barrierColor: Colors.black87,
       pageBuilder: (context, anim1, anim2) {
@@ -222,8 +132,7 @@ class GuestDisplayCard extends ConsumerWidget {
             border: Border.all(color: Colors.grey.shade300),
           ),
           child: isLoading
-              ? // Show only loading indicator when loading
-                const Center(
+              ? const Center(
                   child: Padding(
                     padding: EdgeInsets.symmetric(vertical: 30.0),
                     child: Row(
@@ -248,10 +157,9 @@ class GuestDisplayCard extends ConsumerWidget {
                     ),
                   ),
                 )
-              : // Show guest details when not loading
-                Row(
+              : Row(
                   children: [
-                    // First Column - Profile Picture
+                    // Profile Picture
                     GestureDetector(
                       onTap: () {
                         final selectedGuest = ref.read(selectedGuestProvider);
@@ -303,12 +211,12 @@ class GuestDisplayCard extends ConsumerWidget {
 
                     const SizedBox(width: 16),
 
-                    // Second Column - Guest Name and Rating
+                    // Guest Name, Rating, and Last Visit Date
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // First Row - Guest Name (M P)
+                          // Guest Name
                           Consumer(
                             builder: (context, ref, child) {
                               final selectedGuest = ref.watch(
@@ -350,14 +258,45 @@ class GuestDisplayCard extends ConsumerWidget {
                             },
                           ),
 
-                          // Second Row - Rating Image (Right aligned)
+                          // Last Visit Date (conditionally shown)
+                          if (showLastVisitDate)
+                            Consumer(
+                              builder: (context, ref, child) {
+                                final selectedGuest = ref.watch(
+                                  selectedGuestProvider,
+                                );
+
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 8.0),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.calendar_today,
+                                        size: 14,
+                                        color: const Color.fromARGB(255, 0, 0, 0),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        "LVD: ${_formatLastVisitDate(selectedGuest?.lastVisitDate)}",
+                                        style: TextStyle(
+                                          fontSize: fontSettings.fontSize * 0.85,
+                                          fontWeight: fontSettings.fontWeight,
+                                          color: const Color.fromARGB(255, 0, 0, 0),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+
+                          // Rating Image
                           Consumer(
                             builder: (context, ref, child) {
                               final selectedGuest = ref.watch(
                                 selectedGuestProvider,
                               );
 
-                              // Determine which rating to use - default to CLASSIC if empty or null
                               String ratingToUse = "CLASSIC";
                               if (selectedGuest?.gRating != null &&
                                   selectedGuest!.gRating!.isNotEmpty &&
@@ -387,17 +326,17 @@ class GuestDisplayCard extends ConsumerWidget {
                                       fit: BoxFit.cover,
                                       errorBuilder:
                                           (context, error, stackTrace) {
-                                            return Container(
-                                              color: Colors.grey.shade200,
-                                              child: Icon(
-                                                Icons.star,
-                                                color: _getRatingColor(
-                                                  ratingToUse,
-                                                ),
-                                                size: 16,
-                                              ),
-                                            );
-                                          },
+                                        return Container(
+                                          color: Colors.grey.shade200,
+                                          child: Icon(
+                                            Icons.star,
+                                            color: _getRatingColor(
+                                              ratingToUse,
+                                            ),
+                                            size: 16,
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ),
                                 ),

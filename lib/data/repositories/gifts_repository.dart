@@ -156,7 +156,7 @@ class GiftsRepository {
         response['CommonResult']['Table'] is List &&
         response['CommonResult']['Table'].isNotEmpty) {
       final tableData = response['CommonResult']['Table'] as List;
-
+print('Special Gift Response Table Data: $tableData');
       // Map API response to SpecialGiftRequest
       List<SpecialGiftRequest> giftSpecialList = tableData.map((item) {
         return SpecialGiftRequest.fromJson(Map<String, dynamic>.from(item));

@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-// import 'package:provider/provider.dart';
 
 class BirthdayScreen extends ConsumerStatefulWidget {
   const BirthdayScreen({super.key});
@@ -112,7 +111,7 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
       if (context.canPop()) {
         context.pop();
       } else {
-        context.go('/menu'); // Fallback to home if can't pop
+        context.go('/menu');
       }
     },
   ),
@@ -300,7 +299,7 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                             ),
                           ),
                         ),
-                        OutlinedButton.icon(
+                        ElevatedButton.icon(
                           onPressed: () {
                             ref
                                 .read(selectedGuestProvider.notifier)
@@ -320,25 +319,55 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                                 );
                             context.push('/home/profile');
                           },
-                          icon: Icon(
+                          icon: const Icon(
                             Icons.card_giftcard,
-                            color: birthday.age < 0
-                                ? Colors.green
-                                : Constants.kSecondaryColor,
+                            color: Colors.white,
                           ),
-                          label: const Text('Request a gift'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: birthday.age < 0
+                          label: const Text(
+                            'Request a gift',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: birthday.age < 0
                                 ? Colors.green
                                 : Constants.kSecondaryColor,
-                            side: BorderSide(
-                              color: birthday.age < 0
-                                  ? Colors.green
-                                  : Constants.kSecondaryColor,
-                            ),
+                            foregroundColor: Colors.white,
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 8.0),
+                    // New Button for Price Increase Request
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          // TODO: Implement price increase request functionality
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Price increase requested for ${birthday.mname}'),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.trending_up, color: Colors.white),
+                        label: const Text(
+                          'Request Gift Price Increase',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16.0,
+                            color: Colors.white,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 10.0),
+                        ),
+                      ),
                     ),
                   ],
                 ),

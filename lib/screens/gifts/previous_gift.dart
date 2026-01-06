@@ -66,19 +66,20 @@ class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
 
   List<Map<String, String>> _getGiftData(dynamic gift) {
     return [
-      {"field": "Marketing Person", "value": _parseString(gift.mktPer)},
+    
       {"field": "Date From", "value": _formatDateAndTime(gift.dateFrom)},
       {"field": "Date To", "value": _formatDateAndTime(gift.dateTo)},
       {"field": "Arrival Date", "value": _formatDate(gift.arrDate)},
       {"field": "Departure Date", "value": _formatDate(gift.dptDate)},
       {"field": "Gift", "value": _parseString(gift.cashierPayType)},
       {"field": "Cashier Pay Type", "value": _parseString(gift.cashierPayType)},
-      {
+   
+      {"field": "Category", "value": _parseString(gift.giftCategory)},
+      {"field": "Gift Type", "value": _formatDate(gift.gType)},
+         {
         "field": "Chip Type",
         "value": _parseString(gift.chipType?.replaceAll("_", " ")),
       },
-      {"field": "Category", "value": _parseString(gift.giftCategory)},
-      {"field": "Gift Type", "value": _formatDate(gift.gType)},
       {
         "field": "Amount",
         "value":
@@ -86,7 +87,7 @@ class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
             ? "N/A"
             : _parseString(gift.giftDesc),
       },
-
+  {"field": "Marketing Person", "value": _parseString(gift.mktPer)},
       {"field": "Drop", "value": _parseNumberFormat(gift.mDrop)},
       {"field": "Cash Out", "value": _parseNumberFormat(gift.cashout)},
       {"field": "Result", "value": _parseNumberFormat(gift.res)},
@@ -399,8 +400,9 @@ Widget _buildHorizontalView(
                     ),
                     children: fieldNames.map((fieldName) {
                       final isAmount = fieldName == "Amount" || fieldName == "Gift Type" || fieldName == "Category"|| fieldName == "Chip Type"|| fieldName == "Cashier Pay Type"|| fieldName == "Gift";
+                      final isMarketingPerson = fieldName == "Marketing Person";
                       return Container(
-                        color: isAmount ? const Color(0xFFCCFFCC) : null,
+                        color: isAmount ? const Color(0xFFCCFFCC): isMarketingPerson ? const Color.fromARGB(255, 255, 240, 24) : null,
                         padding: const EdgeInsets.all(8.0),
                         child: Text(
                           fieldName,
@@ -422,9 +424,9 @@ Widget _buildHorizontalView(
                         final value = data["value"]!;
                         final isAmount = fieldName == "Amount" || fieldName == "Gift Type" || fieldName == "Category"|| fieldName == "Chip Type"|| fieldName == "Cashier Pay Type"|| fieldName == "Gift";
                         //final isSpecialRow = fieldName == "Amount" || fieldName == "Gift Type" || fieldName == "Category"|| fieldName == "Chip type"|| fieldName == "cashier pay Type"|| fieldName == "Gift";
-                        
+                        final isMarketingPerson = fieldName == "Marketing Person";
                         return Container(
-                          color: isAmount ? const Color(0xFFCCFFCC) : null,
+                          color: isAmount ? const Color(0xFFCCFFCC) : isMarketingPerson ? const Color.fromARGB(255, 255, 240, 24) : null,
                           padding: const EdgeInsets.all(8.0),
                           child: Text(
                             value,
@@ -455,31 +457,92 @@ Widget _buildHorizontalView(
   }
 
 
-  TableRow _buildRow(String label, String value, FontSettings fontSettings) {
-    final isSpecialRow = label == "Amount" || label == "Gift Type" || label == "Category"|| label == "Chip Type"|| label == "Cashier Pay Type"|| label == "Gift";
-  final isAmount = label == "Amount";
-    return TableRow(
-      decoration: isSpecialRow
-          ? const BoxDecoration(color: Color(0xFFCCFFCC))
-          :  BoxDecoration(color :Constants.kPrimaryColor.withAlpha(50),
-),
-      children: [
+//   TableRow _buildRow(String label, String value, FontSettings fontSettings) {
+//     final isSpecialRow = label == "Amount" || label == "Gift Type" || label == "Category"|| label == "Chip Type"|| label == "Cashier Pay Type"|| label == "Gift";
+//   final isAmount = label == "Amount";
+//   final isMarketingPerson = label == "Marketing Person";
+
+//     return TableRow(
+//       decoration: isSpecialRow
+//           ? const BoxDecoration(color: Color(0xFFCCFFCC))
+//           :  BoxDecoration(color :Constants.kPrimaryColor.withAlpha(50),
+// ),
+//       children: [
         
-        Container(
-         // color: Constants.kPrimaryColor.withAlpha(50),
-           //  color: Colors.white,
-          padding: const EdgeInsets.all(8.0),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: fontSettings.fontSize-1,
-              fontWeight: FontWeight.bold,
-            ),
+//         Container(
+//          // color: Constants.kPrimaryColor.withAlpha(50),
+//            //  color: Colors.white,
+//           padding: const EdgeInsets.all(8.0),
+//           child: Text(
+//             label,
+//             style: TextStyle(
+//               fontSize: fontSettings.fontSize-1,
+//               fontWeight: FontWeight.bold,
+//             ),
+//           ),
+//         ),
+//          Container(
+//             color:isSpecialRow ?  Color(0xFFCCFFCC) : Colors.white ,
+//        child : Padding(
+//           padding: const EdgeInsets.all(8.0),
+//           child: Text(
+//             value,
+//             textAlign: TextAlign.end,
+//             style: TextStyle(
+//               fontSize: isAmount
+//                   ? fontSettings.fontSize + 4
+//                   : fontSettings.fontSize,
+//               fontWeight: isAmount ? FontWeight.bold : fontSettings.fontWeight,
+//               color: isAmount ? Colors.black : null,
+//               fontFamily: 'monospace',
+//               fontFeatures: const [FontFeature.tabularFigures()],
+//             ),
+//           ),
+//         ),
+//          ),
+//       ],
+//     );
+TableRow _buildRow(String label, String value, FontSettings fontSettings) {
+  final isSpecialRow = label == "Amount" ||
+      label == "Gift Type" ||
+      label == "Category" ||
+      label == "Chip Type" ||
+      label == "Cashier Pay Type" ||
+      label == "Gift";
+
+  final isAmount = label == "Amount";
+  final isMarketingPerson = label == "Marketing Person";
+
+  return TableRow(
+    decoration: BoxDecoration(
+      color: isMarketingPerson
+          ? const Color.fromARGB(255, 255, 240, 24) 
+          : isSpecialRow
+              ? const Color(0xFFCCFFCC)
+              : Constants.kPrimaryColor.withAlpha(50),
+    ),
+    children: [
+      // LABEL
+      Container(
+        padding: const EdgeInsets.all(8.0),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: fontSettings.fontSize - 1,
+            fontWeight: FontWeight.bold,
+          
           ),
         ),
-         Container(
-            color:isSpecialRow ?  Color(0xFFCCFFCC) : Colors.white ,
-       child : Padding(
+      ),
+
+      // VALUE
+      Container(
+        color: isMarketingPerson
+            ?const Color.fromARGB(255, 255, 240, 24) 
+            : isSpecialRow
+                ? const Color(0xFFCCFFCC)
+                : Colors.white,
+        child: Padding(
           padding: const EdgeInsets.all(8.0),
           child: Text(
             value,
@@ -488,15 +551,21 @@ Widget _buildHorizontalView(
               fontSize: isAmount
                   ? fontSettings.fontSize + 4
                   : fontSettings.fontSize,
-              fontWeight: isAmount ? FontWeight.bold : fontSettings.fontWeight,
-              color: isAmount ? Colors.black : null,
+              fontWeight: isMarketingPerson
+                  ? FontWeight.w600
+                  : isAmount
+                      ? FontWeight.bold
+                      : fontSettings.fontWeight,
+              
               fontFamily: 'monospace',
               fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
         ),
-         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
+
+  
 }

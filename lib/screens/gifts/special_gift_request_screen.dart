@@ -30,6 +30,7 @@ class _SpecialGiftRequestScreenState
   late TabController _tabController;
   bool _isLoading = false;
   bool isPending = false;
+  bool isApproved = false;
   @override
   void initState() {
     super.initState();
@@ -126,9 +127,9 @@ class _SpecialGiftRequestScreenState
           TabBarView(
             controller: _tabController,
             children: [
-              _buildGiftList(giftsp.pendinggift, isPending: true),
-              _buildGiftList(giftsp.approvedgift, isPending: false),
-              _buildGiftList(giftsp.rejectgift, isPending: false),
+              _buildGiftList(giftsp.pendinggift, isPending: true, isApproved: false),
+              _buildGiftList(giftsp.approvedgift, isPending: false,isApproved: true),
+              _buildGiftList(giftsp.rejectgift, isPending: false,isApproved: false),
             ],
           ),
           if (_isLoading)
@@ -311,6 +312,7 @@ class _SpecialGiftRequestScreenState
 Widget _buildGiftList(
   List<SpecialGiftRequest> gifts, {
   required bool isPending,
+  required bool isApproved,
 }) {
   final fontSettings = ref.watch(fontSettingsProvider);
 
@@ -351,6 +353,7 @@ Widget _buildGiftList(
                 extra: {
                   'gift': gift,
                   'isPending': isPending,
+                  'isApproved': isApproved,
                 },
               );
               if (result == true) {

@@ -85,7 +85,7 @@ class ApproveScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                     Expanded(
+                    Expanded(
                       child: GestureDetector(
                         onTap: () {
                           context.go('/menu/approve-reject/special-gift-requests');
@@ -96,13 +96,8 @@ class ApproveScreen extends StatelessWidget {
                               borderRadius: BorderRadius.circular(10.0),
                               gradient: const LinearGradient(
                                 colors: [
-                                 const Color(0xFF4CAF50),
-                                          const Color.fromARGB(
-                                            255,
-                                            2,
-                                            235,
-                                            235,
-                                          ),
+                                  Color(0xFF4CAF50),
+                                  Color.fromARGB(255, 2, 235, 235),
                                 ],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
@@ -133,6 +128,55 @@ class ApproveScreen extends StatelessWidget {
                         ),
                       ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                         
+                        },
+                        child: Card(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10.0),
+                              gradient: const LinearGradient(
+                                colors: [
+                                  Color(0xFFE91E63),
+                                  Color(0xFFFF6F00),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                            ),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 30),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    FontAwesomeIcons.cakeCandles,
+                                    size: 60,
+                                    color: Colors.white,
+                                  ),
+                                  SizedBox(height: 10),
+                                  Text(
+                                    'Birthdays',
+                                    style: TextStyle(
+                                      fontSize: 16.0,
+                                      fontWeight: FontWeight.normal,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const Expanded(child: SizedBox()),
                   ],
                 ),
               ],

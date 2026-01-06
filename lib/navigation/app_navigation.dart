@@ -649,13 +649,14 @@ class AppNavigation {
                       final gift = extra['gift'] as SpecialGiftRequest?;
                       final isPending =
                           extra['isPending'] as bool? ?? false; // ✅ read flag
-
+                      final isApproved = extra['isApproved'] as bool? ?? false;
                       return ViewSpecificGiftRequest(
                         giftsRepository: GiftsRepository(
                           ApiService(const FlutterSecureStorage()),
                         ),
                         gift: gift,
-                        isPending: isPending, // ✅ pass it to widget
+                        isPending: isPending,
+                        isApproved: isApproved,
                       );
                     },
                   ),
@@ -863,36 +864,15 @@ class AppNavigation {
                 ],
               ),
               GoRoute(
-            path: '/special-gift-requests',
-            pageBuilder: (context, state) => CustomTransitionPage(
-              fullscreenDialog: false,
-              key: state.pageKey,
-              child: SpecialGiftRequestScreen(
-                giftsRepository: GiftsRepository(
-                  ApiService(const FlutterSecureStorage()),
-                ),
-                   hideAddButton: true, 
-              ),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(
-                      opacity: CurveTween(
-                        curve: Curves.easeInOutCirc,
-                      ).animate(animation),
-                      child: child,
-                    );
-                  },
-            ),
-            routes: [
-              GoRoute(
-                path: 'new-gift-request',
+                path: '/special-gift-requests',
                 pageBuilder: (context, state) => CustomTransitionPage(
                   fullscreenDialog: false,
                   key: state.pageKey,
-                  child: NewGiftRequest(
+                  child: SpecialGiftRequestScreen(
                     giftsRepository: GiftsRepository(
                       ApiService(const FlutterSecureStorage()),
                     ),
+                    hideAddButton: true,
                   ),
                   transitionsBuilder:
                       (context, animation, secondaryAnimation, child) {
@@ -904,77 +884,98 @@ class AppNavigation {
                         );
                       },
                 ),
-              ),
-              GoRoute(
-                path: 'prv-gifts/:mid',
-                pageBuilder: (context, state) {
-                  final String mid = state.pathParameters['mid']!;
-                  return CustomTransitionPage(
-                    fullscreenDialog: false,
-                    key: state.pageKey,
-                    child: PrvGiftScreen(
-                      memberId: mid,
-                      giftsRepository: GiftsRepository(
-                        ApiService(const FlutterSecureStorage()),
+                routes: [
+                  GoRoute(
+                    path: 'new-gift-request',
+                    pageBuilder: (context, state) => CustomTransitionPage(
+                      fullscreenDialog: false,
+                      key: state.pageKey,
+                      child: NewGiftRequest(
+                        giftsRepository: GiftsRepository(
+                          ApiService(const FlutterSecureStorage()),
+                        ),
                       ),
+                      transitionsBuilder:
+                          (context, animation, secondaryAnimation, child) {
+                            return FadeTransition(
+                              opacity: CurveTween(
+                                curve: Curves.easeInOutCirc,
+                              ).animate(animation),
+                              child: child,
+                            );
+                          },
                     ),
-                    transitionsBuilder:
-                        (context, animation, secondaryAnimation, child) {
-                          return FadeTransition(
-                            opacity: CurvedAnimation(
-                              parent: animation,
-                              curve: Curves.easeInOutCirc,
-                            ),
-                            child: child,
-                          );
-                        },
-                  );
-                },
-              ),
-              // GoRoute(
-              //   path: 'view-specific-gift-request',
-              //   pageBuilder: (context, state) => CustomTransitionPage(
-              //     fullscreenDialog: false,
-              //     key: state.pageKey,
-              //     child: ViewSpecificGiftRequest(
-              //       giftsRepository: GiftsRepository(
-              //         ApiService(const FlutterSecureStorage()),
-              //       ),
-              //     ),
-              //     transitionsBuilder:
-              //         (context, animation, secondaryAnimation, child) {
-              //           return FadeTransition(
-              //             opacity: CurveTween(
-              //               curve: Curves.easeInOutCirc,
-              //             ).animate(animation),
-              //             child: child,
-              //           );
-              //         },
-              //   ),
-              // ),
-              GoRoute(
-                path: 'view-specific-gift-request',
-                builder: (context, state) {
-                  // Expecting state.extra to be a Map<String, dynamic>
-                  final extra = state.extra as Map<String, dynamic>? ?? {};
-                  final gift = extra['gift'] as SpecialGiftRequest?;
-                  final isPending =
-                      extra['isPending'] as bool? ?? false; // ✅ read flag
-
-                  return ViewSpecificGiftRequest(
-                    giftsRepository: GiftsRepository(
-                      ApiService(const FlutterSecureStorage()),
-                    ),
-                    gift: gift,
-                    isPending: isPending, // ✅ pass it to widget
-                  );
-                },
+                  ),
+                  GoRoute(
+                    path: 'prv-gifts/:mid',
+                    pageBuilder: (context, state) {
+                      final String mid = state.pathParameters['mid']!;
+                      return CustomTransitionPage(
+                        fullscreenDialog: false,
+                        key: state.pageKey,
+                        child: PrvGiftScreen(
+                          memberId: mid,
+                          giftsRepository: GiftsRepository(
+                            ApiService(const FlutterSecureStorage()),
+                          ),
+                        ),
+                        transitionsBuilder:
+                            (context, animation, secondaryAnimation, child) {
+                              return FadeTransition(
+                                opacity: CurvedAnimation(
+                                  parent: animation,
+                                  curve: Curves.easeInOutCirc,
+                                ),
+                                child: child,
+                              );
+                            },
+                      );
+                    },
+                  ),
+                  // GoRoute(
+                  //   path: 'view-specific-gift-request',
+                  //   pageBuilder: (context, state) => CustomTransitionPage(
+                  //     fullscreenDialog: false,
+                  //     key: state.pageKey,
+                  //     child: ViewSpecificGiftRequest(
+                  //       giftsRepository: GiftsRepository(
+                  //         ApiService(const FlutterSecureStorage()),
+                  //       ),
+                  //     ),
+                  //     transitionsBuilder:
+                  //         (context, animation, secondaryAnimation, child) {
+                  //           return FadeTransition(
+                  //             opacity: CurveTween(
+                  //               curve: Curves.easeInOutCirc,
+                  //             ).animate(animation),
+                  //             child: child,
+                  //           );
+                  //         },
+                  //   ),
+                  // ),
+                  GoRoute(
+                    path: 'view-specific-gift-request',
+                    builder: (context, state) {
+                      // Expecting state.extra to be a Map<String, dynamic>
+                      final extra = state.extra as Map<String, dynamic>? ?? {};
+                      final gift = extra['gift'] as SpecialGiftRequest?;
+                      final isPending =
+                          extra['isPending'] as bool? ?? false; // ✅ read flag
+                      final isApproved = extra['isApproved'] as bool? ?? false;
+                      return ViewSpecificGiftRequest(
+                        giftsRepository: GiftsRepository(
+                          ApiService(const FlutterSecureStorage()),
+                        ),
+                        gift: gift,
+                        isPending: isPending,
+                        isApproved: isApproved,
+                      );
+                    },
+                  ),
+                ],
               ),
             ],
           ),
-            ],
-          ),
-          
         ],
       ),
 

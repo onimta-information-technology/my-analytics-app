@@ -317,7 +317,7 @@ print('Special Gift Response Table Data: $tableData');
       "SpName": "sp_CRM_Common_API",
       "con": "1",
     });
-
+print('Prev Gift Response: $response');
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List &&
         (response['CommonResult']['Table'] as List).isNotEmpty) {
@@ -714,4 +714,99 @@ print('Special Gift Response Table Data: $tableData');
       return false;
     }
   }
+
+  Future<bool> reverseSpecialGiftRequest({
+  required double reqid,
+  required String userName,
+}) async {
+  try {
+    print('Approve Reversing special gift request: reqid=$reqid, userName=$userName');
+   
+    final reqidInt = reqid.toInt();
+    print('Converted reqid to int: $reqidInt');
+    final payload = {
+      "HasReturnData": "T",
+      "Parameters": [
+        {
+          "Para_Data": 88894,
+          "Para_Direction": "Input",
+          "Para_Lenth": 1,
+          "Para_Name": "@Iid",
+          "Para_Type": "int",
+        },
+        {
+          "Para_Data": reqidInt,
+          "Para_Direction": "Input",
+          "Para_Lenth": 5000,
+          "Para_Name": "@Text1",
+          "Para_Type": "varchar",
+        },
+        {
+          "Para_Data": userName,
+          "Para_Direction": "Input",
+          "Para_Lenth": 5000,
+          "Para_Name": "@Text2",
+          "Para_Type": "varchar",
+        },
+      
+      ],
+      "SpName": "sp_CRM_Common_API",
+      "con": "1",
+    };
+
+    final resp = await apiService.post('CommonExecute', payload);
+    print('Reverse gift response: $resp');
+    return true;
+  } catch (e) {
+    print('Error reversing special gift request: $e');
+    return false;
+  }
+}
+ Future<bool> reverseSpecialGiftRequestRejected({
+  required double reqid,
+  required String userName,
+}) async {
+  try {
+    print('reject Reversing special gift request: reqid=$reqid, userName=$userName');
+   
+    final reqidInt = reqid.toInt();
+    print('Converted reqid to int: $reqidInt');
+    final payload = {
+      "HasReturnData": "T",
+      "Parameters": [
+        {
+          "Para_Data": 88895,
+          "Para_Direction": "Input",
+          "Para_Lenth": 1,
+          "Para_Name": "@Iid",
+          "Para_Type": "int",
+        },
+        {
+          "Para_Data": reqidInt,
+          "Para_Direction": "Input",
+          "Para_Lenth": 5000,
+          "Para_Name": "@Text1",
+          "Para_Type": "varchar",
+        },
+        {
+          "Para_Data": userName,
+          "Para_Direction": "Input",
+          "Para_Lenth": 5000,
+          "Para_Name": "@Text2",
+          "Para_Type": "varchar",
+        },
+      
+      ],
+      "SpName": "sp_CRM_Common_API",
+      "con": "1",
+    };
+
+    final resp = await apiService.post('CommonExecute', payload);
+    print('Reverse gift response: $resp');
+    return true;
+  } catch (e) {
+    print('Error reversing special gift request: $e');
+    return false;
+  }
+}
 }

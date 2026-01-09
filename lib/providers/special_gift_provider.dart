@@ -200,7 +200,24 @@ class GiftNotifier extends StateNotifier<GiftState> {
       userName: userName,
     );
   }
-
+Future<bool> reverseSpecialGiftFromUI({
+  required double reqid,
+  required String userName,
+}) async {
+  return await giftRepository.reverseSpecialGiftRequest(
+    reqid: reqid,
+    userName: userName,
+  );
+}
+Future<bool> reverseSpecialGiftFromUIrejcted({
+  required double reqid,
+  required String userName,
+}) async {
+  return await giftRepository.reverseSpecialGiftRequestRejected(
+    reqid: reqid,
+    userName: userName,
+  );
+}
   void resetData() {
     state = GiftState();
   }

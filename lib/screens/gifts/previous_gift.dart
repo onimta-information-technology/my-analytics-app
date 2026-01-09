@@ -88,6 +88,9 @@ class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
             : _parseString(gift.giftDesc),
       },
   {"field": "Marketing Person", "value": _parseString(gift.mktPer)},
+   {"field": "Gift Issue Time", "value": _formatDateAndTime(gift.giftAppTime)},
+   {"field": "Gift Approved Time", "value": _formatDateAndTime(gift.pitAppTime)},
+  
       {"field": "Drop", "value": _parseNumberFormat(gift.mDrop)},
       {"field": "Cash Out", "value": _parseNumberFormat(gift.cashout)},
       {"field": "Result", "value": _parseNumberFormat(gift.res)},
@@ -116,7 +119,7 @@ class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
         ),
       },
       {"field": "Pit Approved By", "value": _parseString(gift.pitAppBy)},
-      {"field": "Pit Approved Time", "value": _formatDate(gift.pitAppTime)},
+     
       {"field": "Insert Date", "value": _formatDateAndTime(gift.insertDate)},
       {"field": "Req By", "value": _parseString(gift.reqBy)},
     ];
@@ -415,7 +418,7 @@ Widget _buildHorizontalView(
                           fieldName == "Chip Type" || 
                           fieldName == "Cashier Pay Type" || 
                           fieldName == "Gift";
-                      final isMarketingPerson = fieldName == "Marketing Person";
+                      final isMarketingPerson = fieldName == "Marketing Person" || fieldName == "Gift Issue Time";
                       
                       return Container(
                         color: isAmount 
@@ -448,7 +451,7 @@ Widget _buildHorizontalView(
                             fieldName == "Chip Type" || 
                             fieldName == "Cashier Pay Type" || 
                             fieldName == "Gift";
-                        final isMarketingPerson = fieldName == "Marketing Person";
+                        final isMarketingPerson = fieldName == "Marketing Person" || fieldName == "Gift Issue Time";
                         
                         return Container(
                           color: isAmount 
@@ -500,7 +503,7 @@ TableRow _buildRow(String label, String value, FontSettings fontSettings) {
       label == "Gift";
 
   final isAmount = label == "Amount";
-  final isMarketingPerson = label == "Marketing Person";
+  final isMarketingPerson = label == "Marketing Person" || label == "Gift Issue Time";
 
   return TableRow(
     decoration: BoxDecoration(

@@ -65,7 +65,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
   double tcoupon = 0.0;
   double flushactdrop = 0.0;
   double avgbet = 0.0;
-int? _selectedValidDays;
+  int? _selectedValidDays;
 
   final TextEditingController _amountController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -314,7 +314,7 @@ int? _selectedValidDays;
         //             ),
         //           ),
         //         ),
-        //       ), 
+        //       ),
         //     ),
         // ],
       ),
@@ -332,96 +332,328 @@ int? _selectedValidDays;
                   key: _formKey,
                   child: Column(
                     children: [
-                       if (!widget.isPending)
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        // Show confirmation dialog
-                        showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Reverse Gift'),
-                            content: const Text(
-                              'Are you sure you want to reverse this gift?',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text('Cancel'),
-                              ),
-                              ElevatedButton(
-                                onPressed: () async {
-                                  // Add your reverse gift API call here
-                                  Navigator.pop(context);
-                                  
+                      // if (!widget.isPending)
+                      //   Container(
+                      //     width: double.infinity,
+                      //     margin: const EdgeInsets.only(bottom: 16),
+                      //     child: ElevatedButton.icon(
+                      //       onPressed: () {
+                      //         // Show confirmation dialog
+                      //         showDialog(
+                      //           context: context,
+                      //           builder: (context) => AlertDialog(
+                      //             title: const Text('Reverse Gift'),
+                      //             content: const Text(
+                      //               'Are you sure you want to reverse this gift?',
+                      //             ),
+                      //             actions: [
+                      //               TextButton(
+                      //                 onPressed: () => Navigator.pop(context),
+                      //                 child: const Text('Cancel'),
+                      //               ),
+                      //               ElevatedButton(
+                      //                 onPressed: () async {
+                      //                   // Add your reverse gift API call here
+                      //                   Navigator.pop(context);
+
+                      //                   setState(() {
+                      //                     _isLoading = true;
+                      //                   });
+
+                      //                   try {
+                      //                     // Example: Call your reverse gift method
+                      //                     // final success = await ref
+                      //                     //     .read(giftProvider.notifier)
+                      //                     //     .reverseGift(
+                      //                     //       reqid: widget.gift!.idNo,
+                      //                     //       userName: userName ?? "",
+                      //                     //     );
+
+                      //                     // if (success) {
+                      //                     //   ScaffoldMessenger.of(context).showSnackBar(
+                      //                     //     const SnackBar(
+                      //                     //       content: Text('Gift reversed successfully'),
+                      //                     //     ),
+                      //                     //   );
+                      //                     //   Navigator.of(context).pop(true);
+                      //                     // }
+
+                      //                     ScaffoldMessenger.of(
+                      //                       context,
+                      //                     ).showSnackBar(
+                      //                       const SnackBar(
+                      //                         content: Text(
+                      //                           'Gift reversal in progress...',
+                      //                         ),
+                      //                       ),
+                      //                     );
+                      //                   } catch (e) {
+                      //                     ScaffoldMessenger.of(
+                      //                       context,
+                      //                     ).showSnackBar(
+                      //                       SnackBar(
+                      //                         content: Text('Error: $e'),
+                      //                       ),
+                      //                     );
+                      //                   } finally {
+                      //                     setState(() {
+                      //                       _isLoading = false;
+                      //                     });
+                      //                   }
+                      //                 },
+                      //                 style: ElevatedButton.styleFrom(
+                      //                   backgroundColor: Colors.red,
+                      //                   foregroundColor: Colors.white,
+                      //                 ),
+                      //                 child: const Text('Reverse'),
+                      //               ),
+                      //             ],
+                      //           ),
+                      //         );
+                      //       },
+                      //       icon: const Icon(Icons.undo, size: 20),
+                      //       label: Text(
+                      //         'Reverse Gift',
+                      //         style: TextStyle(
+                      //           fontSize: fontSettings.fontSize,
+                      //           fontWeight: FontWeight.w600,
+                      //         ),
+                      //       ),
+                      //       style: ElevatedButton.styleFrom(
+                      //         backgroundColor: Colors.orange,
+                      //         foregroundColor: Colors.white,
+                      //         padding: const EdgeInsets.symmetric(vertical: 14),
+                      //         shape: RoundedRectangleBorder(
+                      //           borderRadius: BorderRadius.circular(12),
+                      //         ),
+                      //       ),
+                      //     ),
+                      //   ),
+    
+                        if (widget.isApproved)
+                          Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(bottom: 16),
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                // Show confirmation dialog and wait for result
+                                final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  builder: (dialogContext) => AlertDialog(
+                                    title: const Text('Reverse Gift'),
+                                    content: const Text(
+                                      'Are you sure you want to reverse this gift?',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(
+                                          dialogContext,
+                                        ).pop(false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () => Navigator.of(
+                                          dialogContext,
+                                        ).pop(true),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red,
+                                          foregroundColor: Colors.white,
+                                        ),
+                                        child: const Text('Reverse'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                // If user didn't confirm, do nothing
+                                if (confirmed != true) return;
+
+                                // User confirmed, proceed with reversal
+                                setState(() {
+                                  _isLoading = true;
+                                });
+
+                                try {
+                                  final success = await ref
+                                      .read(giftProvider.notifier)
+                                      .reverseSpecialGiftFromUI(
+                                        reqid: widget.gift!.idNo,
+                                        userName: userName ?? "",
+                                      );
+
                                   setState(() {
-                                    _isLoading = true;
+                                    _isLoading = false;
                                   });
-                                  
-                                  try {
-                                    // Example: Call your reverse gift method
-                                    // final success = await ref
-                                    //     .read(giftProvider.notifier)
-                                    //     .reverseGift(
-                                    //       reqid: widget.gift!.idNo,
-                                    //       userName: userName ?? "",
-                                    //     );
-                                    
-                                    // if (success) {
-                                    //   ScaffoldMessenger.of(context).showSnackBar(
-                                    //     const SnackBar(
-                                    //       content: Text('Gift reversed successfully'),
-                                    //     ),
-                                    //   );
-                                    //   Navigator.of(context).pop(true);
-                                    // }
-                                    
+
+                                  if (!mounted) return;
+
+                                  if (success) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('Gift reversal in progress...'),
+                                        content: Text(
+                                          'Gift reversed successfully',
+                                        ),
+                                        backgroundColor: Colors.green,
                                       ),
                                     );
-                                  } catch (e) {
+
+                                    // Navigate back to SpecialGiftRequestScreen
+                                    Navigator.of(context).pop(true);
+                                  } else {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Error: $e')),
+                                      const SnackBar(
+                                        content: Text('Failed to reverse gift'),
+                                        backgroundColor: Colors.red,
+                                      ),
                                     );
-                                  } finally {
-                                    setState(() {
-                                      _isLoading = false;
-                                    });
                                   }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red,
-                                  foregroundColor: Colors.white,
+                                } catch (e) {
+                                  setState(() {
+                                    _isLoading = false;
+                                  });
+
+                                  if (!mounted) return;
+
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              },
+                              icon: const Icon(Icons.undo, size: 20),
+                              label: Text(
+                                'Reverse Gift',
+                                style: TextStyle(
+                                  fontSize: fontSettings.fontSize,
+                                  fontWeight: FontWeight.w600,
                                 ),
-                                child: const Text('Reverse'),
                               ),
-                            ],
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
                           ),
-                        );
-                      },
-                      icon: const Icon(Icons.undo, size: 20),
-                      label: Text(
-                        'Reverse Gift',
-                        style: TextStyle(
-                          fontSize: fontSettings.fontSize,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-          
+                          if (!widget.isApproved && !widget.isPending)
+                          Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(bottom: 16),
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                // Show confirmation dialog and wait for result
+                                final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  builder: (dialogContext) => AlertDialog(
+                                    title: const Text('Reverse Gift'),
+                                    content: const Text(
+                                      'Are you sure you want to reverse this gift?',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(
+                                          dialogContext,
+                                        ).pop(false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () => Navigator.of(
+                                          dialogContext,
+                                        ).pop(true),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red,
+                                          foregroundColor: Colors.white,
+                                        ),
+                                        child: const Text('Reverse'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                // If user didn't confirm, do nothing
+                                if (confirmed != true) return;
+
+                                // User confirmed, proceed with reversal
+                                setState(() {
+                                  _isLoading = true;
+                                });
+
+                                try {
+                                  final success = await ref
+                                      .read(giftProvider.notifier)
+                                      .reverseSpecialGiftFromUIrejcted(
+                                        reqid: widget.gift!.idNo,
+                                        userName: userName ?? "",
+                                      );
+
+                                  setState(() {
+                                    _isLoading = false;
+                                  });
+
+                                  if (!mounted) return;
+
+                                  if (success) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Gift reversed successfully',
+                                        ),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+
+                                    // Navigate back to SpecialGiftRequestScreen
+                                    Navigator.of(context).pop(true);
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Failed to reverse gift'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  setState(() {
+                                    _isLoading = false;
+                                  });
+
+                                  if (!mounted) return;
+
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              },
+                              icon: const Icon(Icons.undo, size: 20),
+                              label: Text(
+                                'Reverse Gift',
+                                style: TextStyle(
+                                  fontSize: fontSettings.fontSize,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
                       const SizedBox(height: 5.0),
                       TextFormField(
                         controller: (_fromDateController),
@@ -462,155 +694,155 @@ int? _selectedValidDays;
                       const SizedBox(height: 5.0),
                       // Row(
                       //   children: [
-                          // Expanded(
-                          //   child: TextFormField(
-                          //     keyboardType:
-                          //         const TextInputType.numberWithOptions(),
-                          //     autofocus: false,
-                          //     readOnly: true,
-                          //     controller: _memberIdController,
-                          //     style: _inputTextStyle(fontSettings),
-                          //     decoration: InputDecoration(
-                          //       labelText: "Member ID",
-                          //       labelStyle: TextStyle(
-                          //         fontSize: fontSettings.fontSize,
-                          //         fontWeight: fontSettings.fontWeight,
-                          //       ),
-                          //       border: const OutlineInputBorder(),
-                          //       contentPadding: const EdgeInsets.symmetric(
-                          //         horizontal: 12.0,
-                          //         vertical: -5.0,
-                          //       ),
-                          //     ),
-                          //     onChanged: (value) {
-                          //       _memberNameController.text = '';
-                          //       ref
-                          //           .read(memberSearchProvider.notifier)
-                          //           .resetState();
-                          //     },
-                          //   ),
-                          // ),
-                          //const SizedBox(width: 16.0),
+                      // Expanded(
+                      //   child: TextFormField(
+                      //     keyboardType:
+                      //         const TextInputType.numberWithOptions(),
+                      //     autofocus: false,
+                      //     readOnly: true,
+                      //     controller: _memberIdController,
+                      //     style: _inputTextStyle(fontSettings),
+                      //     decoration: InputDecoration(
+                      //       labelText: "Member ID",
+                      //       labelStyle: TextStyle(
+                      //         fontSize: fontSettings.fontSize,
+                      //         fontWeight: fontSettings.fontWeight,
+                      //       ),
+                      //       border: const OutlineInputBorder(),
+                      //       contentPadding: const EdgeInsets.symmetric(
+                      //         horizontal: 12.0,
+                      //         vertical: -5.0,
+                      //       ),
+                      //     ),
+                      //     onChanged: (value) {
+                      //       _memberNameController.text = '';
+                      //       ref
+                      //           .read(memberSearchProvider.notifier)
+                      //           .resetState();
+                      //     },
+                      //   ),
+                      // ),
+                      //const SizedBox(width: 16.0),
 
-                          // ElevatedButton(
-                          //   style: ElevatedButton.styleFrom(
-                          //     backgroundColor: Colors.black,
-                          //     foregroundColor: Colors.white,
-                          //     padding: const EdgeInsets.symmetric(
-                          //       horizontal: 16,
-                          //       vertical: 14,
-                          //     ),
-                          //   ),
-                          //   onPressed: _isLoading
-                          //       ? null
-                          //       : () async {
-                          //           // Check if guest data is already loaded
-                          //           final selectedGuest = ref.read(
-                          //             selectedGuestProvider,
-                          //           );
+                      // ElevatedButton(
+                      //   style: ElevatedButton.styleFrom(
+                      //     backgroundColor: Colors.black,
+                      //     foregroundColor: Colors.white,
+                      //     padding: const EdgeInsets.symmetric(
+                      //       horizontal: 16,
+                      //       vertical: 14,
+                      //     ),
+                      //   ),
+                      //   onPressed: _isLoading
+                      //       ? null
+                      //       : () async {
+                      //           // Check if guest data is already loaded
+                      //           final selectedGuest = ref.read(
+                      //             selectedGuestProvider,
+                      //           );
 
-                          //           if (selectedGuest != null &&
-                          //               selectedGuest.mid ==
-                          //                   _memberIdController.text) {
-                          //             // Guest data already loaded, just navigate
-                          //             context.push('/home/profile');
-                          //             return;
-                          //           }
+                      //           if (selectedGuest != null &&
+                      //               selectedGuest.mid ==
+                      //                   _memberIdController.text) {
+                      //             // Guest data already loaded, just navigate
+                      //             context.push('/home/profile');
+                      //             return;
+                      //           }
 
-                          //           // Guest data not loaded, fetch it
-                          //           try {
-                          //             setState(() {
-                          //               _isLoading = true;
-                          //             });
+                      //           // Guest data not loaded, fetch it
+                      //           try {
+                      //             setState(() {
+                      //               _isLoading = true;
+                      //             });
 
-                          //             GuestRepository guestRepository =
-                          //                 GuestRepository(
-                          //                   ApiService(
-                          //                     const FlutterSecureStorage(),
-                          //                   ),
-                          //                 );
+                      //             GuestRepository guestRepository =
+                      //                 GuestRepository(
+                      //                   ApiService(
+                      //                     const FlutterSecureStorage(),
+                      //                   ),
+                      //                 );
 
-                          //             // Search for guest by MID
-                          //             List<GuestSearchResponse> guests =
-                          //                 await guestRepository.searchGuest(
-                          //                   9021,
-                          //                   _memberIdController.text,
-                          //                 );
+                      //             // Search for guest by MID
+                      //             List<GuestSearchResponse> guests =
+                      //                 await guestRepository.searchGuest(
+                      //                   9021,
+                      //                   _memberIdController.text,
+                      //                 );
 
-                          //             setState(() {
-                          //               _isLoading = false;
-                          //             });
+                      //             setState(() {
+                      //               _isLoading = false;
+                      //             });
 
-                          //             if (guests.isNotEmpty) {
-                          //               final guestResponse = guests.first;
-                          //               ref
-                          //                   .read(
-                          //                     selectedGuestProvider.notifier,
-                          //                   )
-                          //                   .setSelectedGuest(
-                          //                     Guest(
-                          //                       mid:
-                          //                           guestResponse.mid ??
-                          //                           _memberIdController.text,
-                          //                       memberName:
-                          //                           guestResponse.mName ??
-                          //                           _memberNameController.text,
-                          //                       country: "",
-                          //                       lastVisitDate:
-                          //                           guestResponse.lvd
-                          //                               ?.toString() ??
-                          //                           "",
+                      //             if (guests.isNotEmpty) {
+                      //               final guestResponse = guests.first;
+                      //               ref
+                      //                   .read(
+                      //                     selectedGuestProvider.notifier,
+                      //                   )
+                      //                   .setSelectedGuest(
+                      //                     Guest(
+                      //                       mid:
+                      //                           guestResponse.mid ??
+                      //                           _memberIdController.text,
+                      //                       memberName:
+                      //                           guestResponse.mName ??
+                      //                           _memberNameController.text,
+                      //                       country: "",
+                      //                       lastVisitDate:
+                      //                           guestResponse.lvd
+                      //                               ?.toString() ??
+                      //                           "",
 
-                          //                       age: 0,
-                          //                       gRating:
-                          //                           guestResponse.gRating ?? "",
-                          //                       mGroup: guestResponse.mGroup,
-                          //                       gName:
-                          //                           guestResponse.gName ?? "",
-                          //                       memImage2:
-                          //                           guestResponse.memImage2,
-                          //                     ),
-                          //                   );
-                          //               context.push('/home/profile');
-                          //             } else {
-                          //               // fallback guest
-                          //               ref
-                          //                   .read(
-                          //                     selectedGuestProvider.notifier,
-                          //                   )
-                          //                   .setSelectedGuest(
-                          //                     Guest(
-                          //                       mid: _memberIdController.text,
-                          //                       memberName:
-                          //                           _memberNameController.text,
-                          //                       country: "",
-                          //                       lastVisitDate: "1990-01-01",
+                      //                       age: 0,
+                      //                       gRating:
+                      //                           guestResponse.gRating ?? "",
+                      //                       mGroup: guestResponse.mGroup,
+                      //                       gName:
+                      //                           guestResponse.gName ?? "",
+                      //                       memImage2:
+                      //                           guestResponse.memImage2,
+                      //                     ),
+                      //                   );
+                      //               context.push('/home/profile');
+                      //             } else {
+                      //               // fallback guest
+                      //               ref
+                      //                   .read(
+                      //                     selectedGuestProvider.notifier,
+                      //                   )
+                      //                   .setSelectedGuest(
+                      //                     Guest(
+                      //                       mid: _memberIdController.text,
+                      //                       memberName:
+                      //                           _memberNameController.text,
+                      //                       country: "",
+                      //                       lastVisitDate: "1990-01-01",
 
-                          //                       age: 0,
-                          //                       gRating: "",
-                          //                       mGroup: "",
-                          //                       gName: "",
-                          //                     ),
-                          //                   );
-                          //               context.push('/home/profile');
-                          //             }
-                          //           } catch (e) {
-                          //             setState(() {
-                          //               _isLoading = false;
-                          //             });
-                          //           }
-                          //         },
-                          //   child: _isLoading
-                          //       ? const SizedBox(
-                          //           width: 20,
-                          //           height: 20,
-                          //           child: CircularProgressIndicator(
-                          //             strokeWidth: 2,
-                          //             color: Colors.white,
-                          //           ),
-                          //         )
-                          //       : const Icon(Icons.person_search, size: 25),
-                          // ),
+                      //                       age: 0,
+                      //                       gRating: "",
+                      //                       mGroup: "",
+                      //                       gName: "",
+                      //                     ),
+                      //                   );
+                      //               context.push('/home/profile');
+                      //             }
+                      //           } catch (e) {
+                      //             setState(() {
+                      //               _isLoading = false;
+                      //             });
+                      //           }
+                      //         },
+                      //   child: _isLoading
+                      //       ? const SizedBox(
+                      //           width: 20,
+                      //           height: 20,
+                      //           child: CircularProgressIndicator(
+                      //             strokeWidth: 2,
+                      //             color: Colors.white,
+                      //           ),
+                      //         )
+                      //       : const Icon(Icons.person_search, size: 25),
+                      // ),
                       //   ],
                       // ),
 
@@ -696,134 +928,162 @@ int? _selectedValidDays;
                       //     ),
                       //   ],
                       // ),
-Row(
-  children: [
-    ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
-        ),
-      ),
-      onPressed: _isLoading
-          ? null
-          : () async {
-              final selectedGuest = ref.read(selectedGuestProvider);
+                      Row(
+                        children: [
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.black,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                            ),
+                            onPressed: _isLoading
+                                ? null
+                                : () async {
+                                    final selectedGuest = ref.read(
+                                      selectedGuestProvider,
+                                    );
 
-              if (selectedGuest != null &&
-                  selectedGuest.mid == _memberIdController.text) {
-                context.push('/home/profile');
-                return;
-              }
+                                    if (selectedGuest != null &&
+                                        selectedGuest.mid ==
+                                            _memberIdController.text) {
+                                      context.push('/home/profile');
+                                      return;
+                                    }
 
-              try {
-                setState(() {
-                  _isLoading = true;
-                });
+                                    try {
+                                      setState(() {
+                                        _isLoading = true;
+                                      });
 
-                GuestRepository guestRepository = GuestRepository(
-                  ApiService(const FlutterSecureStorage()),
-                );
+                                      GuestRepository guestRepository =
+                                          GuestRepository(
+                                            ApiService(
+                                              const FlutterSecureStorage(),
+                                            ),
+                                          );
 
-                List<GuestSearchResponse> guests =
-                    await guestRepository.searchGuest(
-                      9021,
-                      _memberIdController.text,
-                    );
+                                      List<GuestSearchResponse> guests =
+                                          await guestRepository.searchGuest(
+                                            9021,
+                                            _memberIdController.text,
+                                          );
 
-                setState(() {
-                  _isLoading = false;
-                });
+                                      setState(() {
+                                        _isLoading = false;
+                                      });
 
-                if (guests.isNotEmpty) {
-                  final guestResponse = guests.first;
-                  ref.read(selectedGuestProvider.notifier).setSelectedGuest(
-                    Guest(
-                      mid: guestResponse.mid ?? _memberIdController.text,
-                      memberName: guestResponse.mName ?? _memberNameController.text,
-                      country: "",
-                      lastVisitDate: guestResponse.lvd?.toString() ?? "",
-                      age: 0,
-                      gRating: guestResponse.gRating ?? "",
-                      mGroup: guestResponse.mGroup,
-                      gName: guestResponse.gName ?? "",
-                      memImage2: guestResponse.memImage2,
-                    ),
-                  );
-                  context.push('/home/profile');
-                } else {
-                  ref.read(selectedGuestProvider.notifier).setSelectedGuest(
-                    Guest(
-                      mid: _memberIdController.text,
-                      memberName: _memberNameController.text,
-                      country: "",
-                      lastVisitDate: "1990-01-01",
-                      age: 0,
-                      gRating: "",
-                      mGroup: "",
-                      gName: "",
-                    ),
-                  );
-                  context.push('/home/profile');
-                }
-              } catch (e) {
-                setState(() {
-                  _isLoading = false;
-                });
-              }
-            },
-      child: _isLoading
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
-              ),
-            )
-          : const Icon(Icons.person_search, size: 25),
-    ),
-    const SizedBox(width: 16),
-    Expanded(
-      child: ElevatedButton.icon(
-        onPressed: () {
-          final memberId = _memberIdController.text.trim();
+                                      if (guests.isNotEmpty) {
+                                        final guestResponse = guests.first;
+                                        ref
+                                            .read(
+                                              selectedGuestProvider.notifier,
+                                            )
+                                            .setSelectedGuest(
+                                              Guest(
+                                                mid:
+                                                    guestResponse.mid ??
+                                                    _memberIdController.text,
+                                                memberName:
+                                                    guestResponse.mName ??
+                                                    _memberNameController.text,
+                                                country: "",
+                                                lastVisitDate:
+                                                    guestResponse.lvd
+                                                        ?.toString() ??
+                                                    "",
+                                                age: 0,
+                                                gRating:
+                                                    guestResponse.gRating ?? "",
+                                                mGroup: guestResponse.mGroup,
+                                                gName:
+                                                    guestResponse.gName ?? "",
+                                                memImage2:
+                                                    guestResponse.memImage2,
+                                              ),
+                                            );
+                                        context.push('/home/profile');
+                                      } else {
+                                        ref
+                                            .read(
+                                              selectedGuestProvider.notifier,
+                                            )
+                                            .setSelectedGuest(
+                                              Guest(
+                                                mid: _memberIdController.text,
+                                                memberName:
+                                                    _memberNameController.text,
+                                                country: "",
+                                                lastVisitDate: "1990-01-01",
+                                                age: 0,
+                                                gRating: "",
+                                                mGroup: "",
+                                                gName: "",
+                                              ),
+                                            );
+                                        context.push('/home/profile');
+                                      }
+                                    } catch (e) {
+                                      setState(() {
+                                        _isLoading = false;
+                                      });
+                                    }
+                                  },
+                            child: _isLoading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(Icons.person_search, size: 25),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                final memberId = _memberIdController.text
+                                    .trim();
 
-          if (memberId.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("Please enter a Member ID"),
-              ),
-            );
-            return;
-          }
+                                if (memberId.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Please enter a Member ID"),
+                                    ),
+                                  );
+                                  return;
+                                }
 
-          context.push(
-            '/gifts/special-gift-requests/prv-gifts/$memberId',
-          );
-        },
-        icon: const Icon(Icons.card_giftcard),
-        label: Text(
-          "Previous Gift",
-          style: TextStyle(
-            fontSize: fontSettings.fontSize,
-            fontWeight: fontSettings.fontWeight,
-          ),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blue,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-        ),
-      ),
-    ),
-  ],
-),
+                                context.push(
+                                  '/gifts/special-gift-requests/prv-gifts/$memberId',
+                                );
+                              },
+                              icon: const Icon(Icons.card_giftcard),
+                              label: Text(
+                                "Previous Gift",
+                                style: TextStyle(
+                                  fontSize: fontSettings.fontSize,
+                                  fontWeight: fontSettings.fontWeight,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
 
                       // const SizedBox(height: 16.0),
 
@@ -893,7 +1153,7 @@ Row(
                                   ),
                                 ),
                                 DataColumn(
-                                //   numeric: true,
+                                  //   numeric: true,
                                   label: Text(
                                     "Value",
                                     style: TextStyle(
@@ -1104,71 +1364,69 @@ Row(
                               return null;
                             },
                           ),
-
-                        
                         ],
                       ),
-if (widget.isPending) ...[
-  const SizedBox(height: 16),
+                      if (widget.isPending) ...[
+                        const SizedBox(height: 16),
 
-  DropdownButtonFormField<int>(
-    value: _selectedValidDays,
-    style: TextStyle(
-      fontSize: fontSettings.fontSize + 2,
-      fontWeight: FontWeight.bold, // ✅ Selected value bold
-      color: Colors.black,
-    ),
-    decoration: InputDecoration(
-      labelText: "Valid Days",
-      labelStyle: TextStyle(
-        fontSize: fontSettings.fontSize,
-        fontWeight: fontSettings.fontWeight,
-      ),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 12,
-      ),
-    ),
-    items: const [
-      DropdownMenuItem(
-        value: 30,
-        child: Text(
-          "30 Days",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-      ),
-      DropdownMenuItem(
-        value: 60,
-        child: Text(
-          "60 Days",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-      ),
-      DropdownMenuItem(
-        value: 90,
-        child: Text(
-          "90 Days",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-      ),
-    ],
-    onChanged: (value) {
-      setState(() {
-        _selectedValidDays = value;
-      });
-    },
-    validator: (value) {
-      if (value == null) {
-        return "Please select valid days";
-      }
-      return null;
-    },
-  ),
-],
- const SizedBox(height: 16),
+                        DropdownButtonFormField<int>(
+                          value: _selectedValidDays,
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize + 2,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: "Valid Days",
+                            labelStyle: TextStyle(
+                              fontSize: fontSettings.fontSize,
+                              fontWeight: fontSettings.fontWeight,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 12,
+                            ),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 30,
+                              child: Text(
+                                "30 Days",
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: 60,
+                              child: Text(
+                                "60 Days",
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: 90,
+                              child: Text(
+                                "100 Days",
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedValidDays = value;
+                            });
+                          },
+                          validator: (value) {
+                            if (value == null) {
+                              return "Please select valid days";
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                      const SizedBox(height: 16),
                       TextFormField(
                         controller: _remarksController,
                         readOnly: !_isEditable,

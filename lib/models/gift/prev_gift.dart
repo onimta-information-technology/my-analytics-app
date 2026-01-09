@@ -52,6 +52,7 @@ class PrevGift {
   String? cashierPayType;
   double? flushActDrop;
   String? mktPer;
+ String? giftAppTime;
 
   PrevGift({
     required this.mid, 
@@ -106,7 +107,9 @@ class PrevGift {
     required this.isPaid,            
     required this.cashierPayType,            
     required this.flushActDrop,            
-     this.mktPer
+     this.mktPer,
+     this.giftAppTime
+
     });
     
   factory PrevGift.fromJson(Map<String, dynamic> json) {
@@ -163,6 +166,7 @@ class PrevGift {
       cashierPayType: json['CashierPay_Type'],
       flushActDrop: (json['FlushActDrop'] as num?)?.toDouble(),
       mktPer: json['Mkt_Per'],
+      giftAppTime: json['Gift_App_Time']
      );
   }
 
@@ -219,6 +223,7 @@ class PrevGift {
     'Is_Paid': isPaid,
     'CashierPay_Type': cashierPayType,
     'FlushActDrop': flushActDrop,
-    'Mkt_Per': mktPer
+    'Mkt_Per': mktPer,
+    'Gift_App_Time': giftAppTime
   };
 }

@@ -22,7 +22,7 @@ class _WatermarkState extends State<Watermark> {
   Future<void> _loadUserData() async {
     final name = await StorageUtil.getUserName();
     final now = DateTime.now();
-
+print('Watermark User Name: $name');
     setState(() {
       userName = name ?? "Loading...";
       lastSeen = DateFormat('dd MMM yyyy, hh:mm a').format(now);

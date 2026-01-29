@@ -8,12 +8,12 @@ class BirthdaysNotifier extends StateNotifier<Map<String, List<Birthday>>> {
   final BirthdayRepository birthdayRepository;
 
   BirthdaysNotifier(this.birthdayRepository)
-      : super({
-          'past': [],
-          'recentPast': [],
-          'recentUpcoming': [],
-          'upcoming': [],
-        });
+    : super({
+        'past': [],
+        'recentPast': [],
+        'recentUpcoming': [],
+        'upcoming': [],
+      });
 
   Future<Map<String, List<Birthday>>> getBirthdays() async {
     try {
@@ -26,7 +26,6 @@ class BirthdaysNotifier extends StateNotifier<Map<String, List<Birthday>>> {
       };
       return state;
     } catch (e) {
-    
       state = {
         'past': [],
         'recentPast': [],
@@ -37,12 +36,13 @@ class BirthdaysNotifier extends StateNotifier<Map<String, List<Birthday>>> {
     }
   }
 
-  Future<String> sendWhatsappMessage(
-      {required String mname,
-      required String whatsappNumber,
-      required String gift,
-        required String mid,
-    required String memberMobile,}) async {
+  Future<String> sendWhatsappMessage({
+    required String mname,
+    required String whatsappNumber,
+    required String gift,
+    required String mid,
+    required String memberMobile,
+  }) async {
     try {
       final response = await birthdayRepository.sendWhatsappMessage(
         gift: gift,
@@ -58,8 +58,9 @@ class BirthdaysNotifier extends StateNotifier<Map<String, List<Birthday>>> {
   }
 }
 
-final flutterSecureStorageProvider =
-    Provider((ref) => const FlutterSecureStorage());
+final flutterSecureStorageProvider = Provider(
+  (ref) => const FlutterSecureStorage(),
+);
 
 final apiServiceProvider = Provider((ref) {
   final storage = ref.read(flutterSecureStorageProvider);
@@ -72,8 +73,9 @@ final birthdaysRepositoryProvider = Provider((ref) {
 });
 
 final birthdayProvider =
-    StateNotifierProvider<BirthdaysNotifier, Map<String, List<Birthday>>>(
-        (ref) {
-  final birthdayRepository = ref.read(birthdaysRepositoryProvider);
-  return BirthdaysNotifier(birthdayRepository);
-});
+    StateNotifierProvider<BirthdaysNotifier, Map<String, List<Birthday>>>((
+      ref,
+    ) {
+      final birthdayRepository = ref.read(birthdaysRepositoryProvider);
+      return BirthdaysNotifier(birthdayRepository);
+    });

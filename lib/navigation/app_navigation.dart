@@ -4,11 +4,13 @@ import 'package:ballys_reservation_app/data/repositories/inactive_members_reposi
 import 'package:ballys_reservation_app/data/repositories/member_profile_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/main.dart';
+import 'package:ballys_reservation_app/models/birthday.dart';
 import 'package:ballys_reservation_app/models/gift/special_gift_request.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/screens/approve_reject_show_screen.dart';
 import 'package:ballys_reservation_app/screens/auth/login_screen.dart';
 import 'package:ballys_reservation_app/screens/auth/otpVerification_screen.dart';
+import 'package:ballys_reservation_app/screens/birthday_gift_price_increase_screen.dart';
 import 'package:ballys_reservation_app/screens/birthday_screen.dart';
 import 'package:ballys_reservation_app/screens/daily_walking_guests/daily_walking_guests%20_screen.dart';
 import 'package:ballys_reservation_app/screens/chat_screen.dart';
@@ -445,12 +447,33 @@ class AppNavigation {
           //   path: '/settings',
           //   builder: (context, state) => const SettingsPopupMenu(),
           // ),
+          // GoRoute(
+          //   path: '/birthdays',
+          //   pageBuilder: (context, state) => CustomTransitionPage(
+          //     fullscreenDialog: true,
+          //     key: state.pageKey,
+          //     child: const BirthdayScreen(),
+          //     transitionsBuilder:
+          //         (context, animation, secondaryAnimation, child) {
+          //           return FadeTransition(
+          //             opacity: CurveTween(
+          //               curve: Curves.easeInOutCirc,
+          //             ).animate(animation),
+          //             child: child,
+          //           );
+          //         },
+          //   ),
+          // ),
           GoRoute(
             path: '/birthdays',
             pageBuilder: (context, state) => CustomTransitionPage(
               fullscreenDialog: true,
               key: state.pageKey,
-              child: const BirthdayScreen(),
+              child: BirthdayScreen(
+                giftsRepository: GiftsRepository(
+                  ApiService(const FlutterSecureStorage()),
+                ),
+              ),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) {
                     return FadeTransition(
@@ -461,6 +484,34 @@ class AppNavigation {
                     );
                   },
             ),
+            routes: [
+              // Add this nested route for birthday gift price increase
+              GoRoute(
+                path: 'gift-price-increase',
+                pageBuilder: (context, state) {
+                  final birthday = state.extra as Birthday;
+                  return CustomTransitionPage(
+                    fullscreenDialog: false,
+                    key: state.pageKey,
+                    child: BirthdayGiftPriceIncreaseScreen(
+                      birthday: birthday,
+                      giftsRepository: GiftsRepository(
+                        ApiService(const FlutterSecureStorage()),
+                      ),
+                    ),
+                    transitionsBuilder:
+                        (context, animation, secondaryAnimation, child) {
+                          return FadeTransition(
+                            opacity: CurveTween(
+                              curve: Curves.easeInOutCirc,
+                            ).animate(animation),
+                            child: child,
+                          );
+                        },
+                  );
+                },
+              ),
+            ],
           ),
           GoRoute(
             path: '/inactive-members',

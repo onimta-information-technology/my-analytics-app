@@ -365,7 +365,7 @@ print('Prev Gift Response: $response');
       String decStr(num? v) => (v == null) ? "0" : v.toString();
 
       //final double totalCoupon = (guestCoupon ?? 0.0) + (flushCoupon ?? 0.0);
-
+print('Inserting special gift request for MID: $mid, Member Name: $memberName, Amount: $amount');
       final payload = {
         "HasReturnData": "T",
         "Parameters": [
@@ -588,8 +588,9 @@ print('Prev Gift Response: $response');
     required String remarks,
     required String amount,
     required String userName,
+    required String validDates,
   }) async {
-   print('Approving special gift request: reqid=$reqid, remarks=$remarks, amount=$amount, userName=$userName'); 
+   print('Approving special gift request: reqid=$reqid, remarks=$remarks, amount=$amount, userName=$userName , validDates=$validDates'); 
 
     try {
       final deviceId = await DeviceId.get();
@@ -635,6 +636,13 @@ print('Prev Gift Response: $response');
             "Para_Direction": "Input",
             "Para_Lenth": 100,
             "Para_Name": "@Text4",
+            "Para_Type": "varchar",
+          },
+            {
+            "Para_Data": validDates,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text5",
             "Para_Type": "varchar",
           },
           {

@@ -5,13 +5,16 @@ import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/birthdays_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 class BirthdayScreen extends ConsumerStatefulWidget {
-  const BirthdayScreen({super.key});
+  final GiftsRepository giftsRepository;
+  
+  const BirthdayScreen({super.key, required this.giftsRepository});
 
   @override
   ConsumerState<BirthdayScreen> createState() => _BirthdayScreenState();
@@ -25,6 +28,7 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
   bool _showRecentUpcoming = true;
   bool _isLoading = false;
   bool _isRefreshing = false;
+  
   @override
   void initState() {
     super.initState();
@@ -340,18 +344,13 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                       ],
                     ),
                     const SizedBox(height: 8.0),
-                    // New Button for Price Increase Request
+                    // Updated Button for Price Increase Request using go_router
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          // TODO: Implement price increase request functionality
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Price increase requested for ${birthday.mname}'),
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
+                          // Navigate using go_router with birthday object passed as extra
+                          context.push('/birthdays/gift-price-increase', extra: birthday);
                         },
                         icon: const Icon(Icons.trending_up, color: Colors.white),
                         label: const Text(

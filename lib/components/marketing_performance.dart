@@ -710,7 +710,7 @@ class _MarketingPerformanceWidgetState
                 // MDrop Header
                 Expanded(
                   child: Text(
-                    'MDrop',
+                    'Drop',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,

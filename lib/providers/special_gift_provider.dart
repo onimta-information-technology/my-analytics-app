@@ -182,12 +182,15 @@ class GiftNotifier extends StateNotifier<GiftState> {
     required String remarks,
     required String amount,
     required String userName,
+    required String validDates,
   }) async {
     return await giftRepository.approvedSPecialgiftRequest(
       reqid: reqid,
       remarks: remarks,
       amount: amount,
       userName: userName,
+      validDates: validDates,
+
     );
   }
 

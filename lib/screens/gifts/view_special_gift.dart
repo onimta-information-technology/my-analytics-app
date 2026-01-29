@@ -1044,7 +1044,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             DropdownMenuItem(
                               value: 90,
                               child: Text(
-                                "100 Days",
+                                "90 Days",
                                 style: TextStyle(fontWeight: FontWeight.bold),
                               ),
                             ),
@@ -1104,6 +1104,17 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                     return;
                                   }
 
+                                  // Validate that valid days is selected
+                                  if (_selectedValidDays == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text("Please select valid days"),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                    return;
+                                  }
+
                                   final reqid = widget.gift!.idNo;
                                   final remarks = _remarksController.text;
                                   final amount = _amountController.text;
@@ -1121,6 +1132,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                           remarks: remarks,
                                           amount: amount,
                                           userName: uname,
+                                          validDates: _selectedValidDays.toString(),
                                         );
 
                                     if (success) {

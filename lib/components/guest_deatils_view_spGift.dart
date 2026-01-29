@@ -751,7 +751,7 @@ class GuestDisplayCardSpecialGiftview extends ConsumerWidget {
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
-                                    "LVD: ${_formatLastVisitDate(selectedGuest?.lastVisitDate)}",
+                                    "Last Visit On: ${_formatLastVisitDate(selectedGuest?.lastVisitDate)}",
                                     style: TextStyle(
                                       fontSize: fontSettings.fontSize * 0.85,
                                       fontWeight: fontSettings.fontWeight,

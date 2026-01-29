@@ -59,6 +59,7 @@ class SpecialGiftRequest {
   final String? firstAppTime;
   final String? giftCategoryApp;
   final String? descApp;
+  final String? validDates;
   SpecialGiftRequest({
     required this.idNo,
     required this.mid,
@@ -120,9 +121,16 @@ class SpecialGiftRequest {
     this.firstAppTime,
     this.giftCategoryApp,
     this.descApp,
+     this.validDates,
   });
 
   factory SpecialGiftRequest.fromJson(Map<String, dynamic> json) {
+    String? parseValidDates(dynamic value) {
+      if (value == null) return null;
+      if (value is String) return value.isEmpty ? null : value;
+      if (value is num) return value.toString();
+      return value.toString();
+    }
     return SpecialGiftRequest(
       idNo: (json['Id_No'] ?? 0).toDouble(),
       mid: json['MID'] ?? '',
@@ -184,6 +192,7 @@ class SpecialGiftRequest {
       firstAppTime: json['First_AppBy_Time'],
       giftCategoryApp: json['Gift_Category_App'],
       descApp: json['Gift_Desc_App'],
+       validDates: parseValidDates(json['VDate']),
     );
   }
 
@@ -249,6 +258,7 @@ class SpecialGiftRequest {
       'First_AppBy_Time': firstAppTime,
       'Gift_Category_App': giftCategoryApp,
       'Gift_Desc_App': descApp,
+      'VDate': validDates,
     };
   }
 }

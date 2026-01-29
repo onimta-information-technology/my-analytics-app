@@ -192,123 +192,6 @@ class _SpecialGiftRequestScreenState
     );
   }
 
-  // Widget _buildGiftList(
-  //   List<SpecialGiftRequest> gifts, {
-  //   required bool isPending,
-  // }) {
-  //   final fontSettings = ref.watch(fontSettingsProvider);
-
-  //   if (gifts.isEmpty) {
-  //     return const Center(child: Text("No gifts found"));
-  //   }
-
-  //   return ListView.builder(
-  //     itemCount: gifts.length,
-  //     itemBuilder: (context, index) {
-  //       final gift = gifts[index];
-  //       return Stack(
-  //         children: [
-  //           InkWell(
-  //             borderRadius: BorderRadius.circular(10),
-  //             onTap: () async {
-  //               final result =await context.push(
-  //                 '/gifts/special-gift-requests/view-specific-gift-request',
-  //                 extra: {
-  //                   'gift': gift, // the SpecialGiftRequest object
-  //                   'isPending': isPending, // mark it as pending
-  //                 }, // pass the whole object
-  //               );
-  //               if (result == true) {
-  //                 String? salesCode = await StorageUtil.getSalesCode();
-  //                 if (salesCode != null && salesCode.isNotEmpty) {
-  //                   _loadSpGiftData(salesCode);
-  //                 }
-  //               }
-  //             },
-  //             child: Card(
-  //               margin: const EdgeInsets.symmetric(
-  //                 vertical: 10,
-  //                 horizontal: 16,
-  //               ),
-  //               elevation: 4,
-  //               shape: RoundedRectangleBorder(
-  //                 borderRadius: BorderRadius.circular(10),
-  //               ),
-  //               child: ListTile(
-  //                 contentPadding: const EdgeInsets.symmetric(
-  //                   vertical: 14,
-  //                   horizontal: 16,
-  //                 ),
-  //                 title: Text(
-  //                   '${gift.mid} - ${gift.mname}',
-  //                   style: TextStyle(
-  //                     color: Colors.black,
-  //                     fontSize: fontSettings.fontSize,
-  //                     fontWeight: fontSettings.fontWeight,
-  //                   ),
-  //                 ),
-  //                 subtitle: Column(
-  //                   crossAxisAlignment: CrossAxisAlignment.start,
-  //                   children: [
-  //                     Row(
-  //                       children: [
-  //                         const Icon(
-  //                           Icons.card_giftcard,
-  //                           color: Colors.pink,
-  //                           size: 18,
-  //                         ),
-  //                         const SizedBox(width: 6),
-  //                         Text(
-  //                           gift.cashierPayType.replaceAll("_", " "),
-  //                           style: TextStyle(
-  //                             color: Colors.black,
-  //                             fontSize: fontSettings.fontSize,
-  //                             fontWeight: fontSettings.fontWeight,
-  //                           ),
-  //                         ),
-  //                       ],
-  //                     ),
-  //                     const SizedBox(height: 6),
-  //                     Row(
-  //                       children: [
-  //                         const Icon(
-  //                           Icons.access_time,
-  //                           color: Colors.grey,
-  //                           size: 16,
-  //                         ),
-  //                         const SizedBox(width: 6),
-  //                         Text(
-  //                           _formatDate(gift.insertDate),
-  //                           style: TextStyle(
-  //                             color: const Color.fromARGB(255, 2, 2, 2),
-  //                             fontSize: fontSettings.fontSize - 1,
-  //                           ),
-  //                         ),
-  //                       ],
-  //                     ),
-  //                   ],
-  //                 ),
-  //               ),
-  //             ),
-  //           ),
-  //           Positioned(
-  //             top: 10,
-  //             right: 15,
-  //             child: SizedBox(
-  //               width: 90,
-  //               height: 30,
-  //               child: Image.asset(
-  //                 ratingImageMap[gift.gRating] ??
-  //                     "assets/images/ratings/CLASSIC.png",
-  //                 fit: BoxFit.contain,
-  //               ),
-  //             ),
-  //           ),
-  //         ],
-  //       );
-  //     },
-  //   );
-  // }
 Widget _buildGiftList(
   List<SpecialGiftRequest> gifts, {
   required bool isPending,
@@ -482,6 +365,38 @@ Widget _buildGiftList(
                               actionBy,
                               style: TextStyle(
                                 color: actionColor,
+                                fontSize: fontSettings.fontSize - 1,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    // Valid Date (only for approved items)
+                    if (isApproved && gift.validDates != null && gift.validDates!.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_today,
+                            color: Colors.deepPurple,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Valid For: ',
+                            style: TextStyle(
+                              fontSize: fontSettings.fontSize - 1,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              '${gift.validDates} days',
+                              style: TextStyle(
+                                color: Colors.deepPurple,
                                 fontSize: fontSettings.fontSize - 1,
                                 fontWeight: FontWeight.w600,
                               ),

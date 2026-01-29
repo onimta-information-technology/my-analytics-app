@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/components/guest_deatils_view_spGift.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
@@ -10,6 +11,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:ballys_reservation_app/models/birthday.dart';
+import 'package:ballys_reservation_app/models/guest_modal.dart';
+import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+
 import 'package:intl/intl.dart';
 
 class BirthdayGiftPriceIncreaseScreen extends ConsumerStatefulWidget {
@@ -47,6 +51,8 @@ class _BirthdayGiftPriceIncreaseScreenState
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _showGuestData = false;
+  bool _showGuestCard = false;
+  bool _isLoadingGuestCard = true;
 
   @override
   void initState() {
@@ -55,7 +61,49 @@ class _BirthdayGiftPriceIncreaseScreenState
     _initializeMemberData();
     Future.microtask(() {
       ref.read(giftProvider.notifier).getGiftForList();
+      // Fetch complete guest data including image
+      _fetchCompleteGuestData();
     });
+  }
+
+  Future<void> _fetchCompleteGuestData() async {
+    setState(() {
+      _isLoadingGuestCard = true;
+      _showGuestCard = true;
+    });
+
+    try {
+      // Fetch the complete guest data from your repository
+      // This should include the memImage2 field
+      await ref.read(selectedGuestProvider.notifier).getGuestImage(9021,
+        widget.birthday.mid,
+      );
+      
+      setState(() {
+        _isLoadingGuestCard = false;
+      });
+    } catch (e) {
+      // If fetching fails, set basic guest info without image
+      setState(() {
+        _isLoadingGuestCard = false;
+      });
+      
+      ref.read(selectedGuestProvider.notifier).setSelectedGuest(
+        Guest(
+          mid: widget.birthday.mid,
+          memberName: widget.birthday.mname,
+          country: widget.birthday.country,
+          lastVisitDate: widget.birthday.lvd.toString(),
+          age: widget.birthday.age,
+          gRating: widget.birthday.gRating,
+          mGroup: widget.birthday.mGroup,
+          gName: widget.birthday.gName,
+          gift: widget.birthday.gift,
+          mobile: widget.birthday.mobile,
+          memImage2: null, // No image available
+        ),
+      );
+    }
   }
 
   void _initializeMemberData() {
@@ -184,84 +232,31 @@ class _BirthdayGiftPriceIncreaseScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Member Information Card
+                      // Guest Display Card
+                      GuestDisplayCardSpecialGiftview(
+                        memberIdText: _memberIdController.text,
+                        memberNameText: _memberNameController.text,
+                        showCard: _showGuestCard,
+                        isLoading: _isLoadingGuestCard,
+                        showLastVisitDate: true,
+                      ),
+
+                      const SizedBox(height: 16.0),
+
+                      // Current Gift Value Card
                       Card(
                         elevation: 2,
-                        color: Colors.blue.shade50,
+                        color: Colors.green.shade50,
                         child: Padding(
                           padding: const EdgeInsets.all(12.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
                             children: [
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.person,
-                                    color: Colors.blue,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Member Information',
-                                    style: TextStyle(
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.blue.shade900,
-                                    ),
-                                  ),
-                                ],
+                              Icon(
+                                Icons.card_giftcard,
+                                color: Colors.green.shade700,
+                                size: 24,
                               ),
-                              const Divider(),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Member ID:',
-                                          style: TextStyle(
-                                            fontSize:
-                                                fontSettings.fontSize - 2,
-                                            color: const Color.fromARGB(255, 0, 0, 0),
-                                          ),
-                                        ),
-                                        Text(
-                                          widget.birthday.mid,
-                                          style: TextStyle(
-                                            fontSize: fontSettings.fontSize,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Member Name:',
-                                          style: TextStyle(
-                                            fontSize:
-                                                fontSettings.fontSize - 2,
-                                            color: const Color.fromARGB(255, 0, 0, 0),
-                                          ),
-                                        ),
-                                        Text(
-                                          widget.birthday.mname,
-                                          style: TextStyle(
-                                            fontSize: fontSettings.fontSize,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
+                              const SizedBox(width: 12),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -275,7 +270,7 @@ class _BirthdayGiftPriceIncreaseScreenState
                                   Text(
                                     widget.birthday.gift,
                                     style: TextStyle(
-                                      fontSize: fontSettings.fontSize + 2,
+                                      fontSize: fontSettings.fontSize + 4,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.green.shade700,
                                     ),
@@ -341,8 +336,6 @@ class _BirthdayGiftPriceIncreaseScreenState
                       ),
 
                       const SizedBox(height: 10.0),
-
-                    
 
                       // Guest Data and Previous Gift Buttons
                       Row(
@@ -623,7 +616,7 @@ class _BirthdayGiftPriceIncreaseScreenState
                                     }).toList(),
                                   ),
                                 ),
-                               const Watermark(),
+                                const Watermark(),
                               ],
                             );
                           },

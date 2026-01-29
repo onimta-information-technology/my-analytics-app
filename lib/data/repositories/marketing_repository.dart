@@ -28,7 +28,7 @@ class MarketingRepository {
   ) async {
     final actualSalesCode = await StorageUtil.getSalesCode();
     final deviceId = await DeviceId.get();
-
+print('Marketing Repository - IID: $iid, Sales Code: $actualSalesCode, Device ID: $deviceId');
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [

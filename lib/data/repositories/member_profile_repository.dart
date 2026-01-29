@@ -17,7 +17,7 @@ class MemberProfileRepository {
   Future<List<MemberMainProfile>> getMemberMainProfileDetails(
     String text1,
   ) async {
- 
+ print('getMemberMainProfileDetails called with text1: $text1');
     final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
@@ -47,7 +47,7 @@ class MemberProfileRepository {
       "SpName": "sp_CRM_Common_API",
       "con": "1",
     });
-
+print('Response from CommonExecute: $response');
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List &&
         response['CommonResult']['Table'].isNotEmpty) {

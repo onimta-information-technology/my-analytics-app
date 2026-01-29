@@ -106,11 +106,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
         _loadGuestDataForCard();
       });
     }
-    // } else {}
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //       _loadGuestDataForCard();
-    //     });
-    //   }
+
     Future.microtask(() {
       ref.read(giftProvider.notifier).getGiftForList();
     });
@@ -276,13 +272,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
             }
           },
         ),
-        // title: Text(
-        //   'Special Gift Request',
-        //   style: TextStyle(
-        //     fontSize: fontSettings.fontSize,
-        //     fontWeight: fontSettings.fontWeight,
-        //   ),
-        // ),
+
         title: Text(
           'Special Gift Request',
           style: TextStyle(
@@ -290,33 +280,6 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
             fontWeight: fontSettings.fontWeight,
           ),
         ),
-
-        // /// 🔁 Right-side title (Approve + Reject only)
-        // actions: [
-        //   if (!widget.isPending)
-        //     Padding(
-        //       padding: const EdgeInsets.only(right: 12),
-        //       child: Center(
-        //         child: Container(
-        //           padding: const EdgeInsets.symmetric(
-        //             horizontal: 6,
-        //             vertical: 6,
-        //           ),
-        //           decoration: BoxDecoration(
-        //             color: Colors.orange,
-        //             borderRadius: BorderRadius.circular(20),
-        //           ),
-        //           child: const Text(
-        //             'Reverse Gift',
-        //             style: TextStyle(
-        //               color: Colors.white,
-        //               fontWeight: FontWeight.w600,
-        //             ),
-        //           ),
-        //         ),
-        //       ),
-        //     ),
-        // ],
       ),
       body: PopScope(
         onPopInvokedWithResult: (bool didPop, dynamic result) {
@@ -332,328 +295,224 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                   key: _formKey,
                   child: Column(
                     children: [
-                      // if (!widget.isPending)
-                      //   Container(
-                      //     width: double.infinity,
-                      //     margin: const EdgeInsets.only(bottom: 16),
-                      //     child: ElevatedButton.icon(
-                      //       onPressed: () {
-                      //         // Show confirmation dialog
-                      //         showDialog(
-                      //           context: context,
-                      //           builder: (context) => AlertDialog(
-                      //             title: const Text('Reverse Gift'),
-                      //             content: const Text(
-                      //               'Are you sure you want to reverse this gift?',
-                      //             ),
-                      //             actions: [
-                      //               TextButton(
-                      //                 onPressed: () => Navigator.pop(context),
-                      //                 child: const Text('Cancel'),
-                      //               ),
-                      //               ElevatedButton(
-                      //                 onPressed: () async {
-                      //                   // Add your reverse gift API call here
-                      //                   Navigator.pop(context);
-
-                      //                   setState(() {
-                      //                     _isLoading = true;
-                      //                   });
-
-                      //                   try {
-                      //                     // Example: Call your reverse gift method
-                      //                     // final success = await ref
-                      //                     //     .read(giftProvider.notifier)
-                      //                     //     .reverseGift(
-                      //                     //       reqid: widget.gift!.idNo,
-                      //                     //       userName: userName ?? "",
-                      //                     //     );
-
-                      //                     // if (success) {
-                      //                     //   ScaffoldMessenger.of(context).showSnackBar(
-                      //                     //     const SnackBar(
-                      //                     //       content: Text('Gift reversed successfully'),
-                      //                     //     ),
-                      //                     //   );
-                      //                     //   Navigator.of(context).pop(true);
-                      //                     // }
-
-                      //                     ScaffoldMessenger.of(
-                      //                       context,
-                      //                     ).showSnackBar(
-                      //                       const SnackBar(
-                      //                         content: Text(
-                      //                           'Gift reversal in progress...',
-                      //                         ),
-                      //                       ),
-                      //                     );
-                      //                   } catch (e) {
-                      //                     ScaffoldMessenger.of(
-                      //                       context,
-                      //                     ).showSnackBar(
-                      //                       SnackBar(
-                      //                         content: Text('Error: $e'),
-                      //                       ),
-                      //                     );
-                      //                   } finally {
-                      //                     setState(() {
-                      //                       _isLoading = false;
-                      //                     });
-                      //                   }
-                      //                 },
-                      //                 style: ElevatedButton.styleFrom(
-                      //                   backgroundColor: Colors.red,
-                      //                   foregroundColor: Colors.white,
-                      //                 ),
-                      //                 child: const Text('Reverse'),
-                      //               ),
-                      //             ],
-                      //           ),
-                      //         );
-                      //       },
-                      //       icon: const Icon(Icons.undo, size: 20),
-                      //       label: Text(
-                      //         'Reverse Gift',
-                      //         style: TextStyle(
-                      //           fontSize: fontSettings.fontSize,
-                      //           fontWeight: FontWeight.w600,
-                      //         ),
-                      //       ),
-                      //       style: ElevatedButton.styleFrom(
-                      //         backgroundColor: Colors.orange,
-                      //         foregroundColor: Colors.white,
-                      //         padding: const EdgeInsets.symmetric(vertical: 14),
-                      //         shape: RoundedRectangleBorder(
-                      //           borderRadius: BorderRadius.circular(12),
-                      //         ),
-                      //       ),
-                      //     ),
-                      //   ),
-    
-                        if (widget.isApproved)
-                          Container(
-                            width: double.infinity,
-                            margin: const EdgeInsets.only(bottom: 16),
-                            child: ElevatedButton.icon(
-                              onPressed: () async {
-                                // Show confirmation dialog and wait for result
-                                final confirmed = await showDialog<bool>(
-                                  context: context,
-                                  builder: (dialogContext) => AlertDialog(
-                                    title: const Text('Reverse Gift'),
-                                    content: const Text(
-                                      'Are you sure you want to reverse this gift?',
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.of(
-                                          dialogContext,
-                                        ).pop(false),
-                                        child: const Text('Cancel'),
-                                      ),
-                                      ElevatedButton(
-                                        onPressed: () => Navigator.of(
-                                          dialogContext,
-                                        ).pop(true),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.red,
-                                          foregroundColor: Colors.white,
-                                        ),
-                                        child: const Text('Reverse'),
-                                      ),
-                                    ],
+                      if (widget.isApproved)
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              // Show confirmation dialog and wait for result
+                              final confirmed = await showDialog<bool>(
+                                context: context,
+                                builder: (dialogContext) => AlertDialog(
+                                  title: const Text('Reverse Gift'),
+                                  content: const Text(
+                                    'Are you sure you want to reverse this gift?',
                                   ),
-                                );
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(
+                                        dialogContext,
+                                      ).pop(false),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () =>
+                                          Navigator.of(dialogContext).pop(true),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      child: const Text('Reverse'),
+                                    ),
+                                  ],
+                                ),
+                              );
 
-                                // If user didn't confirm, do nothing
-                                if (confirmed != true) return;
+                              // If user didn't confirm, do nothing
+                              if (confirmed != true) return;
 
-                                // User confirmed, proceed with reversal
+                              // User confirmed, proceed with reversal
+                              setState(() {
+                                _isLoading = true;
+                              });
+
+                              try {
+                                final success = await ref
+                                    .read(giftProvider.notifier)
+                                    .reverseSpecialGiftFromUI(
+                                      reqid: widget.gift!.idNo,
+                                      userName: userName ?? "",
+                                    );
+
                                 setState(() {
-                                  _isLoading = true;
+                                  _isLoading = false;
                                 });
 
-                                try {
-                                  final success = await ref
-                                      .read(giftProvider.notifier)
-                                      .reverseSpecialGiftFromUI(
-                                        reqid: widget.gift!.idNo,
-                                        userName: userName ?? "",
-                                      );
+                                if (!mounted) return;
 
-                                  setState(() {
-                                    _isLoading = false;
-                                  });
-
-                                  if (!mounted) return;
-
-                                  if (success) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Gift reversed successfully',
-                                        ),
-                                        backgroundColor: Colors.green,
-                                      ),
-                                    );
-
-                                    // Navigate back to SpecialGiftRequestScreen
-                                    Navigator.of(context).pop(true);
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Failed to reverse gift'),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
-                                  }
-                                } catch (e) {
-                                  setState(() {
-                                    _isLoading = false;
-                                  });
-
-                                  if (!mounted) return;
-
+                                if (success) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Error: $e'),
+                                    const SnackBar(
+                                      content: Text(
+                                        'Gift reversed successfully',
+                                      ),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+
+                                  // Navigate back to SpecialGiftRequestScreen
+                                  Navigator.of(context).pop(true);
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Failed to reverse gift'),
                                       backgroundColor: Colors.red,
                                     ),
                                   );
                                 }
-                              },
-                              icon: const Icon(Icons.undo, size: 20),
-                              label: Text(
-                                'Reverse Gift',
-                                style: TextStyle(
-                                  fontSize: fontSettings.fontSize,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              } catch (e) {
+                                setState(() {
+                                  _isLoading = false;
+                                });
+
+                                if (!mounted) return;
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.undo, size: 20),
+                            label: Text(
+                              'Reverse Gift',
+                              style: TextStyle(
+                                fontSize: fontSettings.fontSize,
+                                fontWeight: FontWeight.w600,
                               ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.orange,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 14,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
                             ),
                           ),
-                          if (!widget.isApproved && !widget.isPending)
-                          Container(
-                            width: double.infinity,
-                            margin: const EdgeInsets.only(bottom: 16),
-                            child: ElevatedButton.icon(
-                              onPressed: () async {
-                                // Show confirmation dialog and wait for result
-                                final confirmed = await showDialog<bool>(
-                                  context: context,
-                                  builder: (dialogContext) => AlertDialog(
-                                    title: const Text('Reverse Gift'),
-                                    content: const Text(
-                                      'Are you sure you want to reverse this gift?',
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.of(
-                                          dialogContext,
-                                        ).pop(false),
-                                        child: const Text('Cancel'),
-                                      ),
-                                      ElevatedButton(
-                                        onPressed: () => Navigator.of(
-                                          dialogContext,
-                                        ).pop(true),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.red,
-                                          foregroundColor: Colors.white,
-                                        ),
-                                        child: const Text('Reverse'),
-                                      ),
-                                    ],
+                        ),
+                      if (!widget.isApproved && !widget.isPending)
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              // Show confirmation dialog and wait for result
+                              final confirmed = await showDialog<bool>(
+                                context: context,
+                                builder: (dialogContext) => AlertDialog(
+                                  title: const Text('Reverse Gift'),
+                                  content: const Text(
+                                    'Are you sure you want to reverse this gift?',
                                   ),
-                                );
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(
+                                        dialogContext,
+                                      ).pop(false),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () =>
+                                          Navigator.of(dialogContext).pop(true),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      child: const Text('Reverse'),
+                                    ),
+                                  ],
+                                ),
+                              );
 
-                                // If user didn't confirm, do nothing
-                                if (confirmed != true) return;
+                              // If user didn't confirm, do nothing
+                              if (confirmed != true) return;
 
-                                // User confirmed, proceed with reversal
+                              // User confirmed, proceed with reversal
+                              setState(() {
+                                _isLoading = true;
+                              });
+
+                              try {
+                                final success = await ref
+                                    .read(giftProvider.notifier)
+                                    .reverseSpecialGiftFromUIrejcted(
+                                      reqid: widget.gift!.idNo,
+                                      userName: userName ?? "",
+                                    );
+
                                 setState(() {
-                                  _isLoading = true;
+                                  _isLoading = false;
                                 });
 
-                                try {
-                                  final success = await ref
-                                      .read(giftProvider.notifier)
-                                      .reverseSpecialGiftFromUIrejcted(
-                                        reqid: widget.gift!.idNo,
-                                        userName: userName ?? "",
-                                      );
+                                if (!mounted) return;
 
-                                  setState(() {
-                                    _isLoading = false;
-                                  });
-
-                                  if (!mounted) return;
-
-                                  if (success) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Gift reversed successfully',
-                                        ),
-                                        backgroundColor: Colors.green,
-                                      ),
-                                    );
-
-                                    // Navigate back to SpecialGiftRequestScreen
-                                    Navigator.of(context).pop(true);
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Failed to reverse gift'),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
-                                  }
-                                } catch (e) {
-                                  setState(() {
-                                    _isLoading = false;
-                                  });
-
-                                  if (!mounted) return;
-
+                                if (success) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Error: $e'),
+                                    const SnackBar(
+                                      content: Text(
+                                        'Gift reversed successfully',
+                                      ),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+
+                                  // Navigate back to SpecialGiftRequestScreen
+                                  Navigator.of(context).pop(true);
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Failed to reverse gift'),
                                       backgroundColor: Colors.red,
                                     ),
                                   );
                                 }
-                              },
-                              icon: const Icon(Icons.undo, size: 20),
-                              label: Text(
-                                'Reverse Gift',
-                                style: TextStyle(
-                                  fontSize: fontSettings.fontSize,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              } catch (e) {
+                                setState(() {
+                                  _isLoading = false;
+                                });
+
+                                if (!mounted) return;
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.undo, size: 20),
+                            label: Text(
+                              'Reverse Gift',
+                              style: TextStyle(
+                                fontSize: fontSettings.fontSize,
+                                fontWeight: FontWeight.w600,
                               ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.orange,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 14,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
                             ),
                           ),
+                        ),
                       const SizedBox(height: 5.0),
                       TextFormField(
                         controller: (_fromDateController),
@@ -692,185 +551,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                         ),
                       ),
                       const SizedBox(height: 5.0),
-                      // Row(
-                      //   children: [
-                      // Expanded(
-                      //   child: TextFormField(
-                      //     keyboardType:
-                      //         const TextInputType.numberWithOptions(),
-                      //     autofocus: false,
-                      //     readOnly: true,
-                      //     controller: _memberIdController,
-                      //     style: _inputTextStyle(fontSettings),
-                      //     decoration: InputDecoration(
-                      //       labelText: "Member ID",
-                      //       labelStyle: TextStyle(
-                      //         fontSize: fontSettings.fontSize,
-                      //         fontWeight: fontSettings.fontWeight,
-                      //       ),
-                      //       border: const OutlineInputBorder(),
-                      //       contentPadding: const EdgeInsets.symmetric(
-                      //         horizontal: 12.0,
-                      //         vertical: -5.0,
-                      //       ),
-                      //     ),
-                      //     onChanged: (value) {
-                      //       _memberNameController.text = '';
-                      //       ref
-                      //           .read(memberSearchProvider.notifier)
-                      //           .resetState();
-                      //     },
-                      //   ),
-                      // ),
-                      //const SizedBox(width: 16.0),
 
-                      // ElevatedButton(
-                      //   style: ElevatedButton.styleFrom(
-                      //     backgroundColor: Colors.black,
-                      //     foregroundColor: Colors.white,
-                      //     padding: const EdgeInsets.symmetric(
-                      //       horizontal: 16,
-                      //       vertical: 14,
-                      //     ),
-                      //   ),
-                      //   onPressed: _isLoading
-                      //       ? null
-                      //       : () async {
-                      //           // Check if guest data is already loaded
-                      //           final selectedGuest = ref.read(
-                      //             selectedGuestProvider,
-                      //           );
-
-                      //           if (selectedGuest != null &&
-                      //               selectedGuest.mid ==
-                      //                   _memberIdController.text) {
-                      //             // Guest data already loaded, just navigate
-                      //             context.push('/home/profile');
-                      //             return;
-                      //           }
-
-                      //           // Guest data not loaded, fetch it
-                      //           try {
-                      //             setState(() {
-                      //               _isLoading = true;
-                      //             });
-
-                      //             GuestRepository guestRepository =
-                      //                 GuestRepository(
-                      //                   ApiService(
-                      //                     const FlutterSecureStorage(),
-                      //                   ),
-                      //                 );
-
-                      //             // Search for guest by MID
-                      //             List<GuestSearchResponse> guests =
-                      //                 await guestRepository.searchGuest(
-                      //                   9021,
-                      //                   _memberIdController.text,
-                      //                 );
-
-                      //             setState(() {
-                      //               _isLoading = false;
-                      //             });
-
-                      //             if (guests.isNotEmpty) {
-                      //               final guestResponse = guests.first;
-                      //               ref
-                      //                   .read(
-                      //                     selectedGuestProvider.notifier,
-                      //                   )
-                      //                   .setSelectedGuest(
-                      //                     Guest(
-                      //                       mid:
-                      //                           guestResponse.mid ??
-                      //                           _memberIdController.text,
-                      //                       memberName:
-                      //                           guestResponse.mName ??
-                      //                           _memberNameController.text,
-                      //                       country: "",
-                      //                       lastVisitDate:
-                      //                           guestResponse.lvd
-                      //                               ?.toString() ??
-                      //                           "",
-
-                      //                       age: 0,
-                      //                       gRating:
-                      //                           guestResponse.gRating ?? "",
-                      //                       mGroup: guestResponse.mGroup,
-                      //                       gName:
-                      //                           guestResponse.gName ?? "",
-                      //                       memImage2:
-                      //                           guestResponse.memImage2,
-                      //                     ),
-                      //                   );
-                      //               context.push('/home/profile');
-                      //             } else {
-                      //               // fallback guest
-                      //               ref
-                      //                   .read(
-                      //                     selectedGuestProvider.notifier,
-                      //                   )
-                      //                   .setSelectedGuest(
-                      //                     Guest(
-                      //                       mid: _memberIdController.text,
-                      //                       memberName:
-                      //                           _memberNameController.text,
-                      //                       country: "",
-                      //                       lastVisitDate: "1990-01-01",
-
-                      //                       age: 0,
-                      //                       gRating: "",
-                      //                       mGroup: "",
-                      //                       gName: "",
-                      //                     ),
-                      //                   );
-                      //               context.push('/home/profile');
-                      //             }
-                      //           } catch (e) {
-                      //             setState(() {
-                      //               _isLoading = false;
-                      //             });
-                      //           }
-                      //         },
-                      //   child: _isLoading
-                      //       ? const SizedBox(
-                      //           width: 20,
-                      //           height: 20,
-                      //           child: CircularProgressIndicator(
-                      //             strokeWidth: 2,
-                      //             color: Colors.white,
-                      //           ),
-                      //         )
-                      //       : const Icon(Icons.person_search, size: 25),
-                      // ),
-                      //   ],
-                      // ),
-
-                      // const SizedBox(height: 16.0),
-                      // TextFormField(
-                      //   autofocus: false,
-                      //   readOnly: true,
-                      //   controller: _memberNameController,
-                      //   style: _inputTextStyle(fontSettings),
-                      //   decoration: InputDecoration(
-                      //     labelText: "Member Name",
-                      //     labelStyle: TextStyle(
-                      //       fontSize: fontSettings.fontSize,
-                      //       fontWeight: fontSettings.fontWeight,
-                      //     ),
-                      //     border: const OutlineInputBorder(),
-                      //     contentPadding: const EdgeInsets.symmetric(
-                      //       horizontal: 12.0,
-                      //       vertical: -5.0,
-                      //     ),
-                      //   ),
-                      //   onChanged: (value) {
-                      //     _memberIdController.text = '';
-                      //     ref.read(memberSearchProvider.notifier).resetState();
-                      //   },
-                      // ),
-                      // // const SizedBox(height: 16.0),
-                      // const SizedBox(height: 10.0),
                       GuestDisplayCardSpecialGiftview(
                         memberIdText: _memberIdController.text,
                         memberNameText: _memberNameController.text,
@@ -882,52 +563,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             true, // Enable last visit date display
                       ),
                       const SizedBox(height: 16.0),
-                      // Row(
-                      //   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      //   children: [
-                      //     const SizedBox(width: 12),
-                      //     Expanded(
-                      //       child: ElevatedButton.icon(
-                      //         onPressed: () {
-                      //           final memberId = _memberIdController.text
-                      //               .trim();
 
-                      //           if (memberId.isEmpty) {
-                      //             ScaffoldMessenger.of(context).showSnackBar(
-                      //               const SnackBar(
-                      //                 content: Text("Please enter a Member ID"),
-                      //               ),
-                      //             );
-                      //             return;
-                      //           }
-
-                      //           // Navigate to PrvGift page with MID as parameter
-                      //           context.push(
-                      //             '/gifts/special-gift-requests/prv-gifts/$memberId',
-                      //           );
-                      //         },
-                      //         icon: const Icon(Icons.card_giftcard),
-                      //         label: Text(
-                      //           "Previous Gift",
-                      //           style: TextStyle(
-                      //             fontSize: fontSettings.fontSize + 2,
-                      //             fontWeight: fontSettings.fontWeight,
-                      //           ),
-                      //         ),
-                      //         style: ElevatedButton.styleFrom(
-                      //           backgroundColor: Colors.blue,
-                      //           foregroundColor: Colors.white,
-                      //           shape: RoundedRectangleBorder(
-                      //             borderRadius: BorderRadius.circular(12),
-                      //           ),
-                      //           padding: const EdgeInsets.symmetric(
-                      //             vertical: 12,
-                      //           ),
-                      //         ),
-                      //       ),
-                      //     ),
-                      //   ],
-                      // ),
                       Row(
                         children: [
                           ElevatedButton(

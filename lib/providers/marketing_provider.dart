@@ -11,9 +11,9 @@ class MarketingNotifier extends StateNotifier<MarketingState> {
   final Ref ref;
 
   MarketingNotifier(this.marketingRepository, this.ref)
-    : super(MarketingState());
+      : super(MarketingState());
 
-  // Updated to fetch both performance and detailed data in one call
+  // Updated to fetch performance, detailed, and result data in one call
   Future<void> getMarketingData(int iid, {AppMode? overrideAppMode}) async {
     state = state.copyWith(isLoading: true);
 
@@ -22,18 +22,12 @@ class MarketingNotifier extends StateNotifier<MarketingState> {
       final currentAppModeSettings = ref.read(appmodeSettingsProvider);
       final appMode = overrideAppMode ?? currentAppModeSettings.appMode;
 
-      // Single API call to get both tables
+      // Single API call to get all three tables
       final result = await marketingRepository.getMarketingData(
         iid,
         appMode,
         salesCode!,
       );
-      if (result.performanceData.isNotEmpty) {
-     
-      }
-      if (result.detailedData.isNotEmpty) {
-       
-      }
 
       // Update state based on IID
       switch (iid) {
@@ -41,6 +35,7 @@ class MarketingNotifier extends StateNotifier<MarketingState> {
           state = state.copyWith(
             todayPerformance: result.performanceData,
             todayDetailedData: result.detailedData,
+            todayResultData: result.resultData, // NEW
             isLoading: false,
           );
           break;
@@ -48,6 +43,7 @@ class MarketingNotifier extends StateNotifier<MarketingState> {
           state = state.copyWith(
             yesterdayPerformance: result.performanceData,
             yesterdayDetailedData: result.detailedData,
+            yesterdayResultData: result.resultData, // NEW
             isLoading: false,
           );
           break;
@@ -55,27 +51,27 @@ class MarketingNotifier extends StateNotifier<MarketingState> {
           state = state.copyWith(
             monthlyPerformance: result.performanceData,
             monthlyDetailedData: result.detailedData,
+            monthlyResultData: result.resultData, // NEW
             isLoading: false,
           );
           break;
-        case 8899: //Last Monthly
+        case 8899: // Last Monthly
           state = state.copyWith(
             lastmonthPerformance: result.performanceData,
             lastmonthDetailedData: result.detailedData,
+            lastmonthResultData: result.resultData, // NEW
             isLoading: false,
           );
           break;
       }
-
-    
     } catch (e, stackTrace) {
-
       // Reset specific state instead of all
       switch (iid) {
         case 8896:
           state = state.copyWith(
             todayPerformance: [],
             todayDetailedData: [],
+            todayResultData: [],
             isLoading: false,
           );
           break;
@@ -83,6 +79,7 @@ class MarketingNotifier extends StateNotifier<MarketingState> {
           state = state.copyWith(
             yesterdayPerformance: [],
             yesterdayDetailedData: [],
+            yesterdayResultData: [],
             isLoading: false,
           );
           break;
@@ -90,13 +87,15 @@ class MarketingNotifier extends StateNotifier<MarketingState> {
           state = state.copyWith(
             monthlyPerformance: [],
             monthlyDetailedData: [],
+            monthlyResultData: [],
             isLoading: false,
           );
           break;
-        case 8899: //Last Monthly
+        case 8899:
           state = state.copyWith(
             lastmonthPerformance: [],
             lastmonthDetailedData: [],
+            lastmonthResultData: [],
             isLoading: false,
           );
           break;
@@ -120,7 +119,6 @@ class MarketingNotifier extends StateNotifier<MarketingState> {
         await getMarketingData(8899, overrideAppMode: overrideAppMode);
         break;
       default:
-        // If no tab selected, refresh today by default
         await getMarketingData(8896, overrideAppMode: overrideAppMode);
         break;
     }
@@ -128,34 +126,25 @@ class MarketingNotifier extends StateNotifier<MarketingState> {
 
   // NEW METHOD: Handle app mode change - refresh ALL tabs
   Future<void> onAppModeChanged(AppMode newAppMode) async {
-    // Only refresh data if a tab is currently selected
     if (state.selectedTab == -1) {
-    
       return;
     }
-    // Refresh ALL tabs with the new app mode
     await refreshAllDataWithAppMode(newAppMode);
   }
 
   // NEW METHOD: Refresh all data with specific app mode
   Future<void> refreshAllDataWithAppMode(AppMode appMode) async {
-    // Show loading state
     state = state.copyWith(isLoading: true);
 
     try {
-      // Refresh all tabs with the specified app mode
       await Future.wait([
         getMarketingData(8896, overrideAppMode: appMode), // Today
         getMarketingData(8897, overrideAppMode: appMode), // Yesterday
         getMarketingData(8898, overrideAppMode: appMode), // Monthly
         getMarketingData(8899, overrideAppMode: appMode), // last month
       ]);
-
-     
     } catch (e) {
-   
     } finally {
-      // Ensure loading state is turned off
       state = state.copyWith(isLoading: false);
     }
   }
@@ -223,7 +212,6 @@ class MarketingNotifier extends StateNotifier<MarketingState> {
     await getMarketingData(8898, overrideAppMode: AppMode.overallData);
   }
 
-  // Keep this method and update it to use the new approach
   Future<void> refreshAllData({AppMode? overrideAppMode}) async {
     if (overrideAppMode != null) {
       await refreshAllDataWithAppMode(overrideAppMode);
@@ -244,9 +232,20 @@ class MarketingNotifier extends StateNotifier<MarketingState> {
   void setSelectedTab(int tabIndex) {
     state = state.copyWith(selectedTab: tabIndex);
   }
+
+  // NEW: Set view type (Performance or Result)
+  void setViewType(MarketingViewType viewType) {
+    state = state.copyWith(viewType: viewType);
+  }
 }
 
-// Providers remain the same
+// NEW: Enum for view type
+enum MarketingViewType {
+  performance,
+  result,
+}
+
+// Providers
 final flutterSecureStorageProvider = Provider(
   (ref) => const FlutterSecureStorage(),
 );
@@ -263,11 +262,11 @@ final marketingRepositoryProvider = Provider((ref) {
 
 final marketingProvider =
     StateNotifierProvider<MarketingNotifier, MarketingState>((ref) {
-      final marketingRepository = ref.read(marketingRepositoryProvider);
-      return MarketingNotifier(marketingRepository, ref);
-    });
+  final marketingRepository = ref.read(marketingRepositoryProvider);
+  return MarketingNotifier(marketingRepository, ref);
+});
 
-// Updated MarketingState to store detailed data for each time period
+// Updated MarketingState to store result data for each time period
 class MarketingState {
   final List<MarketingPerformance> todayPerformance;
   final List<MarketingPerformance> yesterdayPerformance;
@@ -280,10 +279,16 @@ class MarketingState {
   final List<MarketingDetailedData> monthlyDetailedData;
   final List<MarketingDetailedData> lastmonthDetailedData;
 
-  final List<MarketingDetailedData>
-  detailedData; // Keep for backward compatibility
+  // NEW: Store result data (Table2) for each time period
+  final List<MarketingResult> todayResultData;
+  final List<MarketingResult> yesterdayResultData;
+  final List<MarketingResult> monthlyResultData;
+  final List<MarketingResult> lastmonthResultData;
+
+  final List<MarketingDetailedData> detailedData;
   final int selectedTab;
   final bool isLoading;
+  final MarketingViewType viewType; // NEW
 
   MarketingState({
     this.todayPerformance = const [],
@@ -294,9 +299,14 @@ class MarketingState {
     this.yesterdayDetailedData = const [],
     this.monthlyDetailedData = const [],
     this.lastmonthDetailedData = const [],
+    this.todayResultData = const [], // NEW
+    this.yesterdayResultData = const [], // NEW
+    this.monthlyResultData = const [], // NEW
+    this.lastmonthResultData = const [], // NEW
     this.detailedData = const [],
     this.selectedTab = -1,
     this.isLoading = false,
+    this.viewType = MarketingViewType.performance, // NEW
   });
 
   MarketingState copyWith({
@@ -308,9 +318,14 @@ class MarketingState {
     List<MarketingDetailedData>? yesterdayDetailedData,
     List<MarketingDetailedData>? monthlyDetailedData,
     List<MarketingDetailedData>? lastmonthDetailedData,
+    List<MarketingResult>? todayResultData, // NEW
+    List<MarketingResult>? yesterdayResultData, // NEW
+    List<MarketingResult>? monthlyResultData, // NEW
+    List<MarketingResult>? lastmonthResultData, // NEW
     List<MarketingDetailedData>? detailedData,
     int? selectedTab,
     bool? isLoading,
+    MarketingViewType? viewType, // NEW
   }) {
     return MarketingState(
       todayPerformance: todayPerformance ?? this.todayPerformance,
@@ -323,9 +338,14 @@ class MarketingState {
       monthlyDetailedData: monthlyDetailedData ?? this.monthlyDetailedData,
       lastmonthDetailedData:
           lastmonthDetailedData ?? this.lastmonthDetailedData,
+      todayResultData: todayResultData ?? this.todayResultData, // NEW
+      yesterdayResultData: yesterdayResultData ?? this.yesterdayResultData, // NEW
+      monthlyResultData: monthlyResultData ?? this.monthlyResultData, // NEW
+      lastmonthResultData: lastmonthResultData ?? this.lastmonthResultData, // NEW
       detailedData: detailedData ?? this.detailedData,
       selectedTab: selectedTab ?? this.selectedTab,
       isLoading: isLoading ?? this.isLoading,
+      viewType: viewType ?? this.viewType, // NEW
     );
   }
 
@@ -357,6 +377,22 @@ class MarketingState {
         return lastmonthDetailedData;
       default:
         return todayDetailedData;
+    }
+  }
+
+  // NEW: Helper method to get current result data
+  List<MarketingResult> get currentResultData {
+    switch (selectedTab) {
+      case 0:
+        return todayResultData;
+      case 1:
+        return yesterdayResultData;
+      case 2:
+        return monthlyResultData;
+      case 3:
+        return lastmonthResultData;
+      default:
+        return todayResultData;
     }
   }
 

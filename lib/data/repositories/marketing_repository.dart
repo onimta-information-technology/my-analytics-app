@@ -4,14 +4,16 @@ import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart'
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 
-// Create a combined result class to hold both tables
+// Create a combined result class to hold all three tables
 class MarketingApiResult {
   final List<MarketingPerformance> performanceData;
   final List<MarketingDetailedData> detailedData;
+  final List<MarketingResult> resultData; // NEW: Table2 data
 
   MarketingApiResult({
     required this.performanceData,
     required this.detailedData,
+    required this.resultData,
   });
 }
 
@@ -20,7 +22,7 @@ class MarketingRepository {
 
   MarketingRepository(this.apiService);
 
-  // Modified to return both Table and Table1 data
+  // Modified to return Table, Table1, and Table2 data
   Future<MarketingApiResult> getMarketingData(
     int iid,
     AppMode appMode,
@@ -28,7 +30,8 @@ class MarketingRepository {
   ) async {
     final actualSalesCode = await StorageUtil.getSalesCode();
     final deviceId = await DeviceId.get();
-print('Marketing Repository - IID: $iid, Sales Code: $actualSalesCode, Device ID: $deviceId');
+    print('Marketing Repository - IID: $iid, Sales Code: $actualSalesCode, Device ID: $deviceId');
+    
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -58,37 +61,28 @@ print('Marketing Repository - IID: $iid, Sales Code: $actualSalesCode, Device ID
       "con": "1",
     });
 
-
     List<MarketingPerformance> marketingPerformanceList = [];
     List<MarketingDetailedData> marketingDetailedList = [];
+    List<MarketingResult> marketingResultList = []; // NEW
 
     // Process Table (Performance Summary)
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List &&
         response['CommonResult']['Table'].isNotEmpty) {
       final tableData = response['CommonResult']['Table'];
-    
 
       for (var table in tableData) {
         final performance = MarketingPerformance.fromJson(table);
-      
 
         // Filter based on app mode and sales code
         if (actualSalesCode == 'AD001' && appMode == AppMode.overallData) {
           marketingPerformanceList.add(performance);
-
         } else {
-      
           if (performance.sm.toString() == actualSalesCode) {
             marketingPerformanceList.add(performance);
-           
-          } else {
-          
           }
         }
       }
-
-     
     }
 
     // Process Table1 (Detailed Member Data)
@@ -97,30 +91,44 @@ print('Marketing Repository - IID: $iid, Sales Code: $actualSalesCode, Device ID
         response['CommonResult']['Table1'].isNotEmpty) {
       final table1Data = response['CommonResult']['Table1'];
 
-
       for (var memberData in table1Data) {
         final detailed = MarketingDetailedData.fromJson(memberData);
 
         // Apply same filtering logic as performance data
         if (actualSalesCode == 'AD001' && appMode == AppMode.overallData) {
           marketingDetailedList.add(detailed);
-      
         } else {
           if (detailed.sm.toString() == actualSalesCode) {
             marketingDetailedList.add(detailed);
-         
-          } else {
-            
           }
         }
       }
+    }
 
-      
+    // NEW: Process Table2 (Result Data)
+    if (response['CommonResult'] != null &&
+        response['CommonResult']['Table2'] is List &&
+        response['CommonResult']['Table2'].isNotEmpty) {
+      final table2Data = response['CommonResult']['Table2'];
+
+      for (var resultData in table2Data) {
+        final result = MarketingResult.fromJson(resultData);
+
+        // Apply same filtering logic as other tables
+        if (actualSalesCode == 'AD001' && appMode == AppMode.overallData) {
+          marketingResultList.add(result);
+        } else {
+          if (result.sm.toString() == actualSalesCode) {
+            marketingResultList.add(result);
+          }
+        }
+      }
     }
 
     return MarketingApiResult(
       performanceData: marketingPerformanceList,
       detailedData: marketingDetailedList,
+      resultData: marketingResultList, // NEW
     );
   }
 

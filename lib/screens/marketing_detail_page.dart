@@ -15,6 +15,8 @@ class MarketingDetailPage extends ConsumerStatefulWidget {
   final String smName;
   final int currentTabIndex;
   final double winSpecificMember;
+  final double? mDrop; // NEW: Optional MDrop
+  final double? cashOut; // NEW: Optional CashOut
 
   const MarketingDetailPage({
     super.key,
@@ -22,6 +24,8 @@ class MarketingDetailPage extends ConsumerStatefulWidget {
     required this.smName,
     required this.currentTabIndex,
     required this.winSpecificMember,
+    this.mDrop,
+    this.cashOut,
   });
 
   @override
@@ -32,7 +36,7 @@ class MarketingDetailPage extends ConsumerStatefulWidget {
 class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
   List<MarketingDetailedData> filteredMembers = [];
   String? currentLoadingMember;
-  Set<String> expandedCards = {}; // Track which cards are expanded
+  Set<String> expandedCards = {};
 
   @override
   void initState() {
@@ -54,6 +58,8 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
         return "Yesterday";
       case 2:
         return "Monthly";
+      case 3:
+        return "Last Month";
       default:
         return "Today";
     }
@@ -61,9 +67,7 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
 
   String _formatCurrency(double amount) {
     if (amount == 0) return 'N/A';
-    return NumberFormat(
-      "#,##0",
-    ).format(amount); // CHANGED - Removed .## for consistency
+    return NumberFormat("#,##0").format(amount);
   }
 
   Color _getAmountColor(double amount) {
@@ -148,30 +152,51 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
                                 ),
                               ),
                               const SizedBox(height: 16),
-                              _buildSummaryItem(
-                                title: "TOTAL DROP",
-                                value: _formatCurrency(
-                                  filteredMembers.fold(
-                                    0.0,
-                                    (sum, m) => sum + m.mDrop,
-                                  ),
+                              
+                              // Show MDrop and CashOut if provided (from Result view)
+                              if (widget.mDrop != null && widget.cashOut != null) ...[
+                                _buildSummaryItem(
+                                  title: "TOTAL DROP",
+                                  value: _formatCurrency(widget.mDrop!),
+                                  color: Colors.blue,
+                                  fontSettings: fontSettings,
                                 ),
-                                color: Colors.blue,
-                                fontSettings: fontSettings,
-                              ),
-                              const SizedBox(height: 12),
-                              _buildSummaryItem(
-                                title: "TOTAL CASH OUT",
-                                value: _formatCurrency(
-                                  filteredMembers.fold(
-                                    0.0,
-                                    (sum, m) => sum + m.cashOut,
-                                  ),
+                                const SizedBox(height: 12),
+                                _buildSummaryItem(
+                                  title: "TOTAL CASH OUT",
+                                  value: _formatCurrency(widget.cashOut!),
+                                  color: Colors.purple,
+                                  fontSettings: fontSettings,
                                 ),
-                                color: Colors.purple,
-                                fontSettings: fontSettings,
-                              ),
-                              const SizedBox(height: 12),
+                                const SizedBox(height: 12),
+                              ] else ...[
+                                // Calculate from detailed data if not provided (from Performance view)
+                                _buildSummaryItem(
+                                  title: "TOTAL DROP",
+                                  value: _formatCurrency(
+                                    filteredMembers.fold(
+                                      0.0,
+                                      (sum, m) => sum + m.mDrop,
+                                    ),
+                                  ),
+                                  color: Colors.blue,
+                                  fontSettings: fontSettings,
+                                ),
+                                const SizedBox(height: 12),
+                                _buildSummaryItem(
+                                  title: "TOTAL CASH OUT",
+                                  value: _formatCurrency(
+                                    filteredMembers.fold(
+                                      0.0,
+                                      (sum, m) => sum + m.cashOut,
+                                    ),
+                                  ),
+                                  color: Colors.purple,
+                                  fontSettings: fontSettings,
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                              
                               _buildSummaryItem(
                                 title: "WIN/LOST",
                                 value: NumberFormat("#,##0.##").format(

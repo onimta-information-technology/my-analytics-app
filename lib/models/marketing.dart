@@ -15,9 +15,8 @@ class MarketingPerformance {
 
   factory MarketingPerformance.fromJson(Map<String, dynamic> json) {
     final winLostValue = (json['WinLost'] as num?)?.toDouble() ?? 0.0;
-    final isPositiveValue =
-        winLostValue < 0; 
-    final displayValueK = winLostValue.abs() / 100; 
+    final isPositiveValue = winLostValue < 0;
+    final displayValueK = winLostValue.abs() / 100;
 
     return MarketingPerformance(
       sm: json['SM']?.toString() ?? '',
@@ -41,6 +40,60 @@ class MarketingPerformance {
   @override
   String toString() {
     return 'MarketingPerformance{sm: $sm, smName: $smName, winLost: $winLost, isPositive: $isPositive, displayValue: $displayValue}';
+  }
+}
+
+// NEW: Model for Table2 (Result data)
+class MarketingResult {
+  final String sm;
+  final String smName;
+  final double mDrop;
+  final double cashOut;
+  final double winLost;
+  final bool isPositive;
+  final double displayValue;
+
+  MarketingResult({
+    required this.sm,
+    required this.smName,
+    required this.mDrop,
+    required this.cashOut,
+    required this.winLost,
+    required this.isPositive,
+    required this.displayValue,
+  });
+
+  factory MarketingResult.fromJson(Map<String, dynamic> json) {
+    final winLostValue = (json['WinLost'] as num?)?.toDouble() ?? 0.0;
+    final isPositiveValue = winLostValue < 0;
+    final displayValueK = winLostValue.abs() / 100;
+
+    return MarketingResult(
+      sm: json['SM']?.toString() ?? '',
+      smName: json['SM_Name']?.toString() ?? '',
+      mDrop: (json['MDrop'] as num?)?.toDouble() ?? 0.0,
+      cashOut: (json['CashOut'] as num?)?.toDouble() ?? 0.0,
+      winLost: winLostValue,
+      isPositive: isPositiveValue,
+      displayValue: displayValueK,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'SM': sm,
+      'SM_Name': smName,
+      'MDrop': mDrop,
+      'CashOut': cashOut,
+      'WinLost': winLost,
+      'isPositive': isPositive,
+      'displayValue': displayValue,
+    };
+  }
+
+  @override
+  String toString() {
+    return 'MarketingResult{sm: $sm, smName: $smName, mDrop: $mDrop, cashOut: $cashOut, winLost: $winLost, isPositive: $isPositive, displayValue: $displayValue}';
   }
 }
 

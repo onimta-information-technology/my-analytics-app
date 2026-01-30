@@ -1086,149 +1086,157 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                         } : null,
                                                         child: Padding(
                                                           padding: const EdgeInsets.all(8.0),
-                                                          child: Row(
+                                                          child: Column(
+                                                            crossAxisAlignment: CrossAxisAlignment.start,
                                                             children: [
-                                                              Expanded(
-                                                                child: Row(
+                                                              // First row - PRIMARY label at top right
+                                                              if (isPrimary)
+                                                                Row(
+                                                                  mainAxisAlignment: MainAxisAlignment.start,
                                                                   children: [
-                                                                    Flexible(
-                                                                      child: Text(
-                                                                        entry.details['Name']!,
+                                                                    Container(
+                                                                      padding: const EdgeInsets.symmetric(
+                                                                        horizontal: 6,
+                                                                        vertical: 2,
+                                                                      ),
+                                                                      decoration: BoxDecoration(
+                                                                        color: Colors.green,
+                                                                        borderRadius: BorderRadius.circular(4),
+                                                                      ),
+                                                                      child: const Text(
+                                                                        'PRIMARY',
                                                                         style: TextStyle(
-                                                                          color: Colors.black,
-                                                                          fontSize: fontSettings.fontSize,
+                                                                          color: Colors.white,
+                                                                          fontSize: 11,
                                                                           fontWeight: FontWeight.bold,
                                                                         ),
                                                                       ),
                                                                     ),
-                                                                    if (isPrimary) ...[
-                                                                      const SizedBox(width: 6),
-                                                                      Container(
-                                                                        padding: const EdgeInsets.symmetric(
-                                                                          horizontal: 6,
-                                                                          vertical: 2,
-                                                                        ),
-                                                                        decoration: BoxDecoration(
-                                                                          color: Colors.green,
-                                                                          borderRadius: BorderRadius.circular(4),
-                                                                        ),
-                                                                        child: const Text(
-                                                                          'PRIMARY',
-                                                                          style: TextStyle(
-                                                                            color: Colors.white,
-                                                                            fontSize: 10,
-                                                                            fontWeight: FontWeight.bold,
-                                                                          ),
-                                                                        ),
+                                                                  ],
+                                                                ),
+                                                              
+                                                              // Add spacing after PRIMARY label
+                                                              if (isPrimary) const SizedBox(height: 4),
+                                                              
+                                                              // Second row - Name and action icons
+                                                              Row(
+                                                                children: [
+                                                                  Expanded(
+                                                                    child: Text(
+                                                                      entry.details['Name']!,
+                                                                      style: TextStyle(
+                                                                        color: Colors.black,
+                                                                        fontSize: fontSettings.fontSize,
+                                                                        fontWeight: FontWeight.bold,
                                                                       ),
-                                                                    ],
-                                                                  ],
-                                                                ),
+                                                                    ),
+                                                                  ),
+                                                                  if (isBirthday)
+                                                                    Row(
+                                                                      children: const [
+                                                                        Icon(Icons.touch_app, size: 23, color: Color.fromARGB(255, 230, 0, 0)),
+                                                                        SizedBox(width: 4),
+                                                                        Icon(Icons.card_giftcard, size: 23, color: Color.fromARGB(255, 230, 0, 0)),
+                                                                      ],
+                                                                    ),
+                                                                  if (isPhone)
+                                                                    InkWell(
+                                                                      onTap: () => _showAddPhoneDialog(context, guest.mid, 1),
+                                                                      child: Container(
+                                                                        padding: const EdgeInsets.all(4),
+                                                                        decoration: BoxDecoration(
+                                                                          color: const Color.fromARGB(255, 230, 0, 0),
+                                                                          borderRadius: BorderRadius.circular(6),
+                                                                        ),
+                                                                        child: const Icon(Icons.add_call, size: 22, color: Colors.white),
+                                                                      ),
+                                                                    ),
+                                                                  if (isPhone2)
+                                                                    InkWell(
+                                                                      onTap: () => _showAddPhoneDialog(context, guest.mid, 2),
+                                                                      child: Container(
+                                                                        padding: const EdgeInsets.all(4),
+                                                                        decoration: BoxDecoration(
+                                                                          color: const Color.fromARGB(255, 230, 0, 0),
+                                                                          borderRadius: BorderRadius.circular(6),
+                                                                        ),
+                                                                        child: const Icon(Icons.add_call, size: 22, color: Colors.white),
+                                                                      ),
+                                                                    ),
+                                                                  if (isPhone3)
+                                                                    InkWell(
+                                                                      onTap: () => _showAddPhoneDialog(context, guest.mid, 3),
+                                                                      child: Container(
+                                                                        padding: const EdgeInsets.all(4),
+                                                                        decoration: BoxDecoration(
+                                                                          color: const Color.fromARGB(255, 230, 0, 0),
+                                                                          borderRadius: BorderRadius.circular(6),
+                                                                        ),
+                                                                        child: const Icon(Icons.add_call, size: 22, color: Colors.white),
+                                                                      ),
+                                                                    ),
+                                                                  if (iswhatsapp)
+                                                                    InkWell(
+                                                                      onTap: () => _showAddWhatsAppDialog(context, guest.mid, 1),
+                                                                      child: Container(
+                                                                        padding: const EdgeInsets.all(4),
+                                                                        decoration: BoxDecoration(
+                                                                          color: const Color.fromARGB(255, 230, 0, 0),
+                                                                          borderRadius: BorderRadius.circular(6),
+                                                                        ),
+                                                                        child: const Icon(Icons.add_call, size: 22, color: Colors.white),
+                                                                      ),
+                                                                    ),
+                                                                  if (iswhatsapp2)
+                                                                    InkWell(
+                                                                      onTap: () => _showAddWhatsAppDialog(context, guest.mid, 2),
+                                                                      child: Container(
+                                                                        padding: const EdgeInsets.all(4),
+                                                                        decoration: BoxDecoration(
+                                                                          color: const Color.fromARGB(255, 230, 0, 0),
+                                                                          borderRadius: BorderRadius.circular(6),
+                                                                        ),
+                                                                        child: const Icon(Icons.add_call, size: 22, color: Colors.white),
+                                                                      ),
+                                                                    ),
+                                                                  if (iswhatsapp3)
+                                                                    InkWell(
+                                                                      onTap: () => _showAddWhatsAppDialog(context, guest.mid, 3),
+                                                                      child: Container(
+                                                                        padding: const EdgeInsets.all(4),
+                                                                        decoration: BoxDecoration(
+                                                                          color: const Color.fromARGB(255, 230, 0, 0),
+                                                                          borderRadius: BorderRadius.circular(6),
+                                                                        ),
+                                                                        child: const Icon(Icons.add_call, size: 22, color: Colors.white),
+                                                                      ),
+                                                                    ),
+                                                                  if (isEmail)
+                                                                    InkWell(
+                                                                      onTap: () => _showUpdateEmailDialog(context, guest.mid, entry.details['Detail']!, 1),
+                                                                      child: Container(
+                                                                        padding: const EdgeInsets.all(4),
+                                                                        decoration: BoxDecoration(
+                                                                          color: const Color.fromARGB(255, 230, 0, 0),
+                                                                          borderRadius: BorderRadius.circular(6),
+                                                                        ),
+                                                                        child: const Icon(Icons.email, size: 22, color: Colors.white),
+                                                                      ),
+                                                                    ),
+                                                                  if (isEmail2)
+                                                                    InkWell(
+                                                                      onTap: () => _showUpdateEmailDialog(context, guest.mid, entry.details['Detail']!, 2),
+                                                                      child: Container(
+                                                                        padding: const EdgeInsets.all(4),
+                                                                        decoration: BoxDecoration(
+                                                                          color: const Color.fromARGB(255, 230, 0, 0),
+                                                                          borderRadius: BorderRadius.circular(6),
+                                                                        ),
+                                                                        child: const Icon(Icons.email, size: 22, color: Colors.white),
+                                                                      ),
+                                                                    ),
+                                                                ],
                                                               ),
-                                                              if (isBirthday)
-                                                                Row(
-                                                                  children: const [
-                                                                    Icon(Icons.touch_app, size: 23, color: Color.fromARGB(255, 230, 0, 0)),
-                                                                    SizedBox(width: 4),
-                                                                    Icon(Icons.card_giftcard, size: 23, color: Color.fromARGB(255, 230, 0, 0)),
-                                                                  ],
-                                                                ),
-                                                              if (isPhone)
-                                                                InkWell(
-                                                                  onTap: () => _showAddPhoneDialog(context, guest.mid, 1),
-                                                                  child: Container(
-                                                                    padding: const EdgeInsets.all(4),
-                                                                    decoration: BoxDecoration(
-                                                                      color: const Color.fromARGB(255, 230, 0, 0),
-                                                                      borderRadius: BorderRadius.circular(6),
-                                                                    ),
-                                                                    child: const Icon(Icons.add_call, size: 22, color: Colors.white),
-                                                                  ),
-                                                                ),
-                                                              if (isPhone2)
-                                                                InkWell(
-                                                                  onTap: () => _showAddPhoneDialog(context, guest.mid, 2),
-                                                                  child: Container(
-                                                                    padding: const EdgeInsets.all(4),
-                                                                    decoration: BoxDecoration(
-                                                                      color: const Color.fromARGB(255, 230, 0, 0),
-                                                                      borderRadius: BorderRadius.circular(6),
-                                                                    ),
-                                                                    child: const Icon(Icons.add_call, size: 22, color: Colors.white),
-                                                                  ),
-                                                                ),
-                                                              if (isPhone3)
-                                                                InkWell(
-                                                                  onTap: () => _showAddPhoneDialog(context, guest.mid, 3),
-                                                                  child: Container(
-                                                                    padding: const EdgeInsets.all(4),
-                                                                    decoration: BoxDecoration(
-                                                                      color: const Color.fromARGB(255, 230, 0, 0),
-                                                                      borderRadius: BorderRadius.circular(6),
-                                                                    ),
-                                                                    child: const Icon(Icons.add_call, size: 22, color: Colors.white),
-                                                                  ),
-                                                                ),
-                                                              if (iswhatsapp)
-                                                                InkWell(
-                                                                  onTap: () => _showAddWhatsAppDialog(context, guest.mid, 1),
-                                                                  child: Container(
-                                                                    padding: const EdgeInsets.all(4),
-                                                                    decoration: BoxDecoration(
-                                                                      color: const Color.fromARGB(255, 230, 0, 0),
-                                                                      borderRadius: BorderRadius.circular(6),
-                                                                    ),
-                                                                    child: const Icon(Icons.add_call, size: 22, color: Colors.white),
-                                                                  ),
-                                                                ),
-                                                              if (iswhatsapp2)
-                                                                InkWell(
-                                                                  onTap: () => _showAddWhatsAppDialog(context, guest.mid, 2),
-                                                                  child: Container(
-                                                                    padding: const EdgeInsets.all(4),
-                                                                    decoration: BoxDecoration(
-                                                                      color: const Color.fromARGB(255, 230, 0, 0),
-                                                                      borderRadius: BorderRadius.circular(6),
-                                                                    ),
-                                                                    child: const Icon(Icons.add_call, size: 22, color: Colors.white),
-                                                                  ),
-                                                                ),
-                                                              if (iswhatsapp3)
-                                                                InkWell(
-                                                                  onTap: () => _showAddWhatsAppDialog(context, guest.mid, 3),
-                                                                  child: Container(
-                                                                    padding: const EdgeInsets.all(4),
-                                                                    decoration: BoxDecoration(
-                                                                      color: const Color.fromARGB(255, 230, 0, 0),
-                                                                      borderRadius: BorderRadius.circular(6),
-                                                                    ),
-                                                                    child: const Icon(Icons.add_call, size: 22, color: Colors.white),
-                                                                  ),
-                                                                ),
-                                                              if (isEmail)
-                                                                InkWell(
-                                                                  onTap: () => _showUpdateEmailDialog(context, guest.mid, entry.details['Detail']!, 1),
-                                                                  child: Container(
-                                                                    padding: const EdgeInsets.all(4),
-                                                                    decoration: BoxDecoration(
-                                                                      color: const Color.fromARGB(255, 230, 0, 0),
-                                                                      borderRadius: BorderRadius.circular(6),
-                                                                    ),
-                                                                    child: const Icon(Icons.email, size: 22, color: Colors.white),
-                                                                  ),
-                                                                ),
-                                                              if (isEmail2)
-                                                                InkWell(
-                                                                  onTap: () => _showUpdateEmailDialog(context, guest.mid, entry.details['Detail']!, 2),
-                                                                  child: Container(
-                                                                    padding: const EdgeInsets.all(4),
-                                                                    decoration: BoxDecoration(
-                                                                      color: const Color.fromARGB(255, 230, 0, 0),
-                                                                      borderRadius: BorderRadius.circular(6),
-                                                                    ),
-                                                                    child: const Icon(Icons.email, size: 22, color: Colors.white),
-                                                                  ),
-                                                                ),
                                                             ],
                                                           ),
                                                         ),

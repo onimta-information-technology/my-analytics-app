@@ -119,7 +119,6 @@ class GiftsRepository {
       throw Exception('No gifts found: unexpected response structure');
     }
   }
-  // Inside GiftsRepository class
 
   Future<List<SpecialGiftRequest>> getSpecialGift(int iid, String text1) async {
     final deviceId = await DeviceId.get();
@@ -156,8 +155,8 @@ class GiftsRepository {
         response['CommonResult']['Table'] is List &&
         response['CommonResult']['Table'].isNotEmpty) {
       final tableData = response['CommonResult']['Table'] as List;
-print('Special Gift Response Table Data: $tableData');
-      // Map API response to SpecialGiftRequest
+      print('Special Gift Response Table Data: $tableData');
+      
       List<SpecialGiftRequest> giftSpecialList = tableData.map((item) {
         return SpecialGiftRequest.fromJson(Map<String, dynamic>.from(item));
       }).toList();
@@ -239,7 +238,6 @@ print('Special Gift Response Table Data: $tableData');
         response['CommonResult']['Table'].isNotEmpty) {
       final tableData = response['CommonResult']['Table'] as List;
 
-      // Map API response to SpecialGiftRequest
       List<GestGiftData> giftdataList = tableData.map((item) {
         return GestGiftData.fromJson(Map<String, dynamic>.from(item));
       }).toList();
@@ -317,7 +315,9 @@ print('Special Gift Response Table Data: $tableData');
       "SpName": "sp_CRM_Common_API",
       "con": "1",
     });
-print('Prev Gift Response: $response');
+    
+    print('Prev Gift Response: $response');
+    
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List &&
         (response['CommonResult']['Table'] as List).isNotEmpty) {
@@ -330,8 +330,6 @@ print('Prev Gift Response: $response');
       return [];
     }
   }
-
-  // GiftsRepository.dart
 
   Future<Map<String, dynamic>?> insertSpecialGiftRequest({
     required String mid,
@@ -360,12 +358,11 @@ print('Prev Gift Response: $response');
   }) async {
     try {
       final deviceId = await DeviceId.get();
-      // helpers
       String numStr(num? v) => (v == null) ? "0" : v.toString();
       String decStr(num? v) => (v == null) ? "0" : v.toString();
 
-      //final double totalCoupon = (guestCoupon ?? 0.0) + (flushCoupon ?? 0.0);
-print('Inserting special gift request for MID: $mid, Member Name: $memberName, Amount: $amount');
+      print('Inserting special gift request for MID: $mid, Member Name: $memberName, Amount: $amount');
+      
       final payload = {
         "HasReturnData": "T",
         "Parameters": [
@@ -376,7 +373,6 @@ print('Inserting special gift request for MID: $mid, Member Name: $memberName, A
             "Para_Name": "@Iid",
             "Para_Type": "int",
           },
-
           {
             "Para_Data": mid,
             "Para_Direction": "Input",
@@ -391,7 +387,6 @@ print('Inserting special gift request for MID: $mid, Member Name: $memberName, A
             "Para_Name": "@Text2",
             "Para_Type": "varchar",
           },
-
           {
             "Para_Data": decStr(guestDrop),
             "Para_Direction": "Input",
@@ -448,7 +443,6 @@ print('Inserting special gift request for MID: $mid, Member Name: $memberName, A
             "Para_Name": "@Text10",
             "Para_Type": "varchar",
           },
-
           {
             "Para_Data": arrivalDate,
             "Para_Direction": "Input",
@@ -463,7 +457,6 @@ print('Inserting special gift request for MID: $mid, Member Name: $memberName, A
             "Para_Name": "@Text12",
             "Para_Type": "varchar",
           },
-
           {
             "Para_Data": userName,
             "Para_Direction": "Input",
@@ -471,7 +464,6 @@ print('Inserting special gift request for MID: $mid, Member Name: $memberName, A
             "Para_Name": "@Text13",
             "Para_Type": "varchar",
           },
-
           {
             "Para_Data": fromDateTime,
             "Para_Direction": "Input",
@@ -486,7 +478,6 @@ print('Inserting special gift request for MID: $mid, Member Name: $memberName, A
             "Para_Name": "@Text15",
             "Para_Type": "varchar",
           },
-
           {
             "Para_Data": decStr(tmpCommpaid),
             "Para_Direction": "Input",
@@ -501,7 +492,6 @@ print('Inserting special gift request for MID: $mid, Member Name: $memberName, A
             "Para_Name": "@Text17",
             "Para_Type": "varchar",
           },
-
           {
             "Para_Data": grt,
             "Para_Direction": "Input",
@@ -509,7 +499,6 @@ print('Inserting special gift request for MID: $mid, Member Name: $memberName, A
             "Para_Name": "@Text18",
             "Para_Type": "varchar",
           },
-
           {
             "Para_Data": remarks,
             "Para_Direction": "Input",
@@ -517,7 +506,6 @@ print('Inserting special gift request for MID: $mid, Member Name: $memberName, A
             "Para_Name": "@Text19",
             "Para_Type": "varchar",
           },
-
           {
             "Para_Data": amount,
             "Para_Direction": "Input",
@@ -525,7 +513,6 @@ print('Inserting special gift request for MID: $mid, Member Name: $memberName, A
             "Para_Name": "@Text20",
             "Para_Type": "varchar",
           },
-
           {
             "Para_Data": decStr(flushCoupon),
             "Para_Direction": "Input",
@@ -533,7 +520,6 @@ print('Inserting special gift request for MID: $mid, Member Name: $memberName, A
             "Para_Name": "@Text21",
             "Para_Type": "varchar",
           },
-
           {
             "Para_Data": chipTypeCode,
             "Para_Direction": "Input",
@@ -548,7 +534,6 @@ print('Inserting special gift request for MID: $mid, Member Name: $memberName, A
             "Para_Name": "@Text23",
             "Para_Type": "varchar",
           },
-
           {
             "Para_Data": "chip",
             "Para_Direction": "Input",
@@ -576,9 +561,256 @@ print('Inserting special gift request for MID: $mid, Member Name: $memberName, A
       };
 
       final resp = await apiService.post('CommonExecute', payload);
+      print('Special Gift Insert Response: $resp');
       return resp;
     } catch (e) {
-   
+      print('Error in insertSpecialGiftRequest: $e');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> increeseBirthdayGiftRequest({
+    required String mid,
+    required String memberName,
+    required String fromDateTime,
+    required String toDateTime,
+    required String arrivalDate,
+    required String departureDate,
+    required String giftForCode,
+    required String chipTypeCode,
+    required String amount,
+    required String remarks,
+    required String previousGiftPrice,
+    double? guestDrop,
+    double? tmpCashout,
+    double? res,
+    double? actD,
+    double? tmpAvgBet,
+    double? guestCoupon,
+    double? flushCoupon,
+    double? flushActDrop,
+    double? tmpPoint,
+    double? tmphh,
+    double? tmpCommpaid,
+    String? grt,
+    required String userName,
+  }) async {
+    try {
+      final deviceId = await DeviceId.get();
+      String numStr(num? v) => (v == null) ? "0" : v.toString();
+      String decStr(num? v) => (v == null) ? "0" : v.toString();
+
+      print('Inserting birthday gift price increase request for MID: $mid, Member Name: $memberName, New Amount: $amount, Previous Amount: $previousGiftPrice, fromDateTime: $fromDateTime, toDateTime: $toDateTime, guestDrop: $guestDrop, tmpCashout: $tmpCashout, res: $res, guestCoupon: $guestCoupon, tmpAvgBet: $tmpAvgBet, tmpPoint: $tmpPoint, tmphh: $tmphh, tmpCommpaid: $tmpCommpaid, grt: $grt,userName: $userName, deviceId: $deviceId, arrivalDate: $arrivalDate, departureDate: $departureDate,act: $actD,flushActDrop: $flushActDrop,flushCoupon: $flushCoupon,chipTypeCode: $chipTypeCode,giftForCode: $giftForCode' );
+      
+      final payload = {
+        "HasReturnData": "T",
+        "Parameters": [
+          {
+            "Para_Data": 98889,
+            "Para_Direction": "Input",
+            "Para_Lenth": 1,
+            "Para_Name": "@Iid",
+            "Para_Type": "int",
+          },
+          {
+            "Para_Data": mid,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text1",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": memberName,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text2",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": decStr(guestDrop),
+            "Para_Direction": "Input",
+            "Para_Lenth": 5000,
+            "Para_Name": "@Text3",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": decStr(tmpCashout),
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text4",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": decStr(res),
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text5",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": decStr(guestCoupon),
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text6",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": decStr(tmpAvgBet),
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text7",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": decStr(tmpPoint),
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text8",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": decStr(tmphh),
+            "Para_Direction": "Input",
+            "Para_Lenth": 5000,
+            "Para_Name": "@Text9",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": decStr(tmphh),
+            "Para_Direction": "Input",
+            "Para_Lenth": 1000,
+            "Para_Name": "@Text10",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": arrivalDate,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text11",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": departureDate,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text12",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": userName,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text13",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": fromDateTime,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text14",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": toDateTime,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text15",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": decStr(tmpCommpaid),
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text16",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": decStr(actD),
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text17",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": grt,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text18",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": remarks,
+            "Para_Direction": "Input",
+            "Para_Lenth": 250,
+            "Para_Name": "@Text19",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": amount,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text20",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": decStr(flushCoupon),
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text21",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": chipTypeCode,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text22",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": giftForCode,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text23",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": "chip",
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text24",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": flushActDrop,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text25",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": previousGiftPrice,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text26",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": deviceId,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text30",
+            "Para_Type": "varchar",
+          },
+        ],
+        "SpName": "sp_CRM_Common_API",
+        "con": "1",
+      };
+
+      final resp = await apiService.post('CommonExecute', payload);
+      print('Birthday Gift Price Increase Response: $resp');
+      return resp;
+    } catch (e) {
+      print('Error in increeseBirthdayGiftRequest: $e');
       return null;
     }
   }
@@ -590,12 +822,13 @@ print('Inserting special gift request for MID: $mid, Member Name: $memberName, A
     required String userName,
     required String validDates,
   }) async {
-   print('Approving special gift request: reqid=$reqid, remarks=$remarks, amount=$amount, userName=$userName , validDates=$validDates'); 
+    print('Approving special gift request: reqid=$reqid, remarks=$remarks, amount=$amount, userName=$userName, validDates=$validDates'); 
 
     try {
       final deviceId = await DeviceId.get();
-        final reqidInt = reqid.toInt();
+      final reqidInt = reqid.toInt();
       print('Converted reqid to int: $reqidInt');
+      
       final payload = {
         "HasReturnData": "T",
         "Parameters": [
@@ -606,7 +839,6 @@ print('Inserting special gift request for MID: $mid, Member Name: $memberName, A
             "Para_Name": "@Iid",
             "Para_Type": "int",
           },
-
           {
             "Para_Data": reqidInt,
             "Para_Direction": "Input",
@@ -614,7 +846,6 @@ print('Inserting special gift request for MID: $mid, Member Name: $memberName, A
             "Para_Name": "@Text1",
             "Para_Type": "varchar",
           },
-
           {
             "Para_Data": userName,
             "Para_Direction": "Input",
@@ -622,7 +853,6 @@ print('Inserting special gift request for MID: $mid, Member Name: $memberName, A
             "Para_Name": "@Text2",
             "Para_Type": "varchar",
           },
-
           {
             "Para_Data": remarks,
             "Para_Direction": "Input",
@@ -630,7 +860,6 @@ print('Inserting special gift request for MID: $mid, Member Name: $memberName, A
             "Para_Name": "@Text3",
             "Para_Type": "varchar",
           },
-
           {
             "Para_Data": amount,
             "Para_Direction": "Input",
@@ -638,7 +867,7 @@ print('Inserting special gift request for MID: $mid, Member Name: $memberName, A
             "Para_Name": "@Text4",
             "Para_Type": "varchar",
           },
-            {
+          {
             "Para_Data": validDates,
             "Para_Direction": "Input",
             "Para_Lenth": 100,
@@ -658,11 +887,10 @@ print('Inserting special gift request for MID: $mid, Member Name: $memberName, A
       };
 
       final resp = await apiService.post('CommonExecute', payload);
-  
-      //return resp['strRturnRes'];
+      print('Approve Gift Response: $resp');
       return true;
     } catch (e) {
-   
+      print('Error approving special gift request: $e');
       return false;
     }
   }
@@ -674,7 +902,8 @@ print('Inserting special gift request for MID: $mid, Member Name: $memberName, A
     try {
       print('Rejecting special gift request: reqid=$reqid, userName=$userName');
       final deviceId = await DeviceId.get();
-         final reqidInt = reqid.toInt();
+      final reqidInt = reqid.toInt();
+      
       final payload = {
         "HasReturnData": "T",
         "Parameters": [
@@ -685,7 +914,6 @@ print('Inserting special gift request for MID: $mid, Member Name: $memberName, A
             "Para_Name": "@Iid",
             "Para_Type": "int",
           },
-
           {
             "Para_Data": reqidInt,
             "Para_Direction": "Input",
@@ -693,7 +921,6 @@ print('Inserting special gift request for MID: $mid, Member Name: $memberName, A
             "Para_Name": "@Text1",
             "Para_Type": "varchar",
           },
-
           {
             "Para_Data": userName,
             "Para_Direction": "Input",
@@ -714,107 +941,107 @@ print('Inserting special gift request for MID: $mid, Member Name: $memberName, A
       };
 
       final resp = await apiService.post('CommonExecute', payload);
-
-     // return resp['strRturnRes'];
-     return true;
+      print('Reject Gift Response: $resp');
+      return true;
     } catch (e) {
-    
+      print('Error rejecting special gift request: $e');
       return false;
     }
   }
 
   Future<bool> reverseSpecialGiftRequest({
-  required double reqid,
-  required String userName,
-}) async {
-  try {
-    print('Approve Reversing special gift request: reqid=$reqid, userName=$userName');
-   
-    final reqidInt = reqid.toInt();
-    print('Converted reqid to int: $reqidInt');
-    final payload = {
-      "HasReturnData": "T",
-      "Parameters": [
-        {
-          "Para_Data": 88894,
-          "Para_Direction": "Input",
-          "Para_Lenth": 1,
-          "Para_Name": "@Iid",
-          "Para_Type": "int",
-        },
-        {
-          "Para_Data": reqidInt,
-          "Para_Direction": "Input",
-          "Para_Lenth": 5000,
-          "Para_Name": "@Text1",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": userName,
-          "Para_Direction": "Input",
-          "Para_Lenth": 5000,
-          "Para_Name": "@Text2",
-          "Para_Type": "varchar",
-        },
+    required double reqid,
+    required String userName,
+  }) async {
+    try {
+      print('Approve Reversing special gift request: reqid=$reqid, userName=$userName');
       
-      ],
-      "SpName": "sp_CRM_Common_API",
-      "con": "1",
-    };
-
-    final resp = await apiService.post('CommonExecute', payload);
-    print('Reverse gift response: $resp');
-    return true;
-  } catch (e) {
-    print('Error reversing special gift request: $e');
-    return false;
-  }
-}
- Future<bool> reverseSpecialGiftRequestRejected({
-  required double reqid,
-  required String userName,
-}) async {
-  try {
-    print('reject Reversing special gift request: reqid=$reqid, userName=$userName');
-   
-    final reqidInt = reqid.toInt();
-    print('Converted reqid to int: $reqidInt');
-    final payload = {
-      "HasReturnData": "T",
-      "Parameters": [
-        {
-          "Para_Data": 88895,
-          "Para_Direction": "Input",
-          "Para_Lenth": 1,
-          "Para_Name": "@Iid",
-          "Para_Type": "int",
-        },
-        {
-          "Para_Data": reqidInt,
-          "Para_Direction": "Input",
-          "Para_Lenth": 5000,
-          "Para_Name": "@Text1",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": userName,
-          "Para_Direction": "Input",
-          "Para_Lenth": 5000,
-          "Para_Name": "@Text2",
-          "Para_Type": "varchar",
-        },
+      final reqidInt = reqid.toInt();
+      print('Converted reqid to int: $reqidInt');
       
-      ],
-      "SpName": "sp_CRM_Common_API",
-      "con": "1",
-    };
+      final payload = {
+        "HasReturnData": "T",
+        "Parameters": [
+          {
+            "Para_Data": 88894,
+            "Para_Direction": "Input",
+            "Para_Lenth": 1,
+            "Para_Name": "@Iid",
+            "Para_Type": "int",
+          },
+          {
+            "Para_Data": reqidInt,
+            "Para_Direction": "Input",
+            "Para_Lenth": 5000,
+            "Para_Name": "@Text1",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": userName,
+            "Para_Direction": "Input",
+            "Para_Lenth": 5000,
+            "Para_Name": "@Text2",
+            "Para_Type": "varchar",
+          },
+        ],
+        "SpName": "sp_CRM_Common_API",
+        "con": "1",
+      };
 
-    final resp = await apiService.post('CommonExecute', payload);
-    print('Reverse gift response: $resp');
-    return true;
-  } catch (e) {
-    print('Error reversing special gift request: $e');
-    return false;
+      final resp = await apiService.post('CommonExecute', payload);
+      print('Reverse gift response: $resp');
+      return true;
+    } catch (e) {
+      print('Error reversing special gift request: $e');
+      return false;
+    }
   }
-}
+
+  Future<bool> reverseSpecialGiftRequestRejected({
+    required double reqid,
+    required String userName,
+  }) async {
+    try {
+      print('Reject Reversing special gift request: reqid=$reqid, userName=$userName');
+      
+      final reqidInt = reqid.toInt();
+      print('Converted reqid to int: $reqidInt');
+      
+      final payload = {
+        "HasReturnData": "T",
+        "Parameters": [
+          {
+            "Para_Data": 88895,
+            "Para_Direction": "Input",
+            "Para_Lenth": 1,
+            "Para_Name": "@Iid",
+            "Para_Type": "int",
+          },
+          {
+            "Para_Data": reqidInt,
+            "Para_Direction": "Input",
+            "Para_Lenth": 5000,
+            "Para_Name": "@Text1",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": userName,
+            "Para_Direction": "Input",
+            "Para_Lenth": 5000,
+            "Para_Name": "@Text2",
+            "Para_Type": "varchar",
+          },
+        ],
+        "SpName": "sp_CRM_Common_API",
+        "con": "1",
+      };
+
+      final resp = await apiService.post('CommonExecute', payload);
+      print('Reverse gift rejected response: $resp');
+      return true;
+    } catch (e) {
+      print('Error reversing rejected special gift request: $e');
+      return false;
+    }
+  }
 }

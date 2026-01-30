@@ -81,6 +81,7 @@ void updateGuestGift({required String gift, required String mobile}) {
     state = null;
   }
   Future<void> getGuestImage(int iid, String text1) async {
+    print('Fetching guest image for IID: $iid, Text1: $text1');
     try {
       final imageUrl = await guestRepository.fetchGuestImage(iid, text1);
       if (imageUrl == null) return;

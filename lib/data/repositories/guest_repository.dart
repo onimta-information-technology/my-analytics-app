@@ -135,6 +135,7 @@ print( response);
       final tableData = response['CommonResult']['Table'][0];
 
       if (tableData.length > 0) {
+        print('Guest image URL fetched: ${tableData['MemImage2']}');
         return tableData['MemImage2'];
       } else {
         throw Exception(

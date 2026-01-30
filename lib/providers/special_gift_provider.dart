@@ -28,8 +28,8 @@ class GiftNotifier extends StateNotifier<GiftState> {
           break;
       }
     } catch (e) {
-     
-      // Optional: reset that specific state instead of all
+      print('Error in getSpecialGiftData: $e');
+      // Reset that specific state instead of all
       switch (iid) {
         case 8890:
           state = state.copyWith(pendinggift: []);
@@ -63,7 +63,7 @@ class GiftNotifier extends StateNotifier<GiftState> {
       );
       state = state.copyWith(guestGiftData: giftList);
     } catch (e) {
-
+      print('Error in getGestgiftGift: $e');
       state = state.copyWith(guestGiftData: []);
     }
   }
@@ -73,7 +73,7 @@ class GiftNotifier extends StateNotifier<GiftState> {
       final giftForList = await giftRepository.getGiftForList();
       state = state.copyWith(giftForList: giftForList);
     } catch (e) {
-   
+      print('Error in getGiftForList: $e');
       state = state.copyWith(giftForList: []);
     }
   }
@@ -86,12 +86,12 @@ class GiftNotifier extends StateNotifier<GiftState> {
     required String arrivalDate,
     required String departureDate,
     required String giftForCode,
-    required String chipTypeUI, // "OTP Chips" | "NC Chips"
-    required String amountUI, // might include commas
+    required String chipTypeUI,
+    required String amountUI,
     required String remarks,
     required String userName,
   }) async {
-    // map UI chip label -> API code
+    // Map UI chip label -> API code
     String mapChip(String v) {
       final t = v.trim().toUpperCase();
       if (t.contains('NC')) return 'NC_CHIPS';
@@ -100,13 +100,12 @@ class GiftNotifier extends StateNotifier<GiftState> {
 
     String cleanAmount(String v) => v.replaceAll(',', '').trim();
 
-    // Pull guest metrics from current state (after "Guest Data" was fetched)
+    // Pull guest metrics from current state
     final data = state.guestGiftData.isNotEmpty
         ? state.guestGiftData.first
         : null;
 
     try {
-      // Call the repository method and get the full response
       final apiResponse = await giftRepository.insertSpecialGiftRequest(
         mid: mid,
         memberName: memberName,
@@ -133,7 +132,9 @@ class GiftNotifier extends StateNotifier<GiftState> {
         userName: userName,
       );
 
-      // Extract Return_Serial from the response and update state
+      print('API Response in sendSpecialGiftFromUI: $apiResponse');
+
+      // Extract Return_Serial from the response
       String? returnSerial;
       if (apiResponse != null && 
           apiResponse.containsKey('CommonResult') &&
@@ -154,11 +155,14 @@ class GiftNotifier extends StateNotifier<GiftState> {
         lastReturnSerial: returnSerial,
       );
 
-      // Return true if the API call was successful
-      return apiResponse?['strRturnRes'] == true;
+      // Check if the API call was successful
+      bool isSuccess = _isApiResponseSuccessful(apiResponse);
+      print('Is API call successful: $isSuccess');
+      
+      return isSuccess;
       
     } catch (e) {
-  
+      print('Error in sendSpecialGiftFromUI: $e');
       // Clear the response data on error
       state = state.copyWith(
         lastApiResponse: null,
@@ -168,11 +172,204 @@ class GiftNotifier extends StateNotifier<GiftState> {
     }
   }
 
+  Future<bool> increaceBirtdayGiftFromUI({
+    required String mid,
+    required String memberName,
+    required String fromDateTime,
+    required String toDateTime,
+    required String arrivalDate,
+    required String departureDate,
+    required String giftForCode,
+    required String chipTypeUI,
+    required String amountUI,
+    required String remarks,
+    required String userName,
+    required String previousGiftPrice,
+  }) async {
+    // Map UI chip label -> API code
+    String mapChip(String v) {
+      final t = v.trim().toUpperCase();
+      if (t.contains('NC')) return 'NC_CHIPS';
+      return 'OTP_CHIPS';
+    }
+
+    String cleanAmount(String v) => v.replaceAll(',', '').trim();
+
+    // Pull guest metrics from current state
+    final data = state.guestGiftData.isNotEmpty
+        ? state.guestGiftData.first
+        : null;
+
+    try {
+      print('Starting increaceBirtdayGiftFromUI with data:');
+      print('MID: $mid, Name: $memberName');
+      print('New Amount: $amountUI, Previous: $previousGiftPrice');
+      print('Chip Type: $chipTypeUI, Gift For: $giftForCode');
+      
+      final apiResponse = await giftRepository.increeseBirthdayGiftRequest(
+        mid: mid,
+        memberName: memberName,
+        fromDateTime: fromDateTime,
+        toDateTime: toDateTime,
+        arrivalDate: arrivalDate,
+        departureDate: departureDate,
+        giftForCode: (giftForCode.isEmpty) ? "BIRTHDAY_GIFT" : giftForCode,
+        chipTypeCode: mapChip(chipTypeUI),
+        amount: cleanAmount(amountUI),
+        remarks: remarks,
+        previousGiftPrice: "100",
+        guestDrop: data?.guestDrop,
+        tmpCashout: data?.tmpCashout,
+        res: data?.res,
+        actD: data?.actD,
+        tmpAvgBet: data?.tmpAvgBet,
+        guestCoupon: data?.guestCoupon,
+        flushCoupon: data?.flushCoupon,
+        flushActDrop: data?.flushActDrop,
+        tmpPoint: data?.tmpPoint,
+        tmphh: data?.tmphh,
+        tmpCommpaid: data?.tmpCommpaid,
+        grt: data?.grt,
+        userName: userName,
+      );
+
+      print('API Response in increaceBirtdayGiftFromUI: $apiResponse');
+
+      // Extract Return_Serial from the response
+      String? returnSerial;
+      if (apiResponse != null && 
+          apiResponse.containsKey('CommonResult') &&
+          apiResponse['CommonResult'] is Map<String, dynamic> &&
+          apiResponse['CommonResult']['Table'] is List &&
+          (apiResponse['CommonResult']['Table'] as List).isNotEmpty) {
+        
+        final firstTableEntry = (apiResponse['CommonResult']['Table'] as List)[0];
+        if (firstTableEntry is Map<String, dynamic> && 
+            firstTableEntry.containsKey('Return_Serial')) {
+          returnSerial = firstTableEntry['Return_Serial'].toString();
+        }
+      }
+
+      // Update the state with the API response and return serial
+      state = state.copyWith(
+        lastApiResponse: apiResponse,
+        lastReturnSerial: returnSerial,
+      );
+
+      // Check if the API call was successful
+      bool isSuccess = _isApiResponseSuccessful(apiResponse);
+      print('Is API call successful: $isSuccess');
+      
+      return isSuccess;
+      
+    } catch (e) {
+      print('Error in increaceBirtdayGiftFromUI: $e');
+      // Clear the response data on error
+      state = state.copyWith(
+        lastApiResponse: null,
+        lastReturnSerial: null,
+      );
+      return false;
+    }
+  }
+
+  // Helper method to check if API response indicates success
+  bool _isApiResponseSuccessful(Map<String, dynamic>? apiResponse) {
+    if (apiResponse == null) {
+      print('API Response is null');
+      return false;
+    }
+
+    print('Checking API response for success...');
+    print('Full API Response: $apiResponse');
+
+    // Check 1: Look for CommonResult with Table data
+    if (apiResponse.containsKey('CommonResult') &&
+        apiResponse['CommonResult'] != null) {
+      
+      final commonResult = apiResponse['CommonResult'];
+      print('CommonResult found: $commonResult');
+      
+      if (commonResult is Map<String, dynamic> &&
+          commonResult['Table'] is List) {
+        
+        final table = commonResult['Table'] as List;
+        print('Table found with ${table.length} entries');
+        
+        if (table.isNotEmpty) {
+          print('Table has data - considering this a success');
+          return true;
+        }
+      }
+    }
+
+    // Check 2: Look for strRturnRes field (various possible formats)
+    if (apiResponse.containsKey('strRturnRes')) {
+      final strRturnRes = apiResponse['strRturnRes'];
+      print('strRturnRes found: $strRturnRes (type: ${strRturnRes.runtimeType})');
+      
+      // Check for boolean true
+      if (strRturnRes == true) {
+        print('strRturnRes is boolean true');
+        return true;
+      }
+      
+      // Check for string representations of true
+      if (strRturnRes is String) {
+        final upperValue = strRturnRes.toUpperCase();
+        if (upperValue == 'TRUE' || upperValue == 'T' || upperValue == 'SUCCESS') {
+          print('strRturnRes indicates success (string value: $strRturnRes)');
+          return true;
+        }
+      }
+      
+      // Check for numeric 1 (sometimes APIs return 1 for success)
+      if (strRturnRes == 1 || strRturnRes == '1') {
+        print('strRturnRes is 1 (success)');
+        return true;
+      }
+    }
+
+    // Check 3: Look for success indicators in the response
+    if (apiResponse.containsKey('success')) {
+      final success = apiResponse['success'];
+      print('success field found: $success');
+      if (success == true || success == 'true' || success == 'T' || success == 1) {
+        return true;
+      }
+    }
+
+    // Check 4: Look for status field
+    if (apiResponse.containsKey('status')) {
+      final status = apiResponse['status'];
+      print('status field found: $status');
+      if (status == 'success' || status == 'SUCCESS' || status == 'ok' || status == 'OK') {
+        return true;
+      }
+    }
+
+    // Check 5: Look for error indicators (if no error, assume success)
+    bool hasError = apiResponse.containsKey('error') || 
+                    apiResponse.containsKey('Error') ||
+                    (apiResponse.containsKey('strRturnRes') && 
+                     apiResponse['strRturnRes'] == false);
+    
+    if (!hasError && apiResponse.isNotEmpty) {
+      print('No error indicators found and response is not empty - considering success');
+      return true;
+    }
+
+    print('No success indicators found - returning false');
+    return false;
+  }
+
   Future<void> getprvGift(String text1) async {
     try {
       final prvgiftList = await giftRepository.getPrvGiftList(text1);
       state = state.copyWith(prvgiftList: prvgiftList);
     } catch (e, stack) {
+      print('Error in getprvGift: $e');
+      print('Stack trace: $stack');
       state = state.copyWith(prvgiftList: []);
     }
   }
@@ -190,7 +387,6 @@ class GiftNotifier extends StateNotifier<GiftState> {
       amount: amount,
       userName: userName,
       validDates: validDates,
-
     );
   }
 
@@ -203,29 +399,31 @@ class GiftNotifier extends StateNotifier<GiftState> {
       userName: userName,
     );
   }
-Future<bool> reverseSpecialGiftFromUI({
-  required double reqid,
-  required String userName,
-}) async {
-  return await giftRepository.reverseSpecialGiftRequest(
-    reqid: reqid,
-    userName: userName,
-  );
-}
-Future<bool> reverseSpecialGiftFromUIrejcted({
-  required double reqid,
-  required String userName,
-}) async {
-  return await giftRepository.reverseSpecialGiftRequestRejected(
-    reqid: reqid,
-    userName: userName,
-  );
-}
+
+  Future<bool> reverseSpecialGiftFromUI({
+    required double reqid,
+    required String userName,
+  }) async {
+    return await giftRepository.reverseSpecialGiftRequest(
+      reqid: reqid,
+      userName: userName,
+    );
+  }
+
+  Future<bool> reverseSpecialGiftFromUIrejcted({
+    required double reqid,
+    required String userName,
+  }) async {
+    return await giftRepository.reverseSpecialGiftRequestRejected(
+      reqid: reqid,
+      userName: userName,
+    );
+  }
+
   void resetData() {
     state = GiftState();
   }
 
-  // Method to clear the last API response data
   void clearLastApiResponse() {
     state = state.copyWith(
       lastApiResponse: null,
@@ -260,8 +458,8 @@ class GiftState {
   final List<GestGiftData> guestGiftData;
   final List<GiftType> giftForList;
   final List<PrevGift> prvgiftList;
-  final Map<String, dynamic>? lastApiResponse; // Store the full API response
-  final String? lastReturnSerial; // Store the extracted Return_Serial
+  final Map<String, dynamic>? lastApiResponse;
+  final String? lastReturnSerial;
 
   GiftState({
     this.pendinggift = const [],

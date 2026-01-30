@@ -217,7 +217,7 @@ class GiftNotifier extends StateNotifier<GiftState> {
         chipTypeCode: mapChip(chipTypeUI),
         amount: cleanAmount(amountUI),
         remarks: remarks,
-        previousGiftPrice: "100",
+        previousGiftPrice: cleanAmount(previousGiftPrice),
         guestDrop: data?.guestDrop,
         tmpCashout: data?.tmpCashout,
         res: data?.res,

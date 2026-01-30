@@ -136,7 +136,7 @@ class ApproveScreen extends StatelessWidget {
                     Expanded(
                       child: GestureDetector(
                         onTap: () {
-                         
+                          context.go('/menu/approve-reject/birthday-gifts');
                         },
                         child: Card(
                           child: Container(
@@ -162,7 +162,7 @@ class ApproveScreen extends StatelessWidget {
                                   ),
                                   SizedBox(height: 10),
                                   Text(
-                                    'Birthdays',
+                                    'Birthday Gifts',
                                     style: TextStyle(
                                       fontSize: 16.0,
                                       fontWeight: FontWeight.normal,

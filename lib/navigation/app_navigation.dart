@@ -5,11 +5,13 @@ import 'package:ballys_reservation_app/data/repositories/member_profile_reposito
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/main.dart';
 import 'package:ballys_reservation_app/models/birthday.dart';
+import 'package:ballys_reservation_app/models/gift/birthday_gift_request.dart';
 import 'package:ballys_reservation_app/models/gift/special_gift_request.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/screens/approve_reject_show_screen.dart';
 import 'package:ballys_reservation_app/screens/auth/login_screen.dart';
 import 'package:ballys_reservation_app/screens/auth/otpVerification_screen.dart';
+import 'package:ballys_reservation_app/screens/birthdayGiftRequestScreen.dart';
 import 'package:ballys_reservation_app/screens/birthday_gift_price_increase_screen.dart';
 import 'package:ballys_reservation_app/screens/birthday_screen.dart';
 import 'package:ballys_reservation_app/screens/daily_walking_guests/daily_walking_guests%20_screen.dart';
@@ -38,6 +40,7 @@ import 'package:ballys_reservation_app/screens/reservations/reservation_screen.d
 import 'package:ballys_reservation_app/screens/reservations/reservation_view_screen.dart';
 import 'package:ballys_reservation_app/screens/settings_screen.dart';
 import 'package:ballys_reservation_app/screens/support_screen.dart';
+import 'package:ballys_reservation_app/screens/viewBirthdayGiftRequest.dart';
 import 'package:ballys_reservation_app/wrappers/main_wrapper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -1023,6 +1026,74 @@ class AppNavigation {
                       );
                     },
                   ),
+                ],
+              ),
+              GoRoute(
+                path: '/birthday-gifts',
+                pageBuilder: (context, state) => CustomTransitionPage(
+                  fullscreenDialog: true,
+                  key: state.pageKey,
+                  child: BirthdayGiftRequestScreen(
+                    giftsRepository: GiftsRepository(
+                      ApiService(const FlutterSecureStorage()),
+                    ),
+                    hideAddButton: true,
+                  ),
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                        return FadeTransition(
+                          opacity: CurveTween(
+                            curve: Curves.easeInOutCirc,
+                          ).animate(animation),
+                          child: child,
+                        );
+                      },
+                ),
+                routes: [
+                  GoRoute(
+                    path: 'view-birthday-gift-request',
+                    builder: (context, state) {
+                      final extra = state.extra as Map<String, dynamic>? ?? {};
+                      final gift = extra['gift'] as BirthdayIncressGiftRequest?;
+                      final isPending = extra['isPending'] as bool? ?? false;
+                      final isApproved = extra['isApproved'] as bool? ?? false;
+                      return ViewBirthdayGiftRequest(
+                        giftsRepository: GiftsRepository(
+                          ApiService(const FlutterSecureStorage()),
+                        ),
+                        gift: gift,
+                        isPending: isPending,
+                        isApproved: isApproved,
+                      );
+                    },
+                  ),
+                  GoRoute(
+  path: 'prv-gifts/:mid',
+  pageBuilder: (context, state) {
+    final String mid = state.pathParameters['mid']!;
+    return CustomTransitionPage(
+      fullscreenDialog: false,
+      key: state.pageKey,
+      child: PrvGiftScreen(
+        memberId: mid,
+        giftsRepository: GiftsRepository(
+          ApiService(const FlutterSecureStorage()),
+        ),
+      ),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(
+          opacity: CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeInOutCirc,
+          ),
+          child: child,
+        );
+      },
+    );
+  },
+),
+
+
                 ],
               ),
             ],

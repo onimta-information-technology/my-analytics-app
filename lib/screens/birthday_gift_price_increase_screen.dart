@@ -807,7 +807,44 @@ class _BirthdayGiftPriceIncreaseScreenState
                               ? "Chip Type required"
                               : null,
                         ),
-
+                        const SizedBox(height: 10.0),
+Card(
+                          elevation: 2,
+                          color: Colors.green.shade50,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.card_giftcard,
+                                  color: Colors.green.shade700,
+                                  size: 24,
+                                ),
+                                const SizedBox(width: 12),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Current Gift Value:',
+                                      style: TextStyle(
+                                        fontSize: fontSettings.fontSize - 2,
+                                        color: const Color.fromARGB(255, 0, 0, 0),
+                                      ),
+                                    ),
+                                    Text(
+                                      widget.birthday.gift,
+                                      style: TextStyle(
+                                        fontSize: fontSettings.fontSize + 4,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.green.shade700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 10.0),
 
                         // New Amount (Requested Increase)

@@ -236,205 +236,205 @@ class _ViewBirthdayGiftRequestState extends ConsumerState<ViewBirthdayGiftReques
                 key: _formKey,
                 child: Column(
                   children: [
-                    // if (widget.isApproved)
-                    //   Container(
-                    //     width: double.infinity,
-                    //     margin: const EdgeInsets.only(bottom: 16),
-                    //     child: ElevatedButton.icon(
-                    //       onPressed: () async {
-                    //         final confirmed = await showDialog<bool>(
-                    //           context: context,
-                    //           builder: (dialogContext) => AlertDialog(
-                    //             title: const Text('Reverse Gift'),
-                    //             content: const Text(
-                    //               'Are you sure you want to reverse this birthday gift?',
-                    //             ),
-                    //             actions: [
-                    //               TextButton(
-                    //                 onPressed: () => Navigator.of(dialogContext).pop(false),
-                    //                 child: const Text('Cancel'),
-                    //               ),
-                    //               ElevatedButton(
-                    //                 onPressed: () => Navigator.of(dialogContext).pop(true),
-                    //                 style: ElevatedButton.styleFrom(
-                    //                   backgroundColor: Colors.red,
-                    //                   foregroundColor: Colors.white,
-                    //                 ),
-                    //                 child: const Text('Reverse'),
-                    //               ),
-                    //             ],
-                    //           ),
-                    //         );
+                    if (widget.isApproved)
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (dialogContext) => AlertDialog(
+                                title: const Text('Reverse Gift'),
+                                content: const Text(
+                                  'Are you sure you want to reverse this birthday gift?',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(dialogContext).pop(false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () => Navigator.of(dialogContext).pop(true),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    child: const Text('Reverse'),
+                                  ),
+                                ],
+                              ),
+                            );
 
-                    //         if (confirmed != true) return;
+                            if (confirmed != true) return;
 
-                    //         setState(() {
-                    //           _isLoading = true;
-                    //         });
+                            setState(() {
+                              _isLoading = true;
+                            });
 
-                    //         try {
-                    //           final success = await ref
-                    //               .read(birthdayGiftProvider.notifier)
-                    //               .reverseBirthdayGiftFromUI(
-                    //                 reqid: widget.gift!.idNo,
-                    //                 userName: userName ?? "",
-                    //               );
+                            try {
+                              final success = await ref
+                                  .read(birthdayGiftIncreesProvider.notifier)
+                                  .reverseBirthdayGiftFromUI(
+                                    reqid: widget.gift!.idNo,
+                                    userName: userName ?? "",
+                                  );
 
-                    //           setState(() {
-                    //             _isLoading = false;
-                    //           });
+                              setState(() {
+                                _isLoading = false;
+                              });
 
-                    //           if (!mounted) return;
+                              if (!mounted) return;
 
-                    //           if (success) {
-                    //             ScaffoldMessenger.of(context).showSnackBar(
-                    //               const SnackBar(
-                    //                 content: Text('Birthday gift reversed successfully'),
-                    //                 backgroundColor: Colors.green,
-                    //               ),
-                    //             );
-                    //             Navigator.of(context).pop(true);
-                    //           } else {
-                    //             ScaffoldMessenger.of(context).showSnackBar(
-                    //               const SnackBar(
-                    //                 content: Text('Failed to reverse birthday gift'),
-                    //                 backgroundColor: Colors.red,
-                    //               ),
-                    //             );
-                    //           }
-                    //         } catch (e) {
-                    //           setState(() {
-                    //             _isLoading = false;
-                    //           });
+                              if (success) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Birthday gift reversed successfully'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                                Navigator.of(context).pop(true);
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Failed to reverse birthday gift'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              setState(() {
+                                _isLoading = false;
+                              });
 
-                    //           if (!mounted) return;
+                              if (!mounted) return;
 
-                    //           ScaffoldMessenger.of(context).showSnackBar(
-                    //             SnackBar(
-                    //               content: Text('Error: $e'),
-                    //               backgroundColor: Colors.red,
-                    //             ),
-                    //           );
-                    //         }
-                    //       },
-                    //       icon: const Icon(Icons.undo, size: 20),
-                    //       label: Text(
-                    //         'Reverse Gift',
-                    //         style: TextStyle(
-                    //           fontSize: fontSettings.fontSize,
-                    //           fontWeight: FontWeight.w600,
-                    //         ),
-                    //       ),
-                    //       style: ElevatedButton.styleFrom(
-                    //         backgroundColor: Colors.orange,
-                    //         foregroundColor: Colors.white,
-                    //         padding: const EdgeInsets.symmetric(vertical: 14),
-                    //         shape: RoundedRectangleBorder(
-                    //           borderRadius: BorderRadius.circular(12),
-                    //         ),
-                    //       ),
-                    //     ),
-                    //   ),
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.undo, size: 20),
+                          label: Text(
+                            'Reverse Gift',
+                            style: TextStyle(
+                              fontSize: fontSettings.fontSize,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
                     
-                    // if (!widget.isApproved && !widget.isPending)
-                    //   Container(
-                    //     width: double.infinity,
-                    //     margin: const EdgeInsets.only(bottom: 16),
-                    //     child: ElevatedButton.icon(
-                    //       onPressed: () async {
-                    //         final confirmed = await showDialog<bool>(
-                    //           context: context,
-                    //           builder: (dialogContext) => AlertDialog(
-                    //             title: const Text('Reverse Gift'),
-                    //             content: const Text(
-                    //               'Are you sure you want to reverse this rejected birthday gift?',
-                    //             ),
-                    //             actions: [
-                    //               TextButton(
-                    //                 onPressed: () => Navigator.of(dialogContext).pop(false),
-                    //                 child: const Text('Cancel'),
-                    //               ),
-                    //               ElevatedButton(
-                    //                 onPressed: () => Navigator.of(dialogContext).pop(true),
-                    //                 style: ElevatedButton.styleFrom(
-                    //                   backgroundColor: Colors.red,
-                    //                   foregroundColor: Colors.white,
-                    //                 ),
-                    //                 child: const Text('Reverse'),
-                    //               ),
-                    //             ],
-                    //           ),
-                    //         );
+                    if (!widget.isApproved && !widget.isPending)
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (dialogContext) => AlertDialog(
+                                title: const Text('Reverse Gift'),
+                                content: const Text(
+                                  'Are you sure you want to reverse this rejected birthday gift?',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(dialogContext).pop(false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () => Navigator.of(dialogContext).pop(true),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    child: const Text('Reverse'),
+                                  ),
+                                ],
+                              ),
+                            );
 
-                    //         if (confirmed != true) return;
+                            if (confirmed != true) return;
 
-                    //         setState(() {
-                    //           _isLoading = true;
-                    //         });
+                            setState(() {
+                              _isLoading = true;
+                            });
 
-                    //         try {
-                    //           final success = await ref
-                    //               .read(birthdayGiftProvider.notifier)
-                    //               .reverseBirthdayGiftFromUIRejected(
-                    //                 reqid: widget.gift!.idNo,
-                    //                 userName: userName ?? "",
-                    //               );
+                            try {
+                              final success = await ref
+                                  .read(birthdayGiftIncreesProvider.notifier)
+                                  .reverseBirthdayGiftFromUIRejected(
+                                    reqid: widget.gift!.idNo,
+                                    userName: userName ?? "",
+                                  );
 
-                    //           setState(() {
-                    //             _isLoading = false;
-                    //           });
+                              setState(() {
+                                _isLoading = false;
+                              });
 
-                    //           if (!mounted) return;
+                              if (!mounted) return;
 
-                    //           if (success) {
-                    //             ScaffoldMessenger.of(context).showSnackBar(
-                    //               const SnackBar(
-                    //                 content: Text('Birthday gift reversed successfully'),
-                    //                 backgroundColor: Colors.green,
-                    //               ),
-                    //             );
-                    //             Navigator.of(context).pop(true);
-                    //           } else {
-                    //             ScaffoldMessenger.of(context).showSnackBar(
-                    //               const SnackBar(
-                    //                 content: Text('Failed to reverse birthday gift'),
-                    //                 backgroundColor: Colors.red,
-                    //               ),
-                    //             );
-                    //           }
-                    //         } catch (e) {
-                    //           setState(() {
-                    //             _isLoading = false;
-                    //           });
+                              if (success) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Birthday gift reversed successfully'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                                Navigator.of(context).pop(true);
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Failed to reverse birthday gift'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              setState(() {
+                                _isLoading = false;
+                              });
 
-                    //           if (!mounted) return;
+                              if (!mounted) return;
 
-                    //           ScaffoldMessenger.of(context).showSnackBar(
-                    //             SnackBar(
-                    //               content: Text('Error: $e'),
-                    //               backgroundColor: Colors.red,
-                    //             ),
-                    //           );
-                    //         }
-                    //       },
-                    //       icon: const Icon(Icons.undo, size: 20),
-                    //       label: Text(
-                    //         'Reverse Gift',
-                    //         style: TextStyle(
-                    //           fontSize: fontSettings.fontSize,
-                    //           fontWeight: FontWeight.w600,
-                    //         ),
-                    //       ),
-                    //       style: ElevatedButton.styleFrom(
-                    //         backgroundColor: Colors.orange,
-                    //         foregroundColor: Colors.white,
-                    //         padding: const EdgeInsets.symmetric(vertical: 14),
-                    //         shape: RoundedRectangleBorder(
-                    //           borderRadius: BorderRadius.circular(12),
-                    //         ),
-                    //       ),
-                    //     ),
-                    //   ),
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.undo, size: 20),
+                          label: Text(
+                            'Reverse Gift',
+                            style: TextStyle(
+                              fontSize: fontSettings.fontSize,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
 
                     const SizedBox(height: 5.0),
                     TextFormField(

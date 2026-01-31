@@ -1227,99 +1227,99 @@ Future<bool> rejectBirthdayGiftRequest({
   }
 }
 
-// Future<bool> reverseBirthdayGiftRequest({
-//   required double reqid,
-//   required String userName,
-// }) async {
-//   try {
-//     print('Approve Reversing birthday gift request: reqid=$reqid, userName=$userName');
+Future<bool> reverseBirthdayGiftRequest({
+  required double reqid,
+  required String userName,
+}) async {
+  try {
+    print('Approve Reversing birthday gift request: reqid=$reqid, userName=$userName');
     
-//     final reqidInt = reqid.toInt();
-//     print('Converted reqid to int: $reqidInt');
+    final reqidInt = reqid.toInt();
+    print('Converted reqid to int: $reqidInt');
     
-//     final payload = {
-//       "HasReturnData": "T",
-//       "Parameters": [
-//         {
-//           "Para_Data": 988894,
-//           "Para_Direction": "Input",
-//           "Para_Lenth": 1,
-//           "Para_Name": "@Iid",
-//           "Para_Type": "int",
-//         },
-//         {
-//           "Para_Data": reqidInt,
-//           "Para_Direction": "Input",
-//           "Para_Lenth": 5000,
-//           "Para_Name": "@Text1",
-//           "Para_Type": "varchar",
-//         },
-//         {
-//           "Para_Data": userName,
-//           "Para_Direction": "Input",
-//           "Para_Lenth": 5000,
-//           "Para_Name": "@Text2",
-//           "Para_Type": "varchar",
-//         },
-//       ],
-//       "SpName": "sp_CRM_Common_API",
-//       "con": "1",
-//     };
+    final payload = {
+      "HasReturnData": "T",
+      "Parameters": [
+        {
+          "Para_Data": 988894,
+          "Para_Direction": "Input",
+          "Para_Lenth": 1,
+          "Para_Name": "@Iid",
+          "Para_Type": "int",
+        },
+        {
+          "Para_Data": reqidInt,
+          "Para_Direction": "Input",
+          "Para_Lenth": 5000,
+          "Para_Name": "@Text1",
+          "Para_Type": "varchar",
+        },
+        {
+          "Para_Data": userName,
+          "Para_Direction": "Input",
+          "Para_Lenth": 5000,
+          "Para_Name": "@Text2",
+          "Para_Type": "varchar",
+        },
+      ],
+      "SpName": "sp_CRM_Common_API",
+      "con": "1",
+    };
 
-//     final resp = await apiService.post('CommonExecute', payload);
-//     print('Reverse birthday gift response: $resp');
-//     return true;
-//   } catch (e) {
-//     print('Error reversing birthday gift request: $e');
-//     return false;
-//   }
-// }
+    final resp = await apiService.post('CommonExecute', payload);
+    print('Reverse birthday gift response: $resp');
+    return true;
+  } catch (e) {
+    print('Error reversing birthday gift request: $e');
+    return false;
+  }
+}
 
-// Future<bool> reverseBirthdayGiftRequestRejected({
-//   required double reqid,
-//   required String userName,
-// }) async {
-//   try {
-//     print('Reject Reversing birthday gift request: reqid=$reqid, userName=$userName');
+Future<bool> reverseBirthdayGiftRequestRejected({
+  required double reqid,
+  required String userName,
+}) async {
+  try {
+    print('Reject Reversing birthday gift request: reqid=$reqid, userName=$userName');
     
-//     final reqidInt = reqid.toInt();
-//     print('Converted reqid to int: $reqidInt');
+    final reqidInt = reqid.toInt();
+    print('Converted reqid to int: $reqidInt');
     
-//     final payload = {
-//       "HasReturnData": "T",
-//       "Parameters": [
-//         {
-//           "Para_Data": 988895,
-//           "Para_Direction": "Input",
-//           "Para_Lenth": 1,
-//           "Para_Name": "@Iid",
-//           "Para_Type": "int",
-//         },
-//         {
-//           "Para_Data": reqidInt,
-//           "Para_Direction": "Input",
-//           "Para_Lenth": 5000,
-//           "Para_Name": "@Text1",
-//           "Para_Type": "varchar",
-//         },
-//         {
-//           "Para_Data": userName,
-//           "Para_Direction": "Input",
-//           "Para_Lenth": 5000,
-//           "Para_Name": "@Text2",
-//           "Para_Type": "varchar",
-//         },
-//       ],
-//       "SpName": "sp_CRM_Common_API",
-//       "con": "1",
-//     };
+    final payload = {
+      "HasReturnData": "T",
+      "Parameters": [
+        {
+          "Para_Data": 988895,
+          "Para_Direction": "Input",
+          "Para_Lenth": 1,
+          "Para_Name": "@Iid",
+          "Para_Type": "int",
+        },
+        {
+          "Para_Data": reqidInt,
+          "Para_Direction": "Input",
+          "Para_Lenth": 5000,
+          "Para_Name": "@Text1",
+          "Para_Type": "varchar",
+        },
+        {
+          "Para_Data": userName,
+          "Para_Direction": "Input",
+          "Para_Lenth": 5000,
+          "Para_Name": "@Text2",
+          "Para_Type": "varchar",
+        },
+      ],
+      "SpName": "sp_CRM_Common_API",
+      "con": "1",
+    };
 
-//     final resp = await apiService.post('CommonExecute', payload);
-//     print('Reverse birthday gift rejected response: $resp');
-//     return true;
-//   } catch (e) {
-//     print('Error reversing rejected birthday gift request: $e');
-//     return false;
-//   }
-// }
+    final resp = await apiService.post('CommonExecute', payload);
+    print('Reverse birthday gift rejected response: $resp');
+    return true;
+  } catch (e) {
+    print('Error reversing rejected birthday gift request: $e');
+    return false;
+  }
+}
 }

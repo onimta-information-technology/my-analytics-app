@@ -67,25 +67,25 @@ class BirthdayGiftIncreesNotifier extends StateNotifier<BirthdayGiftIncreesState
     );
   }
 
-  // Future<bool> reverseBirthdayGiftFromUI({
-  //   required double reqid,
-  //   required String userName,
-  // }) async {
-  //   return await giftRepository.reverseBirthdayGiftRequest(
-  //     reqid: reqid,
-  //     userName: userName,
-  //   );
-  // }
+  Future<bool> reverseBirthdayGiftFromUI({
+    required double reqid,
+    required String userName,
+  }) async {
+    return await giftRepository.reverseBirthdayGiftRequest(
+      reqid: reqid,
+      userName: userName,
+    );
+  }
 
-  // Future<bool> reverseBirthdayGiftFromUIRejected({
-  //   required double reqid,
-  //   required String userName,
-  // }) async {
-  //   return await giftRepository.reverseBirthdayGiftRequestRejected(
-  //     reqid: reqid,
-  //     userName: userName,
-  //   );
-  // }
+  Future<bool> reverseBirthdayGiftFromUIRejected({
+    required double reqid,
+    required String userName,
+  }) async {
+    return await giftRepository.reverseBirthdayGiftRequestRejected(
+      reqid: reqid,
+      userName: userName,
+    );
+  }
 
   void resetData() {
     state = BirthdayGiftIncreesState();

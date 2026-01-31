@@ -66,6 +66,25 @@ class _BirthdayGiftRequestScreenState
     }
   }
 
+  String _formatAmount(String? amount) {
+    if (amount == null || amount.isEmpty) return "N/A";
+
+    try {
+      // Remove any existing commas or currency symbols
+      String cleanAmount = amount.replaceAll(RegExp(r'[^0-9.]'), '');
+      
+      // Parse as double
+      double value = double.parse(cleanAmount);
+      
+      // Format with thousand separator
+      final formatter = NumberFormat('#,##0.00', 'en_US');
+      return formatter.format(value);
+    } catch (e) {
+      // If parsing fails, return original amount
+      return amount;
+    }
+  }
+
   Future<void> _loadBirthdayGiftData(String salesCode) async {
     setState(() => _isLoading = true);
     try {
@@ -273,7 +292,7 @@ class _BirthdayGiftRequestScreenState
                         children: [
                           const Icon(
                             Icons.access_time,
-                            color: Colors.grey,
+                            color: Color.fromARGB(255, 0, 0, 0),
                             size: 16,
                           ),
                           const SizedBox(width: 6),
@@ -281,7 +300,7 @@ class _BirthdayGiftRequestScreenState
                             _formatDate(gift.insertDate),
                             style: TextStyle(
                               color: const Color.fromARGB(255, 2, 2, 2),
-                              fontSize: fontSettings.fontSize - 1,
+                              fontSize: fontSettings.fontSize,
                             ),
                           ),
                         ],
@@ -298,7 +317,7 @@ class _BirthdayGiftRequestScreenState
                           Text(
                             'Requested By: ',
                             style: TextStyle(
-                              fontSize: fontSettings.fontSize - 1,
+                              fontSize: fontSettings.fontSize,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -306,8 +325,8 @@ class _BirthdayGiftRequestScreenState
                             child: Text(
                               gift.reqBy.isNotEmpty ? gift.reqBy : 'N/A',
                               style: TextStyle(
-                                color: Colors.black87,
-                                fontSize: fontSettings.fontSize - 1,
+                                color: const Color.fromARGB(225, 0, 0, 0),
+                                fontSize: fontSettings.fontSize,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -329,7 +348,7 @@ class _BirthdayGiftRequestScreenState
                             Text(
                               '$actionLabel: ',
                               style: TextStyle(
-                                fontSize: fontSettings.fontSize - 1,
+                                fontSize: fontSettings.fontSize,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -338,7 +357,7 @@ class _BirthdayGiftRequestScreenState
                                 actionBy,
                                 style: TextStyle(
                                   color: actionColor,
-                                  fontSize: fontSettings.fontSize - 1,
+                                  fontSize: fontSettings.fontSize,
                                   fontWeight: FontWeight.w600,
                                 ),
                                 overflow: TextOverflow.ellipsis,
@@ -360,7 +379,7 @@ class _BirthdayGiftRequestScreenState
                             Text(
                               'Valid For: ',
                               style: TextStyle(
-                                fontSize: fontSettings.fontSize - 1,
+                                fontSize: fontSettings.fontSize ,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -369,7 +388,7 @@ class _BirthdayGiftRequestScreenState
                                 '${gift.validDates} days',
                                 style: TextStyle(
                                   color: Colors.deepPurple,
-                                  fontSize: fontSettings.fontSize - 1,
+                                  fontSize: fontSettings.fontSize,
                                   fontWeight: FontWeight.w600,
                                 ),
                                 overflow: TextOverflow.ellipsis,
@@ -391,17 +410,17 @@ class _BirthdayGiftRequestScreenState
                             Text(
                               'Previous Gift: ',
                               style: TextStyle(
-                                fontSize: fontSettings.fontSize - 1,
+                                fontSize: fontSettings.fontSize,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                             Expanded(
                               child: Text(
-                                gift.prvGiftAmount!,
+                                _formatAmount(gift.prvGiftAmount),
                                 style: TextStyle(
-                                  color: Colors.orange,
-                                  fontSize: fontSettings.fontSize - 1,
-                                  fontWeight: FontWeight.w600,
+                                  color: const Color.fromARGB(255, 0, 0, 0),
+                                  fontSize: fontSettings.fontSize+1,
+                                  fontWeight: FontWeight.bold,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),

@@ -130,7 +130,7 @@ class ApproveScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                //const SizedBox(height: 0),
                 Row(
                   children: [
                     Expanded(

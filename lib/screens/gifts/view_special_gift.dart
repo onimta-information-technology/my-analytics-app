@@ -49,11 +49,11 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
   final TextEditingController _chipController = TextEditingController();
   final TextEditingController _remarksController = TextEditingController();
 
-  //final TextEditingController _giftForController = TextEditingController();
   String? _selectedGift;
   String? _chipType;
   String _remarks = "";
   String? userName = "";
+  bool _hasGiftAppPermission = false; // Add this
   double drop = 0.0;
   double cashout = 0.0;
   double res = 0.0;
@@ -74,10 +74,10 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
   bool _isEditable = false;
 
   @override
-  @override
   void initState() {
     super.initState();
     _loadUserCredentials();
+    _checkGiftAppPermission(); // Add this
 
     if (widget.gift != null) {
       final g = widget.gift!;
@@ -112,6 +112,40 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
     });
   }
 
+  // Add this method to check Gift_App permission
+  Future<void> _checkGiftAppPermission() async {
+    final giftApp = await StorageUtil.getGiftApp();
+    setState(() {
+      _hasGiftAppPermission = giftApp ?? false;
+    });
+  }
+
+  // Add this method to show access denied dialog
+  void _showAccessDeniedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.block, color: Colors.red),
+            SizedBox(width: 10),
+            Text('Access Denied'),
+          ],
+        ),
+        content: const Text(
+          'You do not have permission to approve, reject, or reverse gift requests. '
+          // 'Only users with gift approval permission can perform these actions.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _loadGuestDataForCard() async {
     if (_memberIdController.text.isEmpty) return;
 
@@ -125,7 +159,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
       );
 
       List<GuestSearchResponse> guests = await guestRepository.searchGuest(
-        9021, // Using 9021 as the search type for MID lookup
+        9021,
         _memberIdController.text,
       );
 
@@ -139,7 +173,6 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                 memberName: guestResponse.mName ?? _memberNameController.text,
                 country: "",
                 lastVisitDate: guestResponse.lvd?.toString() ?? "",
-
                 age: 0,
                 gRating: guestResponse.gRating ?? "",
                 mGroup: guestResponse.mGroup,
@@ -196,10 +229,11 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
     "PLATINUM": "assets/images/ratings/PLATINUM.png",
     "SILVER": "assets/images/ratings/SILVER.png",
   };
+  
   String formatNumber(dynamic value) {
     if (value == null) return "";
     final num? number = num.tryParse(value.toString());
-    if (number == null) return value.toString(); // return as-is if not numeric
+    if (number == null) return value.toString();
     return NumberFormat.decimalPattern().format(number);
   }
 
@@ -272,7 +306,6 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
             }
           },
         ),
-
         title: Text(
           'Special Gift Request',
           style: TextStyle(
@@ -295,13 +328,19 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                   key: _formKey,
                   child: Column(
                     children: [
+                      // Reverse button for Approved gifts
                       if (widget.isApproved)
                         Container(
                           width: double.infinity,
                           margin: const EdgeInsets.only(bottom: 16),
                           child: ElevatedButton.icon(
                             onPressed: () async {
-                              // Show confirmation dialog and wait for result
+                              // Check permission first
+                              if (!_hasGiftAppPermission) {
+                                _showAccessDeniedDialog();
+                                return;
+                              }
+
                               final confirmed = await showDialog<bool>(
                                 context: context,
                                 builder: (dialogContext) => AlertDialog(
@@ -329,10 +368,8 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                 ),
                               );
 
-                              // If user didn't confirm, do nothing
                               if (confirmed != true) return;
 
-                              // User confirmed, proceed with reversal
                               setState(() {
                                 _isLoading = true;
                               });
@@ -360,8 +397,6 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                       backgroundColor: Colors.green,
                                     ),
                                   );
-
-                                  // Navigate back to SpecialGiftRequestScreen
                                   Navigator.of(context).pop(true);
                                 } else {
                                   ScaffoldMessenger.of(context).showSnackBar(
@@ -404,13 +439,20 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             ),
                           ),
                         ),
+                      
+                      // Reverse button for Rejected gifts
                       if (!widget.isApproved && !widget.isPending)
                         Container(
                           width: double.infinity,
                           margin: const EdgeInsets.only(bottom: 16),
                           child: ElevatedButton.icon(
                             onPressed: () async {
-                              // Show confirmation dialog and wait for result
+                              // Check permission first
+                              if (!_hasGiftAppPermission) {
+                                _showAccessDeniedDialog();
+                                return;
+                              }
+
                               final confirmed = await showDialog<bool>(
                                 context: context,
                                 builder: (dialogContext) => AlertDialog(
@@ -438,10 +480,8 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                 ),
                               );
 
-                              // If user didn't confirm, do nothing
                               if (confirmed != true) return;
 
-                              // User confirmed, proceed with reversal
                               setState(() {
                                 _isLoading = true;
                               });
@@ -469,8 +509,6 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                       backgroundColor: Colors.green,
                                     ),
                                   );
-
-                                  // Navigate back to SpecialGiftRequestScreen
                                   Navigator.of(context).pop(true);
                                 } else {
                                   ScaffoldMessenger.of(context).showSnackBar(
@@ -513,11 +551,11 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             ),
                           ),
                         ),
+                      
                       const SizedBox(height: 5.0),
                       TextFormField(
                         controller: (_fromDateController),
                         readOnly: true,
-
                         style: _inputTextStyle(fontSettings),
                         decoration: InputDecoration(
                           labelText: "From Date & Time",
@@ -559,8 +597,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             _memberIdController.text.isNotEmpty &&
                             _memberNameController.text.isNotEmpty,
                         isLoading: _isLoading,
-                        showLastVisitDate:
-                            true, // Enable last visit date display
+                        showLastVisitDate: true,
                       ),
                       const SizedBox(height: 16.0),
 
@@ -682,8 +719,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () {
-                                final memberId = _memberIdController.text
-                                    .trim();
+                                final memberId = _memberIdController.text.trim();
 
                                 if (memberId.isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
@@ -721,9 +757,6 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                         ],
                       ),
 
-                      // const SizedBox(height: 16.0),
-
-                      // Replace the _showGuestData block with this:
                       const SizedBox(height: 10),
                       Align(
                         alignment: Alignment.center,
@@ -789,7 +822,6 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                   ),
                                 ),
                                 DataColumn(
-                                  //   numeric: true,
                                   label: Text(
                                     "Value",
                                     style: TextStyle(
@@ -819,7 +851,6 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                         alignment: Alignment.centerLeft,
                                         child: Text(
                                           row["Field"].toString(),
-
                                           style: TextStyle(
                                             fontSize: fontSettings.fontSize,
                                             fontWeight: shouldHighlight
@@ -945,7 +976,6 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                 vertical: -5.0,
                               ),
                             ),
-
                             inputFormatters: <TextInputFormatter>[],
                             style: _inputTextStyle(fontSettings),
                           ),
@@ -964,8 +994,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                   icon: Icon(Icons.edit, color: Colors.blue),
                                   onPressed: () {
                                     setState(() {
-                                      _isEditable =
-                                          !_isEditable; // toggle edit mode
+                                      _isEditable = !_isEditable;
                                     });
                                   },
                                 ),
@@ -1095,6 +1124,12 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () async {
+                                  // Check permission first
+                                  if (!_hasGiftAppPermission) {
+                                    _showAccessDeniedDialog();
+                                    return;
+                                  }
+
                                   if (widget.gift == null) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
@@ -1104,7 +1139,6 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                     return;
                                   }
 
-                                  // Validate that valid days is selected
                                   if (_selectedValidDays == null) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
@@ -1184,6 +1218,12 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () async {
+                                  // Check permission first
+                                  if (!_hasGiftAppPermission) {
+                                    _showAccessDeniedDialog();
+                                    return;
+                                  }
+
                                   if (widget.gift == null) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
@@ -1194,7 +1234,6 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                   }
 
                                   final reqid = widget.gift!.idNo;
-
                                   final uname = userName ?? "";
 
                                   setState(() {
@@ -1223,7 +1262,6 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                           .read(giftProvider.notifier)
                                           .getGiftForList();
                                       Navigator.of(context).pop(true);
-                                      // go back after approval
                                     } else {
                                       ScaffoldMessenger.of(
                                         context,
@@ -1278,7 +1316,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(
                                   0xFF25D366,
-                                ), // WhatsApp green color
+                                ),
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -1295,7 +1333,6 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                 ),
               ),
             ),
-
             const Watermark(),
           ],
         ),

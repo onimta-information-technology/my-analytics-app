@@ -68,6 +68,7 @@ class _ViewBirthdayGiftRequestState extends ConsumerState<ViewBirthdayGiftReques
   double flushactdrop = 0.0;
   double avgbet = 0.0;
   int? _selectedValidDays;
+bool _hasGiftAppPermission = false;
 
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
@@ -77,6 +78,7 @@ class _ViewBirthdayGiftRequestState extends ConsumerState<ViewBirthdayGiftReques
   void initState() {
     super.initState();
     _loadUserCredentials();
+ _checkGiftAppPermission();
 
     if (widget.gift != null) {
       final g = widget.gift!;
@@ -109,7 +111,36 @@ class _ViewBirthdayGiftRequestState extends ConsumerState<ViewBirthdayGiftReques
       });
     }
   }
-
+Future<void> _checkGiftAppPermission() async {
+    final giftApp = await StorageUtil.getGiftApp();
+    setState(() {
+      _hasGiftAppPermission = giftApp ?? false;
+    });
+  }
+ void _showAccessDeniedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.block, color: Colors.red),
+            SizedBox(width: 10),
+            Text('Access Denied'),
+          ],
+        ),
+        content: const Text(
+          'You do not have permission to Approve, Reject, or Reverse gift requests.'
+          // 'Only users with gift approval permission can perform these actions.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
   Future<void> _loadGuestDataForCard() async {
     if (_memberIdController.text.isEmpty) return;
 
@@ -242,6 +273,10 @@ class _ViewBirthdayGiftRequestState extends ConsumerState<ViewBirthdayGiftReques
                         margin: const EdgeInsets.only(bottom: 16),
                         child: ElevatedButton.icon(
                           onPressed: () async {
+                            if (!_hasGiftAppPermission) {
+                              _showAccessDeniedDialog();
+                              return;
+                            }
                             final confirmed = await showDialog<bool>(
                               context: context,
                               builder: (dialogContext) => AlertDialog(
@@ -342,6 +377,10 @@ class _ViewBirthdayGiftRequestState extends ConsumerState<ViewBirthdayGiftReques
                         margin: const EdgeInsets.only(bottom: 16),
                         child: ElevatedButton.icon(
                           onPressed: () async {
+                            if (!_hasGiftAppPermission) {
+                              _showAccessDeniedDialog();
+                              return;
+                            }
                             final confirmed = await showDialog<bool>(
                               context: context,
                               builder: (dialogContext) => AlertDialog(
@@ -971,6 +1010,10 @@ ElevatedButton(
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () async {
+                                if (!_hasGiftAppPermission) {
+                                  _showAccessDeniedDialog();
+                                  return;
+                                }
                                 if (widget.gift == null) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
@@ -1050,6 +1093,10 @@ ElevatedButton(
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () async {
+                                 if (!_hasGiftAppPermission) {
+                                  _showAccessDeniedDialog();
+                                  return;
+                                }
                                 if (widget.gift == null) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(

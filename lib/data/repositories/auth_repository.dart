@@ -108,7 +108,8 @@ print("hellooo");
           salesCode: tableData['Sales_Code'].toString(),
           marketingCode: tableData['Marketing_Code'].toString(),
           mobileNumber: tableData['Mobile'].toString(),
-            memProfSH: tableData['Mem_Prof_SH'],
+          memProfSH: tableData['Mem_Prof_SH'],
+          giftApp: tableData['Gift_App'],
         );
       } else {
         // Handle login failure cases

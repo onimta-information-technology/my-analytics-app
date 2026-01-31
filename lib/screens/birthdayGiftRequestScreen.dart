@@ -33,7 +33,27 @@ class _BirthdayGiftRequestScreenState
   bool _isLoading = false;
   bool isPending = false;
   bool isApproved = false;
+   bool _hasGiftAppPermission = false;
   
+
+  Future<bool> _canAccessGiftDetails(BirthdayIncressGiftRequest gift) async {
+    // Check if user has Gift_App permission
+    final giftApp = await StorageUtil.getGiftApp();
+    if (giftApp == true) {
+      return true;
+    }
+
+    // Check if current user is the requester
+    final currentUserName = await StorageUtil.getUserName();
+    if (currentUserName != null && 
+        gift.reqBy.isNotEmpty && 
+        currentUserName.trim().toLowerCase() == gift.reqBy.trim().toLowerCase()) {
+      return true;
+    }
+
+    return false;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -227,6 +247,35 @@ class _BirthdayGiftRequestScreenState
             InkWell(
               borderRadius: BorderRadius.circular(10),
               onTap: () async {
+                 final canAccess = await _canAccessGiftDetails(gift);
+                   if (!canAccess) {
+                  // Show access denied dialog
+                  if (mounted) {
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Row(
+                          children: [
+                            Icon(Icons.block, color: Colors.red),
+                            SizedBox(width: 10),
+                            Text('Access Denied'),
+                          ],
+                        ),
+                        content: const Text(
+                          'You do not have permission to view this gift request. '
+                          
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  return;
+                }
                 final result = await context.push(
                   '/menu/approve-reject/birthday-gifts/view-birthday-gift-request',
                   extra: {

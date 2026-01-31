@@ -165,6 +165,7 @@ class AuthNotifier extends StateNotifier<AuthState?> {
           _pendingUser.marketingCode,
           _pendingUser.mobileNumber ?? "",
           _pendingUser.memProfSH,
+          _pendingUser.giftApp,
         );
 
         // Update state to fully authenticated

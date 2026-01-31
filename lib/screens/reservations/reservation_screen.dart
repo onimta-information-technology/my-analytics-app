@@ -4,13 +4,14 @@ import 'package:ballys_reservation_app/models/reservation.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/reservation_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_reservation_provider.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart'; // Add this import
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class ReservationScreen extends ConsumerStatefulWidget {
-   final bool hideAddButton;
-  const ReservationScreen({super.key,this.hideAddButton = false});
+  final bool hideAddButton;
+  const ReservationScreen({super.key, this.hideAddButton = false});
 
   @override
   ConsumerState<ReservationScreen> createState() => _ReservationScreenState();
@@ -48,6 +49,25 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
     });
   }
 
+  // Add this method to check access permission
+  Future<bool> _canAccessReservationDetails(Reservation reservation) async {
+    // Check if user has Gift_App permission
+    final giftApp = await StorageUtil.getGiftApp();
+    if (giftApp == true) {
+      return true;
+    }
+
+    // Check if current user is the requester
+    final currentUserName = await StorageUtil.getUserName();
+    if (currentUserName != null && 
+        reservation.reqBy.isNotEmpty && 
+        currentUserName.trim().toLowerCase() == reservation.reqBy.trim().toLowerCase()) {
+      return true;
+    }
+
+    return false;
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -78,19 +98,17 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
             },
           ),
           if (!widget.hideAddButton)
-          IconButton(
-            icon: const Icon(Icons.add_rounded, size: 35),
-            onPressed: () async {
-              //context.go('/reservations/new-reservation');
-              final result = await context.push(
-                '/reservations/new-reservation',
-              );
-              if (result == true) {
-                // Refresh reservation data
-                await _loadReservationData();
-              }
-            },
-          ),
+            IconButton(
+              icon: const Icon(Icons.add_rounded, size: 35),
+              onPressed: () async {
+                final result = await context.push(
+                  '/reservations/new-reservation',
+                );
+                if (result == true) {
+                  await _loadReservationData();
+                }
+              },
+            ),
         ],
         bottom: TabBar(
           controller: _tabController,
@@ -177,318 +195,224 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
     );
   }
 
-  // Widget _buildReservationList(List<Reservation> reservations) {
-  //   final fontSettings = ref.watch(fontSettingsProvider);
-  //   if (reservations.isEmpty) {
-  //     return const Center(child: Text('No reservations available.'));
-  //   }
+  Widget _buildReservationList(List<Reservation> reservations) {
+    final fontSettings = ref.watch(fontSettingsProvider);
+    if (reservations.isEmpty) {
+      return const Center(child: Text('No reservations available.'));
+    }
 
-  //   return ListView.builder(
-  //     itemCount: reservations.length,
-  //     itemBuilder: (context, index) {
-  //       final reservation = reservations[index];
-  //       return Stack(
-  //         children: [
-  //           Card(
-  //             margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-  //             elevation: 4,
-  //             shape: RoundedRectangleBorder(
-  //               borderRadius: BorderRadius.circular(10),
-  //             ),
-  //             child: ListTile(
-  //               title: Text(
-  //                 'Reservation: ${reservation.reservNo}',
-  //                 style: TextStyle(
-  //                   color: Colors.black,
-  //                   fontSize: fontSettings.fontSize,
-  //                   fontWeight: FontWeight.bold,
-  //                 ),
-  //               ),
-  //               subtitle: Column(
-  //                 crossAxisAlignment: CrossAxisAlignment.start,
-  //                 children: [
-  //                   Text(
-  //                     '${reservation.mid} - ${reservation.mName}',
-  //                     style: TextStyle(
-  //                       color: Colors.black,
-  //                       fontSize: fontSettings.fontSize,
-  //                     ),
-  //                   ),
-  //                   const SizedBox(height: 4),
-  //                   Container(
-  //                     padding: const EdgeInsets.symmetric(
-  //                       horizontal: 8,
-  //                       vertical: 4,
-  //                     ),
-  //                     decoration: BoxDecoration(
-  //                       color: _getStatusColor(reservation.requestStatus),
-  //                       borderRadius: BorderRadius.circular(12),
-  //                     ),
-  //                     child: Row(
-  //                       mainAxisSize: MainAxisSize.min,
-  //                       children: [
-  //                         Icon(
-  //                           _getStatusIcon(reservation.requestStatus),
-  //                           size: 16,
-  //                           color: Colors.white,
-  //                         ),
-  //                         const SizedBox(width: 4),
-  //                         Text(
-  //                           reservation.requestStatus,
-  //                           style: TextStyle(
-  //                             fontSize: fontSettings.fontSize,
-  //                             color: Colors.white,
-  //                           ),
-  //                         ),
-  //                       ],
-  //                     ),
-  //                   ),
-  //                 ],
-  //               ),
-  //               // onTap: () {
-  //               //   ref
-  //               //       .read(selectedReservationProvider.notifier)
-  //               //       .setSelectedReservation(reservation);
-  //               //   context.go(
-  //               //     "/reservations/reservation-view",
-  //               //   );
-  //               // },
-  //               onTap: () async {
-  //                 ref
-  //                     .read(selectedReservationProvider.notifier)
-  //                     .setSelectedReservation(reservation);
-
-  //                 final result = await context.push(
-  //                   "/reservations/reservation-view",
-  //                 );
-
-  //                 if (result == true) {
-  //                   // refresh reservations after returning
-  //                   await _loadReservationData();
-  //                 }
-  //               },
-  //             ),
-  //           ),
-  //           Positioned(
-  //             top: 10,
-  //             right: 15,
-  //             child: Padding(
-  //               padding: const EdgeInsets.all(0),
-  //               child: SizedBox(
-  //                 width: 100,
-  //                 height: 30,
-  //                 child: ratingImageMap[reservation.gRating] != null
-  //                     ? Hero(
-  //                         tag: "rating-image-${reservation.mid}",
-  //                         child: Image.asset(
-  //                           ratingImageMap[reservation.gRating]!,
-  //                           fit: BoxFit.contain,
-  //                         ),
-  //                       )
-  //                     : Hero(
-  //                         tag: "rating-image-${reservation.mid}",
-  //                         child: Image.asset(
-  //                           "assets/images/ratings/CLASSIC.png",
-  //                           fit: BoxFit.contain,
-  //                         ),
-  //                       ),
-  //               ),
-  //             ),
-  //           ),
-  //         ],
-  //       );
-  //     },
-  //   );
-  // }
-Widget _buildReservationList(List<Reservation> reservations) {
-  final fontSettings = ref.watch(fontSettingsProvider);
-  if (reservations.isEmpty) {
-    return const Center(child: Text('No reservations available.'));
-  }
-
-  return ListView.builder(
-    itemCount: reservations.length,
-    itemBuilder: (context, index) {
-      final reservation = reservations[index];
-      return Stack(
-        children: [
-          Card(
-            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            elevation: 4,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 12,
+    return ListView.builder(
+      itemCount: reservations.length,
+      itemBuilder: (context, index) {
+        final reservation = reservations[index];
+        
+        return Stack(
+          children: [
+            Card(
+              margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
               ),
-              title: Text(
-                'Reservation: ${reservation.reservNo}',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: fontSettings.fontSize,
-                  fontWeight: FontWeight.bold,
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
                 ),
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 4),
-                  Text(
-                    '${reservation.mid} - ${reservation.mName}',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: fontSettings.fontSize,
+                title: Text(
+                  'Reservation: ${reservation.reservNo}',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: fontSettings.fontSize,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 4),
+                    Text(
+                      '${reservation.mid} - ${reservation.mName}',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: fontSettings.fontSize,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  // Request By section
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.person_outline,
-                        size: 20,
-                       color: Colors.blue,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Requested by: ',
-                        style: TextStyle(
-                          fontSize: fontSettings.fontSize,
-                         
-                        ),
-                      ),
-                      Expanded(
-                        child: Text(
-                          reservation.reqBy,
-                          style: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                           
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  // Approved/Rejected By section (only show if approved or rejected)
-                  if (reservation.requestStatus == 'Approved' ||
-                      reservation.requestStatus == 'Rejected')
+                    const SizedBox(height: 8),
+                    // Request By section
                     Row(
                       children: [
-                        Icon(
-                          reservation.requestStatus == 'Approved'
-                              ? Icons.check_circle_outline
-                              : Icons.cancel_outlined,
+                        const Icon(
+                          Icons.person_outline,
                           size: 20,
-                          color: reservation.requestStatus == 'Approved'
-                              ? Colors.green
-                              : Colors.red,
+                          color: Colors.blue,
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '${reservation.requestStatus} by: ',
+                          'Requested by: ',
                           style: TextStyle(
                             fontSize: fontSettings.fontSize,
-                            // color: reservation.requestStatus == 'Approved'
-                            //     ? Colors.green[700]
-                            //     : Colors.red[700],
-                            fontWeight: FontWeight.w500,
                           ),
                         ),
                         Expanded(
                           child: Text(
-                            reservation.isAppBy ?? 'N/A',
+                            reservation.reqBy,
                             style: TextStyle(
-                              fontSize: fontSettings.fontSize ,
-                             color: reservation.requestStatus == 'Approved'
-                                ? Colors.green[700]
-                                : Colors.red[700],
+                              fontSize: fontSettings.fontSize,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
-                  const SizedBox(height: 8),
-                  // Status badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(reservation.requestStatus),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _getStatusIcon(reservation.requestStatus),
-                          size: 16,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          reservation.requestStatus,
-                          style: TextStyle(
-                            fontSize: fontSettings.fontSize,
+                    const SizedBox(height: 4),
+                    // Approved/Rejected By section
+                    if (reservation.requestStatus == 'Approved' ||
+                        reservation.requestStatus == 'Rejected')
+                      Row(
+                        children: [
+                          Icon(
+                            reservation.requestStatus == 'Approved'
+                                ? Icons.check_circle_outline
+                                : Icons.cancel_outlined,
+                            size: 20,
+                            color: reservation.requestStatus == 'Approved'
+                                ? Colors.green
+                                : Colors.red,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${reservation.requestStatus} by: ',
+                            style: TextStyle(
+                              fontSize: fontSettings.fontSize,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              reservation.isAppBy ?? 'N/A',
+                              style: TextStyle(
+                                fontSize: fontSettings.fontSize,
+                                color: reservation.requestStatus == 'Approved'
+                                    ? Colors.green[700]
+                                    : Colors.red[700],
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    const SizedBox(height: 8),
+                    // Status badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _getStatusColor(reservation.requestStatus),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _getStatusIcon(reservation.requestStatus),
+                            size: 16,
                             color: Colors.white,
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              onTap: () async {
-                ref
-                    .read(selectedReservationProvider.notifier)
-                    .setSelectedReservation(reservation);
-
-                final result = await context.push(
-                  "/reservations/reservation-view",
-                );
-
-                if (result == true) {
-                  await _loadReservationData();
-                }
-              },
-            ),
-          ),
-          Positioned(
-            top: 10,
-            right: 15,
-            child: Padding(
-              padding: const EdgeInsets.all(0),
-              child: SizedBox(
-                width: 100,
-                height: 30,
-                child: ratingImageMap[reservation.gRating] != null
-                    ? Hero(
-                        tag: "rating-image-${reservation.mid}",
-                        child: Image.asset(
-                          ratingImageMap[reservation.gRating]!,
-                          fit: BoxFit.contain,
-                        ),
-                      )
-                    : Hero(
-                        tag: "rating-image-${reservation.mid}",
-                        child: Image.asset(
-                          "assets/images/ratings/CLASSIC.png",
-                          fit: BoxFit.contain,
-                        ),
+                          const SizedBox(width: 4),
+                          Text(
+                            reservation.requestStatus,
+                            style: TextStyle(
+                              fontSize: fontSettings.fontSize,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                  ],
+                ),
+                onTap: () async {
+                  // Check access permission before navigation
+                  final canAccess = await _canAccessReservationDetails(reservation);
+                  
+                  if (!canAccess) {
+                    if (mounted) {
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Row(
+                            children: [
+                              Icon(Icons.block, color: Colors.red),
+                              SizedBox(width: 10),
+                              Text('Access Denied'),
+                            ],
+                          ),
+                          content: const Text(
+                            'You do not have permission to view this reservation. '
+                            // 'Only the requester or users with approval permission can view the details.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: const Text('OK'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return;
+                  }
+
+                  // Navigate if user has access
+                  ref
+                      .read(selectedReservationProvider.notifier)
+                      .setSelectedReservation(reservation);
+
+                  final result = await context.push(
+                    "/reservations/reservation-view",
+                  );
+
+                  if (result == true) {
+                    await _loadReservationData();
+                  }
+                },
               ),
             ),
-          ),
-        ],
-      );
-    },
-  );
-}
+            Positioned(
+              top: 10,
+              right: 15,
+              child: Padding(
+                padding: const EdgeInsets.all(0),
+                child: SizedBox(
+                  width: 100,
+                  height: 30,
+                  child: ratingImageMap[reservation.gRating] != null
+                      ? Hero(
+                          tag: "rating-image-${reservation.mid}",
+                          child: Image.asset(
+                            ratingImageMap[reservation.gRating]!,
+                            fit: BoxFit.contain,
+                          ),
+                        )
+                      : Hero(
+                          tag: "rating-image-${reservation.mid}",
+                          child: Image.asset(
+                            "assets/images/ratings/CLASSIC.png",
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Color _getStatusColor(String status) {
     switch (status) {
       case 'Approved':

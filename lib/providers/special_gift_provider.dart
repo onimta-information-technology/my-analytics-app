@@ -11,6 +11,7 @@ class GiftNotifier extends StateNotifier<GiftState> {
   final GiftsRepository giftRepository;
 
   GiftNotifier(this.giftRepository) : super(GiftState());
+  
 
   Future<void> getSpecialGiftData(int iid, String text1) async {
     try {
@@ -431,6 +432,8 @@ class GiftNotifier extends StateNotifier<GiftState> {
     );
   }
 }
+
+
 
 final flutterSecureStorageProvider = Provider(
   (ref) => const FlutterSecureStorage(),

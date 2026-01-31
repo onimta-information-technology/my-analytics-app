@@ -54,10 +54,12 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
   bool _isLoading = false;
   bool _isGuestLoading = false;
   bool _guestDataLoaded = false;
-
+  bool _hasGiftAppPermission = false;
+  
   @override
   void initState() {
     super.initState();
+    _checkGiftAppPermission();
     _getHotels();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       FocusScope.of(context).requestFocus(FocusNode());
@@ -89,6 +91,37 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
     _arrivalDateController.dispose();
     _departureDateController.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkGiftAppPermission() async {
+    final giftApp = await StorageUtil.getGiftApp();
+    setState(() {
+      _hasGiftAppPermission = giftApp ?? false;
+    });
+  }
+
+  void _showAccessDeniedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.block, color: Colors.red),
+            SizedBox(width: 10),
+            Text('Access Denied'),
+          ],
+        ),
+        content: const Text(
+          'You do not have permission to Approve or Reject gift requests.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _loadGuestDataForView() async {
@@ -129,7 +162,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
             );
       }
 
-      // // Mark guest data as loaded
+      // Mark guest data as loaded
       _guestDataLoaded = true;
 
       setState(() {
@@ -223,7 +256,6 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                 TextField(
                   controller: remarksController,
                   decoration: const InputDecoration(
-                    // labelText: 'Remarks',
                     border: OutlineInputBorder(),
                     hintText: 'Enter your remarks here...',
                   ),
@@ -253,6 +285,12 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
   }
 
   Future<void> _approveReservation() async {
+    // Check permission first
+    if (!_hasGiftAppPermission) {
+      _showAccessDeniedDialog();
+      return;
+    }
+
     final selectedReservation = ref.watch(selectedReservationProvider);
     if (selectedReservation == null) return;
 
@@ -308,6 +346,12 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
   }
 
   Future<void> _rejectReservation() async {
+    // Check permission first
+    if (!_hasGiftAppPermission) {
+      _showAccessDeniedDialog();
+      return;
+    }
+
     final selectedReservation = ref.watch(selectedReservationProvider);
     if (selectedReservation == null) return;
 
@@ -404,15 +448,15 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-    icon: const Icon(Icons.arrow_back),
-    onPressed: () {
-      if (context.canPop()) {
-        context.pop();
-      } else {
-        context.go('/MenuScreen');
-      }
-    },
-  ),
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/MenuScreen');
+            }
+          },
+        ),
         title: Text(
           "Reservation - ${selectedReservation != null ? selectedReservation.reservNo : ''}",
           style: const TextStyle(fontSize: 18),
@@ -430,7 +474,6 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
             child: Padding(
               padding: const EdgeInsets.only(right: 8.0),
 
-              // child: IconButton(
               child: (selectedReservation?.requestStatus == 'Pending')
                   ? IconButton(
                       onPressed: () async {
@@ -914,7 +957,6 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                       children: [
                         Expanded(
                           child: SizedBox(
-                            // width: double.infinity,
                             child: ElevatedButton(
                               onPressed: _approveReservation,
                               style: ElevatedButton.styleFrom(
@@ -948,7 +990,6 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                         const SizedBox(width: 10.0),
                         Expanded(
                           child: SizedBox(
-                            // width: double.infinity,
                             child: ElevatedButton(
                               onPressed: _rejectReservation,
                               style: ElevatedButton.styleFrom(

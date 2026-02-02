@@ -55,10 +55,10 @@ class _SpecialGiftRequestScreenState
   // Check access permission for detail view
   Future<bool> _canAccessGiftDetails(SpecialGiftRequest gift) async {
     // Check if user has sales code AD001 (can see all gifts)
-    final salesCode = await StorageUtil.getSalesCode();
-    if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
-      return true;
-    }
+    // final salesCode = await StorageUtil.getSalesCode();
+    // if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
+    //   return true;
+    // }
 
     // Check if user has Gift_App permission
     final giftApp = await StorageUtil.getGiftApp();

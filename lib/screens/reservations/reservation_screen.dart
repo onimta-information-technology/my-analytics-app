@@ -71,10 +71,10 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
   // Check access permission for detail view
   Future<bool> _canAccessReservationDetails(Reservation reservation) async {
     // Check if user has sales code AD001 (can see all reservations)
-    final salesCode = await StorageUtil.getSalesCode();
-    if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
-      return true;
-    }
+    // final salesCode = await StorageUtil.getSalesCode();
+    // if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
+    //   return true;
+    // }
 
     // Check if user has Gift_App permission
     final giftApp = await StorageUtil.getGiftApp();
@@ -364,7 +364,7 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
                             _getStatusIcon(reservation.requestStatus),
                             size: 16,
                             color: const Color.fromARGB(255, 0, 0, 0),
-                            
+
                           ),
                           const SizedBox(width: 4),
                           Text(

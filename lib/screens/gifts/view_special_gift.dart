@@ -171,30 +171,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
     });
   }
 
-  // void _showAccessDeniedDialog() {
-  //   showDialog(
-  //     context: context,
-  //     builder: (context) => AlertDialog(
-  //       title: const Row(
-  //         children: [
-  //           Icon(Icons.block, color: Colors.red),
-  //           SizedBox(width: 10),
-  //           Text('Access Denied'),
-  //         ],
-  //       ),
-  //       content: const Text(
-  //         'You do not have permission to approve, reject, or reverse gift requests.',
-  //       ),
-  //       actions: [
-  //         TextButton(
-  //           onPressed: () => Navigator.of(context).pop(),
-  //           child: const Text('OK'),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-void _showAccessDeniedDialog() {
+  void _showAccessDeniedDialog() {
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -276,6 +253,7 @@ void _showAccessDeniedDialog() {
       },
     );
   }
+
   Future<void> _loadGuestDataForCard() async {
     if (_memberIdController.text.isEmpty) return;
 
@@ -1503,14 +1481,6 @@ void _showAccessDeniedDialog() {
                                           ],
                                         ),
                                         const SizedBox(height: 8),
-                                        // Text(
-                                        //   "Type: ${_chipController.text}",
-                                        //   style: const TextStyle(fontSize: 14),
-                                        // ),
-                                        // Text(
-                                        //   "For: ${_selectedGift?.replaceAll('_', ' ') ?? 'Special Gift'}",
-                                        //   style: const TextStyle(fontSize: 14),
-                                        // ),
                                       ],
                                     ),
                                   ),
@@ -1569,7 +1539,6 @@ void _showAccessDeniedDialog() {
                                   
                                   const Text(
                                     "Note: Please enter the WhatsApp number with the country code",
-                                    // "Examples: 94712345678, 971234567890",
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Color.fromARGB(255, 0, 0, 0),
@@ -1579,10 +1548,10 @@ void _showAccessDeniedDialog() {
                                   
                                   const SizedBox(height: 16),
                                   
-                                  // Send button
+                                  // Send button - FIXED VERSION
                                   SizedBox(
                                     width: double.infinity,
-                                    child: ElevatedButton.icon(
+                                    child: ElevatedButton(
                                       onPressed: () async {
                                         final whatsappNumber = _whatsappNumberController.text.trim();
                                         
@@ -1673,19 +1642,6 @@ void _showAccessDeniedDialog() {
                                           );
                                         }
                                       },
-                                      icon: Image.asset(
-                                        'assets/images/others/whatsapp.png',
-                                        width: 24,
-                                        height: 24,
-                                        color: Colors.white,
-                                      ),
-                                      label: Text(
-                                        "Send Gift Details via WhatsApp",
-                                        style: TextStyle(
-                                          fontSize: fontSettings.fontSize,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: const Color(0xFF25D366),
                                         foregroundColor: Colors.white,
@@ -1694,7 +1650,30 @@ void _showAccessDeniedDialog() {
                                         ),
                                         padding: const EdgeInsets.symmetric(
                                           vertical: 16,
+                                          horizontal: 16,
                                         ),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Image.asset(
+                                            'assets/images/others/whatsapp.png',
+                                            width: 24,
+                                            height: 24,
+                                            color: Colors.white,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          const Flexible(
+                                            child: Text(
+                                              "Send Gift Details via WhatsApp",
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),

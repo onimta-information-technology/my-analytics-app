@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/components/Event/IndependenceEvent.dart';
 import 'package:ballys_reservation_app/components/marketing_performance.dart';
 import 'package:ballys_reservation_app/components/snow.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
@@ -19,6 +20,8 @@ final guestCountsProvider = StateProvider<Map<String, int?>>(
 );
 final homeScreenInitializedProvider = StateProvider<bool>((ref) => false);
 final eventShownProvider = StateProvider<bool>((ref) => false);
+final independenceEventShownProvider = StateProvider<bool>((ref) => false); // ADD THIS
+
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -30,7 +33,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     with AutomaticKeepAliveClientMixin {
   String? userName;
   bool _isLoadingData = false;
-bool _showEvent = false;
+  bool _showEvent = false;
+  bool _showIndependenceEvent = false;
 
   // 🔹 Keep the widget alive when navigating away
   @override
@@ -63,7 +67,8 @@ bool _showEvent = false;
         ref.read(homeScreenInitializedProvider.notifier).state = true;
         _initializeAppMode();
         _loadGuestData();
-         _checkAndShowEvent();
+        _checkAndShowEvent();
+        _checkAndShowIndependenceEvent(); // ADD THIS
       } else {
         // 🔹 Even if initialized, verify data exists
         final guestsState = ref.read(guestsProvider);
@@ -75,23 +80,45 @@ bool _showEvent = false;
       }
     });
   }
+
   void _checkAndShowEvent() {
     final now = DateTime.now();
     final hasShownEvent = ref.read(eventShownProvider);
     
-  
     if (now.month == 12 && !hasShownEvent) {
       setState(() {
         _showEvent = true;
       });
       
-
       ref.read(eventShownProvider.notifier).state = true;
    
       Future.delayed(const Duration(seconds: 5), () {
         if (mounted) {
           setState(() {
             _showEvent = false;
+          });
+        }
+      });
+    }
+  }
+
+  // ADD THIS NEW METHOD
+  void _checkAndShowIndependenceEvent() {
+    final now = DateTime.now();
+    final hasShownIndependenceEvent = ref.read(independenceEventShownProvider);
+    
+    // Show on February 4th
+    if (now.month == 2 && now.day == 2 && !hasShownIndependenceEvent) {
+      setState(() {
+        _showIndependenceEvent = true;
+      });
+      
+      ref.read(independenceEventShownProvider.notifier).state = true;
+   
+      Future.delayed(const Duration(seconds: 4), () {
+        if (mounted) {
+          setState(() {
+            _showIndependenceEvent = false;
           });
         }
       });
@@ -488,18 +515,10 @@ bool _showEvent = false;
               ),
             ),
           ),
-    // if (_showEvent)
-    //   Positioned(
-    //     top: 0,
-    //     left: 0,
-    //     right: 0,
-    //     bottom: 0,
-    //     child: IgnorePointer(
-    //       ignoring: true, 
-    //       child: Event(isShow: true),
-    //     ),
-    //   ),
+          // Christmas Event (December)
           Event(isShow: _showEvent),
+          // Independence Day Event (February 4th) - ADD THIS
+          IndependenceEvent(isShow: _showIndependenceEvent),
         ],
       ),
     );

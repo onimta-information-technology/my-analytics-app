@@ -254,23 +254,141 @@ class _DailyWalkingGuestScreenState
                                       children: [
                                         Container(
                                           width: double.infinity,
-                                          // color: Constants.kPrimaryColor
-                                          //     .withAlpha(50),
                                           padding: const EdgeInsets.all(8.0),
                                           alignment: Alignment.centerLeft,
-                                          child: Text(
-                                            "Image",
-                                            style: TextStyle(
-                                              color: Colors.black,
-                                              fontSize: fontSettings.fontSize,
-                                              fontWeight:
-                                                  fontSettings.fontWeight,
-                                            ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              InkWell(
+                                                onTap: () {
+                                                  _goToGuestPerformance(entry);
+                                                },
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                                child: Row(
+                                                  children: [
+                                                    // Icon(
+                                                    //   Icons.person_search,
+                                                    //   size: 20,
+                                                    //   color: const Color.fromARGB(255, 224, 6, 6),
+                                                    // ),
+
+                                                  Container(
+                                                                        padding: const EdgeInsets.all(4),
+                                                                        decoration: BoxDecoration(
+                                                                          color: const Color.fromARGB(255, 230, 0, 0),
+                                                                          borderRadius: BorderRadius.circular(6),
+                                                                        ),
+                                                                        child: const Icon(Icons.person_search, size: 20, color: Colors.white),
+                                                                      ),
+                                                    const SizedBox(width: 6),
+                                                    Expanded(
+                                                      child: Text(
+                                                        entry.mId,
+                                                        style: TextStyle(
+                                                          color: Colors.blue,
+                                                          fontSize: fontSettings
+                                                              .fontSize+2,
+                                                          fontWeight:
+                                                              fontSettings
+                                                                  .fontWeight,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Row(
+                                                children: [
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.all(4),
+                                                    decoration: BoxDecoration(
+                                                      color:
+                                                          const Color.fromARGB(
+                                                            255,
+                                                            230,
+                                                            0,
+                                                            0,
+                                                          ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            6,
+                                                          ),
+                                                    ),
+                                                    child: const Icon(
+                                                      Icons.person,
+                                                      size: 20,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Expanded(
+                                                    child: Text(
+                                                      entry.mname.isEmpty
+                                                          ? "N/A"
+                                                          : entry.mname,
+                                                      style: TextStyle(
+                                                        color: Colors.black,
+                                                        fontSize: fontSettings
+                                                            .fontSize,
+                                                        fontWeight: fontSettings
+                                                            .fontWeight,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Row(
+                                                children: [
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.all(4),
+                                                    decoration: BoxDecoration(
+                                                      color:
+                                                          const Color.fromARGB(
+                                                            255,
+                                                            230,
+                                                            0,
+                                                            0,
+                                                          ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            6,
+                                                          ),
+                                                    ),
+                                                    child: const Icon(
+                                                      Icons.flag,
+                                                      size: 20,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Expanded(
+                                                    child: Text(
+                                                      entry.country?.isEmpty ??
+                                                              true
+                                                          ? "N/A"
+                                                          : entry.country!,
+                                                      style: TextStyle(
+                                                        color: Colors.black,
+                                                        fontSize: fontSettings
+                                                            .fontSize,
+                                                        fontWeight: fontSettings
+                                                            .fontWeight,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
                                           ),
                                         ),
                                         Container(
                                           color: Colors.white,
-
                                           child: Padding(
                                             padding: const EdgeInsets.all(8.0),
                                             child: entry.menImage2.isNotEmpty
@@ -349,15 +467,6 @@ class _DailyWalkingGuestScreenState
 
   List<TableRow> _buildGuestRows(DailyWalkingGuest entry, fontSettings) {
     return [
-      _buildRow(
-        "Member ID",
-        entry.mId,
-        fontSettings,
-        isMemberId: true,
-        guest: entry,
-      ),
-      _buildRow("Member Name", entry.mname, fontSettings),
-      _buildRow("Country", entry.country, fontSettings),
       _buildRow("Contact No", entry.phone, fontSettings, isPhone: true),
       _buildRow("Register Date", _formatDate2(entry.rdt), fontSettings),
       _buildRow("Latest Visit", entry.dateRemark, fontSettings),
@@ -372,18 +481,12 @@ class _DailyWalkingGuestScreenState
     String value,
     fontSettings, {
     bool isPhone = false,
-    bool isMemberId = false,
-    DailyWalkingGuest? guest,
   }) {
-    bool isMemberName = label == "Member Name";
     return TableRow(
       decoration: BoxDecoration(color: Constants.kPrimaryColor.withAlpha(50)),
       children: [
         Container(
           width: double.infinity,
-
-          /// height: isMemberName ? 90 : null,
-          // color: Constants.kPrimaryColor.withAlpha(50),
           padding: const EdgeInsets.all(8.0),
           child: Text(
             label,
@@ -405,38 +508,19 @@ class _DailyWalkingGuestScreenState
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        Icon(
-                          Icons.phone,
-                          size: 22,
-                          color: const Color.fromARGB(255, 254, 2, 2),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          value,
-                          style: TextStyle(
-                            color: Colors.blue,
-
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: fontSettings.fontWeight,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : isMemberId && value.isNotEmpty
-                ? InkWell(
-                    onTap: () {
-                      if (guest != null) _goToGuestPerformance(guest);
-                    },
-                    borderRadius: BorderRadius.circular(4),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Icon(
-                          Icons.person_search,
-                          size: 25,
-                          color: const Color.fromARGB(255, 224, 6, 6),
-                        ),
+                        // Icon(
+                        //   Icons.phone,
+                        //   size: 22,
+                        //   color: const Color.fromARGB(255, 254, 2, 2),
+                        // ),
+                          Container(
+                                                                        padding: const EdgeInsets.all(4),
+                                                                        decoration: BoxDecoration(
+                                                                          color: const Color.fromARGB(255, 230, 0, 0),
+                                                                          borderRadius: BorderRadius.circular(6),
+                                                                        ),
+                                                                        child: const Icon(Icons.phone, size: 22, color: Colors.white),
+                                                                      ),
                         const SizedBox(width: 6),
                         Text(
                           value,

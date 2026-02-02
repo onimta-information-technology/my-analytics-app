@@ -4,7 +4,7 @@ import 'package:ballys_reservation_app/models/reservation.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/reservation_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_reservation_provider.dart';
-import 'package:ballys_reservation_app/utils/storage_util.dart'; // Add this import
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -49,8 +49,33 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
     });
   }
 
-  // Add this method to check access permission
+  // Filter reservations based on user permissions
+  Future<List<Reservation>> _filterReservations(List<Reservation> reservations) async {
+    // Check if user has sales code AD001 (can see all reservations)
+    final salesCode = await StorageUtil.getSalesCode();
+    if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
+      return reservations; // Show all reservations
+    }
+
+    // For other users, only show reservations they requested
+    final currentUserName = await StorageUtil.getUserName();
+    if (currentUserName == null) {
+      return []; // No user logged in, show nothing
+    }
+
+    return reservations.where((reservation) {
+      return reservation.reqBy.trim().toLowerCase() == currentUserName.trim().toLowerCase();
+    }).toList();
+  }
+
+  // Check access permission for detail view
   Future<bool> _canAccessReservationDetails(Reservation reservation) async {
+    // Check if user has sales code AD001 (can see all reservations)
+    final salesCode = await StorageUtil.getSalesCode();
+    if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
+      return true;
+    }
+
     // Check if user has Gift_App permission
     final giftApp = await StorageUtil.getGiftApp();
     if (giftApp == true) {
@@ -197,14 +222,30 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
 
   Widget _buildReservationList(List<Reservation> reservations) {
     final fontSettings = ref.watch(fontSettingsProvider);
-    if (reservations.isEmpty) {
-      return const Center(child: Text('No reservations available.'));
-    }
+    
+    return FutureBuilder<List<Reservation>>(
+      future: _filterReservations(reservations),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Constants.kSecondaryColor,
+              ),
+            ),
+          );
+        }
 
-    return ListView.builder(
-      itemCount: reservations.length,
-      itemBuilder: (context, index) {
-        final reservation = reservations[index];
+        final filteredReservations = snapshot.data ?? [];
+        
+        if (filteredReservations.isEmpty) {
+          return const Center(child: Text('No reservations available.'));
+        }
+
+        return ListView.builder(
+          itemCount: filteredReservations.length,
+          itemBuilder: (context, index) {
+            final reservation = filteredReservations[index];
         
         return Stack(
           children: [
@@ -322,14 +363,16 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
                           Icon(
                             _getStatusIcon(reservation.requestStatus),
                             size: 16,
-                            color: Colors.white,
+                            color: const Color.fromARGB(255, 0, 0, 0),
+                            
                           ),
                           const SizedBox(width: 4),
                           Text(
                             reservation.requestStatus,
                             style: TextStyle(
                               fontSize: fontSettings.fontSize,
-                              color: Colors.white,
+                              color: const Color.fromARGB(255, 0, 0, 0),
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ],
@@ -338,92 +381,89 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
                   ],
                 ),
                 onTap: () async {
-                  // Check access permission before navigation
+                  // Double check access permission before navigation (extra security layer)
                   final canAccess = await _canAccessReservationDetails(reservation);
                   
                   if (!canAccess) {
                     if (mounted) {
-                     
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.lock_outline,
-                    size: 50,
-                    color: Colors.red.shade400,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                
-                const Text(
-                  "Access Denied",
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2C3E50),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
-                
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Constants.kPrimaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      "Got It",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+                      showDialog(
+                        context: context,
+                        barrierDismissible: true,
+                        builder: (BuildContext context) {
+                          return Dialog(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            elevation: 0,
+                            backgroundColor: Colors.transparent,
+                            child: Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 5),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 80,
+                                    height: 80,
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.shade50,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.lock_outline,
+                                      size: 50,
+                                      color: Colors.red.shade400,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  const Text(
+                                    "Access Denied",
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF2C3E50),
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Constants.kPrimaryColor,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(vertical: 14),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        elevation: 0,
+                                      ),
+                                      child: const Text(
+                                        "Got It",
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      );
                     }
                     return;
                   }
@@ -471,6 +511,8 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
             ),
           ],
         );
+      },
+    );
       },
     );
   }

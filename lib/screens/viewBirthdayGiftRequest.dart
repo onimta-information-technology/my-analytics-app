@@ -231,6 +231,7 @@ Future<void> _checkGiftAppPermission() async {
     return TextStyle(
       fontSize: fontSettings.fontSize + 5,
       fontWeight: FontWeight.bold,
+      color: const Color.fromARGB(255, 255, 0, 0)
     );
   }
 
@@ -854,6 +855,7 @@ ElevatedButton(
                       decoration: InputDecoration(
                         labelText: "Previous Gift Amount",
                         labelStyle: TextStyle(
+                          color: const Color.fromARGB(255, 255, 0, 0),
                           fontSize: fontSettings.fontSize + 2,
                           fontWeight: fontSettings.fontWeight,
                         ),

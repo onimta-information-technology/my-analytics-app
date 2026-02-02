@@ -90,14 +90,14 @@ class _BirthdayGiftRequestScreenState
     if (amount == null || amount.isEmpty) return "N/A";
 
     try {
-      // Remove any existing commas or currency symbols
+   
       String cleanAmount = amount.replaceAll(RegExp(r'[^0-9.]'), '');
       
-      // Parse as double
+     
       double value = double.parse(cleanAmount);
       
       // Format with thousand separator
-      final formatter = NumberFormat('#,##0.00', 'en_US');
+      final formatter = NumberFormat('#,##0', 'en_US');
       return formatter.format(value);
     } catch (e) {
       // If parsing fails, return original amount
@@ -461,6 +461,7 @@ class _BirthdayGiftRequestScreenState
                             Text(
                               'Previous Gift: ',
                               style: TextStyle(
+                                 color: const Color.fromARGB(255, 44, 55, 255),
                                 fontSize: fontSettings.fontSize,
                               fontWeight: fontSettings.fontWeight,
                               ),
@@ -469,8 +470,8 @@ class _BirthdayGiftRequestScreenState
                               child: Text(
                                 _formatAmount(gift.prvGiftAmount),
                                 style: TextStyle(
-                                  color: const Color.fromARGB(255, 0, 0, 0),
-                                  fontSize: fontSettings.fontSize+1,
+                                  color: const Color.fromARGB(255, 44, 55, 255),
+                                  fontSize: fontSettings.fontSize+2,
                                 fontWeight: fontSettings.fontWeight,
                                 ),
                                 overflow: TextOverflow.ellipsis,
@@ -479,6 +480,35 @@ class _BirthdayGiftRequestScreenState
                           ],
                         ),
                       ],
+                      Row(
+                          children: [
+                            const Icon(
+                              Icons.attach_money,
+                              color: Colors.orange,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Requested Gift: ',
+                              style: TextStyle(
+                                   color: const Color.fromARGB(255, 255, 0, 0),
+                                fontSize: fontSettings.fontSize,
+                              fontWeight: fontSettings.fontWeight,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                _formatAmount(gift.giftDesc.toString()),
+                                style: TextStyle(
+                                  color: const Color.fromARGB(255, 255, 0, 0),
+                                  fontSize: fontSettings.fontSize+2,
+                                fontWeight: fontSettings.fontWeight,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                     ],
                   ),
                 ),

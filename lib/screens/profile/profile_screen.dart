@@ -237,6 +237,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     BuildContext context,
     String memberId,
     int phoneType,
+      String? currentPhone,
   ) {
     showDialog(
       context: context,
@@ -244,6 +245,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         return AddPhoneDialog(
           memberId: memberId,
           phoneType: phoneType,
+          currentPhone: currentPhone,
           onPhoneAdded: (phone) {
             // Optional: Handle after phone is added
           },
@@ -256,6 +258,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     BuildContext context,
     String memberId,
     int phoneType,
+     String? currentPhone,
   ) {
     showDialog(
       context: context,
@@ -263,6 +266,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         return AddwhatsappPhoneDialog(
           memberId: memberId,
           phoneType: phoneType,
+           currentPhone: currentPhone,
           onPhoneAdded: (phone) {
             // Optional: Handle after phone is added
           },
@@ -1145,7 +1149,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                                     ),
                                                                   if (isPhone)
                                                                     InkWell(
-                                                                      onTap: () => _showAddPhoneDialog(context, guest.mid, 1),
+                                                                      onTap: () => _showAddPhoneDialog(context, guest.mid, 1, entry.details['Detail']),
                                                                       child: Container(
                                                                         padding: const EdgeInsets.all(4),
                                                                         decoration: BoxDecoration(
@@ -1157,7 +1161,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                                     ),
                                                                   if (isPhone2)
                                                                     InkWell(
-                                                                      onTap: () => _showAddPhoneDialog(context, guest.mid, 2),
+                                                                      onTap: () => _showAddPhoneDialog(context, guest.mid, 2, entry.details['Detail']),
                                                                       child: Container(
                                                                         padding: const EdgeInsets.all(4),
                                                                         decoration: BoxDecoration(
@@ -1169,7 +1173,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                                     ),
                                                                   if (isPhone3)
                                                                     InkWell(
-                                                                      onTap: () => _showAddPhoneDialog(context, guest.mid, 3),
+                                                                      onTap: () => _showAddPhoneDialog(context, guest.mid, 3, entry.details['Detail']),
                                                                       child: Container(
                                                                         padding: const EdgeInsets.all(4),
                                                                         decoration: BoxDecoration(
@@ -1181,7 +1185,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                                     ),
                                                                   if (iswhatsapp)
                                                                     InkWell(
-                                                                      onTap: () => _showAddWhatsAppDialog(context, guest.mid, 1),
+                                                                      onTap: () => _showAddWhatsAppDialog(context, guest.mid, 1,entry.details['Detail']),
                                                                       child: Container(
                                                                         padding: const EdgeInsets.all(4),
                                                                         decoration: BoxDecoration(
@@ -1193,7 +1197,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                                     ),
                                                                   if (iswhatsapp2)
                                                                     InkWell(
-                                                                      onTap: () => _showAddWhatsAppDialog(context, guest.mid, 2),
+                                                                      onTap: () => _showAddWhatsAppDialog(context, guest.mid, 2,entry.details['Detail']),
                                                                       child: Container(
                                                                         padding: const EdgeInsets.all(4),
                                                                         decoration: BoxDecoration(
@@ -1205,7 +1209,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                                     ),
                                                                   if (iswhatsapp3)
                                                                     InkWell(
-                                                                      onTap: () => _showAddWhatsAppDialog(context, guest.mid, 3),
+                                                                      onTap: () => _showAddWhatsAppDialog(context, guest.mid, 3,entry.details['Detail']),
                                                                       child: Container(
                                                                         padding: const EdgeInsets.all(4),
                                                                         decoration: BoxDecoration(

@@ -137,7 +137,7 @@ class _AddEmailDialogState extends ConsumerState<AddEmailDialog> {
     double dialogWidth = screenWidth * 0.95;
     
     // Determine the title based on emailType
-    String title = 'Add/Update Email ${widget.emailType}';
+    String title = 'Add Email ${widget.emailType}';
 
     return Dialog(
       shape: RoundedRectangleBorder(

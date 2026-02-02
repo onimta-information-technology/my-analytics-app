@@ -1,18 +1,38 @@
+import 'package:ballys_reservation_app/models/pendingCounts.dart';
+import 'package:ballys_reservation_app/providers/pending_count_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// Assuming you have a Constants class with kPrimaryColor
-// If not, you can define it like this:
-class Constants {
-  static const Color kPrimaryColor = Color(0xFFD4A853); // Golden color
-}
 
-class ApproveScreen extends StatelessWidget {
+
+class ApproveScreen extends ConsumerStatefulWidget {
   const ApproveScreen({super.key});
 
   @override
+  ConsumerState<ApproveScreen> createState() => _ApproveScreenState();
+}
+
+class _ApproveScreenState extends ConsumerState<ApproveScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // re-fetch every time we land on this screen so the badge stays fresh
+    ref.read(pendingCountProvider.notifier).fetch();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final countsAsync = ref.watch(pendingCountProvider);
+
+    // Default counts while loading or on error – badges simply won't show
+    final counts = countsAsync.when(
+      data: (c) => c,
+      loading: () => const PendingCounts(),
+      error: (e, st) => const PendingCounts(),
+    );
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -32,196 +52,166 @@ class ApproveScreen extends StatelessWidget {
         ),
         centerTitle: true,
       ),
-      body: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(10.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.start,
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          context.go('/menu/approve-reject/reservations');
-                        },
-                        child: Card(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(10.0),
-                              gradient: const LinearGradient(
-                                colors: [
-                                  Color.fromARGB(255, 255, 149, 0),
-                                  Color.fromARGB(255, 255, 149, 0),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                            ),
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 30),
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    FontAwesomeIcons.luggageCart,
-                                    size: 60,
-                                    color: Colors.white,
-                                  ),
-                                  SizedBox(height: 10),
-                                  Text(
-                                    'Reservations',
-                                    style: TextStyle(
-                                      fontSize: 16.0,
-                                      fontWeight: FontWeight.normal,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
+                // ── Reservations card ────────────────────────────────────
+                Expanded(
+                  child: _CardWithBadge(
+                    count: counts.reservation,
+                    onTap: () =>
+                        context.go('/menu/approve-reject/reservations'),
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color.fromARGB(255, 255, 149, 0),
+                        Color.fromARGB(255, 255, 149, 0),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          context.go('/menu/approve-reject/special-gift-requests');
-                        },
-                        child: Card(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(10.0),
-                              gradient: const LinearGradient(
-                                colors: [
-                                  Color(0xFF4CAF50),
-                                  Color.fromARGB(255, 2, 235, 235),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                            ),
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 30),
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    FontAwesomeIcons.gifts,
-                                    size: 60,
-                                    color: Colors.white,
-                                  ),
-                                  SizedBox(height: 10),
-                                  Text(
-                                    'OTP Gifts',
-                                    style: TextStyle(
-                                      fontSize: 16.0,
-                                      fontWeight: FontWeight.normal,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                    icon: FontAwesomeIcons.luggageCart,
+                    label: 'Reservations',
+                  ),
                 ),
-                //const SizedBox(height: 0),
-                Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          context.go('/menu/approve-reject/birthday-gifts');
-                        },
-                        child: Card(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(10.0),
-                              gradient: const LinearGradient(
-                                colors: [
-                                  Color(0xFFE91E63),
-                                  Color(0xFFFF6F00),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                            ),
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 30),
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    FontAwesomeIcons.cakeCandles,
-                                    size: 60,
-                                    color: Colors.white,
-                                  ),
-                                  SizedBox(height: 10),
-                                  Text(
-                                    'Birthday Gifts',
-                                    style: TextStyle(
-                                      fontSize: 16.0,
-                                      fontWeight: FontWeight.normal,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
+                const SizedBox(width: 12),
+                // ── OTP Gifts card ───────────────────────────────────────
+                Expanded(
+                  child: _CardWithBadge(
+                    count: counts.otpGift,
+                    onTap: () =>
+                        context.go('/menu/approve-reject/special-gift-requests'),
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color(0xFF4CAF50),
+                        Color.fromARGB(255, 2, 235, 235),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    const Expanded(child: SizedBox()),
-                  ],
+                    icon: FontAwesomeIcons.gifts,
+                    label: 'OTP Gifts',
+                  ),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildApproveButton({
-    required BuildContext context,
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        decoration: BoxDecoration(
-          color: Constants.kPrimaryColor.withAlpha(50),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: Constants.kPrimaryColor,
-              size: 28,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                // ── Birthday Gifts card ──────────────────────────────────
+                Expanded(
+                  child: _CardWithBadge(
+                    count: counts.birthdayGift,
+                    onTap: () =>
+                        context.go('/menu/approve-reject/birthday-gifts'),
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color.fromARGB(255, 0, 0, 0),
+                        Color(0xFFFF6F00),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    icon: FontAwesomeIcons.cakeCandles,
+                    label: 'Birthday Gifts',
+                  ),
+                ),
+                // empty spacer so Birthday Gifts takes only half width
+                const Expanded(child: SizedBox()),
+              ],
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─── Reusable card widget with an optional badge ────────────────────────────
+
+class _CardWithBadge extends StatelessWidget {
+  final int count;
+  final VoidCallback onTap;
+  final LinearGradient gradient;
+  final IconData icon;
+  final String label;
+
+  const _CardWithBadge({
+    required this.count,
+    required this.onTap,
+    required this.gradient,
+    required this.icon,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        clipBehavior: Clip.none, // let badge overflow the rounded corners
+        children: [
+          // gradient card body with shadow — no Card widget wrapper
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12.0),
+              gradient: gradient,
+              boxShadow: const [
+                BoxShadow(
+                  color: Color.fromRGBO(0, 0, 0, 0.15),
+                  blurRadius: 6,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 30),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Icon(icon, size: 60, color: Colors.white),
+                  const SizedBox(height: 10),
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 16.0,
+                      fontWeight: FontWeight.normal,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // badge – only shown when count > 0
+          if (count > 0)
+            Positioned(
+              top: -10,
+              right: -10,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: Text(
+                  '$count',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

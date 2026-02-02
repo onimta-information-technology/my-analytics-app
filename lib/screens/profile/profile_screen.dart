@@ -904,7 +904,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                               icon: const Icon(Icons.phone, size: 18),
                                               label: const Text(
                                                 'Set Primary Phone',
-                                                style: TextStyle(fontSize: 14),
+                                                style: TextStyle(fontSize: 14,fontWeight: FontWeight.bold),
                                               ),
                                               style: ElevatedButton.styleFrom(
                                                 backgroundColor: const Color(0xFF1976D2),
@@ -923,7 +923,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                               icon: const Icon(Icons.email, size: 18),
                                               label: const Text(
                                                 'Set Primary Email',
-                                                style: TextStyle(fontSize: 14),
+                                                style: TextStyle(fontSize: 14,fontWeight: FontWeight.bold),
                                               ),
                                               style: ElevatedButton.styleFrom(
                                                 backgroundColor: const Color(0xFFD32F2F),
@@ -946,15 +946,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                             'assets/images/others/whatsapp.png',
                                             width: 18,
                                             height: 18,
-                                            color: Colors.white,
+                                            color: const Color.fromARGB(255, 0, 0, 0),
                                           ),
                                           label: const Text(
                                             'Set Primary WhatsApp',
-                                            style: TextStyle(fontSize: 14),
+                                            style: TextStyle(fontSize: 15,fontWeight: FontWeight.bold),
                                           ),
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: const Color(0xFF25D366),
-                                            foregroundColor: Colors.white,
+                                            foregroundColor: const Color.fromARGB(255, 0, 0, 0),
                                             padding: const EdgeInsets.symmetric(vertical: 10),
                                             shape: RoundedRectangleBorder(
                                               borderRadius: BorderRadius.circular(8),

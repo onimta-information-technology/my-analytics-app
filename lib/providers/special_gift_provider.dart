@@ -172,7 +172,31 @@ class GiftNotifier extends StateNotifier<GiftState> {
       return false;
     }
   }
-
+Future<String> sendSpecialGiftWhatsapp({
+    required String whatsappNumber,
+    required String bmNumber,
+    required String memberName,
+    required String giftValue,
+    required String chipType,
+    required String giftFor,
+    required String createdBy,
+  }) async {
+    try {
+      final result = await giftRepository.sendSpecialGiftWhatsapp(
+        whatsappNumber: whatsappNumber,
+        bmNumber: bmNumber,
+        memberName: memberName,
+        giftValue: giftValue,
+        chipType: chipType,
+        giftFor: giftFor,
+        createdBy: createdBy,
+      );
+      return result;
+    } catch (e) {
+      print('Error in sendSpecialGiftWhatsapp provider: $e');
+      return "Error sending message";
+    }
+  }
   Future<bool> increaceBirtdayGiftFromUI({
     required String mid,
     required String memberName,

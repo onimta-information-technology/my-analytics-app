@@ -236,6 +236,7 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
                       style: TextStyle(
                         color: Colors.black,
                         fontSize: fontSettings.fontSize,
+                        fontWeight: FontWeight.bold
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -252,6 +253,7 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
                           'Requested by: ',
                           style: TextStyle(
                             fontSize: fontSettings.fontSize,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                         Expanded(
@@ -259,6 +261,7 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
                             reservation.reqBy,
                             style: TextStyle(
                               fontSize: fontSettings.fontSize,
+                              fontWeight: FontWeight.bold,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),

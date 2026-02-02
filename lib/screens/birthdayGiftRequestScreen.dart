@@ -350,6 +350,7 @@ class _BirthdayGiftRequestScreenState
                             style: TextStyle(
                               color: const Color.fromARGB(255, 2, 2, 2),
                               fontSize: fontSettings.fontSize,
+                              fontWeight: fontSettings.fontWeight,
                             ),
                           ),
                         ],
@@ -367,7 +368,7 @@ class _BirthdayGiftRequestScreenState
                             'Requested By: ',
                             style: TextStyle(
                               fontSize: fontSettings.fontSize,
-                              fontWeight: FontWeight.w500,
+                           fontWeight: fontSettings.fontWeight,
                             ),
                           ),
                           Expanded(
@@ -376,6 +377,7 @@ class _BirthdayGiftRequestScreenState
                               style: TextStyle(
                                 color: const Color.fromARGB(225, 0, 0, 0),
                                 fontSize: fontSettings.fontSize,
+                                fontWeight: fontSettings.fontWeight,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -398,7 +400,7 @@ class _BirthdayGiftRequestScreenState
                               '$actionLabel: ',
                               style: TextStyle(
                                 fontSize: fontSettings.fontSize,
-                                fontWeight: FontWeight.w500,
+                               fontWeight: fontSettings.fontWeight,
                               ),
                             ),
                             Expanded(
@@ -407,7 +409,7 @@ class _BirthdayGiftRequestScreenState
                                 style: TextStyle(
                                   color: actionColor,
                                   fontSize: fontSettings.fontSize,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: fontSettings.fontWeight,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -429,7 +431,7 @@ class _BirthdayGiftRequestScreenState
                               'Valid For: ',
                               style: TextStyle(
                                 fontSize: fontSettings.fontSize ,
-                                fontWeight: FontWeight.w500,
+                               fontWeight: fontSettings.fontWeight,
                               ),
                             ),
                             Expanded(
@@ -438,7 +440,7 @@ class _BirthdayGiftRequestScreenState
                                 style: TextStyle(
                                   color: Colors.deepPurple,
                                   fontSize: fontSettings.fontSize,
-                                  fontWeight: FontWeight.w600,
+                                 fontWeight: fontSettings.fontWeight,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -460,7 +462,7 @@ class _BirthdayGiftRequestScreenState
                               'Previous Gift: ',
                               style: TextStyle(
                                 fontSize: fontSettings.fontSize,
-                                fontWeight: FontWeight.w500,
+                              fontWeight: fontSettings.fontWeight,
                               ),
                             ),
                             Expanded(
@@ -469,7 +471,7 @@ class _BirthdayGiftRequestScreenState
                                 style: TextStyle(
                                   color: const Color.fromARGB(255, 0, 0, 0),
                                   fontSize: fontSettings.fontSize+1,
-                                  fontWeight: FontWeight.bold,
+                                fontWeight: fontSettings.fontWeight,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),

@@ -353,6 +353,7 @@ Widget _buildGiftList(
                           style: TextStyle(
                             color: const Color.fromARGB(255, 2, 2, 2),
                             fontSize: fontSettings.fontSize - 1,
+                            fontWeight: fontSettings.fontWeight,
                           ),
                         ),
                       ],
@@ -372,7 +373,7 @@ Widget _buildGiftList(
                           style: TextStyle(
                            
                             fontSize: fontSettings.fontSize - 1,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: fontSettings.fontWeight,
                           ),
                         ),
                         Expanded(
@@ -381,6 +382,7 @@ Widget _buildGiftList(
                             style: TextStyle(
                               color: Colors.black87,
                               fontSize: fontSettings.fontSize - 1,
+                              fontWeight: fontSettings.fontWeight,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -405,7 +407,7 @@ Widget _buildGiftList(
                             style: TextStyle(
                              
                               fontSize: fontSettings.fontSize - 1,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: fontSettings.fontWeight,
                             ),
                           ),
                           Expanded(

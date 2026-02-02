@@ -4,6 +4,7 @@ import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -26,10 +27,20 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
   List<Guest> originalMembers = [];
   List<Guest> inactiveMembers = [];
 
+  String? _salesCode;
+
   @override
   void initState() {
-    _applyFilter();
     super.initState();
+    _applyFilter();
+    _loadSalesCode();
+  }
+
+  Future<void> _loadSalesCode() async {
+    final salesCode = await StorageUtil.getSalesCode();
+    setState(() {
+      _salesCode = salesCode;
+    });
   }
 
   void _applyFilter() async {
@@ -53,6 +64,30 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
     "PLATINUM": "assets/images/ratings/PLATINUM.png",
     "SILVER": "assets/images/ratings/SILVER.png",
   };
+
+  void _showAccessDeniedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.block, color: Colors.red),
+            SizedBox(width: 10),
+            Text('Access Denied'),
+          ],
+        ),
+        content: const Text(
+          'You do not have permission to view guest gifts.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,15 +141,13 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
                                   key: ValueKey(guest.mid),
                                   splashColor: Colors.transparent,
                                   highlightColor: Colors.transparent,
-                                  // onTap: () {
-                                  //   ref
-                                  //       .read(selectedGuestProvider.notifier)
-                                  //       .setSelectedGuest(guest);
-                                  //   context.push(
-                                  //     '/gifts/event-gifts/guest-gifts/${guest.mid}',
-                                  //   );
-                                  // },
                                   onTap: () async {
+                                    // Check sales code permission
+                                    if (_salesCode != 'AD001') {
+                                      _showAccessDeniedDialog();
+                                      return;
+                                    }
+
                                     // Show loading indicator
                                     setState(() {
                                       _isLoading = true;
@@ -189,57 +222,11 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
                                               ),
                                             ],
                                           ),
-                                          // const SizedBox(height: 8),
-                                          // Row(
-                                          //   children: [
-                                          //     const Icon(
-                                          //       Icons.calendar_today,
-                                          //       color: Colors.grey,
-                                          //       size: 18,
-                                          //     ),
-                                          //     const SizedBox(width: 8),
-                                          //     Text(
-                                          //       'Last visit on ${DateFormat('dd MMM yyyy').format(DateTime.parse(guest.lastVisitDate))}',
-                                          //       style: TextStyle(
-                                          //         fontSize:
-                                          //             fontSettings.fontSize,
-                                          //         color: Colors.grey[600],
-                                          //       ),
-                                          //     ),
-                                          //   ],
-                                          // ),
                                         ],
                                       ),
                                     ),
                                   ),
                                 ),
-                                // Positioned(
-                                //   top: 6,
-                                //   right: -2,
-                                //   child: Padding(
-                                //     padding: const EdgeInsets.all(0),
-                                //     child: SizedBox(
-                                //       width: 80,
-                                //       height: 26,
-                                //       child:
-                                //           ratingImageMap[guest.gRating] != null
-                                //           ? Hero(
-                                //               tag: "rating-image-${guest.mid}",
-                                //               child: Image.asset(
-                                //                 ratingImageMap[guest.gRating]!,
-                                //                 fit: BoxFit.contain,
-                                //               ),
-                                //             )
-                                //           : Hero(
-                                //               tag: "rating-image-${guest.mid}",
-                                //               child: Image.asset(
-                                //                 "assets/images/ratings/CLASSIC.png",
-                                //                 fit: BoxFit.contain,
-                                //               ),
-                                //             ),
-                                //     ),
-                                //   ),
-                                // ),
                               ],
                             );
                           },

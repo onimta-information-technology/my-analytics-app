@@ -108,7 +108,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final hasShownIndependenceEvent = ref.read(independenceEventShownProvider);
     
     // Show on February 4th
-    if (now.month == 2 && now.day == 2 && !hasShownIndependenceEvent) {
+    if (now.month == 2 && now.day == 4 && !hasShownIndependenceEvent) {
       setState(() {
         _showIndependenceEvent = true;
       });

@@ -17,6 +17,7 @@ class PendingCountNotifier extends StateNotifier<AsyncValue<PendingCounts>> {
 
   Future<void> fetch() async {
     state = const AsyncValue.loading();
+    print('Fetching pending counts...');
     try {
       final counts = await repository.getPendingCounts();
       state = AsyncValue.data(counts);

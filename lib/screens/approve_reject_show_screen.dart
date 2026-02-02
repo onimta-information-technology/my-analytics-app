@@ -19,7 +19,9 @@ class _ApproveScreenState extends ConsumerState<ApproveScreen> {
   void initState() {
     super.initState();
     // re-fetch every time we land on this screen so the badge stays fresh
+  Future.microtask(() {
     ref.read(pendingCountProvider.notifier).fetch();
+  });
   }
 
   @override

@@ -132,10 +132,25 @@ class _LocationSelectorWidgetState extends State<LocationSelectorWidget> {
                               : Colors.grey.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Icon(
-                          Icons.business,
-                          color: isSelected ? Colors.orange : Colors.grey[600],
-                        ),
+                        // child: Icon(
+                        //   Icons.business,
+                        //   color: isSelected ? Colors.orange : Colors.grey[600],
+                        // ),
+                        child: ClipRRect(
+  borderRadius: BorderRadius.circular(6),
+  child: location.imageUrl != null &&
+          location.imageUrl!.isNotEmpty
+      ? Image.network(
+          location.imageUrl!,
+          width: 40,
+          height: 40,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) =>
+              const Icon(Icons.business),
+        )
+      : const Icon(Icons.business),
+),
+
                       ),
                       title: Text(
                         location.name,

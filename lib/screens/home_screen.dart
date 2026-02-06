@@ -38,8 +38,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   String? userName;
   bool _isLoadingData = false;
   bool _showEvent = false;
+  String? locationLogo;
 
-  // 🔹 Keep the widget alive when navigating away
+
   @override
   bool get wantKeepAlive => true;
 
@@ -47,9 +48,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   void initState() {
     super.initState();
     _loadUserName();
-
+    _loadLocationLogo();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // 🔹 Check if user is actually logged in
+      
       final userName = await StorageUtil.getUserName();
       final salesCode = await StorageUtil.getSalesCode();
 
@@ -72,7 +73,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         _loadGuestData();
         _checkAndShowEvent();
       } else {
-        // 🔹 Even if initialized, verify data exists
+      
         final guestsState = ref.read(guestsProvider);
         if (guestsState.todayGuests.isEmpty &&
             guestsState.yesterdayGuests.isEmpty &&
@@ -136,9 +137,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }
   }
 
-  // 🔹 Enhanced _loadGuestData with proper state management
+  
   Future<void> _loadGuestData() async {
-    // Prevent multiple concurrent loads
+  
     if (_isLoadingData) return;
 
     _isLoadingData = true;
@@ -151,20 +152,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }
 
     try {
-      // 🔹 Reset counts to null to show loading state
+
       ref.read(guestCountsProvider.notifier).state = {
         "today": null,
         "yesterday": null,
         "monthly": null,
       };
 
-      // 🔹 Get current mode at the time of loading
+     
       final currentMode = ref.read(appmodeSettingsProvider).appMode;
 
-      // 🔹 Clear existing guest data first
+
       ref.read(guestsProvider.notifier).resetData();
 
-      // 🔹 Load data for all three periods
+
       await Future.wait<void>([
         ref
             .read(guestsProvider.notifier)
@@ -232,7 +233,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     await Future.wait<void>([_loadUserName(), _loadGuestData()]);
   }
 
-  // 🔹 Reusable fixed size box widget
+  Future<void> _loadLocationLogo() async {
+    final location = await StorageUtil.getCurrentLocation();
+    if (mounted) {
+      setState(() {
+        locationLogo = location?.imageUrl;
+      });
+    }
+  }
+
+
   Widget buildCountBox({
     required int? count,
     required String label,
@@ -240,7 +250,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }) {
     final formatter = NumberFormat.decimalPattern();
     return SizedBox(
-      height: 150, // fixed height
+      height: 150, 
       child: Card(
         color: color,
         child: Center(
@@ -328,56 +338,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
-                  // 🔹 LocationSelector moved here (outside AppBar)
-
-                  //   Card(
-                  //     elevation: 2,
-                  //     margin: const EdgeInsets.only(bottom: 8.0),
-                  // child: Padding(
-                  //      padding: const EdgeInsets.all(12.0),
-                  //  child :LocationSelectorWidget(
-                  //         onLocationChanged: () {
-                  //           // Refresh data when location changes
-                  //           _manualRefresh();
-                  //             ref.read(reservationProvider.notifier).clearReservations();
-                  //              ref.read(giftProvider.notifier).clearGifts();
-                  //                ref.read(birthdayProvider.notifier).clearBirthdays();
-                  //                  ref.read(dailyWalkingProvider.notifier).clearDailyWalkingGuests();
-                  //                  ref.read(marketingProvider.notifier).clearMarketing();
-                  //         },
-                  //       ),
-                  //    ),
-                  //   ),
-                  // FutureBuilder<bool>(
-                  //   future: StorageUtil.isAdmin(),
-                  //   builder: (context, snapshot) {
-                  //     // Only show the card if user is admin
-                  //     if (snapshot.hasData && snapshot.data == true) {
-                  //       return Card(
-                  //         elevation: 2,
-                  //         margin: const EdgeInsets.only(bottom: 12.0),
-                  //         child: Padding(
-                  //           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-
-                  //           child: LocationSelectorWidget(
-                  //             onLocationChanged: () {
-                  //               // Refresh data when location changes
-                  //               _manualRefresh();
-                  //               ref.read(reservationProvider.notifier).clearReservations();
-                  //               ref.read(giftProvider.notifier).clearGifts();
-                  //               ref.read(birthdayProvider.notifier).clearBirthdays();
-                  //               ref.read(dailyWalkingProvider.notifier).clearDailyWalkingGuests();
-                  //               ref.read(marketingProvider.notifier).clearMarketing();
-                  //             },
-                  //           ),
-                  //         ),
-
-                  //       );
-                  //     }
-                  //     // Return empty container for non-admin users
-                  //     return const SizedBox.shrink();
-                  //   },
-                  // ),
+                 
                   FutureBuilder<bool>(
                     future: StorageUtil.isAdmin(),
                     builder: (context, snapshot) {
@@ -397,26 +358,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 children: [
                                   // Bally's Logo
                                   Container(
-                                    width: 48,
-                                    height: 48,
+                                    width: 60,
+                                    height: 60,
                                     decoration: BoxDecoration(
-                                      color: const Color(
-                                        0xFFE52522,
-                                      ), // Bally's red color
                                       shape: BoxShape.circle,
+                                      color: Colors.grey.shade200,
                                     ),
-                                    child: Center(
-                                      child: Text(
-                                        'B',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 26,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
+                                    clipBehavior: Clip.antiAlias,
+                                    child:
+                                        locationLogo != null &&
+                                            locationLogo!.isNotEmpty
+                                        ? Image.network(
+                                            locationLogo!,
+                                            fit: BoxFit.contain,
+                                            errorBuilder: (_, __, ___) =>
+                                                const Icon(
+                                                  Icons.business,
+                                                  size: 28,
+                                                ),
+                                          )
+                                        : const Icon(Icons.business, size: 28),
                                   ),
-                                  const SizedBox(width: 16),
+
+                                  const SizedBox(width: 8),
 
                                   // Location Dropdown - Takes remaining space
                                   Expanded(
@@ -424,6 +388,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                       onLocationChanged: () {
                                         // Refresh data when location changes
                                         _manualRefresh();
+                                        _loadLocationLogo();
+
                                         ref
                                             .read(reservationProvider.notifier)
                                             .clearReservations();

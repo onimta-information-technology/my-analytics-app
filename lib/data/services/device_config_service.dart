@@ -133,6 +133,7 @@ class LocationConfig {
   final String code;
   final String apiUrl;
   final bool isEnabled;
+  final String? imageUrl;
 
   LocationConfig({
     this.id,
@@ -140,6 +141,7 @@ class LocationConfig {
     required this.code,
     required this.apiUrl,
     required this.isEnabled,
+    this.imageUrl,
   });
 
   factory LocationConfig.fromJson(Map<String, dynamic> json) {
@@ -149,6 +151,7 @@ class LocationConfig {
       code: json['code'],
       apiUrl: json['api_url'],
       isEnabled: json['is_enabled'] ?? true,
+      imageUrl: json['image_url'],
     );
   }
 
@@ -159,6 +162,7 @@ class LocationConfig {
       'code': code,
       'api_url': apiUrl,
       'is_enabled': isEnabled,
+      'image_url': imageUrl,
     };
   }
 }

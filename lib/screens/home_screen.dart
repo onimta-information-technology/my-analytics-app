@@ -109,8 +109,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Don't reload data when returning from navigation
-    // Only reload if explicitly needed (like app mode change)
+  
   }
 
   final String currentDate = DateFormat(
@@ -342,17 +341,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   FutureBuilder<bool>(
                     future: StorageUtil.isAdmin(),
                     builder: (context, snapshot) {
-                      // Only show the card if user is admin
+                   
                       if (snapshot.hasData && snapshot.data == true) {
                         return Container(
-                          width: double.infinity, // Full width
+                          width: double.infinity, 
                           margin: const EdgeInsets.only(bottom: 12.0),
                           child: Card(
                             elevation: 2,
                             child: Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12.0,
-                                vertical: 16.0,
+                                vertical: 2.0,
                               ),
                               child: Row(
                                 children: [
@@ -360,11 +359,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   Container(
                                     width: 60,
                                     height: 60,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.grey.shade200,
-                                    ),
-                                    clipBehavior: Clip.antiAlias,
+                                    // decoration: BoxDecoration(
+                                    //   shape: BoxShape.circle,
+                                    //   color: Colors.grey.shade200,
+                                    // ),
+                                    // clipBehavior: Clip.antiAlias,
                                     child:
                                         locationLogo != null &&
                                             locationLogo!.isNotEmpty

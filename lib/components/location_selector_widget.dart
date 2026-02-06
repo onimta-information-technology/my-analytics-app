@@ -5,10 +5,7 @@ import 'package:ballys_reservation_app/utils/storage_util.dart';
 class LocationSelectorWidget extends StatefulWidget {
   final VoidCallback onLocationChanged;
 
-  const LocationSelectorWidget({
-    super.key,
-    required this.onLocationChanged,
-  });
+  const LocationSelectorWidget({super.key, required this.onLocationChanged});
 
   @override
   State<LocationSelectorWidget> createState() => _LocationSelectorWidgetState();
@@ -30,7 +27,7 @@ class _LocationSelectorWidgetState extends State<LocationSelectorWidget> {
     try {
       final isAdmin = await StorageUtil.isAdmin();
       final currentLocation = await StorageUtil.getCurrentLocation();
-      
+
       if (isAdmin) {
         final locations = await StorageUtil.getLocations();
         if (mounted) {
@@ -79,9 +76,7 @@ class _LocationSelectorWidgetState extends State<LocationSelectorWidget> {
               padding: const EdgeInsets.all(16),
               decoration: const BoxDecoration(
                 color: Colors.orange,
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(20),
-                ),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
               ),
               child: Row(
                 children: [
@@ -111,7 +106,7 @@ class _LocationSelectorWidgetState extends State<LocationSelectorWidget> {
                 itemBuilder: (context, index) {
                   final location = _locations[index];
                   final isSelected = location.code == _currentLocation?.code;
-                  
+
                   return Card(
                     elevation: isSelected ? 4 : 1,
                     margin: const EdgeInsets.only(bottom: 12),
@@ -123,40 +118,38 @@ class _LocationSelectorWidgetState extends State<LocationSelectorWidget> {
                       ),
                     ),
                     child: ListTile(
-                      contentPadding: const EdgeInsets.all(16),
+                      contentPadding: const EdgeInsets.all(8),
                       leading: Container(
-                        padding: const EdgeInsets.all(8),
+                         padding: const EdgeInsets.symmetric(horizontal: 2),
                         decoration: BoxDecoration(
-                          color: isSelected
-                              ? Colors.orange.withOpacity(0.2)
-                              : Colors.grey.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          // color: isSelected
+                          //     ? Colors.orange.withOpacity(0.2)
+                          //     : Colors.grey.withOpacity(0.1),
+                          // borderRadius: BorderRadius.circular(8),
                         ),
-                        // child: Icon(
-                        //   Icons.business,
-                        //   color: isSelected ? Colors.orange : Colors.grey[600],
-                        // ),
+                     
                         child: ClipRRect(
-  borderRadius: BorderRadius.circular(6),
-  child: location.imageUrl != null &&
-          location.imageUrl!.isNotEmpty
-      ? Image.network(
-          location.imageUrl!,
-          width: 40,
-          height: 40,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) =>
-              const Icon(Icons.business),
-        )
-      : const Icon(Icons.business),
-),
-
+                          // borderRadius: BorderRadius.circular(6),
+                          child:
+                              location.imageUrl != null &&
+                                  location.imageUrl!.isNotEmpty
+                              ? Image.network(
+                                  location.imageUrl!,
+                                  width: 60,
+                                  height: 60,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) =>
+                                      const Icon(Icons.business),
+                                )
+                              : const Icon(Icons.business),
+                        ),
                       ),
                       title: Text(
                         location.name,
                         style: TextStyle(
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                           color: isSelected ? Colors.orange : Colors.black,
                         ),
                       ),
@@ -228,11 +221,11 @@ class _LocationSelectorWidgetState extends State<LocationSelectorWidget> {
 
   Future<void> _changeLocation(LocationConfig location) async {
     if (!mounted) return;
-    
+
     // Don't show dialog in the context that's closing
     // Use root navigator context
     final navigatorContext = Navigator.of(context, rootNavigator: true).context;
-    
+
     try {
       // Show loading overlay
       showDialog(
@@ -267,10 +260,10 @@ class _LocationSelectorWidgetState extends State<LocationSelectorWidget> {
 
         // Close loading dialog using root navigator
         Navigator.of(navigatorContext, rootNavigator: true).pop();
-        
+
         // Wait a frame before showing snackbar
         await Future.delayed(const Duration(milliseconds: 50));
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -282,7 +275,7 @@ class _LocationSelectorWidgetState extends State<LocationSelectorWidget> {
 
           // Wait for UI to settle before triggering callback
           await Future.delayed(const Duration(milliseconds: 300));
-          
+
           if (mounted) {
             widget.onLocationChanged();
           }
@@ -292,9 +285,9 @@ class _LocationSelectorWidgetState extends State<LocationSelectorWidget> {
       if (mounted) {
         // Close loading dialog
         Navigator.of(navigatorContext, rootNavigator: true).pop();
-        
+
         await Future.delayed(const Duration(milliseconds: 50));
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -322,83 +315,78 @@ class _LocationSelectorWidgetState extends State<LocationSelectorWidget> {
       return const SizedBox.shrink();
     }
 
-  //   return GestureDetector(
-  //     onTap: _showLocationSelector,
-  //     child: Container(
-  //       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-  //       decoration: BoxDecoration(
-  //         color: Colors.orange.withOpacity(0.1),
-  //         borderRadius: BorderRadius.circular(20),
-  //         border: Border.all(color: Colors.orange, width: 1.5),
-  //       ),
-  //       child: Row(
-  //         mainAxisSize: MainAxisSize.min,
-  //         children: [
-  //           const Icon(Icons.location_on, size: 16, color: Color.fromARGB(255, 0, 0, 0)),
-  //           const SizedBox(width: 6),
-  //           ConstrainedBox(
-  //             constraints: const BoxConstraints(maxWidth: 150),
-  //             child: Text(
-  //               _currentLocation!.name,
-  //               style: const TextStyle(
-  //                 fontSize: 16,
-  //                 fontWeight: FontWeight.bold,
-  //                 color: Color.fromARGB(255, 0, 0, 0),
-  //               ),
-  //               overflow: TextOverflow.ellipsis,
-  //             ),
-  //           ),
-  //           const SizedBox(width: 6),
-  //           const Icon(Icons.arrow_drop_down, size: 22, color: Color.fromARGB(255, 0, 0, 0)),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
-  return GestureDetector(
-  onTap: _showLocationSelector,
-  child: Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-    decoration: BoxDecoration(
-      color: Colors.orange.withOpacity(0.1),
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: Colors.orange, width: 1.5),
-    ),
-    child: Row(
-      children: [
-        // LEFT ICON
-        const Icon(
-          Icons.location_on,
-          size: 16,
-          color: Colors.black,
+    //   return GestureDetector(
+    //     onTap: _showLocationSelector,
+    //     child: Container(
+    //       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    //       decoration: BoxDecoration(
+    //         color: Colors.orange.withOpacity(0.1),
+    //         borderRadius: BorderRadius.circular(20),
+    //         border: Border.all(color: Colors.orange, width: 1.5),
+    //       ),
+    //       child: Row(
+    //         mainAxisSize: MainAxisSize.min,
+    //         children: [
+    //           const Icon(Icons.location_on, size: 16, color: Color.fromARGB(255, 0, 0, 0)),
+    //           const SizedBox(width: 6),
+    //           ConstrainedBox(
+    //             constraints: const BoxConstraints(maxWidth: 150),
+    //             child: Text(
+    //               _currentLocation!.name,
+    //               style: const TextStyle(
+    //                 fontSize: 16,
+    //                 fontWeight: FontWeight.bold,
+    //                 color: Color.fromARGB(255, 0, 0, 0),
+    //               ),
+    //               overflow: TextOverflow.ellipsis,
+    //             ),
+    //           ),
+    //           const SizedBox(width: 6),
+    //           const Icon(Icons.arrow_drop_down, size: 22, color: Color.fromARGB(255, 0, 0, 0)),
+    //         ],
+    //       ),
+    //     ),
+    //   );
+    // }
+    return GestureDetector(
+      onTap: _showLocationSelector,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          ///color: Colors.orange.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+          // border: Border.all(color: Colors.orange, width: 1.5),
         ),
+        child: Row(
+          children: [
+            // LEFT ICON
+            // const Icon(
+            //   Icons.location_on,
+            //   size: 16,
+            //   color: Colors.black,
+            // ),
 
-        // CENTER TEXT
-        Expanded(
-          child: Center(
-            child: Text(
-              _currentLocation!.name,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
+            // CENTER TEXT
+            Expanded(
+              child: Center(
+                child: Text(
+                  _currentLocation!.name,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
               ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
             ),
-          ),
-        ),
 
-        // RIGHT ICON
-        const Icon(
-          Icons.arrow_drop_down,
-          size: 22,
-          color: Colors.black,
+            // RIGHT ICON
+            const Icon(Icons.arrow_drop_down, size: 22, color: Colors.black),
+          ],
         ),
-      ],
-    ),
-  ),
-);
-
+      ),
+    );
   }
 }

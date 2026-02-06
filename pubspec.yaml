@@ -114,13 +114,15 @@ flutter:
     - assets/images/ratings/SILVER-2.png
     - assets/images/others/gift.png
     - assets/images/others/whatsapp.png
-    - assets/Christmas.json
-    - assets/santa.json
-    - assets/snow.json
-    - assets/ChristmasTree.json
-    - assets/independenceDaySl.json
-    
- 
+    - assets/events/snow.json
+    - assets/events/ChristmasTree.json
+    - assets/events/independenceDaySl.json
+    - assets/events/LohriFestival.json
+    - assets/events/HappyPongal.json
+    - assets/events/RepublicDay.json
+    - assets/events/ValentineDayHeart.json
+    - assets/events/ChineseNewYear.json
+    - assets/events/HappyHoli.json
   
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg

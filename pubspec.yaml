@@ -123,7 +123,10 @@ flutter:
     - assets/events/ValentineDayHeart.json
     - assets/events/ChineseNewYear.json
     - assets/events/HappyHoli.json
-  
+    - assets/events/HappyWomen.json
+    - assets/events/Moon Night Ramadan.json
+    - assets/events/Muslim family going to mosque.json
+    - assets/events/Happy Easter.json
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

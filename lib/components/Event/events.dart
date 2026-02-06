@@ -10,6 +10,9 @@ enum EventType {
   valentineDay,
   chineseNewYear,
   holi,
+  happyWomen,
+  ramadan,
+  easter,
 }
 
 class EventOverlay extends StatelessWidget {
@@ -43,6 +46,12 @@ class EventOverlay extends StatelessWidget {
         return _buildChineseNewYearEvent();
       case EventType.holi:
         return _buildHoliEvent();
+      case EventType.happyWomen:
+        return _buildHappyWomenEvent();
+      case EventType.ramadan:
+        return _buildRamadanEvent();
+      case EventType.easter:
+        return _buildEasterEvent();
     }
   }
 
@@ -214,6 +223,83 @@ class EventOverlay extends StatelessWidget {
           child: Center(
             child: Lottie.asset(
               'assets/events/HappyHoli.json',
+              width: 500,
+              height: 500,
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+   Widget _buildHappyWomenEvent() {
+    return IgnorePointer(
+      child: Material(
+        color: Colors.transparent,
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Center(
+            child: Lottie.asset(
+              'assets/events/HappyWomen.json',
+              width: 500,
+              height: 500,
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+ Widget _buildRamadanEvent() {
+  return Material(
+    color: Colors.transparent,
+    child: SizedBox(
+      width: double.infinity,
+      height: double.infinity,
+      child: Stack(
+        children: [
+       
+          Positioned(
+            right: 20, 
+            top: -20,   
+            child: Lottie.asset(
+              'assets/events/Moon Night Ramadan.json',
+              width: 150,  
+              height: 150, 
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+          // Family animation - positioned at bottom left
+          Positioned(
+            left: -5,
+            bottom: -20,
+            child: Lottie.asset(
+              'assets/events/Muslim family going to mosque.json',
+              width: 250,  // Reduced size
+              height: 250, // Reduced size
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+  Widget _buildEasterEvent() {
+    return IgnorePointer(
+      child: Material(
+        color: Colors.transparent,
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Center(
+            child: Lottie.asset(
+              'assets/events/Happy Easter.json',
               width: 500,
               height: 500,
               fit: BoxFit.contain,

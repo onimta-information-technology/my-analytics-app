@@ -108,8 +108,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }else if (now.month == 2 && now.day == 17) {
       eventToShow = EventType.chineseNewYear;
       displayDuration = 5;
-    }else if (now.month == 2 && now.day == 3) {
+    }else if (now.month == 3 && now.day == 4) {
       eventToShow = EventType.holi;
+      displayDuration = 5;
+    }else if (now.month == 3 && now.day == 8) {
+      eventToShow = EventType.happyWomen;
+      displayDuration = 5;
+    }else if (now.month == 3 && now.day == 21) {
+      eventToShow = EventType.ramadan;
+      displayDuration = 5;
+    }else if (now.month == 4 && now.day == 5) {
+      eventToShow = EventType.easter;
       displayDuration = 5;
     }
 

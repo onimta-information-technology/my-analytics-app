@@ -13,6 +13,19 @@ enum EventType {
   happyWomen,
   ramadan,
   easter,
+  sinhalatamilNewYear,
+  earthDay,
+  labourDay,
+  mothersDay,
+  eidAlAdha,
+  environmentDay,
+  fathersDay,
+  friendshipDay,
+  youthDay,
+  pakistanIndependenceDay,
+  indianIndependenceDay,
+  rakshaBandhan,
+  janmashtamiEvent,
 }
 
 class EventOverlay extends StatelessWidget {
@@ -52,6 +65,32 @@ class EventOverlay extends StatelessWidget {
         return _buildRamadanEvent();
       case EventType.easter:
         return _buildEasterEvent();
+      case EventType.sinhalatamilNewYear:
+        return _buildSinhalatamilNewYearEvent();
+      case EventType.earthDay:
+        return _buildEarthDayEvent();
+      case EventType.labourDay:
+        return _buildLabourDayEvent();
+      case EventType.mothersDay:
+        return _buildMotherDayEvent();
+      case EventType.eidAlAdha:
+        return _buildEidAlAdhaEvent();
+      case EventType.environmentDay:
+        return _buildSaveTheEarthEvent();
+      case EventType.fathersDay:
+        return _buildFathersDayEvent();
+      case EventType.friendshipDay:
+        return _buildFriendsipDayEvent();
+      case EventType.youthDay:
+        return _buildYouthDayEvent();
+      case EventType.pakistanIndependenceDay:
+        return _buildPakisthanIndependenceEvent();
+      case EventType.indianIndependenceDay:
+        return _buildindianindependenceDayEvent();
+      case EventType.rakshaBandhan:
+        return _buildRakshaBandhanEvent();
+      case EventType.janmashtamiEvent:
+        return _buildHappyJanmashtamiEvent();
     }
   }
 
@@ -302,6 +341,332 @@ class EventOverlay extends StatelessWidget {
               'assets/events/Happy Easter.json',
               width: 500,
               height: 500,
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+   Widget _buildSinhalatamilNewYearEvent() {
+  return Material(
+    color: Colors.transparent,
+    child: SizedBox(
+      width: double.infinity,
+      height: double.infinity,
+      child: Stack(
+        children: [
+       
+          Positioned(
+            right: 10, 
+            top: 20,   
+            child: Lottie.asset(
+              'assets/events/Lunarnewyear.json',
+              width: 200,  
+              height: 200, 
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+         
+          // Positioned(
+          //   left: -5,
+          //   bottom: -20,
+          //   child: Lottie.asset(
+          //     'assets/events/Happy New Year.json',
+          //     width: 250, 
+          //     height: 250,
+          //     fit: BoxFit.contain,
+          //     repeat: true,
+          //   ),
+          // ),
+           SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Center(
+            child: Lottie.asset(
+              'assets/events/Happy New Year.json',
+              width: 500,
+              height: 500,
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+        ),
+        ],
+      ),
+    ),
+  );
+}
+ Widget _buildEarthDayEvent() {
+    return IgnorePointer(
+      child: Material(
+        color: Colors.transparent,
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Center(
+            child: Lottie.asset(
+              'assets/events/Earth day.json',
+              width: 500,
+              height: 500,
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+   Widget _buildLabourDayEvent() {
+    return IgnorePointer(
+      child: Material(
+        color: Colors.transparent,
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Center(
+            child: Lottie.asset(
+              'assets/events/Happy Labour Day.json',
+              width: 500,
+              height: 500,
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  Widget _buildMotherDayEvent() {
+    return IgnorePointer(
+      child: Material(
+        color: Colors.transparent,
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Center(
+            child: Lottie.asset(
+              'assets/events/Happy mothers day.json',
+              width: 500,
+              height: 500,
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+   Widget _buildEidAlAdhaEvent() {
+    return IgnorePointer(
+      child: Material(
+        color: Colors.transparent,
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Center(
+            child: Lottie.asset(
+              'assets/events/Happy Eid al Adha.json',
+              width: 600,
+              height: 600,
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+    Widget _buildSaveTheEarthEvent() {
+    return IgnorePointer(
+      child: Material(
+        color: Colors.transparent,
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Center(
+            child: Lottie.asset(
+              'assets/events/Save the Earth campaign.json',
+              width: 600,
+              height: 600,
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+   Widget _buildFathersDayEvent() {
+    return IgnorePointer(
+      child: Material(
+        color: Colors.transparent,
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Center(
+            child: Lottie.asset(
+              'assets/events/Father Hugging his Daughter.json',
+              width: 600,
+              height: 600,
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  Widget _buildFriendsipDayEvent() {
+  return Material(
+    color: Colors.transparent,
+    child: SizedBox(
+      width: double.infinity,
+      height: double.infinity,
+      child: Stack(
+        children: [
+        SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Center(
+            child: Lottie.asset(
+              'assets/events/friends.json',
+              width: 600,
+              height: 600,
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+        ),
+          // Family animation - positioned at bottom left
+          Positioned(
+            left: -5,
+            bottom: -20,
+            child: Lottie.asset(
+              'assets/events/Friendship Day.json',
+              width: 250,  // Reduced size
+              height: 250, // Reduced size
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+Widget _buildYouthDayEvent() {
+    return IgnorePointer(
+      child: Material(
+        color: Colors.transparent,
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Center(
+            child: Lottie.asset(
+              'assets/events/Youth Day.json',
+              width: 600,
+              height: 600,
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+   Widget _buildPakisthanIndependenceEvent() {
+    return IgnorePointer(
+      child: Material(
+        color: Colors.transparent,
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Center(
+            child: Lottie.asset(
+              'assets/events/Pakistan flag.json',
+              width: 500,
+              height: 500,
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+   Widget _buildindianindependenceDayEvent() {
+  return Material(
+    color: Colors.transparent,
+    child: SizedBox(
+      width: double.infinity,
+      height: double.infinity,
+      child: Stack(
+        children: [
+        SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Center(
+            child: Lottie.asset(
+              'assets/events/Indian Independence Day.json',
+              width: 600,
+              height: 600,
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+        ),
+          // Family animation - positioned at bottom left
+          Positioned(
+            // right: 20, 
+            top: -100, 
+            child: Lottie.asset(
+              'assets/events/Republic Day india.json',
+              width: 500,  // Reduced size
+              height: 500, // Reduced size
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+   Widget _buildRakshaBandhanEvent() {
+    return IgnorePointer(
+      child: Material(
+        color: Colors.transparent,
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Center(
+            child: Lottie.asset(
+              'assets/events/Raksha Bandhan.json',
+              width: 600,
+              height: 600,
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+    Widget _buildHappyJanmashtamiEvent() {
+    return IgnorePointer(
+      child: Material(
+        color: Colors.transparent,
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Center(
+            child: Lottie.asset(
+              'assets/events/Happy Janmashtami.json',
+              width: 600,
+              height: 600,
               fit: BoxFit.contain,
               repeat: true,
             ),

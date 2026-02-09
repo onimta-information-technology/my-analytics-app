@@ -127,7 +127,23 @@ flutter:
     - assets/events/Moon Night Ramadan.json
     - assets/events/Muslim family going to mosque.json
     - assets/events/Happy Easter.json
-  #   - images/a_dot_burr.jpeg
+    - assets/events/Happy New Year.json
+    - assets/events/Lunarnewyear.json
+    - assets/events/Earth day.json
+    - assets/events/Happy Labour Day.json 
+    - assets/events/Happy mothers day.json
+    - assets/events/Happy Eid al Adha.json
+    - assets/events/Save the Earth campaign.json
+    - assets/events/Father Hugging his Daughter.json
+    - assets/events/Friendship Day.json
+    - assets/events/friends.json
+    - assets/events/Youth Day.json
+    - assets/events/Pakistan flag.json
+    - assets/events/Indian Independence Day.json
+    - assets/events/Republic Day india.json
+    - assets/events/Raksha Bandhan.json
+    - assets/events/Happy Janmashtami.json
+    
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

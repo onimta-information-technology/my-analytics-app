@@ -120,6 +120,45 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }else if (now.month == 4 && now.day == 5) {
       eventToShow = EventType.easter;
       displayDuration = 5;
+    }else if (now.month == 4 && (now.day == 13 || now.day == 14 || now.day == 15)) {
+      eventToShow = EventType.sinhalatamilNewYear;
+      displayDuration = 5;
+    }else if (now.month == 4 && now.day == 22) {
+      eventToShow = EventType.earthDay;
+      displayDuration = 5;
+    }else if (now.month == 5 && now.day == 1) {
+      eventToShow = EventType.labourDay;
+      displayDuration = 5;
+    }else if (now.month == 5 && now.day == 11) {
+      eventToShow = EventType.mothersDay;
+      displayDuration = 5;
+    }else if (now.month == 5 && now.day == 26) {
+      eventToShow = EventType.eidAlAdha;
+      displayDuration = 5;
+    }else if (now.month == 6 && now.day == 5) {
+      eventToShow = EventType.environmentDay;
+      displayDuration = 5;
+    }else if (now.month == 6 && now.day == 15) {
+      eventToShow = EventType.fathersDay;
+      displayDuration = 5;
+    }else if (now.month == 7 && now.day == 30) {
+      eventToShow = EventType.friendshipDay;
+      displayDuration = 5;
+    }else if (now.month == 8 && now.day == 12) {
+      eventToShow = EventType.youthDay;
+      displayDuration = 5;
+    }else if (now.month == 8 && now.day == 14) {
+      eventToShow = EventType.pakistanIndependenceDay;
+      displayDuration = 5;
+    }else if (now.month == 8 && now.day == 15) {
+      eventToShow = EventType.indianIndependenceDay;
+      displayDuration = 5;
+    }else if (now.month == 8 && now.day == 28) {
+      eventToShow = EventType.rakshaBandhan;
+      displayDuration = 5;
+    }else if (now.month == 9 && now.day == 4) {
+      eventToShow = EventType.janmashtamiEvent;
+      displayDuration = 5;
     }
 
     if (eventToShow != null) {

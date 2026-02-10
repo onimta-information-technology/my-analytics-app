@@ -26,15 +26,18 @@ enum EventType {
   indianIndependenceDay,
   rakshaBandhan,
   janmashtamiEvent,
+  ganeshchaturthi,
+  peaceDay,
+  autumnFestival,
+  travellingBags,
+  halloween,
+  diwali,
 }
 
 class EventOverlay extends StatelessWidget {
   final EventType? activeEvent;
 
-  const EventOverlay({
-    Key? key,
-    this.activeEvent,
-  }) : super(key: key);
+  const EventOverlay({Key? key, this.activeEvent}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -91,6 +94,18 @@ class EventOverlay extends StatelessWidget {
         return _buildRakshaBandhanEvent();
       case EventType.janmashtamiEvent:
         return _buildHappyJanmashtamiEvent();
+      case EventType.ganeshchaturthi:
+        return _buildGaneshChathurthiEvent();
+      case EventType.peaceDay:
+        return _buildPeaceDayEvent();
+      case EventType.autumnFestival:
+        return _buildAutumnFestivalEvent();
+      case EventType.travellingBags:
+        return _buildTravellingBagsEvent();
+      case EventType.halloween:
+        return _buildHalloweenEvent();
+      case EventType.diwali:
+        return _buildDiwaliEvent();
     }
   }
 
@@ -172,7 +187,8 @@ class EventOverlay extends StatelessWidget {
       ),
     );
   }
-    Widget _buildHappyPongalEvent() {
+
+  Widget _buildHappyPongalEvent() {
     return IgnorePointer(
       child: Material(
         color: Colors.transparent,
@@ -192,6 +208,7 @@ class EventOverlay extends StatelessWidget {
       ),
     );
   }
+
   Widget _buildRepublicDayEvent() {
     return IgnorePointer(
       child: Material(
@@ -212,7 +229,8 @@ class EventOverlay extends StatelessWidget {
       ),
     );
   }
-   Widget _buildValentineDayEvent() {
+
+  Widget _buildValentineDayEvent() {
     return IgnorePointer(
       child: Material(
         color: Colors.transparent,
@@ -232,7 +250,8 @@ class EventOverlay extends StatelessWidget {
       ),
     );
   }
-   Widget _buildChineseNewYearEvent() {
+
+  Widget _buildChineseNewYearEvent() {
     return IgnorePointer(
       child: Material(
         color: Colors.transparent,
@@ -252,6 +271,7 @@ class EventOverlay extends StatelessWidget {
       ),
     );
   }
+
   Widget _buildHoliEvent() {
     return IgnorePointer(
       child: Material(
@@ -272,7 +292,8 @@ class EventOverlay extends StatelessWidget {
       ),
     );
   }
-   Widget _buildHappyWomenEvent() {
+
+  Widget _buildHappyWomenEvent() {
     return IgnorePointer(
       child: Material(
         color: Colors.transparent,
@@ -292,43 +313,44 @@ class EventOverlay extends StatelessWidget {
       ),
     );
   }
- Widget _buildRamadanEvent() {
-  return Material(
-    color: Colors.transparent,
-    child: SizedBox(
-      width: double.infinity,
-      height: double.infinity,
-      child: Stack(
-        children: [
-       
-          Positioned(
-            right: 20, 
-            top: -20,   
-            child: Lottie.asset(
-              'assets/events/Moon Night Ramadan.json',
-              width: 150,  
-              height: 150, 
-              fit: BoxFit.contain,
-              repeat: true,
+
+  Widget _buildRamadanEvent() {
+    return Material(
+      color: Colors.transparent,
+      child: SizedBox(
+        width: double.infinity,
+        height: double.infinity,
+        child: Stack(
+          children: [
+            Positioned(
+              right: 20,
+              top: -20,
+              child: Lottie.asset(
+                'assets/events/Moon Night Ramadan.json',
+                width: 150,
+                height: 150,
+                fit: BoxFit.contain,
+                repeat: true,
+              ),
             ),
-          ),
-          // Family animation - positioned at bottom left
-          Positioned(
-            left: -5,
-            bottom: -20,
-            child: Lottie.asset(
-              'assets/events/Muslim family going to mosque.json',
-              width: 250,  // Reduced size
-              height: 250, // Reduced size
-              fit: BoxFit.contain,
-              repeat: true,
+            // Family animation - positioned at bottom left
+            Positioned(
+              left: -5,
+              bottom: -20,
+              child: Lottie.asset(
+                'assets/events/Muslim family going to mosque.json',
+                width: 250, // Reduced size
+                height: 250, // Reduced size
+                fit: BoxFit.contain,
+                repeat: true,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
+
   Widget _buildEasterEvent() {
     return IgnorePointer(
       child: Material(
@@ -349,57 +371,58 @@ class EventOverlay extends StatelessWidget {
       ),
     );
   }
-   Widget _buildSinhalatamilNewYearEvent() {
-  return Material(
-    color: Colors.transparent,
-    child: SizedBox(
-      width: double.infinity,
-      height: double.infinity,
-      child: Stack(
-        children: [
-       
-          Positioned(
-            right: 10, 
-            top: 20,   
-            child: Lottie.asset(
-              'assets/events/Lunarnewyear.json',
-              width: 200,  
-              height: 200, 
-              fit: BoxFit.contain,
-              repeat: true,
+
+  Widget _buildSinhalatamilNewYearEvent() {
+    return Material(
+      color: Colors.transparent,
+      child: SizedBox(
+        width: double.infinity,
+        height: double.infinity,
+        child: Stack(
+          children: [
+            Positioned(
+              right: 10,
+              top: 20,
+              child: Lottie.asset(
+                'assets/events/Lunarnewyear.json',
+                width: 200,
+                height: 200,
+                fit: BoxFit.contain,
+                repeat: true,
+              ),
             ),
-          ),
-         
-          // Positioned(
-          //   left: -5,
-          //   bottom: -20,
-          //   child: Lottie.asset(
-          //     'assets/events/Happy New Year.json',
-          //     width: 250, 
-          //     height: 250,
-          //     fit: BoxFit.contain,
-          //     repeat: true,
-          //   ),
-          // ),
-           SizedBox(
-          width: double.infinity,
-          height: double.infinity,
-          child: Center(
-            child: Lottie.asset(
-              'assets/events/Happy New Year.json',
-              width: 500,
-              height: 500,
-              fit: BoxFit.contain,
-              repeat: true,
+
+            // Positioned(
+            //   left: -5,
+            //   bottom: -20,
+            //   child: Lottie.asset(
+            //     'assets/events/Happy New Year.json',
+            //     width: 250,
+            //     height: 250,
+            //     fit: BoxFit.contain,
+            //     repeat: true,
+            //   ),
+            // ),
+            SizedBox(
+              width: double.infinity,
+              height: double.infinity,
+              child: Center(
+                child: Lottie.asset(
+                  'assets/events/Happy New Year.json',
+                  width: 500,
+                  height: 500,
+                  fit: BoxFit.contain,
+                  repeat: true,
+                ),
+              ),
             ),
-          ),
+          ],
         ),
-        ],
       ),
-    ),
-  );
-}
- Widget _buildEarthDayEvent() {
+    );
+  }
+
+  Widget _buildEarthDayEvent() {
     return IgnorePointer(
       child: Material(
         color: Colors.transparent,
@@ -419,7 +442,8 @@ class EventOverlay extends StatelessWidget {
       ),
     );
   }
-   Widget _buildLabourDayEvent() {
+
+  Widget _buildLabourDayEvent() {
     return IgnorePointer(
       child: Material(
         color: Colors.transparent,
@@ -439,6 +463,7 @@ class EventOverlay extends StatelessWidget {
       ),
     );
   }
+
   Widget _buildMotherDayEvent() {
     return IgnorePointer(
       child: Material(
@@ -459,7 +484,8 @@ class EventOverlay extends StatelessWidget {
       ),
     );
   }
-   Widget _buildEidAlAdhaEvent() {
+
+  Widget _buildEidAlAdhaEvent() {
     return IgnorePointer(
       child: Material(
         color: Colors.transparent,
@@ -479,7 +505,8 @@ class EventOverlay extends StatelessWidget {
       ),
     );
   }
-    Widget _buildSaveTheEarthEvent() {
+
+  Widget _buildSaveTheEarthEvent() {
     return IgnorePointer(
       child: Material(
         color: Colors.transparent,
@@ -499,7 +526,8 @@ class EventOverlay extends StatelessWidget {
       ),
     );
   }
-   Widget _buildFathersDayEvent() {
+
+  Widget _buildFathersDayEvent() {
     return IgnorePointer(
       child: Material(
         color: Colors.transparent,
@@ -519,45 +547,47 @@ class EventOverlay extends StatelessWidget {
       ),
     );
   }
+
   Widget _buildFriendsipDayEvent() {
-  return Material(
-    color: Colors.transparent,
-    child: SizedBox(
-      width: double.infinity,
-      height: double.infinity,
-      child: Stack(
-        children: [
-        SizedBox(
-          width: double.infinity,
-          height: double.infinity,
-          child: Center(
-            child: Lottie.asset(
-              'assets/events/friends.json',
-              width: 600,
-              height: 600,
-              fit: BoxFit.contain,
-              repeat: true,
+    return Material(
+      color: Colors.transparent,
+      child: SizedBox(
+        width: double.infinity,
+        height: double.infinity,
+        child: Stack(
+          children: [
+            SizedBox(
+              width: double.infinity,
+              height: double.infinity,
+              child: Center(
+                child: Lottie.asset(
+                  'assets/events/friends.json',
+                  width: 600,
+                  height: 600,
+                  fit: BoxFit.contain,
+                  repeat: true,
+                ),
+              ),
             ),
-          ),
+            // Family animation - positioned at bottom left
+            Positioned(
+              left: -5,
+              bottom: -20,
+              child: Lottie.asset(
+                'assets/events/Friendship Day.json',
+                width: 250, // Reduced size
+                height: 250, // Reduced size
+                fit: BoxFit.contain,
+                repeat: true,
+              ),
+            ),
+          ],
         ),
-          // Family animation - positioned at bottom left
-          Positioned(
-            left: -5,
-            bottom: -20,
-            child: Lottie.asset(
-              'assets/events/Friendship Day.json',
-              width: 250,  // Reduced size
-              height: 250, // Reduced size
-              fit: BoxFit.contain,
-              repeat: true,
-            ),
-          ),
-        ],
       ),
-    ),
-  );
-}
-Widget _buildYouthDayEvent() {
+    );
+  }
+
+  Widget _buildYouthDayEvent() {
     return IgnorePointer(
       child: Material(
         color: Colors.transparent,
@@ -577,7 +607,8 @@ Widget _buildYouthDayEvent() {
       ),
     );
   }
-   Widget _buildPakisthanIndependenceEvent() {
+
+  Widget _buildPakisthanIndependenceEvent() {
     return IgnorePointer(
       child: Material(
         color: Colors.transparent,
@@ -597,45 +628,47 @@ Widget _buildYouthDayEvent() {
       ),
     );
   }
-   Widget _buildindianindependenceDayEvent() {
-  return Material(
-    color: Colors.transparent,
-    child: SizedBox(
-      width: double.infinity,
-      height: double.infinity,
-      child: Stack(
-        children: [
-        SizedBox(
-          width: double.infinity,
-          height: double.infinity,
-          child: Center(
-            child: Lottie.asset(
-              'assets/events/Indian Independence Day.json',
-              width: 600,
-              height: 600,
-              fit: BoxFit.contain,
-              repeat: true,
+
+  Widget _buildindianindependenceDayEvent() {
+    return Material(
+      color: Colors.transparent,
+      child: SizedBox(
+        width: double.infinity,
+        height: double.infinity,
+        child: Stack(
+          children: [
+            SizedBox(
+              width: double.infinity,
+              height: double.infinity,
+              child: Center(
+                child: Lottie.asset(
+                  'assets/events/Indian Independence Day.json',
+                  width: 600,
+                  height: 600,
+                  fit: BoxFit.contain,
+                  repeat: true,
+                ),
+              ),
             ),
-          ),
+            // Family animation - positioned at bottom left
+            Positioned(
+              // right: 20,
+              top: -100,
+              child: Lottie.asset(
+                'assets/events/Republic Day india.json',
+                width: 500, // Reduced size
+                height: 500, // Reduced size
+                fit: BoxFit.contain,
+                repeat: true,
+              ),
+            ),
+          ],
         ),
-          // Family animation - positioned at bottom left
-          Positioned(
-            // right: 20, 
-            top: -100, 
-            child: Lottie.asset(
-              'assets/events/Republic Day india.json',
-              width: 500,  // Reduced size
-              height: 500, // Reduced size
-              fit: BoxFit.contain,
-              repeat: true,
-            ),
-          ),
-        ],
       ),
-    ),
-  );
-}
-   Widget _buildRakshaBandhanEvent() {
+    );
+  }
+
+  Widget _buildRakshaBandhanEvent() {
     return IgnorePointer(
       child: Material(
         color: Colors.transparent,
@@ -655,7 +688,8 @@ Widget _buildYouthDayEvent() {
       ),
     );
   }
-    Widget _buildHappyJanmashtamiEvent() {
+
+  Widget _buildHappyJanmashtamiEvent() {
     return IgnorePointer(
       child: Material(
         color: Colors.transparent,
@@ -665,6 +699,149 @@ Widget _buildYouthDayEvent() {
           child: Center(
             child: Lottie.asset(
               'assets/events/Happy Janmashtami.json',
+              width: 600,
+              height: 600,
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGaneshChathurthiEvent() {
+    return IgnorePointer(
+      child: Material(
+        color: Colors.transparent,
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Center(
+            child: Lottie.asset(
+              'assets/events/Happy Ganesh Chathurthi.json',
+              width: 600,
+              height: 600,
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPeaceDayEvent() {
+    return IgnorePointer(
+      child: Material(
+        color: Colors.transparent,
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Center(
+            child: Lottie.asset(
+              'assets/events/Peace Day.json',
+              width: 600,
+              height: 600,
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAutumnFestivalEvent() {
+    return IgnorePointer(
+      child: Material(
+        color: Colors.transparent,
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Center(
+            child: Lottie.asset(
+              'assets/events/Mid-Autumn Festival Food.json',
+              width: 600,
+              height: 600,
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTravellingBagsEvent() {
+    return IgnorePointer(
+      child: Material(
+        color: Colors.transparent,
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Center(
+            child: Lottie.asset(
+              'assets/events/Travelling Bags.json',
+              width: 600,
+              height: 600,
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+   Widget _buildHalloweenEvent() {
+    return Material(
+      color: Colors.transparent,
+      child: SizedBox(
+        width: double.infinity,
+        height: double.infinity,
+        child: Stack(
+          children: [
+            SizedBox(
+              width: double.infinity,
+              height: double.infinity,
+              child: Center(
+                child: Lottie.asset(
+                  'assets/events/Halloween ghost.json',
+                  width: 600,
+                  height: 600,
+                  fit: BoxFit.contain,
+                  repeat: true,
+                ),
+              ),
+            ),
+            // Family animation - positioned at bottom left
+            Positioned(
+               right: 20,
+              top: 10,
+              child: Lottie.asset(
+                'assets/events/Searching.json',
+                width: 250, // Reduced size
+                height: 250, // Reduced size
+                fit: BoxFit.contain,
+                repeat: true,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  Widget _buildDiwaliEvent() {
+    return IgnorePointer(
+      child: Material(
+        color: Colors.transparent,
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Center(
+            child: Lottie.asset(
+              'assets/events/Diwali.json',
               width: 600,
               height: 600,
               fit: BoxFit.contain,

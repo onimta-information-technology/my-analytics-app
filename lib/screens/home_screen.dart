@@ -160,6 +160,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       eventToShow = EventType.janmashtamiEvent;
       displayDuration = 5;
     }
+    // else if (now.month == 9 && now.day == 14) {
+    //   eventToShow = EventType.ganeshchaturthi;
+    //   displayDuration = 200;
+    // }
+    else if (now.month == 9 && now.day == 21) {
+      eventToShow = EventType.peaceDay;
+      displayDuration = 5;
+    }else if (now.month == 9 && now.day == 25) {
+      eventToShow = EventType.autumnFestival;
+      displayDuration = 5;
+    }else if (now.month == 9 && now.day == 27) {
+      eventToShow = EventType.travellingBags;
+      displayDuration = 5;
+    }else if (now.month == 10 && now.day == 31) {
+      eventToShow = EventType.halloween;
+      displayDuration = 5;
+    }else if (now.month == 11 && now.day == 8) {
+      eventToShow = EventType.diwali;
+      displayDuration = 5;
+    }
 
     if (eventToShow != null) {
       // Show the event

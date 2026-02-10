@@ -143,7 +143,13 @@ flutter:
     - assets/events/Republic Day india.json
     - assets/events/Raksha Bandhan.json
     - assets/events/Happy Janmashtami.json
-    
+    - assets/events/Happy Ganesh Chathurthi.json
+    - assets/events/Peace Day.json
+    - assets/events/Mid-Autumn Festival Food.json
+    - assets/events/Travelling Bags.json
+    - assets/events/Halloween ghost.json
+    - assets/events/Searching.json
+    - assets/events/Diwali.json
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

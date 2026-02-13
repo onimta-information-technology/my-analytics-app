@@ -254,6 +254,7 @@ print(  'Raw trip history data: $data');
     required String dateFrom,
     required String dateTo,
   }) async {
+    print('getMemberSummary called with playerId: $playerId, dateFrom: $dateFrom, dateTo: $dateTo');
     final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
@@ -302,7 +303,7 @@ print(  'Raw trip history data: $data');
         response['CommonResult']['Table'] is List &&
         response['CommonResult']['Table'].isNotEmpty) {
       final tableData = response['CommonResult']['Table'];
-
+print('Member Summary Table Data: $tableData');
       List<MemberSummary> memberSummaries = [];
 
       if (tableData.length > 0) {

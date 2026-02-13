@@ -27,7 +27,7 @@ class ViewBirthdayGiftRequest extends ConsumerStatefulWidget {
   final BirthdayIncressGiftRequest? gift;
   final bool isPending;
   final bool isApproved;
-  
+
   const ViewBirthdayGiftRequest({
     super.key,
     required this.giftsRepository,
@@ -41,17 +41,20 @@ class ViewBirthdayGiftRequest extends ConsumerStatefulWidget {
       _ViewBirthdayGiftRequestState();
 }
 
-class _ViewBirthdayGiftRequestState extends ConsumerState<ViewBirthdayGiftRequest> {
+class _ViewBirthdayGiftRequestState
+    extends ConsumerState<ViewBirthdayGiftRequest> {
   final TextEditingController _memberIdController = TextEditingController();
   final TextEditingController _memberNameController = TextEditingController();
   final TextEditingController _fromDateController = TextEditingController();
   final TextEditingController _toDateController = TextEditingController();
   final TextEditingController _arrivalDateController = TextEditingController();
-  final TextEditingController _departureDateController = TextEditingController();
+  final TextEditingController _departureDateController =
+      TextEditingController();
   final TextEditingController _chipController = TextEditingController();
   final TextEditingController _remarksController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
-  final TextEditingController _previousGiftAmountController = TextEditingController();
+  final TextEditingController _previousGiftAmountController =
+      TextEditingController();
 
   String? _selectedGift;
   String? _chipType;
@@ -69,7 +72,7 @@ class _ViewBirthdayGiftRequestState extends ConsumerState<ViewBirthdayGiftReques
   double flushactdrop = 0.0;
   double avgbet = 0.0;
   int? _selectedValidDays;
-bool _hasGiftAppPermission = false;
+  bool _hasGiftAppPermission = false;
 
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
@@ -79,7 +82,7 @@ bool _hasGiftAppPermission = false;
   void initState() {
     super.initState();
     _loadUserCredentials();
- _checkGiftAppPermission();
+    _checkGiftAppPermission();
 
     if (widget.gift != null) {
       final g = widget.gift!;
@@ -94,7 +97,7 @@ bool _hasGiftAppPermission = false;
       _amountController.text = formatNumber(g.giftDesc.toString()) ?? "";
       _remarksController.text = g.giftCategory ?? "";
       _previousGiftAmountController.text = g.prvGiftAmount ?? "0";
-      
+
       drop = g.mdrop;
       cashout = g.cashout;
       res = g.res;
@@ -106,42 +109,44 @@ bool _hasGiftAppPermission = false;
       tcoupon = g.mCoupon + g.flushCoupon;
       flushactdrop = g.flushActDrop;
       avgbet = g.avebet;
-      
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _loadGuestDataForCard();
       });
     }
   }
-Future<void> _checkGiftAppPermission() async {
+
+  Future<void> _checkGiftAppPermission() async {
     final giftApp = await StorageUtil.getGiftApp();
     setState(() {
       _hasGiftAppPermission = giftApp ?? false;
     });
   }
-//  void _showAccessDeniedDialog() {
-//     showDialog(
-//       context: context,
-//       builder: (context) => AlertDialog(
-//         title: const Row(
-//           children: [
-//             Icon(Icons.block, color: Colors.red),
-//             SizedBox(width: 10),
-//             Text('Access Denied'),
-//           ],
-//         ),
-//         content: const Text(
-//           'You do not have permission to Approve, Reject, or Reverse gift requests.'
-//           // 'Only users with gift approval permission can perform these actions.',
-//         ),
-//         actions: [
-//           TextButton(
-//             onPressed: () => Navigator.of(context).pop(),
-//             child: const Text('OK'),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
+
+  //  void _showAccessDeniedDialog() {
+  //     showDialog(
+  //       context: context,
+  //       builder: (context) => AlertDialog(
+  //         title: const Row(
+  //           children: [
+  //             Icon(Icons.block, color: Colors.red),
+  //             SizedBox(width: 10),
+  //             Text('Access Denied'),
+  //           ],
+  //         ),
+  //         content: const Text(
+  //           'You do not have permission to Approve, Reject, or Reverse gift requests.'
+  //           // 'Only users with gift approval permission can perform these actions.',
+  //         ),
+  //         actions: [
+  //           TextButton(
+  //             onPressed: () => Navigator.of(context).pop(),
+  //             child: const Text('OK'),
+  //           ),
+  //         ],
+  //       ),
+  //     );
+  //   }
   void _showAccessDeniedDialog() {
     showDialog(
       context: context,
@@ -183,7 +188,7 @@ Future<void> _checkGiftAppPermission() async {
                   ),
                 ),
                 const SizedBox(height: 20),
-                
+
                 const Text(
                   "Access Denied",
                   style: TextStyle(
@@ -194,7 +199,7 @@ Future<void> _checkGiftAppPermission() async {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
-                
+
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -224,6 +229,7 @@ Future<void> _checkGiftAppPermission() async {
       },
     );
   }
+
   Future<void> _loadGuestDataForCard() async {
     if (_memberIdController.text.isEmpty) return;
 
@@ -243,19 +249,21 @@ Future<void> _checkGiftAppPermission() async {
 
       if (guests.isNotEmpty) {
         final guestResponse = guests.first;
-        ref.read(selectedGuestProvider.notifier).setSelectedGuest(
-          Guest(
-            mid: guestResponse.mid ?? _memberIdController.text,
-            memberName: guestResponse.mName ?? _memberNameController.text,
-            country: "",
-            lastVisitDate: guestResponse.lvd?.toString() ?? "",
-            age: 0,
-            gRating: guestResponse.gRating ?? "",
-            mGroup: guestResponse.mGroup,
-            gName: guestResponse.gName ?? "",
-            memImage2: guestResponse.memImage2,
-          ),
-        );
+        ref
+            .read(selectedGuestProvider.notifier)
+            .setSelectedGuest(
+              Guest(
+                mid: guestResponse.mid ?? _memberIdController.text,
+                memberName: guestResponse.mName ?? _memberNameController.text,
+                country: "",
+                lastVisitDate: guestResponse.lvd?.toString() ?? "",
+                age: 0,
+                gRating: guestResponse.gRating ?? "",
+                mGroup: guestResponse.mGroup,
+                gName: guestResponse.gName ?? "",
+                memImage2: guestResponse.memImage2,
+              ),
+            );
       }
 
       setState(() {
@@ -314,7 +322,7 @@ Future<void> _checkGiftAppPermission() async {
     return TextStyle(
       fontSize: fontSettings.fontSize + 5,
       fontWeight: FontWeight.bold,
-      color: const Color.fromARGB(255, 255, 0, 0)
+      color: const Color.fromARGB(255, 255, 0, 0),
     );
   }
 
@@ -370,11 +378,13 @@ Future<void> _checkGiftAppPermission() async {
                                 ),
                                 actions: [
                                   TextButton(
-                                    onPressed: () => Navigator.of(dialogContext).pop(false),
+                                    onPressed: () =>
+                                        Navigator.of(dialogContext).pop(false),
                                     child: const Text('Cancel'),
                                   ),
                                   ElevatedButton(
-                                    onPressed: () => Navigator.of(dialogContext).pop(true),
+                                    onPressed: () =>
+                                        Navigator.of(dialogContext).pop(true),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.red,
                                       foregroundColor: Colors.white,
@@ -408,7 +418,9 @@ Future<void> _checkGiftAppPermission() async {
                               if (success) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Birthday gift reversed successfully'),
+                                    content: Text(
+                                      'Birthday gift reversed successfully',
+                                    ),
                                     backgroundColor: Colors.green,
                                   ),
                                 );
@@ -416,7 +428,9 @@ Future<void> _checkGiftAppPermission() async {
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Failed to reverse birthday gift'),
+                                    content: Text(
+                                      'Failed to reverse birthday gift',
+                                    ),
                                     backgroundColor: Colors.red,
                                   ),
                                 );
@@ -454,7 +468,7 @@ Future<void> _checkGiftAppPermission() async {
                           ),
                         ),
                       ),
-                    
+
                     if (!widget.isApproved && !widget.isPending)
                       Container(
                         width: double.infinity,
@@ -474,11 +488,13 @@ Future<void> _checkGiftAppPermission() async {
                                 ),
                                 actions: [
                                   TextButton(
-                                    onPressed: () => Navigator.of(dialogContext).pop(false),
+                                    onPressed: () =>
+                                        Navigator.of(dialogContext).pop(false),
                                     child: const Text('Cancel'),
                                   ),
                                   ElevatedButton(
-                                    onPressed: () => Navigator.of(dialogContext).pop(true),
+                                    onPressed: () =>
+                                        Navigator.of(dialogContext).pop(true),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.red,
                                       foregroundColor: Colors.white,
@@ -512,7 +528,9 @@ Future<void> _checkGiftAppPermission() async {
                               if (success) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Birthday gift reversed successfully'),
+                                    content: Text(
+                                      'Birthday gift reversed successfully',
+                                    ),
                                     backgroundColor: Colors.green,
                                   ),
                                 );
@@ -520,7 +538,9 @@ Future<void> _checkGiftAppPermission() async {
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Failed to reverse birthday gift'),
+                                    content: Text(
+                                      'Failed to reverse birthday gift',
+                                    ),
                                     backgroundColor: Colors.red,
                                   ),
                                 );
@@ -577,7 +597,7 @@ Future<void> _checkGiftAppPermission() async {
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 16.0),
                     TextFormField(
                       controller: _toDateController,
@@ -596,137 +616,150 @@ Future<void> _checkGiftAppPermission() async {
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 5.0),
                     GuestDisplayCardSpecialGiftview(
                       memberIdText: _memberIdController.text,
                       memberNameText: _memberNameController.text,
-                      showCard: _memberIdController.text.isNotEmpty &&
+                      showCard:
+                          _memberIdController.text.isNotEmpty &&
                           _memberNameController.text.isNotEmpty,
                       isLoading: _isLoading,
                       showLastVisitDate: true,
                     ),
-                    
+
                     const SizedBox(height: 16.0),
                     Row(
                       children: [
                         // In ViewBirthdayGiftRequest, replace the profile navigation button code:
-ElevatedButton(
-  style: ElevatedButton.styleFrom(
-    backgroundColor: Colors.black,
-    foregroundColor: Colors.white,
-    padding: const EdgeInsets.symmetric(
-      horizontal: 16,
-      vertical: 14,
-    ),
-  ),
-  onPressed: _isLoading
-      ? null
-      : () async {
-          final selectedGuest = ref.read(selectedGuestProvider);
-
-          if (selectedGuest != null &&
-              selectedGuest.mid == _memberIdController.text) {
-            // ✅ Navigate to profile
-            context.push('/home/profile');
-            return;
-          }
-
-          try {
-            setState(() {
-              _isLoading = true;
-            });
-
-            GuestRepository guestRepository = GuestRepository(
-              ApiService(const FlutterSecureStorage()),
-            );
-
-            List<GuestSearchResponse> guests =
-                await guestRepository.searchGuest(
-                  9021,
-                  _memberIdController.text,
-                );
-
-            setState(() {
-              _isLoading = false;
-            });
-
-            if (guests.isNotEmpty) {
-              final guestResponse = guests.first;
-              ref
-                  .read(selectedGuestProvider.notifier)
-                  .setSelectedGuest(
-                    Guest(
-                      mid: guestResponse.mid ?? _memberIdController.text,
-                      memberName: guestResponse.mName ?? _memberNameController.text,
-                      country: "",
-                      lastVisitDate: guestResponse.lvd?.toString() ?? "",
-                      age: 0,
-                      gRating: guestResponse.gRating ?? "",
-                      mGroup: guestResponse.mGroup,
-                      gName: guestResponse.gName ?? "",
-                      memImage2: guestResponse.memImage2,
-                    ),
-                  );
-              context.push('/home/profile');
-            }
-          } catch (e) {
-            setState(() {
-              _isLoading = false;
-            });
-          }
-        },
-  child: _isLoading
-      ? const SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: Colors.white,
-          ),
-        )
-      : const Icon(Icons.person_search, size: 25),
-),
-                         const SizedBox(width: 16),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                final memberId = _memberIdController.text
-                                    .trim();
-
-                                if (memberId.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Please enter a Member ID"),
-                                    ),
-                                  );
-                                  return;
-                                }
-
-                                context.push(
-                                  '/menu/approve-reject/birthday-gifts/prv-gifts/$memberId',
-                                );
-                              },
-                              icon: const Icon(Icons.card_giftcard),
-                              label: Text(
-                                "Previous Gift",
-                                style: TextStyle(
-                                  fontSize: fontSettings.fontSize,
-                                  fontWeight: fontSettings.fontWeight,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                              ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
                             ),
                           ),
+                          onPressed: _isLoading
+                              ? null
+                              : () async {
+                                  final selectedGuest = ref.read(
+                                    selectedGuestProvider,
+                                  );
+
+                                  if (selectedGuest != null &&
+                                      selectedGuest.mid ==
+                                          _memberIdController.text) {
+                                    // ✅ Navigate to profile
+                                    context.push('/home/profile');
+                                    return;
+                                  }
+
+                                  try {
+                                    setState(() {
+                                      _isLoading = true;
+                                    });
+
+                                    GuestRepository guestRepository =
+                                        GuestRepository(
+                                          ApiService(
+                                            const FlutterSecureStorage(),
+                                          ),
+                                        );
+
+                                    List<GuestSearchResponse> guests =
+                                        await guestRepository.searchGuest(
+                                          9021,
+                                          _memberIdController.text,
+                                        );
+
+                                    setState(() {
+                                      _isLoading = false;
+                                    });
+
+                                    if (guests.isNotEmpty) {
+                                      final guestResponse = guests.first;
+                                      ref
+                                          .read(selectedGuestProvider.notifier)
+                                          .setSelectedGuest(
+                                            Guest(
+                                              mid:
+                                                  guestResponse.mid ??
+                                                  _memberIdController.text,
+                                              memberName:
+                                                  guestResponse.mName ??
+                                                  _memberNameController.text,
+                                              country: "",
+                                              lastVisitDate:
+                                                  guestResponse.lvd
+                                                      ?.toString() ??
+                                                  "",
+                                              age: 0,
+                                              gRating:
+                                                  guestResponse.gRating ?? "",
+                                              mGroup: guestResponse.mGroup,
+                                              gName: guestResponse.gName ?? "",
+                                              memImage2:
+                                                  guestResponse.memImage2,
+                                            ),
+                                          );
+                                      context.push('/home/profile');
+                                    }
+                                  } catch (e) {
+                                    setState(() {
+                                      _isLoading = false;
+                                    });
+                                  }
+                                },
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.person_search, size: 25),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              final memberId = _memberIdController.text.trim();
+
+                              if (memberId.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Please enter a Member ID"),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              context.push(
+                                '/menu/approve-reject/birthday-gifts/prv-gifts/$memberId',
+                              );
+                            },
+                            icon: const Icon(Icons.card_giftcard),
+                            label: Text(
+                              "Previous Gift",
+                              style: TextStyle(
+                                fontSize: fontSettings.fontSize,
+                                fontWeight: fontSettings.fontWeight,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
 
@@ -741,7 +774,7 @@ ElevatedButton(
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 10),
                     Builder(
                       builder: (context) {
@@ -753,9 +786,15 @@ ElevatedButton(
                           {"Field": "Coupons (Est)", "Value": mcoupen},
                           {"Field": "Commission Paid (Est)", "Value": paidcom},
                           {"Field": "Points (Est)", "Value": gpoints},
-                          {"Field": "Flush Coupon (Est)", "Value": gflushcoupen},
+                          {
+                            "Field": "Flush Coupon (Est)",
+                            "Value": gflushcoupen,
+                          },
                           {"Field": "Total Coupon (Est)", "Value": tcoupon},
-                          {"Field": "Flush Actual Drop (Est)", "Value": flushactdrop},
+                          {
+                            "Field": "Flush Actual Drop (Est)",
+                            "Value": flushactdrop,
+                          },
                           {"Field": "Avg Bet (Est)", "Value": avgbet},
                         ];
 
@@ -771,7 +810,9 @@ ElevatedButton(
                             headingRowColor: WidgetStateProperty.all(
                               Colors.amber.shade100,
                             ),
-                            border: TableBorder.all(color: Colors.grey.shade300),
+                            border: TableBorder.all(
+                              color: Colors.grey.shade300,
+                            ),
                             columns: [
                               DataColumn(
                                 label: Text(
@@ -938,7 +979,7 @@ ElevatedButton(
                       decoration: InputDecoration(
                         labelText: "Previous Gift Amount",
                         labelStyle: TextStyle(
-                        //  color: const Color.fromARGB(255, 255, 0, 0),
+                          //  color: const Color.fromARGB(255, 255, 0, 0),
                           fontSize: fontSettings.fontSize + 2,
                           fontWeight: fontSettings.fontWeight,
                         ),
@@ -1129,19 +1170,24 @@ ElevatedButton(
 
                                 try {
                                   final success = await ref
-                                      .read(birthdayGiftIncreesProvider.notifier)
+                                      .read(
+                                        birthdayGiftIncreesProvider.notifier,
+                                      )
                                       .sendApprovedBirthdayGiftFromUI(
                                         reqid: reqid,
                                         remarks: remarks,
                                         amount: amount,
                                         userName: uname,
-                                        validDates: _selectedValidDays.toString(),
+                                        validDates: _selectedValidDays
+                                            .toString(),
                                       );
 
                                   if (success) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text("Request Approved Successfully"),
+                                        content: Text(
+                                          "Request Approved Successfully",
+                                        ),
                                       ),
                                     );
                                     Navigator.of(context).pop(true);
@@ -1170,7 +1216,9 @@ ElevatedButton(
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
                               ),
                             ),
                           ),
@@ -1178,7 +1226,7 @@ ElevatedButton(
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () async {
-                                 if (!_hasGiftAppPermission) {
+                                if (!_hasGiftAppPermission) {
                                   _showAccessDeniedDialog();
                                   return;
                                 }
@@ -1200,7 +1248,9 @@ ElevatedButton(
 
                                 try {
                                   final success = await ref
-                                      .read(birthdayGiftIncreesProvider.notifier)
+                                      .read(
+                                        birthdayGiftIncreesProvider.notifier,
+                                      )
                                       .rejectBirthdayGiftFromUI(
                                         reqid: reqid,
                                         userName: uname,
@@ -1209,7 +1259,9 @@ ElevatedButton(
                                   if (success) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text("Request Rejected Successfully"),
+                                        content: Text(
+                                          "Request Rejected Successfully",
+                                        ),
                                       ),
                                     );
                                     Navigator.of(context).pop(true);
@@ -1238,7 +1290,9 @@ ElevatedButton(
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
                               ),
                             ),
                           ),

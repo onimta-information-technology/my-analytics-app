@@ -392,9 +392,9 @@ Row(
                     ),
                     Expanded(
                       child: GestureDetector(
-                        onTap: () {
-                          // context.go('/daily-gests');
-                        },
+                       onTap: () {
+  context.push('/guest-bookings');
+},
                         child: const Card(
                           color: Color.fromARGB(174, 134, 132, 16),
                           child: Padding(

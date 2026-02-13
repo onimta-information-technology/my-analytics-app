@@ -1,9 +1,11 @@
 import 'package:ballys_reservation_app/data/repositories/airport_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
+import 'package:ballys_reservation_app/data/repositories/guest_booking_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/inactive_members_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/member_profile_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/main.dart';
+import 'package:ballys_reservation_app/models/Guest/guest_booking.dart';
 import 'package:ballys_reservation_app/models/birthday.dart';
 import 'package:ballys_reservation_app/models/gift/birthday_gift_request.dart';
 import 'package:ballys_reservation_app/models/gift/special_gift_request.dart';
@@ -23,6 +25,7 @@ import 'package:ballys_reservation_app/screens/gifts/new_gift_request.dart';
 import 'package:ballys_reservation_app/screens/gifts/previous_gift.dart';
 import 'package:ballys_reservation_app/screens/gifts/special_gift_request_screen.dart';
 import 'package:ballys_reservation_app/screens/gifts/view_special_gift.dart';
+import 'package:ballys_reservation_app/screens/guest_booking_screen.dart';
 import 'package:ballys_reservation_app/screens/home_screen.dart';
 import 'package:ballys_reservation_app/screens/inactive_members.dart';
 import 'package:ballys_reservation_app/screens/member_visits.dart';
@@ -41,6 +44,7 @@ import 'package:ballys_reservation_app/screens/reservations/reservation_view_scr
 import 'package:ballys_reservation_app/screens/settings_screen.dart';
 import 'package:ballys_reservation_app/screens/support_screen.dart';
 import 'package:ballys_reservation_app/screens/viewBirthdayGiftRequest.dart';
+import 'package:ballys_reservation_app/screens/view_guest_booking.dart';
 import 'package:ballys_reservation_app/wrappers/main_wrapper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -761,6 +765,41 @@ class AppNavigation {
             path: '/reports',
             builder: (context, state) => const ReportsScreen(),
           ),
+          GoRoute(
+  path: '/guest-bookings',
+  pageBuilder: (context, state) => CustomTransitionPage(
+    fullscreenDialog: true,
+    key: state.pageKey,
+    child: GuestBookingScreen(
+      bookingRepository: GuestBookingRepository(
+        ApiService(const FlutterSecureStorage()),
+      ),
+    ),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return FadeTransition(
+        opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+        child: child,
+      );
+    },
+  ),
+  routes: [
+    GoRoute(
+      path: 'view-booking',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>? ?? {};
+        final booking = extra['booking'] as GuestBooking?;
+        final isPending = extra['isPending'] as bool? ?? false;
+        return ViewGuestBooking(
+          bookingRepository: GuestBookingRepository(
+            ApiService(const FlutterSecureStorage()),
+          ),
+          booking: booking,
+          isPending: isPending,
+        );
+      },
+    ),
+  ],
+),
         ],
       ),
       // GoRoute(path: '/menu', builder: (context, state) => const MenuScreen()),

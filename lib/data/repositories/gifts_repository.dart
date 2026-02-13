@@ -182,6 +182,7 @@ class GiftsRepository {
     String text4,
     String text5,
   ) async {
+    print('getgestgiftGift called with iid: $iid, text1: $text1, text2: $text2, text3: $text3, text4: $text4, text5: $text5');
     final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",

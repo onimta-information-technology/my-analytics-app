@@ -10,7 +10,8 @@ class GuestRepository {
 
   Future<List<Guest>> getGuestData(int iid, String text1) async {
     final deviceId = await DeviceId.get();
-
+    print("iid is $iid and text1 is $text1");
+    
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -39,8 +40,10 @@ class GuestRepository {
       "SpName": "sp_CRM_Common_API",
       "con": "1",
     });
-print("hiii2");
-print( response);
+    
+    print("hiii2");
+    print(response);
+    
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List &&
         response['CommonResult']['Table'].isNotEmpty) {
@@ -51,20 +54,8 @@ print( response);
 
       if (tableData.length > 0) {
         for (var table in tableData) {
-       
-          guestList.add(
-            Guest(
-              mid: table['MID'] ?? '',
-              memberName:
-                  table['MName'] ?? table['MNane'] ?? table['MNAME'] ?? '',
-              country: table['COUNTRY'] ?? '',
-              lastVisitDate: table['LVD'] ?? '',
-              age: table['AGE'] ?? '',
-              gRating: table['G_Rating'] ?? '',
-              mGroup: table['mGroup'] ?? '',
-              gName: table['GName'] ?? '',
-            ),
-          );
+          // ✅ FIX: Use fromJson to properly parse all fields including memImage2
+          guestList.add(Guest.fromJson(table));
         }
       }
 
@@ -134,13 +125,13 @@ print( response);
         response['CommonResult']['Table'].isNotEmpty) {
       final tableData = response['CommonResult']['Table'][0];
 
-      if (tableData.length > 0) {
+      // ✅ FIX: Check if MemImage2 exists in the response
+      if (tableData.containsKey('MemImage2') && tableData['MemImage2'] != null) {
         print('Guest image URL fetched: ${tableData['MemImage2']}');
         return tableData['MemImage2'];
       } else {
-        throw Exception(
-          'Login failed: Invalid credentials or LoginStatus is not True',
-        );
+        print('No MemImage2 found in response');
+        return null;
       }
     }
     return null;

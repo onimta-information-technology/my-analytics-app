@@ -41,8 +41,8 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
 
   String? userName = "";
   bool _isLoading = false;
- bool _guestDataLoaded = false;
-   bool _isGuestLoading = false;
+  bool _guestDataLoaded = false;
+  bool _isGuestLoading = false;
   @override
   void initState() {
     super.initState();
@@ -56,7 +56,8 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
       _insertDateController.text = _formatDateTime(booking.insertDate);
     }
   }
-Future<void> _loadGuestDataForView() async {
+
+  Future<void> _loadGuestDataForView() async {
     if (_memberIdController.text.isEmpty || _guestDataLoaded) return;
 
     try {
@@ -83,13 +84,12 @@ Future<void> _loadGuestDataForView() async {
                 memberName: guestResponse.mName ?? "",
                 country: "",
                 lastVisitDate: guestResponse.lvd?.toString() ?? "",
-               
+
                 age: 0,
                 gRating: guestResponse.gRating ?? "",
                 mGroup: guestResponse.mGroup,
                 gName: guestResponse.gName ?? "",
                 memImage2: guestResponse.memImage2,
-              
               ),
             );
       }
@@ -106,6 +106,7 @@ Future<void> _loadGuestDataForView() async {
       });
     }
   }
+
   Future<void> _loadUserCredentials() async {
     final name = await StorageUtil.getUserName();
     setState(() {
@@ -223,12 +224,12 @@ Future<void> _loadGuestDataForView() async {
                   ),
 
                   // const SizedBox(height: 24),
- GuestDisplayCardById(
-  memberId: widget.booking?.mid ?? "",
-  showLastVisitDate: true,
-),
+                  GuestDisplayCardById(
+                    memberId: widget.booking?.mid ?? "",
+                    showLastVisitDate: true,
+                  ),
 
-                    const SizedBox(height: 16.0),
+                  const SizedBox(height: 16.0),
                   // Member ID
                   // TextFormField(
                   //   controller: _memberIdController,
@@ -248,7 +249,7 @@ Future<void> _loadGuestDataForView() async {
                   //     ),
                   //   ),
                   // ),
- Row(
+                  Row(
                     children: [
                       // Member ID field
                       Expanded(
@@ -281,8 +282,8 @@ Future<void> _loadGuestDataForView() async {
                       // Search Button
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black, // Black background
-                          foregroundColor: Colors.white, // White text/icon
+                          backgroundColor: Colors.black,
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 14,
@@ -290,9 +291,14 @@ Future<void> _loadGuestDataForView() async {
                         ),
                         onPressed: () async {
                           try {
-                            // Only load if not already loaded
-                            if (!_guestDataLoaded &&
-                                _memberIdController.text.isNotEmpty) {
+                            // Check if guest data is already loaded in the provider
+                            final existingGuest = ref.read(
+                              selectedGuestProvider,
+                            );
+
+                            // Only fetch if not already available
+                            if (existingGuest == null ||
+                                existingGuest.mid != _memberIdController.text) {
                               setState(() {
                                 _isLoading = true;
                               });
@@ -304,12 +310,12 @@ Future<void> _loadGuestDataForView() async {
                               });
                             }
 
+                            // Navigate to profile
                             context.push('/home/profile');
                           } catch (e) {
                             setState(() {
                               _isLoading = false;
                             });
-
                           }
                         },
                         child: const Icon(Icons.person_search, size: 25),
@@ -330,11 +336,14 @@ Future<void> _loadGuestDataForView() async {
                         fontSize: fontSettings.fontSize,
                         fontWeight: fontSettings.fontWeight,
                       ),
-                      prefixIcon: const Icon(Icons.calendar_today, color: Colors.blue),
+                      prefixIcon: const Icon(
+                        Icons.calendar_today,
+                        color: Colors.blue,
+                      ),
                       border: const OutlineInputBorder(),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 12.0,
-                        vertical: 16.0,
+                        vertical: -5.0,
                       ),
                     ),
                   ),
@@ -356,7 +365,7 @@ Future<void> _loadGuestDataForView() async {
                       border: const OutlineInputBorder(),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 12.0,
-                        vertical: 16.0,
+                        vertical: -5.0,
                       ),
                     ),
                   ),
@@ -374,11 +383,14 @@ Future<void> _loadGuestDataForView() async {
                         fontSize: fontSettings.fontSize,
                         fontWeight: fontSettings.fontWeight,
                       ),
-                      prefixIcon: const Icon(Icons.access_time, color: Colors.grey),
+                      prefixIcon: const Icon(
+                        Icons.access_time,
+                        color: Colors.grey,
+                      ),
                       border: const OutlineInputBorder(),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 12.0,
-                        vertical: 16.0,
+                        vertical: -5.0,
                       ),
                     ),
                   ),
@@ -389,7 +401,7 @@ Future<void> _loadGuestDataForView() async {
                   // Container(
                   //   padding: const EdgeInsets.all(16),
                   //   decoration: BoxDecoration(
-                  //     color: widget.isPending 
+                  //     color: widget.isPending
                   //         ? Colors.orange.withOpacity(0.1)
                   //         : Colors.green.withOpacity(0.1),
                   //     borderRadius: BorderRadius.circular(12),
@@ -398,27 +410,27 @@ Future<void> _loadGuestDataForView() async {
                   //       width: 2,
                   //     ),
                   //   ),
-                    // child: Row(
-                    //   children: [
-                    //     Icon(
-                    //       widget.isPending ? Icons.pending : Icons.check_circle,
-                    //       color: widget.isPending ? Colors.orange : Colors.green,
-                    //       size: 30,
-                    //     ),
-                    //     const SizedBox(width: 12),
-                    //     Text(
-                    //       'Status: ${widget.isPending ? 'Pending' : 'Accepted'}',
-                    //       style: TextStyle(
-                    //         fontSize: fontSettings.fontSize + 2,
-                    //         fontWeight: FontWeight.bold,
-                    //         color: widget.isPending ? Colors.orange : Colors.green,
-                    //       ),
-                    //     ),
-                    //   ],
-                    // ),
-                 // ),
+                  // child: Row(
+                  //   children: [
+                  //     Icon(
+                  //       widget.isPending ? Icons.pending : Icons.check_circle,
+                  //       color: widget.isPending ? Colors.orange : Colors.green,
+                  //       size: 30,
+                  //     ),
+                  //     const SizedBox(width: 12),
+                  //     Text(
+                  //       'Status: ${widget.isPending ? 'Pending' : 'Accepted'}',
+                  //       style: TextStyle(
+                  //         fontSize: fontSettings.fontSize + 2,
+                  //         fontWeight: FontWeight.bold,
+                  //         color: widget.isPending ? Colors.orange : Colors.green,
+                  //       ),
+                  //     ),
+                  //   ],
+                  // ),
+                  // ),
 
-                 // const SizedBox(height: 24),
+                  // const SizedBox(height: 24),
 
                   // Action Buttons (only show if pending)
                   if (widget.isPending) ...[
@@ -446,11 +458,14 @@ Future<void> _loadGuestDataForView() async {
                                   ),
                                   actions: [
                                     TextButton(
-                                      onPressed: () => Navigator.of(dialogContext).pop(false),
+                                      onPressed: () => Navigator.of(
+                                        dialogContext,
+                                      ).pop(false),
                                       child: const Text('Cancel'),
                                     ),
                                     ElevatedButton(
-                                      onPressed: () => Navigator.of(dialogContext).pop(true),
+                                      onPressed: () =>
+                                          Navigator.of(dialogContext).pop(true),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: Colors.green,
                                         foregroundColor: Colors.white,
@@ -505,7 +520,13 @@ Future<void> _loadGuestDataForView() async {
                               }
                             },
                             icon: const Icon(Icons.check),
-                            label: const Text("ACCEPT", style: TextStyle(fontSize:20, fontWeight: FontWeight.bold)),
+                            label: const Text(
+                              "ACCEPT",
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.green,
                               foregroundColor: Colors.white,

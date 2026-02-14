@@ -84,6 +84,7 @@ class _GuestDisplayCardByIdState extends ConsumerState<GuestDisplayCardById> {
     print('Guest data received: ${guest?.mid}');
     print('Guest name: ${guest?.memberName}');
     print('Has image: ${guest?.memImage2 != null}');
+    print('Guest last visit: ${guest?.lastVisitDate}');
 
     if (guest != null) {
       setState(() {
@@ -131,16 +132,19 @@ class _GuestDisplayCardByIdState extends ConsumerState<GuestDisplayCardById> {
         return Colors.green.shade600;
     }
   }
-
-  String _formatLastVisitDate(String? dateString) {
-    if (dateString == null || dateString.isEmpty) return "N/A";
-    try {
-      final date = DateTime.parse(dateString);
-      return DateFormat('yyyy-MM-dd').format(date);
-    } catch (_) {
-      return dateString;
+String _formatLastVisitDate(String? dateString) {
+  if (dateString == null || dateString.isEmpty) return "N/A";
+  try {
+    final date = DateTime.parse(dateString);
+    // Check if date is Unix epoch (1970-01-01) - treat as N/A
+    if (date.year == 1970 && date.month == 1 && date.day == 1) {
+      return "N/A";
     }
+    return DateFormat('yyyy-MM-dd').format(date);
+  } catch (_) {
+    return dateString;
   }
+}
 
   void _showFullScreenImage(BuildContext context, Guest guest) {
     if (guest.memImage2 == null || guest.memImage2!.isEmpty) {

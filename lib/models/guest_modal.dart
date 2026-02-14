@@ -86,7 +86,7 @@ class Guest {
       mid: getValue(['MID']) ?? '',
       memberName: getValue(['MName', 'MNAME', 'MNane']) ?? '',
       country: getValue(['COUNTRY']) ?? '',
-      lastVisitDate: getValue(['LVD']) ?? '1970-01-01',
+      lastVisitDate: getValue(['LVD']) ?? '',
       age: int.tryParse(getValue(['AGE']) ?? '0') ?? 0,
       gRating: getValue(['G_Rating']),
       mGroup: getValue(['mGroup']),

@@ -291,31 +291,36 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Icon(
-                        isPending ? Icons.pending : Icons.check_circle,
-                        color: isPending ? Colors.orange : Colors.green,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Status: ',
-                        style: TextStyle(
-                          fontSize: fontSettings.fontSize,
-                          fontWeight: FontWeight.bold,
+                  const SizedBox(height: 8),
+                  // Status badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(isPending ? 'Pending' : 'Accepted'),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _getStatusIcon(isPending ? 'Pending' : 'Accepted'),
+                          size: 16,
+                          color: const Color.fromARGB(255, 0, 0, 0),
                         ),
-                      ),
-                      Text(
-                        isPending ? 'Pending' : 'Accepted',
-                        style: TextStyle(
-                          color: isPending ? Colors.orange : Colors.green,
-                          fontSize: fontSettings.fontSize,
-                          fontWeight: FontWeight.bold,
+                        const SizedBox(width: 4),
+                        Text(
+                          isPending ? 'Pending' : 'Accepted',
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize,
+                            color: const Color.fromARGB(255, 0, 0, 0),
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -324,5 +329,27 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
         );
       },
     );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Accepted':
+        return Colors.green;
+      case 'Pending':
+        return Colors.orange;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getStatusIcon(String status) {
+    switch (status) {
+      case 'Accepted':
+        return Icons.check_circle;
+      case 'Pending':
+        return Icons.hourglass_bottom;
+      default:
+        return Icons.info;
+    }
   }
 }

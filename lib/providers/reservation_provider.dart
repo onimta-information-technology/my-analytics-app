@@ -19,7 +19,9 @@ class ReservationNotifier
     state = reservations;
  
   }
-
+  void clearReservations() {
+    state = {'Pending': [], 'Approved': [], 'Rejected': []};
+  }
   void addReservationToPending(Reservation newReservation) {
    
   }

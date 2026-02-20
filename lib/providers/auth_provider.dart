@@ -165,8 +165,8 @@ class AuthNotifier extends StateNotifier<AuthState?> {
           _pendingUser.marketingCode,
           _pendingUser.mobileNumber ?? "",
           _pendingUser.memProfSH,
-          _pendingUser.giftApp,
-        );
+          _pendingUser.giftApp,       
+           );
 
         // Update state to fully authenticated
         state = AuthState(user: _pendingUser, isLoading: false);
@@ -211,42 +211,37 @@ class AuthNotifier extends StateNotifier<AuthState?> {
   //     _currentSessionusername = null;
   //   state = AuthState(user: null, isLoading: false, error: null);
   // }
-  Future<void> logout() async {
-    try {
-
-    
-      final prefs = await SharedPreferences.getInstance();
-      final fcmToken = prefs.getString('FCMToken');
-      if (fcmToken != null) {
-        await FirebaseMessaging.instance.deleteToken();
-     
-
-        // Clear stored FCM token
-        await prefs.remove('FCMToken');
-    
-      } else {
-      
-      }
-      // Clear user data
-      await StorageUtil.clearUserData();
-
-      // Clear session data
-      _currentSessionPassword = null;
-      _currentSessionusername = null;
-
-      // Update state
-      state = AuthState(user: null, isLoading: false, error: null);
-await prefs.setBool('is_logged_in', false);
-   
-    } catch (e) {
-   
-      // Still clear local data even if server call fails
-      await StorageUtil.clearUserData();
-      _currentSessionPassword = null;
-      _currentSessionusername = null;
-      state = AuthState(user: null, isLoading: false, error: null);
+ Future<void> logout() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final fcmToken = prefs.getString('FCMToken');
+    if (fcmToken != null) {
+      await FirebaseMessaging.instance.deleteToken();
+      await prefs.remove('FCMToken');
     }
+
+    // Clear user data
+    await StorageUtil.clearUserData();
+    
+    // Clear location data
+    await StorageUtil.clearLocationData();
+
+    // Clear session data
+    _currentSessionPassword = null;
+    _currentSessionusername = null;
+
+    // Update state
+    state = AuthState(user: null, isLoading: false, error: null);
+    await prefs.setBool('is_logged_in', false);
+  } catch (e) {
+    // Still clear local data even if server call fails
+    await StorageUtil.clearUserData();
+    await StorageUtil.clearLocationData();
+    _currentSessionPassword = null;
+    _currentSessionusername = null;
+    state = AuthState(user: null, isLoading: false, error: null);
   }
+}
 // Add this method to the AuthNotifier class
 
 Future<bool> deleteAccount() async {

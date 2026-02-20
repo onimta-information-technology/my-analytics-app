@@ -17,7 +17,9 @@ class DailyWalkingNotifier extends StateNotifier<List<DailyWalkingGuest>> {
       state = [];
     }
   }
-
+ void clearDailyWalkingGuests() {
+    state = [];
+  }
   void reset() {
     state = [];
   }

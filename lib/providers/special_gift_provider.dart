@@ -21,6 +21,9 @@ class GiftNotifier extends StateNotifier<GiftState> {
         case 8890:
           state = state.copyWith(pendinggift: gifttList);
           break;
+        case 88790:
+          state = state.copyWith(chekbygift: gifttList);
+          break;
         case 8891:
           state = state.copyWith(approvedgift: gifttList);
           break;
@@ -34,6 +37,9 @@ class GiftNotifier extends StateNotifier<GiftState> {
       switch (iid) {
         case 8890:
           state = state.copyWith(pendinggift: []);
+          break;
+        case 88790:
+          state = state.copyWith(chekbygift: []);
           break;
         case 8891:
           state = state.copyWith(approvedgift: []);
@@ -414,7 +420,21 @@ Future<String> sendSpecialGiftWhatsapp({
       validDates: validDates,
     );
   }
-
+ Future<bool> checkBySpecialGiftFromUI({
+    required double reqid,
+    required String remarks,
+    required String amount,
+    required String userName,
+    required String validDates,
+  }) async {
+    return await giftRepository.checkSpecialGiftRequest(
+      reqid: reqid,
+      remarks: remarks,
+      amount: amount,
+      userName: userName,
+      validDates: validDates,
+    );
+  }
   Future<bool> rejectSpecialGiftFromUI({
     required double reqid,
     required String userName,
@@ -480,6 +500,7 @@ final giftProvider = StateNotifierProvider<GiftNotifier, GiftState>((ref) {
 
 class GiftState {
   final List<SpecialGiftRequest> pendinggift;
+  final List<SpecialGiftRequest> chekbygift;
   final List<SpecialGiftRequest> approvedgift;
   final List<SpecialGiftRequest> rejectgift;
   final List<GestGiftData> guestGiftData;
@@ -490,6 +511,7 @@ class GiftState {
 
   GiftState({
     this.pendinggift = const [],
+    this.chekbygift = const [],
     this.approvedgift = const [],
     this.rejectgift = const [],
     this.guestGiftData = const [],
@@ -501,6 +523,7 @@ class GiftState {
 
   GiftState copyWith({
     List<SpecialGiftRequest>? pendinggift,
+    List<SpecialGiftRequest>? chekbygift,
     List<SpecialGiftRequest>? approvedgift,
     List<SpecialGiftRequest>? rejectgift,
     List<GestGiftData>? guestGiftData,
@@ -512,6 +535,7 @@ class GiftState {
     return GiftState(
       pendinggift: pendinggift ?? this.pendinggift,
       approvedgift: approvedgift ?? this.approvedgift,
+      chekbygift: chekbygift ?? this.chekbygift,
       rejectgift: rejectgift ?? this.rejectgift,
       guestGiftData: guestGiftData ?? this.guestGiftData,
       giftForList: giftForList ?? this.giftForList,

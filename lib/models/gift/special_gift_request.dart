@@ -60,6 +60,10 @@ class SpecialGiftRequest {
   final String? giftCategoryApp;
   final String? descApp;
   final String? validDates;
+  final bool checkBy;
+  final String? checkApp;
+
+  final String? checkAppByTime;
   SpecialGiftRequest({
     required this.idNo,
     required this.mid,
@@ -121,7 +125,11 @@ class SpecialGiftRequest {
     this.firstAppTime,
     this.giftCategoryApp,
     this.descApp,
-     this.validDates,
+    this.validDates,
+    required this.checkBy,
+    this.checkApp,
+
+    this.checkAppByTime,
   });
 
   factory SpecialGiftRequest.fromJson(Map<String, dynamic> json) {
@@ -131,6 +139,7 @@ class SpecialGiftRequest {
       if (value is num) return value.toString();
       return value.toString();
     }
+
     return SpecialGiftRequest(
       idNo: (json['Id_No'] ?? 0).toDouble(),
       mid: json['MID'] ?? '',
@@ -192,7 +201,10 @@ class SpecialGiftRequest {
       firstAppTime: json['First_AppBy_Time'],
       giftCategoryApp: json['Gift_Category_App'],
       descApp: json['Gift_Desc_App'],
-       validDates: parseValidDates(json['VDate']),
+      validDates: parseValidDates(json['VDate']),
+      checkBy: json['Check_By'] == true || json['Check_By'] == 1,
+      checkApp: json['Check_App']?.toString(),
+      checkAppByTime: json['Check_AppBy_Time']?.toString(),
     );
   }
 
@@ -259,6 +271,9 @@ class SpecialGiftRequest {
       'Gift_Category_App': giftCategoryApp,
       'Gift_Desc_App': descApp,
       'VDate': validDates,
+      'Check_By': checkBy,
+      'Check_App': checkApp,
+      'Check_AppBy_Time': checkAppByTime,
     };
   }
 }

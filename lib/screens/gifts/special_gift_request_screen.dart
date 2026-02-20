@@ -29,69 +29,48 @@ class _SpecialGiftRequestScreenState
     with TickerProviderStateMixin {
   late TabController _tabController;
   bool _isLoading = false;
-  bool isPending = false;
-  bool isApproved = false;
-  bool _hasGiftAppPermission = false;
 
-  // Filter gifts based on user permissions
-  Future<List<SpecialGiftRequest>> _filterGifts(List<SpecialGiftRequest> gifts) async {
-    // Check if user has sales code AD001 (can see all gifts)
+  Future<List<SpecialGiftRequest>> _filterGifts(
+      List<SpecialGiftRequest> gifts) async {
     final salesCode = await StorageUtil.getSalesCode();
     if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
-      return gifts; // Show all gifts
+      return gifts;
     }
-
-    // For other users, only show gifts they requested
     final currentUserName = await StorageUtil.getUserName();
-    if (currentUserName == null) {
-      return []; // No user logged in, show nothing
-    }
-
-    return gifts.where((gift) {
-      return gift.reqBy.trim().toLowerCase() == currentUserName.trim().toLowerCase();
-    }).toList();
+    if (currentUserName == null) return [];
+    return gifts
+        .where((gift) =>
+            gift.reqBy.trim().toLowerCase() ==
+            currentUserName.trim().toLowerCase())
+        .toList();
   }
 
-  // Check access permission for detail view
   Future<bool> _canAccessGiftDetails(SpecialGiftRequest gift) async {
-    // Check if user has sales code AD001 (can see all gifts)
-    // final salesCode = await StorageUtil.getSalesCode();
-    // if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
-    //   return true;
-    // }
-
-    // Check if user has Gift_App permission
     final giftApp = await StorageUtil.getGiftApp();
-    if (giftApp == true) {
-      return true;
-    }
-
-    // Check if current user is the requester
+    if (giftApp == true) return true;
     final currentUserName = await StorageUtil.getUserName();
-    if (currentUserName != null && 
-        gift.reqBy.isNotEmpty && 
-        currentUserName.trim().toLowerCase() == gift.reqBy.trim().toLowerCase()) {
+    if (currentUserName != null &&
+        gift.reqBy.isNotEmpty &&
+        currentUserName.trim().toLowerCase() ==
+            gift.reqBy.trim().toLowerCase()) {
       return true;
     }
-
     return false;
   }
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final giftSp = ref.read(giftProvider);
-
       if (giftSp.pendinggift.isNotEmpty ||
+          giftSp.chekbygift.isNotEmpty ||
           giftSp.approvedgift.isNotEmpty ||
           giftSp.rejectgift.isNotEmpty) {
         return;
       }
-
-      /// 🔹 Fix: fetch salesCode from StorageUtil
       String? salesCode = await StorageUtil.getSalesCode();
       if (salesCode != null && salesCode.isNotEmpty) {
         _loadSpGiftData(salesCode);
@@ -101,22 +80,29 @@ class _SpecialGiftRequestScreenState
 
   String _formatDate(String? dateStr) {
     if (dateStr == null || dateStr.isEmpty) return "N/A";
-
     try {
-      // Adjust parse format depending on how your backend sends date
       final dateTime = DateTime.parse(dateStr);
       return DateFormat("yyyy-MM-dd hh:mm a").format(dateTime);
     } catch (e) {
-      return dateStr; // fallback: just show raw string if parsing fails
+      return dateStr;
     }
   }
 
   Future<void> _loadSpGiftData(String salesCode) async {
     setState(() => _isLoading = true);
     try {
-      await ref.read(giftProvider.notifier).getSpecialGiftData(8890, salesCode);
-      await ref.read(giftProvider.notifier).getSpecialGiftData(8891, salesCode);
-      await ref.read(giftProvider.notifier).getSpecialGiftData(8893, salesCode);
+      await ref
+          .read(giftProvider.notifier)
+          .getSpecialGiftData(8890, salesCode);
+      await ref
+          .read(giftProvider.notifier)
+          .getSpecialGiftData(88790, salesCode);
+      await ref
+          .read(giftProvider.notifier)
+          .getSpecialGiftData(8891, salesCode);
+      await ref
+          .read(giftProvider.notifier)
+          .getSpecialGiftData(8893, salesCode);
     } finally {
       setState(() => _isLoading = false);
     }
@@ -162,20 +148,26 @@ class _SpecialGiftRequestScreenState
           indicatorColor: Colors.pink,
           tabs: [
             _buildTab('Pending', giftsp.pendinggift.length, Colors.orange),
+            _buildTab('Checked', giftsp.chekbygift.length,
+                const Color.fromARGB(255, 92, 17, 255)),
             _buildTab('Approved', giftsp.approvedgift.length, Colors.green),
             _buildTab('Rejected', giftsp.rejectgift.length, Colors.red),
           ],
         ),
       ),
-
       body: Stack(
         children: [
           TabBarView(
             controller: _tabController,
             children: [
-              _buildGiftList(giftsp.pendinggift, isPending: true, isApproved: false),
-              _buildGiftList(giftsp.approvedgift, isPending: false, isApproved: true),
-              _buildGiftList(giftsp.rejectgift, isPending: false, isApproved: false),
+              _buildGiftList(giftsp.pendinggift,
+                  isPending: true, isApproved: false, isChecked: false),
+              _buildGiftList(giftsp.chekbygift,
+                  isPending: false, isApproved: false, isChecked: true),
+              _buildGiftList(giftsp.approvedgift,
+                  isPending: false, isApproved: true, isChecked: false),
+              _buildGiftList(giftsp.rejectgift,
+                  isPending: false, isApproved: false, isChecked: false),
             ],
           ),
           if (_isLoading)
@@ -185,8 +177,7 @@ class _SpecialGiftRequestScreenState
                 child: const Center(
                   child: RefreshProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      Constants.kSecondaryColor,
-                    ),
+                        Constants.kSecondaryColor),
                   ),
                 ),
               ),
@@ -198,9 +189,8 @@ class _SpecialGiftRequestScreenState
           ? null
           : FloatingActionButton(
               onPressed: () async {
-                final result = await context.push(
-                  '/gifts/special-gift-requests/new-gift-request',
-                );
+                final result = await context
+                    .push('/gifts/special-gift-requests/new-gift-request');
                 if (result == true) {
                   String? salesCode = await StorageUtil.getSalesCode();
                   if (salesCode != null && salesCode.isNotEmpty) {
@@ -210,10 +200,7 @@ class _SpecialGiftRequestScreenState
               },
               backgroundColor: Colors.red,
               shape: const CircleBorder(),
-              child: const Icon(
-                Icons.add,
-                color: Color.fromARGB(255, 255, 255, 255),
-              ),
+              child: const Icon(Icons.add, color: Colors.white),
             ),
     );
   }
@@ -228,10 +215,9 @@ class _SpecialGiftRequestScreenState
           CircleAvatar(
             radius: 12,
             backgroundColor: color,
-            child: Text(
-              count.toString(),
-              style: const TextStyle(color: Colors.white, fontSize: 12),
-            ),
+            child: Text(count.toString(),
+                style:
+                    const TextStyle(color: Colors.white, fontSize: 12)),
           ),
         ],
       ),
@@ -242,6 +228,7 @@ class _SpecialGiftRequestScreenState
     List<SpecialGiftRequest> gifts, {
     required bool isPending,
     required bool isApproved,
+    required bool isChecked,
   }) {
     final fontSettings = ref.watch(fontSettingsProvider);
 
@@ -252,14 +239,12 @@ class _SpecialGiftRequestScreenState
           return const Center(
             child: CircularProgressIndicator(
               valueColor: AlwaysStoppedAnimation<Color>(
-                Constants.kSecondaryColor,
-              ),
+                  Constants.kSecondaryColor),
             ),
           );
         }
 
         final filteredGifts = snapshot.data ?? [];
-
         if (filteredGifts.isEmpty) {
           return const Center(child: Text("No gifts found"));
         }
@@ -268,33 +253,39 @@ class _SpecialGiftRequestScreenState
           itemCount: filteredGifts.length,
           itemBuilder: (context, index) {
             final gift = filteredGifts[index];
-            
-            // Determine approval/rejection info based on status
+
             String? actionBy;
             String? actionLabel;
             Color? actionColor;
-            
-            if (!isPending) {
-              // Check if it's approved or rejected
+
+            if (!isPending && !isChecked) {
               if (gift.firstAppBy != null && gift.firstAppBy!.isNotEmpty) {
                 actionBy = gift.firstAppBy;
                 actionLabel = 'Approved By';
                 actionColor = Colors.green;
-              } else if (gift.deleteUser != null && gift.deleteUser!.isNotEmpty) {
+              } else if (gift.deleteUser != null &&
+                  gift.deleteUser!.isNotEmpty) {
                 actionBy = gift.deleteUser;
                 actionLabel = 'Rejected By';
                 actionColor = Colors.red;
               }
             }
-            
+
+            // For checked tab, use checkApp field
+            if (isChecked) {
+              if (gift.checkApp != null && gift.checkApp!.isNotEmpty) {
+                actionBy = gift.checkApp;
+                actionLabel = 'Checked By';
+                actionColor = const Color.fromARGB(255, 92, 17, 255);
+              }
+            }
+
             return Stack(
               children: [
                 InkWell(
                   borderRadius: BorderRadius.circular(10),
                   onTap: () async {
-                    // Double check access permission before navigation (extra security layer)
                     final canAccess = await _canAccessGiftDetails(gift);
-                    
                     if (!canAccess) {
                       if (mounted) {
                         showDialog(
@@ -303,8 +294,7 @@ class _SpecialGiftRequestScreenState
                           builder: (BuildContext context) {
                             return Dialog(
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
+                                  borderRadius: BorderRadius.circular(20)),
                               elevation: 0,
                               backgroundColor: Colors.transparent,
                               child: Container(
@@ -327,46 +317,41 @@ class _SpecialGiftRequestScreenState
                                       width: 80,
                                       height: 80,
                                       decoration: BoxDecoration(
-                                        color: Colors.red.shade50,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        Icons.lock_outline,
-                                        size: 50,
-                                        color: Colors.red.shade400,
-                                      ),
+                                          color: Colors.red.shade50,
+                                          shape: BoxShape.circle),
+                                      child: Icon(Icons.lock_outline,
+                                          size: 50,
+                                          color: Colors.red.shade400),
                                     ),
                                     const SizedBox(height: 20),
-                                    const Text(
-                                      "Access Denied",
-                                      style: TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF2C3E50),
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
+                                    const Text("Access Denied",
+                                        style: TextStyle(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF2C3E50)),
+                                        textAlign: TextAlign.center),
                                     const SizedBox(height: 12),
                                     SizedBox(
                                       width: double.infinity,
                                       child: ElevatedButton(
-                                        onPressed: () => Navigator.of(context).pop(),
+                                        onPressed: () =>
+                                            Navigator.of(context).pop(),
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: Constants.kPrimaryColor,
+                                          backgroundColor:
+                                              Constants.kPrimaryColor,
                                           foregroundColor: Colors.white,
-                                          padding: const EdgeInsets.symmetric(vertical: 14),
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 14),
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
+                                              borderRadius:
+                                                  BorderRadius.circular(12)),
                                           elevation: 0,
                                         ),
-                                        child: const Text(
-                                          "Got It",
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
+                                        child: const Text("Got It",
+                                            style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight:
+                                                    FontWeight.bold)),
                                       ),
                                     ),
                                   ],
@@ -379,13 +364,13 @@ class _SpecialGiftRequestScreenState
                       return;
                     }
 
-                    // Navigate if user has access
                     final result = await context.push(
                       '/gifts/special-gift-requests/view-specific-gift-request',
                       extra: {
                         'gift': gift,
                         'isPending': isPending,
                         'isApproved': isApproved,
+                        'isChecked': isChecked,
                       },
                     );
                     if (result == true) {
@@ -397,18 +382,13 @@ class _SpecialGiftRequestScreenState
                   },
                   child: Card(
                     margin: const EdgeInsets.symmetric(
-                      vertical: 10,
-                      horizontal: 16,
-                    ),
+                        vertical: 10, horizontal: 16),
                     elevation: 4,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                        borderRadius: BorderRadius.circular(10)),
                     child: ListTile(
                       contentPadding: const EdgeInsets.symmetric(
-                        vertical: 14,
-                        horizontal: 16,
-                      ),
+                          vertical: 14, horizontal: 16),
                       title: Text(
                         '${gift.mid} - ${gift.mname}',
                         style: TextStyle(
@@ -422,20 +402,16 @@ class _SpecialGiftRequestScreenState
                         children: [
                           Row(
                             children: [
-                              const Icon(
-                                Icons.card_giftcard,
-                                color: Colors.pink,
-                                size: 18,
-                              ),
+                              const Icon(Icons.card_giftcard,
+                                  color: Colors.pink, size: 18),
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
                                   gift.cashierPayType.replaceAll("_", " "),
                                   style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: fontSettings.fontSize,
-                                    fontWeight: fontSettings.fontWeight,
-                                  ),
+                                      color: Colors.black,
+                                      fontSize: fontSettings.fontSize,
+                                      fontWeight: fontSettings.fontWeight),
                                 ),
                               ),
                             ],
@@ -443,112 +419,155 @@ class _SpecialGiftRequestScreenState
                           const SizedBox(height: 6),
                           Row(
                             children: [
-                              const Icon(
-                                Icons.access_time,
-                                color: Colors.grey,
-                                size: 16,
-                              ),
+                              const Icon(Icons.access_time,
+                                  color: Colors.grey, size: 16),
                               const SizedBox(width: 6),
                               Text(
                                 _formatDate(gift.insertDate),
                                 style: TextStyle(
-                                  color: const Color.fromARGB(255, 2, 2, 2),
-                                  fontSize: fontSettings.fontSize - 1,
-                                  fontWeight: fontSettings.fontWeight,
-                                ),
+                                    color: const Color.fromARGB(255, 2, 2, 2),
+                                    fontSize: fontSettings.fontSize - 1,
+                                    fontWeight: fontSettings.fontWeight),
                               ),
                             ],
                           ),
                           const SizedBox(height: 6),
-                          // Requested By
                           Row(
                             children: [
-                              const Icon(
-                                Icons.person_outline,
-                                color: Colors.blue,
-                                size: 16,
-                              ),
+                              const Icon(Icons.person_outline,
+                                  color: Colors.blue, size: 16),
                               const SizedBox(width: 6),
-                              Text(
-                                'Requested By: ',
-                                style: TextStyle(
-                                  fontSize: fontSettings.fontSize - 1,
-                                  fontWeight: fontSettings.fontWeight,
-                                ),
-                              ),
+                              Text('Requested By: ',
+                                  style: TextStyle(
+                                      fontSize: fontSettings.fontSize - 1,
+                                      fontWeight: fontSettings.fontWeight)),
                               Expanded(
                                 child: Text(
-                                  gift.reqBy.isNotEmpty ? gift.reqBy : 'N/A',
+                                  gift.reqBy.isNotEmpty
+                                      ? gift.reqBy
+                                      : 'N/A',
                                   style: TextStyle(
-                                    color: Colors.black87,
-                                    fontSize: fontSettings.fontSize - 1,
-                                    fontWeight: fontSettings.fontWeight,
-                                  ),
+                                      color: Colors.black87,
+                                      fontSize: fontSettings.fontSize - 1,
+                                      fontWeight: fontSettings.fontWeight),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
                           ),
-                          // Approved By or Rejected By (only for non-pending items)
+
+                          // Checked By / Approved By / Rejected By row
                           if (actionBy != null && actionLabel != null) ...[
                             const SizedBox(height: 6),
                             Row(
                               children: [
                                 Icon(
-                                  actionLabel == 'Approved By' 
-                                      ? Icons.check_circle_outline 
-                                      : Icons.cancel_outlined,
+                                  actionLabel == 'Approved By'
+                                      ? Icons.check_circle_outline
+                                      : actionLabel == 'Checked By'
+                                          ? Icons.rule_rounded
+                                          : Icons.cancel_outlined,
                                   color: actionColor,
                                   size: 16,
                                 ),
                                 const SizedBox(width: 6),
-                                Text(
-                                  '$actionLabel: ',
-                                  style: TextStyle(
-                                    fontSize: fontSettings.fontSize - 1,
-                                    fontWeight: fontSettings.fontWeight,
-                                  ),
-                                ),
+                                Text('$actionLabel: ',
+                                    style: TextStyle(
+                                        fontSize: fontSettings.fontSize - 1,
+                                        fontWeight: fontSettings.fontWeight)),
                                 Expanded(
                                   child: Text(
                                     actionBy,
                                     style: TextStyle(
-                                      color: actionColor,
-                                      fontSize: fontSettings.fontSize - 1,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                        color: actionColor,
+                                        fontSize: fontSettings.fontSize - 1,
+                                        fontWeight: FontWeight.w600),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],
                             ),
                           ],
-                          // Valid Date (only for approved items)
-                          if (isApproved && gift.validDates != null && gift.validDates!.isNotEmpty) ...[
+
+                          // ── NEW: Check Time row (Checked tab only) ──────────
+                          if (isChecked &&
+                              gift.checkAppByTime != null &&
+                              gift.checkAppByTime!.isNotEmpty) ...[
                             const SizedBox(height: 6),
                             Row(
                               children: [
-                                const Icon(
-                                  Icons.calendar_today,
-                                  color: Colors.deepPurple,
-                                  size: 16,
-                                ),
+                                const Icon(Icons.schedule,
+                                    color: Color.fromARGB(255, 92, 17, 255),
+                                    size: 16),
                                 const SizedBox(width: 6),
-                                Text(
-                                  'Valid For: ',
-                                  style: TextStyle(
-                                    fontSize: fontSettings.fontSize - 1,
-                                    fontWeight: FontWeight.w500,
+                                Text('Check Time: ',
+                                    style: TextStyle(
+                                        fontSize: fontSettings.fontSize - 1,
+                                        fontWeight: fontSettings.fontWeight)),
+                                Expanded(
+                                  child: Text(
+                                    _formatDate(gift.checkAppByTime),
+                                    style: TextStyle(
+                                        color: const Color.fromARGB(
+                                            255, 92, 17, 255),
+                                        fontSize: fontSettings.fontSize - 1,
+                                        fontWeight: FontWeight.w600),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
+                              ],
+                            ),
+                          ],
+
+                          // ── NEW: Valid Days row (Checked tab only) ──────────
+                          if (isChecked &&
+                              gift.validDates != null &&
+                              gift.validDates!.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const Icon(Icons.calendar_today,
+                                    color: Colors.deepPurple, size: 16),
+                                const SizedBox(width: 6),
+                                Text('Valid For: ',
+                                    style: TextStyle(
+                                        fontSize: fontSettings.fontSize - 1,
+                                        fontWeight: FontWeight.w500)),
                                 Expanded(
                                   child: Text(
                                     '${gift.validDates} days',
                                     style: TextStyle(
-                                      color: Colors.deepPurple,
-                                      fontSize: fontSettings.fontSize - 1,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                        color: Colors.deepPurple,
+                                        fontSize: fontSettings.fontSize - 1,
+                                        fontWeight: FontWeight.w600),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+
+                          // Valid Days row for Approved tab
+                          if (isApproved &&
+                              gift.validDates != null &&
+                              gift.validDates!.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const Icon(Icons.calendar_today,
+                                    color: Colors.deepPurple, size: 16),
+                                const SizedBox(width: 6),
+                                Text('Valid For: ',
+                                    style: TextStyle(
+                                        fontSize: fontSettings.fontSize - 1,
+                                        fontWeight: FontWeight.w500)),
+                                Expanded(
+                                  child: Text(
+                                    '${gift.validDates} days',
+                                    style: TextStyle(
+                                        color: Colors.deepPurple,
+                                        fontSize: fontSettings.fontSize - 1,
+                                        fontWeight: FontWeight.w600),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -579,27 +598,5 @@ class _SpecialGiftRequestScreenState
         );
       },
     );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'Approved':
-        return Colors.green;
-      case 'Rejected':
-        return Colors.red;
-      default:
-        return Colors.orange;
-    }
-  }
-
-  IconData _getStatusIcon(String status) {
-    switch (status) {
-      case 'Approved':
-        return Icons.check_circle;
-      case 'Rejected':
-        return Icons.cancel;
-      default:
-        return Icons.hourglass_bottom;
-    }
   }
 }

@@ -708,6 +708,7 @@ class AppNavigation {
                       final isPending =
                           extra['isPending'] as bool? ?? false; // ✅ read flag
                       final isApproved = extra['isApproved'] as bool? ?? false;
+                        final isChecked = extra['isChecked'] as bool? ?? false; 
                       return ViewSpecificGiftRequest(
                         giftsRepository: GiftsRepository(
                           ApiService(const FlutterSecureStorage()),
@@ -715,6 +716,7 @@ class AppNavigation {
                         gift: gift,
                         isPending: isPending,
                         isApproved: isApproved,
+                        isChecked: isChecked,
                       );
                     },
                   ),
@@ -1053,8 +1055,9 @@ class AppNavigation {
                       final extra = state.extra as Map<String, dynamic>? ?? {};
                       final gift = extra['gift'] as SpecialGiftRequest?;
                       final isPending =
-                          extra['isPending'] as bool? ?? false; // ✅ read flag
+                          extra['isPending'] as bool? ?? false; // 
                       final isApproved = extra['isApproved'] as bool? ?? false;
+                        final isChecked = extra['isChecked'] as bool? ?? false; 
                       return ViewSpecificGiftRequest(
                         giftsRepository: GiftsRepository(
                           ApiService(const FlutterSecureStorage()),
@@ -1062,6 +1065,7 @@ class AppNavigation {
                         gift: gift,
                         isPending: isPending,
                         isApproved: isApproved,
+                        isChecked: isChecked,
                       );
                     },
                   ),

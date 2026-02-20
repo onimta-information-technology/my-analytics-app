@@ -28,12 +28,14 @@ class ViewSpecificGiftRequest extends ConsumerStatefulWidget {
   final SpecialGiftRequest? gift;
   final bool isPending;
   final bool isApproved;
+  final bool isChecked;
   const ViewSpecificGiftRequest({
     super.key,
     required this.giftsRepository,
     this.gift,
     this.isPending = false,
     this.isApproved = false,
+    this.isChecked = false,
   });
 
   @override
@@ -52,7 +54,8 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
   final TextEditingController _chipController = TextEditingController();
   final TextEditingController _remarksController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
-  final TextEditingController _whatsappNumberController = TextEditingController();
+  final TextEditingController _whatsappNumberController =
+      TextEditingController();
 
   String? _selectedGift;
   String? _chipType;
@@ -106,10 +109,17 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
       tcoupon = g.mCoupon + g.flushCoupon;
       flushactdrop = g.flushActDrop;
       avgbet = g.avebet;
-      
+
+      // ── Pre-fill valid days from the gift's validDates field ──────────────
+      if (g.validDates != null && g.validDates!.isNotEmpty) {
+        final parsed = int.tryParse(g.validDates!);
+        if (parsed == 30 || parsed == 60 || parsed == 90) {
+          _selectedValidDays = parsed;
+        }
+      }
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _loadGuestDataForCard();
-        // Load WhatsApp number from birthday gift API
         _loadWhatsAppNumber();
       });
     }
@@ -134,33 +144,21 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
     super.dispose();
   }
 
-  // New method to load WhatsApp number from birthday gift API
   Future<void> _loadWhatsAppNumber() async {
     if (_memberIdController.text.isEmpty) return;
-
     try {
-      // Fetch birthday gift data which contains the mobile number
       await ref.read(birthdayGiftProvider.notifier).fetchGiftData(
-        _memberIdController.text,
-      );
-
-      // Get the gift state
+            _memberIdController.text,
+          );
       final giftState = ref.read(birthdayGiftProvider);
-
-      // If mobile number is available, set it to WhatsApp controller
-      if (giftState.giftData != null && 
+      if (giftState.giftData != null &&
           giftState.giftData!.mobile.isNotEmpty) {
         setState(() {
           _whatsappNumberController.text = giftState.giftData!.mobile;
         });
-        print('WhatsApp number loaded: ${giftState.giftData!.mobile}');
-      } else {
-        print('No mobile number available in birthday gift data');
       }
     } catch (e) {
       print('Error loading WhatsApp number: $e');
-      // Don't show error to user, just log it
-      // The WhatsApp field will remain empty and user can enter manually
     }
   }
 
@@ -177,9 +175,8 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
       barrierDismissible: true,
       builder: (BuildContext context) {
         return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           elevation: 0,
           backgroundColor: Colors.transparent,
           child: Container(
@@ -189,10 +186,9 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5)),
               ],
             ),
             child: Column(
@@ -202,28 +198,20 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.lock_outline,
-                    size: 50,
-                    color: Colors.red.shade400,
-                  ),
+                      color: Colors.red.shade50, shape: BoxShape.circle),
+                  child: Icon(Icons.lock_outline,
+                      size: 50, color: Colors.red.shade400),
                 ),
                 const SizedBox(height: 20),
-                
                 const Text(
                   "Access Denied",
                   style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2C3E50),
-                  ),
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2C3E50)),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
-                
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -233,17 +221,12 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                          borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
-                    child: const Text(
-                      "Got It",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: const Text("Got It",
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -256,29 +239,19 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
 
   Future<void> _loadGuestDataForCard() async {
     if (_memberIdController.text.isEmpty) return;
-
     try {
-      setState(() {
-        _isLoading = true;
-      });
-
-      GuestRepository guestRepository = GuestRepository(
-        ApiService(const FlutterSecureStorage()),
-      );
-
-      List<GuestSearchResponse> guests = await guestRepository.searchGuest(
-        9021,
-        _memberIdController.text,
-      );
-
+      setState(() => _isLoading = true);
+      GuestRepository guestRepository =
+          GuestRepository(ApiService(const FlutterSecureStorage()));
+      List<GuestSearchResponse> guests =
+          await guestRepository.searchGuest(9021, _memberIdController.text);
       if (guests.isNotEmpty) {
         final guestResponse = guests.first;
-        ref
-            .read(selectedGuestProvider.notifier)
-            .setSelectedGuest(
+        ref.read(selectedGuestProvider.notifier).setSelectedGuest(
               Guest(
                 mid: guestResponse.mid ?? _memberIdController.text,
-                memberName: guestResponse.mName ?? _memberNameController.text,
+                memberName:
+                    guestResponse.mName ?? _memberNameController.text,
                 country: "",
                 lastVisitDate: guestResponse.lvd?.toString() ?? "",
                 age: 0,
@@ -289,24 +262,16 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
               ),
             );
       }
-
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     } catch (e) {
       print("Error loading guest data: $e");
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
   Future<void> _loadUserCredentials() async {
     final name = await StorageUtil.getUserName();
-
-    setState(() {
-      userName = name;
-    });
+    setState(() => userName = name);
   }
 
   String _formatDate(String? dateString) {
@@ -337,7 +302,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
     "PLATINUM": "assets/images/ratings/PLATINUM.png",
     "SILVER": "assets/images/ratings/SILVER.png",
   };
-  
+
   String formatNumber(dynamic value) {
     if (value == null) return "";
     final num? number = num.tryParse(value.toString());
@@ -355,39 +320,169 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
     );
-
     if (date == null) return;
-
-    final TimeOfDay? time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-    );
-
+    final TimeOfDay? time =
+        await showTimePicker(context: context, initialTime: TimeOfDay.now());
     if (time == null) return;
-
     final DateTime dateTime = DateTime(
-      date.year,
-      date.month,
-      date.day,
-      time.hour,
-      time.minute,
-    );
-
+        date.year, date.month, date.day, time.hour, time.minute);
     controller.text =
         "${dateTime.day}/${dateTime.month}/${dateTime.year} ${time.format(context)}";
   }
 
-  TextStyle _inputTextStyle(FontSettings fontSettings) {
-    return TextStyle(
-      fontSize: fontSettings.fontSize,
-      fontWeight: fontSettings.fontWeight,
+  TextStyle _inputTextStyle(FontSettings fontSettings) => TextStyle(
+        fontSize: fontSettings.fontSize,
+        fontWeight: fontSettings.fontWeight,
+      );
+
+  TextStyle _inputTextStylefroammount(FontSettings fontSettings) => TextStyle(
+        fontSize: fontSettings.fontSize + 5,
+        fontWeight: FontWeight.bold,
+      );
+
+  // ─── Valid-days dropdown (editable) ─────────────────────────────────────────
+  Widget _buildValidDaysDropdown(FontSettings fontSettings) {
+    return DropdownButtonFormField<int>(
+      value: _selectedValidDays,
+      style: TextStyle(
+        fontSize: fontSettings.fontSize + 2,
+        fontWeight: FontWeight.bold,
+        color: Colors.black,
+      ),
+      decoration: InputDecoration(
+        labelText: "Valid Days",
+        labelStyle: TextStyle(
+          fontSize: fontSettings.fontSize,
+          fontWeight: fontSettings.fontWeight,
+        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      ),
+      items: const [
+        DropdownMenuItem(
+            value: 30,
+            child:
+                Text("30 Days", style: TextStyle(fontWeight: FontWeight.bold))),
+        DropdownMenuItem(
+            value: 60,
+            child:
+                Text("60 Days", style: TextStyle(fontWeight: FontWeight.bold))),
+        DropdownMenuItem(
+            value: 90,
+            child:
+                Text("90 Days", style: TextStyle(fontWeight: FontWeight.bold))),
+      ],
+      onChanged: (value) => setState(() => _selectedValidDays = value),
+      validator: (value) =>
+          value == null ? "Please select valid days" : null,
     );
   }
 
-  TextStyle _inputTextStylefroammount(FontSettings fontSettings) {
-    return TextStyle(
-      fontSize: fontSettings.fontSize + 5,
-      fontWeight: FontWeight.bold,
+  // ─── Valid-days read-only display (Approved / Rejected tabs) ─────────────────
+  Widget _buildValidDaysReadOnly(FontSettings fontSettings) {
+    final validDates = widget.gift?.validDates;
+    if (validDates == null || validDates.isEmpty) return const SizedBox.shrink();
+    return TextFormField(
+      readOnly: true,
+      initialValue: '$validDates days',
+      decoration: InputDecoration(
+        labelText: "Valid Days",
+        labelStyle: TextStyle(
+          fontSize: fontSettings.fontSize,
+          fontWeight: fontSettings.fontWeight,
+        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        prefixIcon:
+            const Icon(Icons.calendar_today, color: Colors.deepPurple),
+      ),
+      style: TextStyle(
+        fontSize: fontSettings.fontSize + 2,
+        fontWeight: FontWeight.bold,
+        color: Colors.deepPurple,
+      ),
+    );
+  }
+
+  // ─── Reverse button (Approved & Rejected only) ────────────────────────────────
+  Widget _buildReverseButton(FontSettings fontSettings, bool isRejected) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      child: ElevatedButton.icon(
+        onPressed: () async {
+          if (!_hasGiftAppPermission) {
+            _showAccessDeniedDialog();
+            return;
+          }
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (dialogContext) => AlertDialog(
+              title: const Text('Reverse Gift'),
+              content: const Text(
+                  'Are you sure you want to reverse this gift?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white),
+                  child: const Text('Reverse'),
+                ),
+              ],
+            ),
+          );
+          if (confirmed != true) return;
+          setState(() => _isLoading = true);
+          try {
+            final success = isRejected
+                ? await ref
+                    .read(giftProvider.notifier)
+                    .reverseSpecialGiftFromUIrejcted(
+                      reqid: widget.gift!.idNo,
+                      userName: userName ?? "",
+                    )
+                : await ref
+                    .read(giftProvider.notifier)
+                    .reverseSpecialGiftFromUI(
+                      reqid: widget.gift!.idNo,
+                      userName: userName ?? "",
+                    );
+            setState(() => _isLoading = false);
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(success
+                  ? 'Gift reversed successfully'
+                  : 'Failed to reverse gift'),
+              backgroundColor: success ? Colors.green : Colors.red,
+            ));
+            if (success) Navigator.of(context).pop(true);
+          } catch (e) {
+            setState(() => _isLoading = false);
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+          }
+        },
+        icon: const Icon(Icons.undo, size: 20),
+        label: Text('Reverse Gift',
+            style: TextStyle(
+                fontSize: fontSettings.fontSize,
+                fontWeight: FontWeight.w600)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.orange,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
     );
   }
 
@@ -401,6 +496,14 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
       _memberIdController.text = newReservation.mid;
       _memberNameController.text = newReservation.memberName;
     }
+
+    final bool showPendingButtons = widget.isPending;
+    final bool showCheckedButtons = widget.isChecked;
+    final bool showApprovedSection = widget.isApproved;
+    final bool showRejectedReverse =
+        !widget.isApproved && !widget.isPending && !widget.isChecked;
+
+    final bool canEditFields = widget.isPending || widget.isChecked || _isEditable;
 
     return Scaffold(
       appBar: AppBar(
@@ -436,231 +539,19 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                   key: _formKey,
                   child: Column(
                     children: [
-                      // Reverse button for Approved gifts
-                      if (widget.isApproved)
-                        Container(
-                          width: double.infinity,
-                          margin: const EdgeInsets.only(bottom: 16),
-                          child: ElevatedButton.icon(
-                            onPressed: () async {
-                              if (!_hasGiftAppPermission) {
-                                _showAccessDeniedDialog();
-                                return;
-                              }
+                      // ── Reverse button: Approved tab ──────────────────────
+                      if (showApprovedSection)
+                        _buildReverseButton(fontSettings, false),
 
-                              final confirmed = await showDialog<bool>(
-                                context: context,
-                                builder: (dialogContext) => AlertDialog(
-                                  title: const Text('Reverse Gift'),
-                                  content: const Text(
-                                    'Are you sure you want to reverse this gift?',
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(
-                                        dialogContext,
-                                      ).pop(false),
-                                      child: const Text('Cancel'),
-                                    ),
-                                    ElevatedButton(
-                                      onPressed: () =>
-                                          Navigator.of(dialogContext).pop(true),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.red,
-                                        foregroundColor: Colors.white,
-                                      ),
-                                      child: const Text('Reverse'),
-                                    ),
-                                  ],
-                                ),
-                              );
+                      // ── Reverse button: Rejected tab ──────────────────────
+                      if (showRejectedReverse)
+                        _buildReverseButton(fontSettings, true),
 
-                              if (confirmed != true) return;
+                      // ── NO reverse button for Checked tab ─────────────────
 
-                              setState(() {
-                                _isLoading = true;
-                              });
-
-                              try {
-                                final success = await ref
-                                    .read(giftProvider.notifier)
-                                    .reverseSpecialGiftFromUI(
-                                      reqid: widget.gift!.idNo,
-                                      userName: userName ?? "",
-                                    );
-
-                                setState(() {
-                                  _isLoading = false;
-                                });
-
-                                if (!mounted) return;
-
-                                if (success) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Gift reversed successfully',
-                                      ),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
-                                  Navigator.of(context).pop(true);
-                                } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Failed to reverse gift'),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                setState(() {
-                                  _isLoading = false;
-                                });
-
-                                if (!mounted) return;
-
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Error: $e'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
-                            },
-                            icon: const Icon(Icons.undo, size: 20),
-                            label: Text(
-                              'Reverse Gift',
-                              style: TextStyle(
-                                fontSize: fontSettings.fontSize,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                        ),
-                      
-                      // Reverse button for Rejected gifts
-                      if (!widget.isApproved && !widget.isPending)
-                        Container(
-                          width: double.infinity,
-                          margin: const EdgeInsets.only(bottom: 16),
-                          child: ElevatedButton.icon(
-                            onPressed: () async {
-                              if (!_hasGiftAppPermission) {
-                                _showAccessDeniedDialog();
-                                return;
-                              }
-
-                              final confirmed = await showDialog<bool>(
-                                context: context,
-                                builder: (dialogContext) => AlertDialog(
-                                  title: const Text('Reverse Gift'),
-                                  content: const Text(
-                                    'Are you sure you want to reverse this gift?',
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(
-                                        dialogContext,
-                                      ).pop(false),
-                                      child: const Text('Cancel'),
-                                    ),
-                                    ElevatedButton(
-                                      onPressed: () =>
-                                          Navigator.of(dialogContext).pop(true),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.red,
-                                        foregroundColor: Colors.white,
-                                      ),
-                                      child: const Text('Reverse'),
-                                    ),
-                                  ],
-                                ),
-                              );
-
-                              if (confirmed != true) return;
-
-                              setState(() {
-                                _isLoading = true;
-                              });
-
-                              try {
-                                final success = await ref
-                                    .read(giftProvider.notifier)
-                                    .reverseSpecialGiftFromUIrejcted(
-                                      reqid: widget.gift!.idNo,
-                                      userName: userName ?? "",
-                                    );
-
-                                setState(() {
-                                  _isLoading = false;
-                                });
-
-                                if (!mounted) return;
-
-                                if (success) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Gift reversed successfully',
-                                      ),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
-                                  Navigator.of(context).pop(true);
-                                } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Failed to reverse gift'),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                setState(() {
-                                  _isLoading = false;
-                                });
-
-                                if (!mounted) return;
-
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Error: $e'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
-                            },
-                            icon: const Icon(Icons.undo, size: 20),
-                            label: Text(
-                              'Reverse Gift',
-                              style: TextStyle(
-                                fontSize: fontSettings.fontSize,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                        ),
-                      
                       const SizedBox(height: 5.0),
                       TextFormField(
-                        controller: (_fromDateController),
+                        controller: _fromDateController,
                         readOnly: true,
                         style: _inputTextStyle(fontSettings),
                         decoration: InputDecoration(
@@ -671,9 +562,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                           ),
                           border: const OutlineInputBorder(),
                           contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12.0,
-                            vertical: -5.0,
-                          ),
+                              horizontal: 12.0, vertical: -5.0),
                         ),
                       ),
                       const SizedBox(height: 16.0),
@@ -689,9 +578,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                           ),
                           border: const OutlineInputBorder(),
                           contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12.0,
-                            vertical: -5.0,
-                          ),
+                              horizontal: 12.0, vertical: -5.0),
                         ),
                       ),
                       const SizedBox(height: 5.0),
@@ -699,8 +586,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                       GuestDisplayCardSpecialGiftview(
                         memberIdText: _memberIdController.text,
                         memberNameText: _memberNameController.text,
-                        showCard:
-                            _memberIdController.text.isNotEmpty &&
+                        showCard: _memberIdController.text.isNotEmpty &&
                             _memberNameController.text.isNotEmpty,
                         isLoading: _isLoading,
                         showLastVisitDate: true,
@@ -714,100 +600,69 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                               backgroundColor: Colors.black,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
-                              ),
+                                  horizontal: 16, vertical: 14),
                             ),
                             onPressed: _isLoading
                                 ? null
                                 : () async {
-                                    final selectedGuest = ref.read(
-                                      selectedGuestProvider,
-                                    );
-
+                                    final selectedGuest =
+                                        ref.read(selectedGuestProvider);
                                     if (selectedGuest != null &&
                                         selectedGuest.mid ==
                                             _memberIdController.text) {
                                       context.push('/home/profile');
                                       return;
                                     }
-
                                     try {
-                                      setState(() {
-                                        _isLoading = true;
-                                      });
-
+                                      setState(() => _isLoading = true);
                                       GuestRepository guestRepository =
-                                          GuestRepository(
-                                            ApiService(
-                                              const FlutterSecureStorage(),
-                                            ),
-                                          );
-
+                                          GuestRepository(ApiService(
+                                              const FlutterSecureStorage()));
                                       List<GuestSearchResponse> guests =
                                           await guestRepository.searchGuest(
-                                            9021,
-                                            _memberIdController.text,
-                                          );
-
-                                      setState(() {
-                                        _isLoading = false;
-                                      });
-
+                                              9021, _memberIdController.text);
+                                      setState(() => _isLoading = false);
                                       if (guests.isNotEmpty) {
                                         final guestResponse = guests.first;
                                         ref
                                             .read(
-                                              selectedGuestProvider.notifier,
-                                            )
-                                            .setSelectedGuest(
-                                              Guest(
-                                                mid:
-                                                    guestResponse.mid ??
-                                                    _memberIdController.text,
-                                                memberName:
-                                                    guestResponse.mName ??
-                                                    _memberNameController.text,
-                                                country: "",
-                                                lastVisitDate:
-                                                    guestResponse.lvd
-                                                        ?.toString() ??
-                                                    "",
-                                                age: 0,
-                                                gRating:
-                                                    guestResponse.gRating ?? "",
-                                                mGroup: guestResponse.mGroup,
-                                                gName:
-                                                    guestResponse.gName ?? "",
-                                                memImage2:
-                                                    guestResponse.memImage2,
-                                              ),
-                                            );
+                                                selectedGuestProvider.notifier)
+                                            .setSelectedGuest(Guest(
+                                              mid: guestResponse.mid ??
+                                                  _memberIdController.text,
+                                              memberName: guestResponse.mName ??
+                                                  _memberNameController.text,
+                                              country: "",
+                                              lastVisitDate:
+                                                  guestResponse.lvd?.toString() ??
+                                                      "",
+                                              age: 0,
+                                              gRating:
+                                                  guestResponse.gRating ?? "",
+                                              mGroup: guestResponse.mGroup,
+                                              gName: guestResponse.gName ?? "",
+                                              memImage2: guestResponse.memImage2,
+                                            ));
                                         context.push('/home/profile');
                                       } else {
                                         ref
                                             .read(
-                                              selectedGuestProvider.notifier,
-                                            )
-                                            .setSelectedGuest(
-                                              Guest(
-                                                mid: _memberIdController.text,
-                                                memberName:
-                                                    _memberNameController.text,
-                                                country: "",
-                                                lastVisitDate: "1990-01-01",
-                                                age: 0,
-                                                gRating: "",
-                                                mGroup: "",
-                                                gName: "",
-                                              ),
-                                            );
+                                                selectedGuestProvider.notifier)
+                                            .setSelectedGuest(Guest(
+                                              mid: _memberIdController.text,
+                                              memberName:
+                                                  _memberNameController.text,
+                                              country: "",
+                                              lastVisitDate: "1990-01-01",
+                                              age: 0,
+                                              gRating: "",
+                                              mGroup: "",
+                                              gName: "",
+                                            ));
                                         context.push('/home/profile');
                                       }
                                     } catch (e) {
-                                      setState(() {
-                                        _isLoading = false;
-                                      });
+                                      setState(() => _isLoading = false);
                                     }
                                   },
                             child: _isLoading
@@ -815,48 +670,38 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                     width: 20,
                                     height: 20,
                                     child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
+                                        strokeWidth: 2, color: Colors.white))
                                 : const Icon(Icons.person_search, size: 25),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () {
-                                final memberId = _memberIdController.text.trim();
-
+                                final memberId =
+                                    _memberIdController.text.trim();
                                 if (memberId.isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text("Please enter a Member ID"),
-                                    ),
+                                        content: Text(
+                                            "Please enter a Member ID")),
                                   );
                                   return;
                                 }
-
                                 context.push(
-                                  '/gifts/special-gift-requests/prv-gifts/$memberId',
-                                );
+                                    '/gifts/special-gift-requests/prv-gifts/$memberId');
                               },
                               icon: const Icon(Icons.card_giftcard),
-                              label: Text(
-                                "Previous Gift",
-                                style: TextStyle(
-                                  fontSize: fontSettings.fontSize,
-                                  fontWeight: fontSettings.fontWeight,
-                                ),
-                              ),
+                              label: Text("Previous Gift",
+                                  style: TextStyle(
+                                      fontSize: fontSettings.fontSize,
+                                      fontWeight: fontSettings.fontWeight)),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.blue,
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
+                                    borderRadius: BorderRadius.circular(12)),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
                               ),
                             ),
                           ),
@@ -869,39 +714,26 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                         child: Text(
                           "Guest Gift Data",
                           style: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: fontSettings.fontWeight,
-                          ),
+                              fontSize: fontSettings.fontSize,
+                              fontWeight: fontSettings.fontWeight),
                         ),
                       ),
                       const SizedBox(height: 10),
                       Builder(
                         builder: (context) {
-                          final giftState = ref.watch(giftProvider);
-
                           final rows = [
                             {"Field": "Drop (Est)", "Value": drop},
                             {"Field": "Cash Out (Est)", "Value": cashout},
                             {"Field": "Result (Est)", "Value": res},
                             {"Field": "Actual Drop (Est)", "Value": actdrop},
                             {"Field": "Coupons (Est)", "Value": mcoupen},
-                            {
-                              "Field": "Commission Paid (Est)",
-                              "Value": paidcom,
-                            },
+                            {"Field": "Commission Paid (Est)", "Value": paidcom},
                             {"Field": "Points (Est)", "Value": gpoints},
-                            {
-                              "Field": "Flush Coupon (Est)",
-                              "Value": gflushcoupen,
-                            },
+                            {"Field": "Flush Coupon (Est)", "Value": gflushcoupen},
                             {"Field": "Total Coupon (Est)", "Value": tcoupon},
-                            {
-                              "Field": "Flush Actual Drop (Est)",
-                              "Value": flushactdrop,
-                            },
+                            {"Field": "Flush Actual Drop (Est)", "Value": flushactdrop},
                             {"Field": "Avg Bet (Est)", "Value": avgbet},
                           ];
-
                           return Container(
                             margin: const EdgeInsets.only(top: 5),
                             decoration: BoxDecoration(
@@ -912,30 +744,22 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                               dataRowMinHeight: 48,
                               dataRowMaxHeight: 56,
                               headingRowColor: WidgetStateProperty.all(
-                                Colors.amber.shade100,
-                              ),
-                              border: TableBorder.all(
-                                color: Colors.grey.shade300,
-                              ),
+                                  Colors.amber.shade100),
+                              border:
+                                  TableBorder.all(color: Colors.grey.shade300),
                               columns: [
                                 DataColumn(
-                                  label: Text(
-                                    "Field",
-                                    style: TextStyle(
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
+                                    label: Text("Field",
+                                        style: TextStyle(
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight:
+                                                fontSettings.fontWeight))),
                                 DataColumn(
-                                  label: Text(
-                                    "Value",
-                                    style: TextStyle(
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight,
-                                    ),
-                                  ),
-                                ),
+                                    label: Text("Value",
+                                        style: TextStyle(
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight:
+                                                fontSettings.fontWeight))),
                               ],
                               rows: rows.map((row) {
                                 final shouldHighlight = [
@@ -948,42 +772,32 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                 return DataRow(
                                   color: shouldHighlight
                                       ? WidgetStateProperty.all(
-                                          Color(0xFFCCFFCC),
-                                        )
+                                          const Color(0xFFCCFFCC))
                                       : null,
                                   cells: [
-                                    DataCell(
-                                      Align(
-                                        alignment: Alignment.centerLeft,
-                                        child: Text(
-                                          row["Field"].toString(),
+                                    DataCell(Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(row["Field"].toString(),
                                           style: TextStyle(
-                                            fontSize: fontSettings.fontSize,
-                                            fontWeight: shouldHighlight
-                                                ? FontWeight.bold
-                                                : fontSettings.fontWeight,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Align(
-                                        alignment: Alignment.centerRight,
-                                        child: Text(
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight: shouldHighlight
+                                                  ? FontWeight.bold
+                                                  : fontSettings.fontWeight)),
+                                    )),
+                                    DataCell(Align(
+                                      alignment: Alignment.centerRight,
+                                      child: Text(
                                           formatNumber(row["Value"]),
                                           style: TextStyle(
-                                            fontSize: fontSettings.fontSize,
-                                            fontWeight: shouldHighlight
-                                                ? FontWeight.bold
-                                                : fontSettings.fontWeight,
-                                            fontFamily: 'monospace',
-                                            fontFeatures: const [
-                                              FontFeature.tabularFigures(),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight: shouldHighlight
+                                                  ? FontWeight.bold
+                                                  : fontSettings.fontWeight,
+                                              fontFamily: 'monospace',
+                                              fontFeatures: const [
+                                                FontFeature.tabularFigures()
+                                              ])),
+                                    )),
                                   ],
                                 );
                               }).toList(),
@@ -1004,14 +818,11 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                               decoration: InputDecoration(
                                 labelText: "Arrival Date",
                                 labelStyle: TextStyle(
-                                  fontSize: fontSettings.fontSize,
-                                  fontWeight: fontSettings.fontWeight,
-                                ),
+                                    fontSize: fontSettings.fontSize,
+                                    fontWeight: fontSettings.fontWeight),
                                 border: const OutlineInputBorder(),
                                 contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12.0,
-                                  vertical: -5.0,
-                                ),
+                                    horizontal: 12.0, vertical: -5.0),
                               ),
                             ),
                           ),
@@ -1024,14 +835,11 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                               decoration: InputDecoration(
                                 labelText: "Departure Date",
                                 labelStyle: TextStyle(
-                                  fontSize: fontSettings.fontSize,
-                                  fontWeight: fontSettings.fontWeight,
-                                ),
+                                    fontSize: fontSettings.fontSize,
+                                    fontWeight: fontSettings.fontWeight),
                                 border: const OutlineInputBorder(),
                                 contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12.0,
-                                  vertical: -5.0,
-                                ),
+                                    horizontal: 12.0, vertical: -5.0),
                               ),
                             ),
                           ),
@@ -1042,191 +850,150 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: 16),
-
                           TextFormField(
                             readOnly: true,
                             controller: TextEditingController(
-                              text: _selectedGift?.replaceAll("_", ""),
-                            ),
+                                text: _selectedGift?.replaceAll("_", "")),
                             decoration: InputDecoration(
                               labelText: "Gift For",
                               labelStyle: TextStyle(
-                                fontSize: fontSettings.fontSize,
-                                fontWeight: fontSettings.fontWeight,
-                              ),
+                                  fontSize: fontSettings.fontSize,
+                                  fontWeight: fontSettings.fontWeight),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8.0),
-                              ),
+                                  borderRadius: BorderRadius.circular(8.0)),
                               contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12.0,
-                                vertical: -5.0,
-                              ),
+                                  horizontal: 12.0, vertical: -5.0),
                             ),
                             style: _inputTextStyle(fontSettings),
                           ),
-
                           const SizedBox(height: 16),
-
                           TextFormField(
                             controller: _chipController,
                             readOnly: true,
                             decoration: InputDecoration(
-                              labelText: "Chip Type ",
+                              labelText: "Chip Type",
                               labelStyle: TextStyle(
-                                fontSize: fontSettings.fontSize,
-                                fontWeight: fontSettings.fontWeight,
-                              ),
+                                  fontSize: fontSettings.fontSize,
+                                  fontWeight: fontSettings.fontWeight),
                               border: const OutlineInputBorder(),
                               contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12.0,
-                                vertical: -5.0,
-                              ),
+                                  horizontal: 12.0, vertical: -5.0),
                             ),
-                            inputFormatters: <TextInputFormatter>[],
                             style: _inputTextStyle(fontSettings),
                           ),
+
+                          // ── Edit toggle: Pending tab ────────────────────────
                           if (widget.isPending)
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
                                   "Amount & Remarks",
                                   style: TextStyle(
-                                    fontSize: fontSettings.fontSize + 2,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                      fontSize: fontSettings.fontSize + 2,
+                                      fontWeight: FontWeight.bold),
                                 ),
                                 IconButton(
-                                  icon: Icon(Icons.edit, color: Colors.blue),
-                                  onPressed: () {
-                                    setState(() {
-                                      _isEditable = !_isEditable;
-                                    });
-                                  },
+                                  icon: const Icon(Icons.edit,
+                                      color: Colors.blue),
+                                  onPressed: () => setState(
+                                      () => _isEditable = !_isEditable),
                                 ),
                               ],
                             ),
-                          const SizedBox(height: 16.0),
 
+                          // ── Edit toggle: Checked tab ────────────────────────
+                          if (widget.isChecked)
+                            Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  "Amount & Remarks",
+                                  style: TextStyle(
+                                      fontSize: fontSettings.fontSize + 2,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.edit,
+                                      color: Colors.blue),
+                                  onPressed: () => setState(
+                                      () => _isEditable = !_isEditable),
+                                ),
+                              ],
+                            ),
+
+                          const SizedBox(height: 16.0),
                           TextFormField(
                             controller: _amountController,
-                            readOnly: !_isEditable,
+                            readOnly: !canEditFields,
                             style: _inputTextStylefroammount(fontSettings),
                             decoration: InputDecoration(
                               labelText: "Amount",
                               labelStyle: TextStyle(
-                                fontSize: fontSettings.fontSize + 2,
-                                fontWeight: fontSettings.fontWeight,
-                              ),
+                                  fontSize: fontSettings.fontSize + 2,
+                                  fontWeight: fontSettings.fontWeight),
                               border: const OutlineInputBorder(),
                               contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12.0,
-                                vertical: -5.0,
-                              ),
+                                  horizontal: 12.0, vertical: -5.0),
                             ),
                             keyboardType: TextInputType.number,
-                            inputFormatters: <TextInputFormatter>[
-                              ThousandsSeparatorInputFormatter(),
+                            inputFormatters: [
+                              ThousandsSeparatorInputFormatter()
                             ],
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return "Please enter amount";
-                              }
-                              return null;
-                            },
+                            validator: (value) =>
+                                (value == null || value.isEmpty)
+                                    ? "Please enter amount"
+                                    : null,
                           ),
                         ],
                       ),
-                      if (widget.isPending) ...[
-                        const SizedBox(height: 16),
 
-                        DropdownButtonFormField<int>(
-                          value: _selectedValidDays,
-                          style: TextStyle(
-                            fontSize: fontSettings.fontSize + 2,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                          decoration: InputDecoration(
-                            labelText: "Valid Days",
-                            labelStyle: TextStyle(
-                              fontSize: fontSettings.fontSize,
-                              fontWeight: fontSettings.fontWeight,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 12,
-                            ),
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 30,
-                              child: Text(
-                                "30 Days",
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            DropdownMenuItem(
-                              value: 60,
-                              child: Text(
-                                "60 Days",
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            DropdownMenuItem(
-                              value: 90,
-                              child: Text(
-                                "90 Days",
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedValidDays = value;
-                            });
-                          },
-                          validator: (value) {
-                            if (value == null) {
-                              return "Please select valid days";
-                            }
-                            return null;
-                          },
-                        ),
+                      // ── Valid Days: editable dropdown (Pending & Checked tabs) ──
+                      if (widget.isPending || widget.isChecked) ...[
+                        const SizedBox(height: 16),
+                        _buildValidDaysDropdown(fontSettings),
                       ],
+
+                      // ── Valid Days: read-only display (Approved & Rejected tabs) ──
+                      if (!widget.isPending && !widget.isChecked) ...[
+                        const SizedBox(height: 16),
+                        _buildValidDaysReadOnly(fontSettings),
+                      ],
+
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _remarksController,
-                        readOnly: !_isEditable,
+                        readOnly: !canEditFields,
                         style: _inputTextStyle(fontSettings),
                         decoration: InputDecoration(
                           alignLabelWithHint: true,
                           labelText: "Remarks",
                           labelStyle: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: fontSettings.fontWeight,
-                          ),
+                              fontSize: fontSettings.fontSize,
+                              fontWeight: fontSettings.fontWeight),
                           hintText: "Enter additional details...",
                           hintStyle: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: fontSettings.fontWeight,
-                          ),
+                              fontSize: fontSettings.fontSize,
+                              fontWeight: fontSettings.fontWeight),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8.0),
-                          ),
+                              borderRadius: BorderRadius.circular(8.0)),
                         ),
                         maxLines: 5,
                         keyboardType: TextInputType.multiline,
                         onChanged: (value) => _remarks = value,
                       ),
                       const SizedBox(height: 16.0),
-                      if (widget.isPending)
+
+                      // ════════════════════════════════════════════════════════
+                      // PENDING TAB: "Check By" + "Reject" buttons
+                      // ════════════════════════════════════════════════════════
+                      if (showPendingButtons)
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
+                            // CHECK BY button
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () async {
@@ -1234,20 +1001,19 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                     _showAccessDeniedDialog();
                                     return;
                                   }
-
                                   if (widget.gift == null) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text("Gift request not found"),
-                                      ),
+                                          content: Text(
+                                              "Gift request not found")),
                                     );
                                     return;
                                   }
-
                                   if (_selectedValidDays == null) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text("Please select valid days"),
+                                        content:
+                                            Text("Please select valid days"),
                                         backgroundColor: Colors.red,
                                       ),
                                     );
@@ -1259,67 +1025,56 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                   final amount = _amountController.text;
                                   final uname = userName ?? "";
 
-                                  setState(() {
-                                    _isLoading = true;
-                                  });
-
+                                  setState(() => _isLoading = true);
                                   try {
                                     final success = await ref
                                         .read(giftProvider.notifier)
-                                        .sendApprovedSpecialGiftFromUI(
+                                        .checkBySpecialGiftFromUI(
                                           reqid: reqid,
                                           remarks: remarks,
                                           amount: amount,
                                           userName: uname,
-                                          validDates: _selectedValidDays.toString(),
+                                          validDates:
+                                              _selectedValidDays.toString(),
                                         );
-
                                     if (success) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            "Request Approved Successfully ",
-                                          ),
-                                        ),
-                                      );
-
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                        content: Text(
+                                            "Request Checked Successfully"),
+                                        backgroundColor: Colors.blue,
+                                      ));
                                       Navigator.of(context).pop(true);
                                     } else {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text("Approval Failed "),
-                                        ),
-                                      );
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                        content: Text("Check By Failed"),
+                                        backgroundColor: Colors.red,
+                                      ));
                                     }
                                   } catch (e) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text("Error: $e")),
-                                    );
+                                        SnackBar(
+                                            content: Text("Error: $e")));
                                   } finally {
-                                    setState(() {
-                                      _isLoading = false;
-                                    });
+                                    setState(() => _isLoading = false);
                                   }
                                 },
-                                icon: const Icon(Icons.check),
-                                label: const Text("APPROVE"),
+                                icon: const Icon(Icons.rule_rounded),
+                                label: const Text("CHECK BY"),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
+                                  backgroundColor: Colors.blue,
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
+                                      borderRadius:
+                                          BorderRadius.circular(12)),
                                   padding: const EdgeInsets.symmetric(
-                                    vertical: 16,
-                                  ),
+                                      vertical: 16),
                                 ),
                               ),
                             ),
                             const SizedBox(width: 16),
+                            // REJECT button
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () async {
@@ -1327,23 +1082,17 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                     _showAccessDeniedDialog();
                                     return;
                                   }
-
                                   if (widget.gift == null) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text("Gift request not found"),
-                                      ),
+                                          content: Text(
+                                              "Gift request not found")),
                                     );
                                     return;
                                   }
-
                                   final reqid = widget.gift!.idNo;
                                   final uname = userName ?? "";
-
-                                  setState(() {
-                                    _isLoading = true;
-                                  });
-
+                                  setState(() => _isLoading = true);
                                   try {
                                     final success = await ref
                                         .read(giftProvider.notifier)
@@ -1351,38 +1100,29 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                           reqid: reqid,
                                           userName: uname,
                                         );
-
                                     if (success) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            "Request Reject Successfully ",
-                                          ),
-                                        ),
-                                      );
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                        content: Text(
+                                            "Request Rejected Successfully"),
+                                        backgroundColor: Colors.red,
+                                      ));
                                       await ref
                                           .read(giftProvider.notifier)
                                           .getGiftForList();
                                       Navigator.of(context).pop(true);
                                     } else {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text("Reject Failed "),
-                                        ),
-                                      );
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                              content:
+                                                  Text("Reject Failed")));
                                     }
                                   } catch (e) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text("Error: $e")),
-                                    );
+                                        SnackBar(
+                                            content: Text("Error: $e")));
                                   } finally {
-                                    setState(() {
-                                      _isLoading = false;
-                                    });
+                                    setState(() => _isLoading = false);
                                   }
                                 },
                                 icon: const Icon(Icons.close),
@@ -1391,26 +1131,180 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                   backgroundColor: Colors.red,
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
+                                      borderRadius:
+                                          BorderRadius.circular(12)),
                                   padding: const EdgeInsets.symmetric(
-                                    vertical: 16,
-                                  ),
+                                      vertical: 16),
                                 ),
                               ),
                             ),
                           ],
                         ),
 
-                      // WhatsApp Section for Approved Gifts
-                      if (widget.isApproved)
+                      // ════════════════════════════════════════════════════════
+                      // CHECKED TAB: "Approve" + "Reject" buttons
+                      // ════════════════════════════════════════════════════════
+                      if (showCheckedButtons)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            // APPROVE button
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () async {
+                                  if (!_hasGiftAppPermission) {
+                                    _showAccessDeniedDialog();
+                                    return;
+                                  }
+                                  if (widget.gift == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text(
+                                              "Gift request not found")),
+                                    );
+                                    return;
+                                  }
+                                  if (_selectedValidDays == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content:
+                                            Text("Please select valid days"),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                    return;
+                                  }
+
+                                  final reqid = widget.gift!.idNo;
+                                  final remarks = _remarksController.text;
+                                  final amount = _amountController.text;
+                                  final uname = userName ?? "";
+
+                                  setState(() => _isLoading = true);
+                                  try {
+                                    final success = await ref
+                                        .read(giftProvider.notifier)
+                                        .sendApprovedSpecialGiftFromUI(
+                                          reqid: reqid,
+                                          remarks: remarks,
+                                          amount: amount,
+                                          userName: uname,
+                                          validDates:
+                                              _selectedValidDays.toString(),
+                                        );
+                                    if (success) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                        content: Text(
+                                            "Request Approved Successfully"),
+                                        backgroundColor: Colors.green,
+                                      ));
+                                      Navigator.of(context).pop(true);
+                                    } else {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                              content:
+                                                  Text("Approval Failed")));
+                                    }
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                            content: Text("Error: $e")));
+                                  } finally {
+                                    setState(() => _isLoading = false);
+                                  }
+                                },
+                                icon: const Icon(Icons.check),
+                                label: const Text("APPROVE"),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(12)),
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 16),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            // REJECT button
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () async {
+                                  if (!_hasGiftAppPermission) {
+                                    _showAccessDeniedDialog();
+                                    return;
+                                  }
+                                  if (widget.gift == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text(
+                                              "Gift request not found")),
+                                    );
+                                    return;
+                                  }
+                                  final reqid = widget.gift!.idNo;
+                                  final uname = userName ?? "";
+                                  setState(() => _isLoading = true);
+                                  try {
+                                    final success = await ref
+                                        .read(giftProvider.notifier)
+                                        .rejectSpecialGiftFromUI(
+                                          reqid: reqid,
+                                          userName: uname,
+                                        );
+                                    if (success) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                        content: Text(
+                                            "Request Rejected Successfully"),
+                                        backgroundColor: Colors.red,
+                                      ));
+                                      await ref
+                                          .read(giftProvider.notifier)
+                                          .getGiftForList();
+                                      Navigator.of(context).pop(true);
+                                    } else {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                              content:
+                                                  Text("Reject Failed")));
+                                    }
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                            content: Text("Error: $e")));
+                                  } finally {
+                                    setState(() => _isLoading = false);
+                                  }
+                                },
+                                icon: const Icon(Icons.close),
+                                label: const Text("REJECT"),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(12)),
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 16),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                      // ════════════════════════════════════════════════════════
+                      // APPROVED TAB: WhatsApp section
+                      // ════════════════════════════════════════════════════════
+                      if (showApprovedSection)
                         Padding(
                           padding: const EdgeInsets.only(top: 16.0),
                           child: Card(
                             elevation: 5,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                                borderRadius: BorderRadius.circular(12)),
                             child: Container(
                               color: Colors.green[10],
                               padding: const EdgeInsets.all(16.0),
@@ -1418,111 +1312,91 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       const Text(
                                         "Send Gift Details via WhatsApp",
                                         style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold),
                                       ),
-                                      // Refresh button to reload WhatsApp number
                                       IconButton(
-                                        icon: const Icon(
-                                          Icons.refresh,
-                                          color: Colors.green,
-                                        ),
+                                        icon: const Icon(Icons.refresh,
+                                            color: Colors.green),
                                         onPressed: () async {
                                           await _loadWhatsAppNumber();
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('WhatsApp number refreshed'),
-                                              duration: Duration(seconds: 1),
-                                            ),
-                                          );
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(const SnackBar(
+                                            content: Text(
+                                                'WhatsApp number refreshed'),
+                                            duration:
+                                                Duration(seconds: 1),
+                                          ));
                                         },
                                         tooltip: 'Refresh WhatsApp Number',
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 10),
-                                  
-                                  // Gift details summary
                                   Container(
                                     padding: const EdgeInsets.all(4),
                                     decoration: BoxDecoration(
                                       color: Colors.green.shade50,
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius:
+                                          BorderRadius.circular(8),
                                       border: Border.all(
-                                        color: Colors.green.shade300,
-                                      ),
+                                          color: Colors.green.shade300),
                                     ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                    child: Row(
                                       children: [
-                                        Row(
-                                          children: [
-                                            const Icon(
-                                              Icons.card_giftcard,
-                                              color: Colors.green,
-                                              size: 20,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: Text(
-                                                "Amount: ${_amountController.text}",
-                                                style: const TextStyle(
-                                                  fontSize: 20,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
+                                        const Icon(Icons.card_giftcard,
+                                            color: Colors.green, size: 20),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            "Amount: ${_amountController.text}",
+                                            style: const TextStyle(
+                                                fontSize: 20,
+                                                fontWeight:
+                                                    FontWeight.bold),
+                                          ),
                                         ),
-                                        const SizedBox(height: 8),
                                       ],
                                     ),
                                   ),
-                                  
                                   const SizedBox(height: 16),
-                                  
-                                  // WhatsApp number input
                                   TextField(
                                     controller: _whatsappNumberController,
                                     style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16),
                                     keyboardType: TextInputType.phone,
                                     decoration: InputDecoration(
-                                      contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 12,
-                                      ),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                              horizontal: 12, vertical: 12),
                                       border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
+                                        borderRadius:
+                                            BorderRadius.circular(12),
                                         borderSide: const BorderSide(
-                                          color: Colors.green,
-                                          width: 2.0,
-                                        ),
+                                            color: Colors.green, width: 2.0),
                                       ),
                                       enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
+                                        borderRadius:
+                                            BorderRadius.circular(12),
                                         borderSide: const BorderSide(
-                                          color: Colors.green,
-                                          width: 2.0,
-                                        ),
+                                            color: Colors.green, width: 2.0),
                                       ),
                                       focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
+                                        borderRadius:
+                                            BorderRadius.circular(12),
                                         borderSide: const BorderSide(
-                                          color: Colors.green,
-                                          width: 2.5,
-                                        ),
+                                            color: Colors.green, width: 2.5),
                                       ),
                                       labelText: "WhatsApp Number",
-                                      hintText: "Enter WhatsApp number with country code",
+                                      hintText:
+                                          "Enter WhatsApp number with country code",
                                       helperText: "e.g., 94712345678",
                                       prefixIcon: Padding(
                                         padding: const EdgeInsets.all(12.0),
@@ -1534,127 +1408,124 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                       ),
                                     ),
                                   ),
-                                  
                                   const SizedBox(height: 8),
-                                  
                                   const Text(
                                     "Note: Please enter the WhatsApp number with the country code",
                                     style: TextStyle(
-                                      fontSize: 12,
-                                      color: Color.fromARGB(255, 0, 0, 0),
-                                      fontStyle: FontStyle.italic,
-                                    ),
+                                        fontSize: 12,
+                                        color: Color.fromARGB(255, 0, 0, 0),
+                                        fontStyle: FontStyle.italic),
                                   ),
-                                  
                                   const SizedBox(height: 16),
-                                  
-                                  // Send button - FIXED VERSION
                                   SizedBox(
                                     width: double.infinity,
                                     child: ElevatedButton(
                                       onPressed: () async {
-                                        final whatsappNumber = _whatsappNumberController.text.trim();
-                                        
+                                        final whatsappNumber =
+                                            _whatsappNumberController.text
+                                                .trim();
                                         if (whatsappNumber.isEmpty) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Please enter a WhatsApp number'),
-                                              backgroundColor: Colors.red,
-                                            ),
-                                          );
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(const SnackBar(
+                                            content: Text(
+                                                'Please enter a WhatsApp number'),
+                                            backgroundColor: Colors.red,
+                                          ));
                                           return;
                                         }
-                                        
                                         if (widget.gift == null) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Gift details not available'),
-                                              backgroundColor: Colors.red,
-                                            ),
-                                          );
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(const SnackBar(
+                                            content: Text(
+                                                'Gift details not available'),
+                                            backgroundColor: Colors.red,
+                                          ));
                                           return;
                                         }
-
                                         try {
-                                          EasyLoading.show(status: 'Sending gift details...');
-                                          
-                                          // Clean the amount (remove commas)
-                                          final cleanAmount = _amountController.text.replaceAll(',', '').trim();
-                                          
-                                          // Get chip type without spaces and uppercase
-                                          final chipType = _chipController.text.replaceAll(' ', '').toUpperCase();
-                                          
-                                          // Get gift for type
-                                          final giftFor = _selectedGift?.replaceAll('_', ' ') ?? 'SPECIAL GIFT';
-                                          
+                                          EasyLoading.show(
+                                              status:
+                                                  'Sending gift details...');
+                                          final cleanAmount =
+                                              _amountController.text
+                                                  .replaceAll(',', '')
+                                                  .trim();
+                                          final chipType = _chipController
+                                              .text
+                                              .replaceAll(' ', '')
+                                              .toUpperCase();
+                                          final giftFor = _selectedGift
+                                                  ?.replaceAll('_', ' ') ??
+                                              'SPECIAL GIFT';
                                           final result = await ref
                                               .read(giftProvider.notifier)
                                               .sendSpecialGiftWhatsapp(
-                                                whatsappNumber: whatsappNumber,
-                                                bmNumber: _memberIdController.text,
-                                                memberName: _memberNameController.text,
+                                                whatsappNumber:
+                                                    whatsappNumber,
+                                                bmNumber:
+                                                    _memberIdController.text,
+                                                memberName:
+                                                    _memberNameController
+                                                        .text,
                                                 giftValue: cleanAmount,
                                                 chipType: chipType,
                                                 giftFor: giftFor,
                                                 createdBy: userName ?? '',
                                               );
-                                          
                                           EasyLoading.dismiss();
-                                          
                                           if (result == "Success") {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  'Gift details sent successfully via WhatsApp!',
-                                                ),
-                                                backgroundColor: Colors.green,
-                                                duration: Duration(seconds: 3),
-                                              ),
-                                            );
-                                          } else if (result == "WhatsApp not available") {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  'WhatsApp is not installed or available on this device',
-                                                ),
-                                                backgroundColor: Colors.orange,
-                                                duration: Duration(seconds: 3),
-                                              ),
-                                            );
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(const SnackBar(
+                                              content: Text(
+                                                  'Gift details sent successfully via WhatsApp!'),
+                                              backgroundColor: Colors.green,
+                                              duration:
+                                                  Duration(seconds: 3),
+                                            ));
+                                          } else if (result ==
+                                              "WhatsApp not available") {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(const SnackBar(
+                                              content: Text(
+                                                  'WhatsApp is not installed or available on this device'),
+                                              backgroundColor: Colors.orange,
+                                              duration:
+                                                  Duration(seconds: 3),
+                                            ));
                                           } else {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(
-                                                content: Text('Failed to send: $result'),
-                                                backgroundColor: Colors.orange,
-                                                duration: const Duration(seconds: 3),
-                                              ),
-                                            );
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(SnackBar(
+                                              content: Text(
+                                                  'Failed to send: $result'),
+                                              backgroundColor: Colors.orange,
+                                              duration:
+                                                  const Duration(seconds: 3),
+                                            ));
                                           }
                                         } catch (e) {
                                           EasyLoading.dismiss();
-                                          
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text('Error: $e'),
-                                              backgroundColor: Colors.red,
-                                              duration: const Duration(seconds: 3),
-                                            ),
-                                          );
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(SnackBar(
+                                            content: Text('Error: $e'),
+                                            backgroundColor: Colors.red,
+                                            duration:
+                                                const Duration(seconds: 3),
+                                          ));
                                         }
                                       },
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF25D366),
+                                        backgroundColor:
+                                            const Color(0xFF25D366),
                                         foregroundColor: Colors.white,
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
+                                            borderRadius:
+                                                BorderRadius.circular(12)),
                                         padding: const EdgeInsets.symmetric(
-                                          vertical: 16,
-                                          horizontal: 16,
-                                        ),
+                                            vertical: 16, horizontal: 16),
                                       ),
                                       child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
                                           Image.asset(
                                             'assets/images/others/whatsapp.png',
@@ -1668,9 +1539,9 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                               "Send Gift Details via WhatsApp",
                                               textAlign: TextAlign.center,
                                               style: TextStyle(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.bold,
-                                              ),
+                                                  fontSize: 15,
+                                                  fontWeight:
+                                                      FontWeight.bold),
                                             ),
                                           ),
                                         ],
@@ -1687,6 +1558,18 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                 ),
               ),
             ),
+            // if (_isLoading)
+            //   Positioned.fill(
+            //     child: Container(
+            //       color: const Color.fromARGB(135, 117, 115, 115),
+            //       child: const Center(
+            //         child: RefreshProgressIndicator(
+            //           valueColor: AlwaysStoppedAnimation<Color>(
+            //               Constants.kSecondaryColor),
+            //         ),
+            //       ),
+            //     ),
+            //   ),
             const Watermark(),
           ],
         ),

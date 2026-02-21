@@ -1,4 +1,5 @@
 import 'package:ballys_reservation_app/models/auth_state.dart';
+import 'package:ballys_reservation_app/utils/token_refresh_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -98,14 +99,12 @@ class AuthNotifier extends StateNotifier<AuthState?> {
             key: _biometricEnabledKey,
             value: biometricEnabled,
           );
-
         }
         if (biometricUsername != null) {
           await authRepository.storage.write(
             key: _usernameKey,
             value: biometricUsername,
           );
-
         }
         if (biometricPassword != null) {
           await authRepository.storage.write(
@@ -116,11 +115,8 @@ class AuthNotifier extends StateNotifier<AuthState?> {
         await StorageUtil.saveAppVersion(currentVersion);
 
         state = AuthState(user: null, isLoading: false, error: null);
-       
       }
-    } catch (e) {
-  
-    }
+    } catch (e) {}
   }
 
   Future<void> authenticateAndLogin(String username, String password) async {
@@ -140,7 +136,6 @@ class AuthNotifier extends StateNotifier<AuthState?> {
 
       state = AuthState(user: user, isLoading: false);
     } catch (e) {
-     
       String errorMessage = e.toString();
       if (errorMessage.startsWith('Exception: ')) {
         errorMessage = errorMessage.substring(
@@ -172,12 +167,11 @@ class AuthNotifier extends StateNotifier<AuthState?> {
         state = AuthState(user: _pendingUser, isLoading: false);
         _pendingUser = null; // Clear pending data
 
-   
+        TokenRefreshService().start(authRepository);
       } else {
         throw Exception('No pending user data found');
       }
     } catch (e) {
-
       state = AuthState(
         user: null,
         isLoading: false,
@@ -213,20 +207,15 @@ class AuthNotifier extends StateNotifier<AuthState?> {
   // }
   Future<void> logout() async {
     try {
-
-    
+      TokenRefreshService().stop();
       final prefs = await SharedPreferences.getInstance();
       final fcmToken = prefs.getString('FCMToken');
       if (fcmToken != null) {
         await FirebaseMessaging.instance.deleteToken();
-     
 
         // Clear stored FCM token
         await prefs.remove('FCMToken');
-    
-      } else {
-      
-      }
+      } else {}
       // Clear user data
       await StorageUtil.clearUserData();
 
@@ -236,10 +225,8 @@ class AuthNotifier extends StateNotifier<AuthState?> {
 
       // Update state
       state = AuthState(user: null, isLoading: false, error: null);
-await prefs.setBool('is_logged_in', false);
-   
+      await prefs.setBool('is_logged_in', false);
     } catch (e) {
-   
       // Still clear local data even if server call fails
       await StorageUtil.clearUserData();
       _currentSessionPassword = null;
@@ -247,37 +234,38 @@ await prefs.setBool('is_logged_in', false);
       state = AuthState(user: null, isLoading: false, error: null);
     }
   }
-// Add this method to the AuthNotifier class
+  // Add this method to the AuthNotifier class
 
-Future<bool> deleteAccount() async {
-  try {
-    state = AuthState(user: state?.user, isLoading: true);
+  Future<bool> deleteAccount() async {
+    try {
+      state = AuthState(user: state?.user, isLoading: true);
 
-    final success = await authRepository.deleteAccount();
+      final success = await authRepository.deleteAccount();
 
-    if (success) {
-      // Reuse logout logic
-      await logout();
-      return true;
-    } else {
+      if (success) {
+        // Reuse logout logic
+        await logout();
+        return true;
+      } else {
+        state = AuthState(
+          user: state?.user,
+          isLoading: false,
+          error: 'Account deletion failed',
+        );
+        return false;
+      }
+    } catch (e) {
+      print("Delete account error: $e");
+      await logout(); // Force logout even on error
       state = AuthState(
-        user: state?.user,
+        user: null,
         isLoading: false,
-        error: 'Account deletion failed',
+        error: 'Failed to delete account: ${e.toString()}',
       );
       return false;
     }
-  } catch (e) {
-    print("Delete account error: $e");
-    await logout(); // Force logout even on error
-    state = AuthState(
-      user: null,
-      isLoading: false,
-      error: 'Failed to delete account: ${e.toString()}',
-    );
-    return false;
   }
-}
+
   void clearPendingUser() {
     _pendingUser = null;
     state = AuthState(user: null, isLoading: false);

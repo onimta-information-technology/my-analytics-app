@@ -20,7 +20,6 @@ class ReservationScreen extends ConsumerStatefulWidget {
 class _ReservationScreenState extends ConsumerState<ReservationScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
   bool _isLoading = false;
 
   @override
@@ -29,7 +28,6 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
     _tabController = TabController(length: 3, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final reservations = ref.watch(reservationProvider);
-
       if (reservations['Pending']!.isNotEmpty ||
           reservations['Approved']!.isNotEmpty ||
           reservations['Rejected']!.isNotEmpty) {
@@ -40,56 +38,36 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
   }
 
   Future<void> _loadReservationData() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
     await ref.read(reservationProvider.notifier).getReservationData();
-    setState(() {
-      _isLoading = false;
-    });
+    setState(() => _isLoading = false);
   }
 
-  // Filter reservations based on user permissions
-  Future<List<Reservation>> _filterReservations(List<Reservation> reservations) async {
-    // Check if user has sales code AD001 (can see all reservations)
+  Future<List<Reservation>> _filterReservations(
+    List<Reservation> reservations,
+  ) async {
     final salesCode = await StorageUtil.getSalesCode();
     if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
-      return reservations; // Show all reservations
+      return reservations;
     }
-
-    // For other users, only show reservations they requested
     final currentUserName = await StorageUtil.getUserName();
-    if (currentUserName == null) {
-      return []; // No user logged in, show nothing
-    }
-
+    if (currentUserName == null) return [];
     return reservations.where((reservation) {
-      return reservation.reqBy.trim().toLowerCase() == currentUserName.trim().toLowerCase();
+      return reservation.reqBy.trim().toLowerCase() ==
+          currentUserName.trim().toLowerCase();
     }).toList();
   }
 
-  // Check access permission for detail view
   Future<bool> _canAccessReservationDetails(Reservation reservation) async {
-    // Check if user has sales code AD001 (can see all reservations)
-    // final salesCode = await StorageUtil.getSalesCode();
-    // if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
-    //   return true;
-    // }
-
-    // Check if user has Gift_App permission
     final giftApp = await StorageUtil.getGiftApp();
-    if (giftApp == true) {
-      return true;
-    }
-
-    // Check if current user is the requester
+    if (giftApp == true) return true;
     final currentUserName = await StorageUtil.getUserName();
-    if (currentUserName != null && 
-        reservation.reqBy.isNotEmpty && 
-        currentUserName.trim().toLowerCase() == reservation.reqBy.trim().toLowerCase()) {
+    if (currentUserName != null &&
+        reservation.reqBy.isNotEmpty &&
+        currentUserName.trim().toLowerCase() ==
+            reservation.reqBy.trim().toLowerCase()) {
       return true;
     }
-
     return false;
   }
 
@@ -97,6 +75,16 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  /// Format DateTime to "DD/MM/YYYY  HH:MM"
+  String _formatDateTime(DateTime dt) {
+    final day = dt.day.toString().padLeft(2, '0');
+    final month = dt.month.toString().padLeft(2, '0');
+    final year = dt.year.toString();
+    final hour = dt.hour.toString().padLeft(2, '0');
+    final minute = dt.minute.toString().padLeft(2, '0');
+    return '$day/$month/$year  $hour:$minute';
   }
 
   final Map<String, String> ratingImageMap = {
@@ -118,9 +106,7 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, size: 30),
-            onPressed: () async {
-              await _loadReservationData();
-            },
+            onPressed: _loadReservationData,
           ),
           if (!widget.hideAddButton)
             IconButton(
@@ -129,9 +115,7 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
                 final result = await context.push(
                   '/reservations/new-reservation',
                 );
-                if (result == true) {
-                  await _loadReservationData();
-                }
+                if (result == true) await _loadReservationData();
               },
             ),
         ],
@@ -170,9 +154,7 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
           if (_isLoading)
             Positioned.fill(
               child: Container(
-                decoration: const BoxDecoration(
-                  color: Color.fromARGB(135, 117, 115, 115),
-                ),
+                color: const Color.fromARGB(135, 117, 115, 115),
                 child: const Center(
                   child: RefreshProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(
@@ -222,7 +204,7 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
 
   Widget _buildReservationList(List<Reservation> reservations) {
     final fontSettings = ref.watch(fontSettingsProvider);
-    
+
     return FutureBuilder<List<Reservation>>(
       future: _filterReservations(reservations),
       builder: (context, snapshot) {
@@ -237,7 +219,7 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
         }
 
         final filteredReservations = snapshot.data ?? [];
-        
+
         if (filteredReservations.isEmpty) {
           return const Center(child: Text('No reservations available.'));
         }
@@ -246,273 +228,329 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
           itemCount: filteredReservations.length,
           itemBuilder: (context, index) {
             final reservation = filteredReservations[index];
-        
-        return Stack(
-          children: [
-            Card(
-              margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                title: Text(
-                  'Reservation: ${reservation.reservNo}',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSettings.fontSize,
-                    fontWeight: FontWeight.bold,
+            final isApprovedOrRejected =
+                reservation.requestStatus == 'Approved' ||
+                reservation.requestStatus == 'Rejected';
+
+            return Stack(
+              children: [
+                Card(
+                  margin: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 16,
                   ),
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 4),
-                    Text(
-                      '${reservation.mid} - ${reservation.mName}',
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    title: Text(
+                      'Reservation: ${reservation.reservNo}',
                       style: TextStyle(
                         color: Colors.black,
                         fontSize: fontSettings.fontSize,
-                        fontWeight: FontWeight.bold
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    // Request By section
-                    Row(
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(
-                          Icons.person_outline,
-                          size: 20,
-                          color: Colors.blue,
-                        ),
-                        const SizedBox(width: 4),
+                        const SizedBox(height: 4),
+
+                        // Member ID & Name
                         Text(
-                          'Requested by: ',
+                          '${reservation.mid} - ${reservation.mName}',
                           style: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                            fontSize: fontSettings.fontSize + 1,
+                            fontWeight: fontSettings.fontWeight,
                           ),
                         ),
-                        Expanded(
-                          child: Text(
-                            reservation.reqBy,
-                            style: TextStyle(
-                              fontSize: fontSettings.fontSize,
-                              fontWeight: FontWeight.bold,
+                        const SizedBox(height: 8),
+
+                        // Requested By
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.person_outline,
+                              size: 20,
+                              color: Colors.blue,
                             ),
-                            overflow: TextOverflow.ellipsis,
+                            const SizedBox(width: 4),
+                            Text(
+                              'Requested by: ',
+                              style: TextStyle(
+                                fontSize: fontSettings.fontSize + 2,
+                                fontWeight: fontSettings.fontWeight,
+                                 color: const Color.fromARGB(255, 0, 0, 0),
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                reservation.reqBy,
+                                style: TextStyle(
+                                  fontSize: fontSettings.fontSize + 2,
+                                  fontWeight: fontSettings.fontWeight,
+                                   color: const Color.fromARGB(255, 0, 0, 0),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+
+                        // Approved / Rejected By
+                        if (isApprovedOrRejected)
+                          Row(
+                            children: [
+                              Icon(
+                                reservation.requestStatus == 'Approved'
+                                    ? Icons.check_circle_outline
+                                    : Icons.cancel_outlined,
+                                size: 20,
+                                color: reservation.requestStatus == 'Approved'
+                                    ? Colors.green
+                                    : Colors.red,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${reservation.requestStatus} by: ',
+                                style: TextStyle(
+                                  fontSize: fontSettings.fontSize + 2,
+                                  fontWeight: fontSettings.fontWeight,
+                                   color: const Color.fromARGB(255, 0, 0, 0),
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  reservation.isAppBy ?? 'N/A',
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize + 2,
+                                    fontWeight: fontSettings.fontWeight,
+                                    
+                                    color:
+                                        reservation.requestStatus == 'Approved'
+                                        ? Colors.green[700]
+                                        : Colors.red[700],
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.schedule,
+                              size: 15,
+                              color: Colors.blueGrey,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Requested: ${_formatDateTime(reservation.insertDate)}',
+                              style: TextStyle(
+                                fontSize: fontSettings.fontSize + 2,
+                                color: const Color.fromARGB(255, 0, 0, 0),
+                                fontWeight: fontSettings.fontWeight,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        // Approved or Rejected time
+                        if (isApprovedOrRejected) ...[
+                          const SizedBox(height: 3),
+                          Row(
+                            children: [
+                              Icon(
+                                reservation.requestStatus == 'Approved'
+                                    ? Icons.check_circle_outline
+                                    : Icons.cancel_outlined,
+                                size: 15,
+                                color: reservation.requestStatus == 'Approved'
+                                    ? Colors.green
+                                    : Colors.red,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${reservation.requestStatus}: ${_formatDateTime(reservation.isAppTime)}',
+                                style: TextStyle(
+                                  fontSize: fontSettings.fontSize + 2,
+                                  color: reservation.requestStatus == 'Approved'
+                                      ? Colors.green[700]
+                                      : Colors.red[700],
+                                  fontWeight: fontSettings.fontWeight,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                        const SizedBox(height: 4),
+                        // Status Badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(reservation.requestStatus),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _getStatusIcon(reservation.requestStatus),
+                                size: 16,
+                                color: Colors.black,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                reservation.requestStatus,
+                                style: TextStyle(
+                                  fontSize: fontSettings.fontSize,
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    // Approved/Rejected By section
-                    if (reservation.requestStatus == 'Approved' ||
-                        reservation.requestStatus == 'Rejected')
-                      Row(
-                        children: [
-                          Icon(
-                            reservation.requestStatus == 'Approved'
-                                ? Icons.check_circle_outline
-                                : Icons.cancel_outlined,
-                            size: 20,
-                            color: reservation.requestStatus == 'Approved'
-                                ? Colors.green
-                                : Colors.red,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${reservation.requestStatus} by: ',
-                            style: TextStyle(
-                              fontSize: fontSettings.fontSize,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              reservation.isAppBy ?? 'N/A',
-                              style: TextStyle(
-                                fontSize: fontSettings.fontSize,
-                                color: reservation.requestStatus == 'Approved'
-                                    ? Colors.green[700]
-                                    : Colors.red[700],
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    const SizedBox(height: 8),
-                    // Status badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _getStatusColor(reservation.requestStatus),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _getStatusIcon(reservation.requestStatus),
-                            size: 16,
-                            color: const Color.fromARGB(255, 0, 0, 0),
+                    onTap: () async {
+                      final canAccess = await _canAccessReservationDetails(
+                        reservation,
+                      );
 
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            reservation.requestStatus,
-                            style: TextStyle(
-                              fontSize: fontSettings.fontSize,
-                              color: const Color.fromARGB(255, 0, 0, 0),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                      if (!canAccess) {
+                        if (mounted) {
+                          showDialog(
+                            context: context,
+                            barrierDismissible: true,
+                            builder: (BuildContext context) {
+                              return Dialog(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                elevation: 0,
+                                backgroundColor: Colors.transparent,
+                                child: Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.1),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 5),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 80,
+                                        height: 80,
+                                        decoration: BoxDecoration(
+                                          color: Colors.red.shade50,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.lock_outline,
+                                          size: 50,
+                                          color: Colors.red.shade400,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      const Text(
+                                        "Access Denied",
+                                        style: TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF2C3E50),
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 12),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: ElevatedButton(
+                                          onPressed: () =>
+                                              Navigator.of(context).pop(),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor:
+                                                Constants.kPrimaryColor,
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 14,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            elevation: 0,
+                                          ),
+                                          child: const Text(
+                                            "Got It",
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        }
+                        return;
+                      }
+
+                      ref
+                          .read(selectedReservationProvider.notifier)
+                          .setSelectedReservation(reservation);
+
+                      final result = await context.push(
+                        "/reservations/reservation-view",
+                      );
+                      if (result == true) await _loadReservationData();
+                    },
+                  ),
+                ),
+
+                // Rating image (top-right corner)
+                Positioned(
+                  top: 10,
+                  right: 15,
+                  child: SizedBox(
+                    width: 100,
+                    height: 30,
+                    child: Hero(
+                      tag: "rating-image-${reservation.mid}",
+                      child: Image.asset(
+                        ratingImageMap[reservation.gRating] ??
+                            "assets/images/ratings/CLASSIC.png",
+                        fit: BoxFit.contain,
                       ),
                     ),
-                  ],
+                  ),
                 ),
-                onTap: () async {
-                  // Double check access permission before navigation (extra security layer)
-                  final canAccess = await _canAccessReservationDetails(reservation);
-                  
-                  if (!canAccess) {
-                    if (mounted) {
-                      showDialog(
-                        context: context,
-                        barrierDismissible: true,
-                        builder: (BuildContext context) {
-                          return Dialog(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            elevation: 0,
-                            backgroundColor: Colors.transparent,
-                            child: Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 5),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 80,
-                                    height: 80,
-                                    decoration: BoxDecoration(
-                                      color: Colors.red.shade50,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      Icons.lock_outline,
-                                      size: 50,
-                                      color: Colors.red.shade400,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  const Text(
-                                    "Access Denied",
-                                    style: TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF2C3E50),
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton(
-                                      onPressed: () => Navigator.of(context).pop(),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Constants.kPrimaryColor,
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(vertical: 14),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        elevation: 0,
-                                      ),
-                                      child: const Text(
-                                        "Got It",
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    }
-                    return;
-                  }
-
-                  // Navigate if user has access
-                  ref
-                      .read(selectedReservationProvider.notifier)
-                      .setSelectedReservation(reservation);
-
-                  final result = await context.push(
-                    "/reservations/reservation-view",
-                  );
-
-                  if (result == true) {
-                    await _loadReservationData();
-                  }
-                },
-              ),
-            ),
-            Positioned(
-              top: 10,
-              right: 15,
-              child: Padding(
-                padding: const EdgeInsets.all(0),
-                child: SizedBox(
-                  width: 100,
-                  height: 30,
-                  child: ratingImageMap[reservation.gRating] != null
-                      ? Hero(
-                          tag: "rating-image-${reservation.mid}",
-                          child: Image.asset(
-                            ratingImageMap[reservation.gRating]!,
-                            fit: BoxFit.contain,
-                          ),
-                        )
-                      : Hero(
-                          tag: "rating-image-${reservation.mid}",
-                          child: Image.asset(
-                            "assets/images/ratings/CLASSIC.png",
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         );
-      },
-    );
       },
     );
   }

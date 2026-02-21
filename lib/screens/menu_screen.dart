@@ -17,7 +17,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
   late AnimationController _controller;
   String? _salesCode;
   bool _isLoading = true;
-  
+
   @override
   void initState() {
     super.initState();
@@ -57,10 +57,10 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
     // Watch pending counts
     final countsAsync = ref.watch(pendingCountProvider);
     final hasPendingItems = countsAsync.when(
-      data: (counts) => 
-        counts.reservation > 0 || 
-        counts.otpGift > 0 || 
-        counts.birthdayGift > 0,
+      data: (counts) =>
+          counts.reservation > 0 ||
+          counts.otpGift > 0 ||
+          counts.birthdayGift > 0,
       loading: () => false,
       error: (e, st) => false,
     );
@@ -138,102 +138,102 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
                     ),
                   ],
                 ),
-Row(
-  children: [
-    Expanded(
-      child: GestureDetector(
-        onTap: () {
-          context.go('/reports');
-        },
-        child: const Card(
-          color: Color.fromARGB(255, 4, 158, 143),
-          child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 30),
-            child: Column(
-              children: [
-                Icon(
-                  Icons.edit_document,
-                  size: 60,
-                  color: Colors.white,
-                ),
-                Text(
-                  'Package Guest',
-                  style: TextStyle(
-                    fontSize: 16.0,
-                    fontWeight: FontWeight.normal,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    ),
-    Expanded(
-      child: Stack(
-        children: [
-          GestureDetector(
-            onTap: () {
-              context.go('/menu/approve-reject');
-            },
-            child: Card(
-              color: const Color.fromARGB(255, 201, 185, 8),
-              child: const SizedBox(
-                width: double.infinity,
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 30),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.check,
-                        size: 60,
-                        color: Colors.white,
-                      ),
-                      Text(
-                        'Approve',
-                        style: TextStyle(
-                          fontSize: 16.0,
-                          fontWeight: FontWeight.normal,
-                          color: Colors.white,
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          context.go('/reports');
+                        },
+                        child: const Card(
+                          color: Color.fromARGB(255, 4, 158, 143),
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 30),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.edit_document,
+                                  size: 60,
+                                  color: Colors.white,
+                                ),
+                                Text(
+                                  'Package Guest',
+                                  style: TextStyle(
+                                    fontSize: 16.0,
+                                    fontWeight: FontWeight.normal,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          // Red dot indicator for pending items
-          if (hasPendingItems)
-            Positioned(
-              top: 8,
-              right: 8,
-              child: Container(
-                width: 16,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white,
-                    width: 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
+                    ),
+                    Expanded(
+                      child: Stack(
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              context.go('/menu/approve-reject');
+                            },
+                            child: Card(
+                              color: const Color.fromARGB(255, 201, 185, 8),
+                              child: const SizedBox(
+                                width: double.infinity,
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 30),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        Icons.check,
+                                        size: 60,
+                                        color: Colors.white,
+                                      ),
+                                      Text(
+                                        'Approve',
+                                        style: TextStyle(
+                                          fontSize: 16.0,
+                                          fontWeight: FontWeight.normal,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Red dot indicator for pending items
+                          if (hasPendingItems)
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Container(
+                                width: 16,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.3),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-              ),
-            ),
-        ],
-      ),
-    ),
-  ],
-),
                 Row(
                   children: [
                     Expanded(
@@ -392,9 +392,9 @@ Row(
                     ),
                     Expanded(
                       child: GestureDetector(
-                       onTap: () {
-  context.push('/guest-bookings');
-},
+                        onTap: () {
+                          context.push('/guest-bookings');
+                        },
                         child: const Card(
                           color: Color.fromARGB(174, 134, 132, 16),
                           child: Padding(

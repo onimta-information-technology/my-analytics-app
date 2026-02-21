@@ -7,8 +7,10 @@ import 'package:ballys_reservation_app/components/developer_banner.dart';
 import 'package:ballys_reservation_app/components/localNotificationService.dart';
 import 'package:ballys_reservation_app/data/services/versioncehck_service.dart';
 import 'package:ballys_reservation_app/navigation/app_navigation.dart';
+import 'package:ballys_reservation_app/providers/auth_provider.dart';
 import 'package:ballys_reservation_app/utils/badge_sync_helper.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
+import 'package:ballys_reservation_app/utils/token_refresh_service.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -499,7 +501,9 @@ class _SplashScreenState extends State<SplashScreen> {
           // Mark as logged in
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('is_logged_in', true);
-          
+          final container = ProviderScope.containerOf(context);
+  final authRepo = container.read(authRepositoryProvider);
+  TokenRefreshService().start(authRepo);
           // Check if opened from notification
           if (notificationChatData != null &&
               notificationChatData['chatId'] != '') {

@@ -88,6 +88,16 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
 
     return Scaffold(
       appBar: AppBar(
+         leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+          },
+        ),
         title: const Text('Guest Bookings'),
         actions: [
           IconButton(

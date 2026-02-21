@@ -307,7 +307,7 @@ class GuestDisplayCardSpecialGiftview extends ConsumerWidget {
                                   child: Text(
                                     "M P: ${selectedGuest.gName!}",
                                     style: TextStyle(
-                                      fontSize: fontSettings.fontSize * 0.95,
+                                      fontSize: fontSettings.fontSize +1,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.blue.shade700,
                                     ),
@@ -346,7 +346,7 @@ class GuestDisplayCardSpecialGiftview extends ConsumerWidget {
                                   Text(
                                     "Last Visit On: ${_formatLastVisitDate(selectedGuest?.lastVisitDate)}",
                                     style: TextStyle(
-                                      fontSize: fontSettings.fontSize * 0.85,
+                                      fontSize: fontSettings.fontSize +1,
                                       fontWeight: fontSettings.fontWeight,
                                       color: const Color.fromARGB(255, 0, 0, 0),
                                     ),

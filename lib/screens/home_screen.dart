@@ -346,6 +346,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         ),
                       )
                     : Text(
+                    
                         formatter.format(count),
                         style: const TextStyle(
                           fontSize: 40.0,
@@ -397,8 +398,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return Scaffold(
       appBar: AppBar(
         title: Text(
+         
           userName != null ? 'Welcome, $userName ' : 'Loading...',
-          style: const TextStyle(fontSize: 16),
+          style: const TextStyle(fontSize: 16, fontFamily: 'ABCArizonaFlare'),
         ),
         actions: [
           IconButton(

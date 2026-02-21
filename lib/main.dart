@@ -216,7 +216,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       theme: ThemeData(
         useMaterial3: true,
         primarySwatch: Colors.amber,
-        textTheme: GoogleFonts.poppinsTextTheme(),
+        textTheme: TextTheme(bodyMedium: TextStyle(fontFamily: 'ABCArizonaFlare')),
         bottomNavigationBarTheme: BottomNavigationBarThemeData(
           backgroundColor: customGoldColor,
           elevation: 20.0,

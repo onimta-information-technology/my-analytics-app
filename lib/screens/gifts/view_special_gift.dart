@@ -673,7 +673,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                         strokeWidth: 2, color: Colors.white))
                                 : const Icon(Icons.person_search, size: 25),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 5),
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () {
@@ -705,7 +705,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                               ),
                             ),
                           ),
-                           const SizedBox(width: 10),
+                           const SizedBox(width: 5),
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () {

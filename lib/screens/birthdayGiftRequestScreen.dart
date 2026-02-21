@@ -353,7 +353,7 @@ class _BirthdayGiftRequestScreenState
                         '${gift.mid} - ${gift.mname}',
                         style: TextStyle(
                           color: Colors.black,
-                          fontSize: fontSettings.fontSize,
+                          fontSize: fontSettings.fontSize+1,
                           fontWeight: fontSettings.fontWeight,
                         ),
                       ),
@@ -370,8 +370,8 @@ class _BirthdayGiftRequestScreenState
                                 child: Text(
                                   'Birthday Gift',
                                   style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: fontSettings.fontSize,
+                                    color: Colors.pink,
+                                    fontSize: fontSettings.fontSize+2,
                                     fontWeight: fontSettings.fontWeight,
                                   ),
                                 ),
@@ -391,7 +391,7 @@ class _BirthdayGiftRequestScreenState
                                 _formatDate(gift.insertDate),
                                 style: TextStyle(
                                   color: const Color.fromARGB(255, 2, 2, 2),
-                                  fontSize: fontSettings.fontSize,
+                                  fontSize: fontSettings.fontSize + 2,
                                   fontWeight: fontSettings.fontWeight,
                                 ),
                               ),

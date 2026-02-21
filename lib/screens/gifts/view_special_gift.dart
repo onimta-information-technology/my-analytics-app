@@ -331,13 +331,13 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
   }
 
   TextStyle _inputTextStyle(FontSettings fontSettings) => TextStyle(
-        fontSize: fontSettings.fontSize,
+        fontSize: fontSettings.fontSize+2,
         fontWeight: fontSettings.fontWeight,
       );
 
   TextStyle _inputTextStylefroammount(FontSettings fontSettings) => TextStyle(
         fontSize: fontSettings.fontSize + 5,
-        fontWeight: FontWeight.bold,
+        fontWeight:  fontSettings.fontWeight,
       );
 
   // ─── Valid-days dropdown (editable) ─────────────────────────────────────────
@@ -673,7 +673,39 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                         strokeWidth: 2, color: Colors.white))
                                 : const Icon(Icons.person_search, size: 25),
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                // final memberId =
+                                //     _memberIdController.text.trim();
+                                // if (memberId.isEmpty) {
+                                //   ScaffoldMessenger.of(context).showSnackBar(
+                                //     const SnackBar(
+                                //         content: Text(
+                                //             "Please enter a Member ID")),
+                                //   );
+                                //   return;
+                                // }
+                                // context.push(
+                                //     '/gifts/special-gift-requests/prv-gifts/$memberId');
+                              },
+                              icon: const Icon(Icons.card_giftcard),
+                              label: Text("Pending Gifts",
+                                  style: TextStyle(
+                                      fontSize: fontSettings.fontSize,
+                                      fontWeight: fontSettings.fontWeight)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                            ),
+                          ),
+                           const SizedBox(width: 10),
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () {
@@ -691,12 +723,12 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                     '/gifts/special-gift-requests/prv-gifts/$memberId');
                               },
                               icon: const Icon(Icons.card_giftcard),
-                              label: Text("Previous Gift",
+                              label: Text("Issued Gifts",
                                   style: TextStyle(
                                       fontSize: fontSettings.fontSize,
                                       fontWeight: fontSettings.fontWeight)),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue,
+                                backgroundColor: Colors.green,
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12)),
@@ -779,7 +811,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                       alignment: Alignment.centerLeft,
                                       child: Text(row["Field"].toString(),
                                           style: TextStyle(
-                                              fontSize: fontSettings.fontSize,
+                                              fontSize: fontSettings.fontSize+2,
                                               fontWeight: shouldHighlight
                                                   ? FontWeight.bold
                                                   : fontSettings.fontWeight)),
@@ -789,9 +821,9 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                       child: Text(
                                           formatNumber(row["Value"]),
                                           style: TextStyle(
-                                              fontSize: fontSettings.fontSize,
+                                              fontSize: fontSettings.fontSize+2,
                                               fontWeight: shouldHighlight
-                                                  ? FontWeight.bold
+                                                  ? fontSettings.fontWeight
                                                   : fontSettings.fontWeight,
                                               fontFamily: 'monospace',
                                               fontFeatures: const [
@@ -818,7 +850,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                               decoration: InputDecoration(
                                 labelText: "Arrival Date",
                                 labelStyle: TextStyle(
-                                    fontSize: fontSettings.fontSize,
+                                    fontSize: fontSettings.fontSize+1,
                                     fontWeight: fontSettings.fontWeight),
                                 border: const OutlineInputBorder(),
                                 contentPadding: const EdgeInsets.symmetric(
@@ -881,7 +913,144 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             ),
                             style: _inputTextStyle(fontSettings),
                           ),
+// ── Checked By & Check Date Card ──────────────────────────────────────────
+if (!widget.isPending &&
+    widget.gift != null &&
+    widget.gift!.checkApp != null &&
+    widget.gift!.checkApp!.isNotEmpty) ...[
+  const SizedBox(height: 16),
+  Container(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        colors: [
+          const Color.fromARGB(255, 92, 17, 255).withOpacity(0.08),
+          const Color.fromARGB(255, 92, 17, 255).withOpacity(0.03),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(
+        color: const Color.fromARGB(255, 92, 17, 255).withOpacity(0.4),
+        width: 1.5,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: const Color.fromARGB(255, 92, 17, 255).withOpacity(0.08),
+          blurRadius: 8,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(14.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header ──────────────────────────────────────────────────
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color.fromARGB(255, 92, 17, 255),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.rule_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                "Checked Information",
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize + 2,
+                  fontWeight: FontWeight.bold,
+                  color: const Color.fromARGB(255, 92, 17, 255),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(
+            color: Color.fromARGB(80, 92, 17, 255),
+            height: 1,
+          ),
+          const SizedBox(height: 12),
 
+          // ── Checked By Row ───────────────────────────────────────────
+          Row(
+            children: [
+              const Icon(
+                Icons.person_outline,
+                color: Color.fromARGB(255, 92, 17, 255),
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                "Checked By:",
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize,
+                  fontWeight: fontSettings.fontWeight,
+                   color: Color.fromARGB(255, 0, 0, 0)
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  widget.gift!.checkApp!,
+                  style: TextStyle(
+                    fontSize: fontSettings.fontSize + 1,
+                    fontWeight: FontWeight.bold,
+                    color: const Color.fromARGB(255, 92, 17, 255),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // ── Check Date Row ───────────────────────────────────────────
+          Row(
+            children: [
+              const Icon(
+                Icons.schedule,
+                color: Color.fromARGB(255, 92, 17, 255),
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                "Check Date:",
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize,
+                  fontWeight: fontSettings.fontWeight,
+                  color: Color.fromARGB(255, 0, 0, 0)           ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  widget.gift!.checkAppByTime != null &&
+                          widget.gift!.checkAppByTime!.isNotEmpty
+                      ? _formatDateandTime(widget.gift!.checkAppByTime)
+                      : 'N/A',
+                  style: TextStyle(
+                    fontSize: fontSettings.fontSize,
+                    fontWeight: FontWeight.bold,
+                    color: const Color.fromARGB(255, 92, 17, 255),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  ),
+],
                           // ── Edit toggle: Pending tab ────────────────────────
                           if (widget.isPending)
                             Row(

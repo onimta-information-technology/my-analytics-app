@@ -237,7 +237,7 @@ class GuestDisplayCardSpecialGiftview extends ConsumerWidget {
                                       Text(
                                         "ID: $memberIdText",
                                         style: TextStyle(
-                                          fontSize: fontSettings.fontSize * 0.9,
+                                          fontSize: fontSettings.fontSize,
                                           fontWeight: FontWeight.bold,
                                           color: const Color.fromARGB(255, 0, 0, 0),
                                         ),
@@ -262,7 +262,7 @@ class GuestDisplayCardSpecialGiftview extends ConsumerWidget {
                                         child: Text(
                                           "$memberNameText",
                                           style: TextStyle(
-                                            fontSize: fontSettings.fontSize * 0.9,
+                                            fontSize: fontSettings.fontSize,
                                             fontWeight: FontWeight.bold,
                                             color: const Color.fromARGB(255, 0, 0, 0),
                                           ),

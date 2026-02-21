@@ -348,10 +348,61 @@ class _BirthdayGiftPriceIncreaseScreenState
 
                         const SizedBox(height: 10.0),
 
-                        // Guest Data and Previous Gift Buttons
+                        // ── Profile + Guest Data + Prv Gift buttons ──────────
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
+                            // Profile navigation button (same as ViewSpecificGiftRequest)
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.black,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 14),
+                              ),
+                              onPressed: _isLoading
+                                  ? null
+                                  : () async {
+                                      final selectedGuest =
+                                          ref.read(selectedGuestProvider);
+                                      if (selectedGuest != null &&
+                                          selectedGuest.mid ==
+                                              _memberIdController.text) {
+                                        context.push('/home/profile');
+                                        return;
+                                      }
+                                      try {
+                                        setState(() => _isLoading = true);
+                                        ref
+                                            .read(selectedGuestProvider.notifier)
+                                            .setSelectedGuest(Guest(
+                                              mid: widget.birthday.mid,
+                                              memberName: widget.birthday.mname,
+                                              country: widget.birthday.country,
+                                              lastVisitDate:
+                                                  widget.birthday.lvd
+                                                          ?.toString() ??
+                                                      "",
+                                              age: widget.birthday.age,
+                                              gRating: widget.birthday.gRating,
+                                              mGroup: widget.birthday.mGroup,
+                                              gName: widget.birthday.gName,
+                                            ));
+                                        setState(() => _isLoading = false);
+                                        context.push('/home/profile');
+                                      } catch (e) {
+                                        setState(() => _isLoading = false);
+                                      }
+                                    },
+                              child: _isLoading
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2, color: Colors.white))
+                                  : const Icon(Icons.person_search, size: 25),
+                            ),
+                            const SizedBox(width: 10),
+                            // Guest Data button
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: _areRequiredFieldsFilled
@@ -403,7 +454,8 @@ class _BirthdayGiftPriceIncreaseScreenState
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: 10),
+                            // Prv Gift button
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: _areRequiredFieldsFilled
@@ -808,7 +860,7 @@ class _BirthdayGiftPriceIncreaseScreenState
                               : null,
                         ),
                         const SizedBox(height: 10.0),
-Card(
+                        Card(
                           elevation: 2,
                           color: Colors.green.shade50,
                           child: Padding(
@@ -1024,7 +1076,6 @@ Card(
                     ),
                   ),
                 ),
-              //   const Watermark(),
             ],
           ),
         ),

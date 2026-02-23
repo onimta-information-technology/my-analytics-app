@@ -285,7 +285,7 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'Inserted: ',
+                        'Rquesed at: ',
                         style: TextStyle(
                               color: Color.fromARGB(255, 0, 0, 0),
                           fontSize: fontSettings.fontSize+2,

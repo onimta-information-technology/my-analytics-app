@@ -18,8 +18,8 @@ class BirthdayGiftIncreesNotifier extends StateNotifier<BirthdayGiftIncreesState
         case 98890:
           state = state.copyWith(pendingBirthdayGift: birthdayGiftList);
           break;
-        case 98890:
-          state = state.copyWith(pendingBirthdayGift: birthdayGiftList);
+        case 788790:
+          state = state.copyWith(checkedBirthdayGift: birthdayGiftList);
           break;
         case 98891:
           state = state.copyWith(approvedBirthdayGift: birthdayGiftList);
@@ -33,6 +33,9 @@ class BirthdayGiftIncreesNotifier extends StateNotifier<BirthdayGiftIncreesState
       switch (iid) {
         case 98890:
           state = state.copyWith(pendingBirthdayGift: []);
+          break;
+        case 788790:
+          state = state.copyWith(checkedBirthdayGift: []);
           break;
         case 98891:
           state = state.copyWith(approvedBirthdayGift: []);
@@ -89,7 +92,21 @@ class BirthdayGiftIncreesNotifier extends StateNotifier<BirthdayGiftIncreesState
       userName: userName,
     );
   }
-
+Future<bool> checkBirthdayGiftincreesFromUI({
+    required double reqid,
+    required String remarks,
+    required String amount,
+    required String userName,
+    required String validDates,
+  }) async {
+    return await giftRepository.checkbirthdayGiftPriceIncreesRequest(
+      reqid: reqid,
+      remarks: remarks,
+      amount: amount,
+      userName: userName,
+      validDates: validDates,
+    );
+  }
   void resetData() {
     state = BirthdayGiftIncreesState();
   }
@@ -108,22 +125,26 @@ final giftRepositoryIncreesProvider = Provider((ref) {
 
 class BirthdayGiftIncreesState {
   final List<BirthdayIncressGiftRequest> pendingBirthdayGift;
+  final List<BirthdayIncressGiftRequest> checkedBirthdayGift;
   final List<BirthdayIncressGiftRequest> approvedBirthdayGift;
   final List<BirthdayIncressGiftRequest> rejectBirthdayGift;
 
   BirthdayGiftIncreesState({
     this.pendingBirthdayGift = const [],
+    this.checkedBirthdayGift = const [],
     this.approvedBirthdayGift = const [],
     this.rejectBirthdayGift = const [],
   });
 
   BirthdayGiftIncreesState copyWith({
     List<BirthdayIncressGiftRequest>? pendingBirthdayGift,
+    List<BirthdayIncressGiftRequest>? checkedBirthdayGift,
     List<BirthdayIncressGiftRequest>? approvedBirthdayGift,
     List<BirthdayIncressGiftRequest>? rejectBirthdayGift,
   }) {
     return BirthdayGiftIncreesState(
       pendingBirthdayGift: pendingBirthdayGift ?? this.pendingBirthdayGift,
+      checkedBirthdayGift: checkedBirthdayGift ?? this.checkedBirthdayGift,
       approvedBirthdayGift: approvedBirthdayGift ?? this.approvedBirthdayGift,
       rejectBirthdayGift: rejectBirthdayGift ?? this.rejectBirthdayGift,
     );

@@ -72,8 +72,8 @@ class AppNavigation {
             child: const LoginScreen(),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
-                  return FadeTransition(opacity: animation, child: child);
-                },
+              return FadeTransition(opacity: animation, child: child);
+            },
           );
         },
       ),
@@ -90,19 +90,14 @@ class AppNavigation {
             ),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
-                  return SlideTransition(
-                    position:
-                        Tween<Offset>(
-                          begin: const Offset(1.0, 0.0),
-                          end: Offset.zero,
-                        ).animate(
-                          CurveTween(
-                            curve: Curves.easeInOut,
-                          ).animate(animation),
-                        ),
-                    child: FadeTransition(opacity: animation, child: child),
-                  );
-                },
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1.0, 0.0),
+                  end: Offset.zero,
+                ).animate(CurveTween(curve: Curves.easeInOut).animate(animation)),
+                child: FadeTransition(opacity: animation, child: child),
+              );
+            },
           );
         },
       ),
@@ -117,13 +112,12 @@ class AppNavigation {
               child: const HomeScreen(),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(
-                      opacity: CurveTween(
-                        curve: Curves.easeInOutCirc,
-                      ).animate(animation),
-                      child: child,
-                    );
-                  },
+                return FadeTransition(
+                  opacity: CurveTween(curve: Curves.easeInOutCirc)
+                      .animate(animation),
+                  child: child,
+                );
+              },
             ),
             routes: [
               GoRoute(
@@ -135,13 +129,12 @@ class AppNavigation {
                     child: const ProfileScreen(),
                     transitionsBuilder:
                         (context, animation, secondaryAnimation, child) {
-                          return FadeTransition(
-                            opacity: CurveTween(
-                              curve: Curves.easeInOutCirc,
-                            ).animate(animation),
-                            child: child,
-                          );
-                        },
+                      return FadeTransition(
+                        opacity: CurveTween(curve: Curves.easeInOutCirc)
+                            .animate(animation),
+                        child: child,
+                      );
+                    },
                   );
                 },
                 routes: [
@@ -158,13 +151,12 @@ class AppNavigation {
                         ),
                         transitionsBuilder:
                             (context, animation, secondaryAnimation, child) {
-                              return FadeTransition(
-                                opacity: CurveTween(
-                                  curve: Curves.easeInOutCirc,
-                                ).animate(animation),
-                                child: child,
-                              );
-                            },
+                          return FadeTransition(
+                            opacity: CurveTween(curve: Curves.easeInOutCirc)
+                                .animate(animation),
+                            child: child,
+                          );
+                        },
                       );
                     },
                   ),
@@ -181,13 +173,12 @@ class AppNavigation {
                         ),
                         transitionsBuilder:
                             (context, animation, secondaryAnimation, child) {
-                              return FadeTransition(
-                                opacity: CurveTween(
-                                  curve: Curves.easeInOutCirc,
-                                ).animate(animation),
-                                child: child,
-                              );
-                            },
+                          return FadeTransition(
+                            opacity: CurveTween(curve: Curves.easeInOutCirc)
+                                .animate(animation),
+                            child: child,
+                          );
+                        },
                       );
                     },
                   ),
@@ -204,13 +195,12 @@ class AppNavigation {
                         ),
                         transitionsBuilder:
                             (context, animation, secondaryAnimation, child) {
-                              return FadeTransition(
-                                opacity: CurveTween(
-                                  curve: Curves.easeInOutCirc,
-                                ).animate(animation),
-                                child: child,
-                              );
-                            },
+                          return FadeTransition(
+                            opacity: CurveTween(curve: Curves.easeInOutCirc)
+                                .animate(animation),
+                            child: child,
+                          );
+                        },
                       );
                     },
                   ),
@@ -224,20 +214,18 @@ class AppNavigation {
                   final String title = data['title'] as String;
                   final List<Guest> guestList =
                       data['guestList'] as List<Guest>;
-
                   return CustomTransitionPage(
                     fullscreenDialog: false,
                     key: state.pageKey,
                     child: MemberVisits(title: title, guestList: guestList),
                     transitionsBuilder:
                         (context, animation, secondaryAnimation, child) {
-                          return FadeTransition(
-                            opacity: CurveTween(
-                              curve: Curves.easeInOutCirc,
-                            ).animate(animation),
-                            child: child,
-                          );
-                        },
+                      return FadeTransition(
+                        opacity: CurveTween(curve: Curves.easeInOutCirc)
+                            .animate(animation),
+                        child: child,
+                      );
+                    },
                   );
                 },
                 routes: const [],
@@ -250,7 +238,6 @@ class AppNavigation {
                   final String title = data['title'] as String;
                   final Map<String, List<Guest>> salesPersons =
                       data['salesPersons'] as Map<String, List<Guest>>;
-
                   return CustomTransitionPage(
                     fullscreenDialog: false,
                     key: state.pageKey,
@@ -260,13 +247,12 @@ class AppNavigation {
                     ),
                     transitionsBuilder:
                         (context, animation, secondaryAnimation, child) {
-                          return FadeTransition(
-                            opacity: CurveTween(
-                              curve: Curves.easeInOutCirc,
-                            ).animate(animation),
-                            child: child,
-                          );
-                        },
+                      return FadeTransition(
+                        opacity: CurveTween(curve: Curves.easeInOutCirc)
+                            .animate(animation),
+                        child: child,
+                      );
+                    },
                   );
                 },
                 routes: const [],
@@ -281,13 +267,12 @@ class AppNavigation {
               child: const ReservationScreen(),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(
-                      opacity: CurveTween(
-                        curve: Curves.easeInOutCirc,
-                      ).animate(animation),
-                      child: child,
-                    );
-                  },
+                return FadeTransition(
+                  opacity: CurveTween(curve: Curves.easeInOutCirc)
+                      .animate(animation),
+                  child: child,
+                );
+              },
             ),
             routes: [
               GoRoute(
@@ -299,36 +284,15 @@ class AppNavigation {
                     child: const NewReservationScreen(),
                     transitionsBuilder:
                         (context, animation, secondaryAnimation, child) {
-                          return FadeTransition(
-                            opacity: CurveTween(
-                              curve: Curves.easeInOutCirc,
-                            ).animate(animation),
-                            child: child,
-                          );
-                        },
+                      return FadeTransition(
+                        opacity: CurveTween(curve: Curves.easeInOutCirc)
+                            .animate(animation),
+                        child: child,
+                      );
+                    },
                   );
                 },
                 routes: [
-                  //   GoRoute(
-                  //     path: 'hotel-selection',
-                  //     pageBuilder: (context, state) {
-                  //       return CustomTransitionPage(
-                  //         fullscreenDialog: false,
-                  //         key: state.pageKey,
-                  //         child: HotelAndRoomSelectionScreen(
-                  //             RoomCategoryRepository(
-                  //                 ApiService(const FlutterSecureStorage()))),
-                  //         transitionsBuilder:
-                  //             (context, animation, secondaryAnimation, child) {
-                  //           return FadeTransition(
-                  //             opacity: CurveTween(curve: Curves.easeInOutCirc)
-                  //                 .animate(animation),
-                  //             child: child,
-                  //           );
-                  //         },
-                  //       );
-                  //     },
-                  //   ),
                   GoRoute(
                     path: 'air-tickets-selection',
                     pageBuilder: (context, state) {
@@ -341,20 +305,18 @@ class AppNavigation {
                         key: state.pageKey,
                         child: AirTicketsSelectionScreen(
                           AirportRepository(
-                            ApiService(const FlutterSecureStorage()),
-                          ),
+                              ApiService(const FlutterSecureStorage())),
                           arrivalDate: arrivalDate,
                           departureDate: departureDate,
                         ),
                         transitionsBuilder:
                             (context, animation, secondaryAnimation, child) {
-                              return FadeTransition(
-                                opacity: CurveTween(
-                                  curve: Curves.easeInOutCirc,
-                                ).animate(animation),
-                                child: child,
-                              );
-                            },
+                          return FadeTransition(
+                            opacity: CurveTween(curve: Curves.easeInOutCirc)
+                                .animate(animation),
+                            child: child,
+                          );
+                        },
                       );
                     },
                   ),
@@ -369,53 +331,17 @@ class AppNavigation {
                     child: const ReservationViewScreen(),
                     transitionsBuilder:
                         (context, animation, secondaryAnimation, child) {
-                          return FadeTransition(
-                            opacity: CurveTween(
-                              curve: Curves.easeInOutCirc,
-                            ).animate(animation),
-                            child: child,
-                          );
-                        },
+                      return FadeTransition(
+                        opacity: CurveTween(curve: Curves.easeInOutCirc)
+                            .animate(animation),
+                        child: child,
+                      );
+                    },
                   );
                 },
               ),
-              // GoRoute(
-              //   path: 'reservation-edit',
-              //   pageBuilder: (context, state) {
-              //     return CustomTransitionPage(
-              //       fullscreenDialog: false,
-              //       key: state.pageKey,
-              //       child: const ReservationEditScreen(),
-              //       transitionsBuilder:
-              //           (context, animation, secondaryAnimation, child) {
-              //         return FadeTransition(
-              //           opacity: CurveTween(curve: Curves.easeInOutCirc)
-              //               .animate(animation),
-              //           child: child,
-              //         );
-              //       },
-              //     );
-              //   },
-              // ),
             ],
           ),
-          // GoRoute(
-          //   path: '/chats',
-          //   pageBuilder: (context, state) => CustomTransitionPage(
-          //     fullscreenDialog: true,
-          //     key: state.pageKey,
-          //     child: const ChatScreen(),
-          //     transitionsBuilder:
-          //         (context, animation, secondaryAnimation, child) {
-          //           return FadeTransition(
-          //             opacity: CurveTween(
-          //               curve: Curves.easeInOutCirc,
-          //             ).animate(animation),
-          //             child: child,
-          //           );
-          //         },
-          //   ),
-          // ),
           GoRoute(
             path: '/support',
             pageBuilder: (context, state) => CustomTransitionPage(
@@ -424,13 +350,12 @@ class AppNavigation {
               child: const SupportScreen(),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(
-                      opacity: CurveTween(
-                        curve: Curves.easeInOutCirc,
-                      ).animate(animation),
-                      child: child,
-                    );
-                  },
+                return FadeTransition(
+                  opacity: CurveTween(curve: Curves.easeInOutCirc)
+                      .animate(animation),
+                  child: child,
+                );
+              },
             ),
           ),
           GoRoute(
@@ -441,36 +366,14 @@ class AppNavigation {
               child: const SettingsScreen(),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(
-                      opacity: CurveTween(
-                        curve: Curves.easeInOutCirc,
-                      ).animate(animation),
-                      child: child,
-                    );
-                  },
+                return FadeTransition(
+                  opacity: CurveTween(curve: Curves.easeInOutCirc)
+                      .animate(animation),
+                  child: child,
+                );
+              },
             ),
           ),
-          // GoRoute(
-          //   path: '/settings',
-          //   builder: (context, state) => const SettingsPopupMenu(),
-          // ),
-          // GoRoute(
-          //   path: '/birthdays',
-          //   pageBuilder: (context, state) => CustomTransitionPage(
-          //     fullscreenDialog: true,
-          //     key: state.pageKey,
-          //     child: const BirthdayScreen(),
-          //     transitionsBuilder:
-          //         (context, animation, secondaryAnimation, child) {
-          //           return FadeTransition(
-          //             opacity: CurveTween(
-          //               curve: Curves.easeInOutCirc,
-          //             ).animate(animation),
-          //             child: child,
-          //           );
-          //         },
-          //   ),
-          // ),
           GoRoute(
             path: '/birthdays',
             pageBuilder: (context, state) => CustomTransitionPage(
@@ -483,16 +386,14 @@ class AppNavigation {
               ),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(
-                      opacity: CurveTween(
-                        curve: Curves.easeInOutCirc,
-                      ).animate(animation),
-                      child: child,
-                    );
-                  },
+                return FadeTransition(
+                  opacity: CurveTween(curve: Curves.easeInOutCirc)
+                      .animate(animation),
+                  child: child,
+                );
+              },
             ),
             routes: [
-              // Add this nested route for birthday gift price increase
               GoRoute(
                 path: 'gift-price-increase',
                 pageBuilder: (context, state) {
@@ -508,13 +409,12 @@ class AppNavigation {
                     ),
                     transitionsBuilder:
                         (context, animation, secondaryAnimation, child) {
-                          return FadeTransition(
-                            opacity: CurveTween(
-                              curve: Curves.easeInOutCirc,
-                            ).animate(animation),
-                            child: child,
-                          );
-                        },
+                      return FadeTransition(
+                        opacity: CurveTween(curve: Curves.easeInOutCirc)
+                            .animate(animation),
+                        child: child,
+                      );
+                    },
                   );
                 },
               ),
@@ -532,13 +432,12 @@ class AppNavigation {
               ),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(
-                      opacity: CurveTween(
-                        curve: Curves.easeInOutCirc,
-                      ).animate(animation),
-                      child: child,
-                    );
-                  },
+                return FadeTransition(
+                  opacity: CurveTween(curve: Curves.easeInOutCirc)
+                      .animate(animation),
+                  child: child,
+                );
+              },
             ),
           ),
           GoRoute(
@@ -553,13 +452,12 @@ class AppNavigation {
               ),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(
-                      opacity: CurveTween(
-                        curve: Curves.easeInOutCirc,
-                      ).animate(animation),
-                      child: child,
-                    );
-                  },
+                return FadeTransition(
+                  opacity: CurveTween(curve: Curves.easeInOutCirc)
+                      .animate(animation),
+                  child: child,
+                );
+              },
             ),
             routes: [
               GoRoute(
@@ -574,13 +472,12 @@ class AppNavigation {
                   ),
                   transitionsBuilder:
                       (context, animation, secondaryAnimation, child) {
-                        return FadeTransition(
-                          opacity: CurveTween(
-                            curve: Curves.easeInOutCirc,
-                          ).animate(animation),
-                          child: child,
-                        );
-                      },
+                    return FadeTransition(
+                      opacity: CurveTween(curve: Curves.easeInOutCirc)
+                          .animate(animation),
+                      child: child,
+                    );
+                  },
                 ),
                 routes: [
                   GoRoute(
@@ -598,13 +495,12 @@ class AppNavigation {
                         ),
                         transitionsBuilder:
                             (context, animation, secondaryAnimation, child) {
-                              return FadeTransition(
-                                opacity: CurveTween(
-                                  curve: Curves.easeInOutCirc,
-                                ).animate(animation),
-                                child: child,
-                              );
-                            },
+                          return FadeTransition(
+                            opacity: CurveTween(curve: Curves.easeInOutCirc)
+                                .animate(animation),
+                            child: child,
+                          );
+                        },
                       );
                     },
                   ),
@@ -622,13 +518,12 @@ class AppNavigation {
                   ),
                   transitionsBuilder:
                       (context, animation, secondaryAnimation, child) {
-                        return FadeTransition(
-                          opacity: CurveTween(
-                            curve: Curves.easeInOutCirc,
-                          ).animate(animation),
-                          child: child,
-                        );
-                      },
+                    return FadeTransition(
+                      opacity: CurveTween(curve: Curves.easeInOutCirc)
+                          .animate(animation),
+                      child: child,
+                    );
+                  },
                 ),
                 routes: [
                   GoRoute(
@@ -643,13 +538,12 @@ class AppNavigation {
                       ),
                       transitionsBuilder:
                           (context, animation, secondaryAnimation, child) {
-                            return FadeTransition(
-                              opacity: CurveTween(
-                                curve: Curves.easeInOutCirc,
-                              ).animate(animation),
-                              child: child,
-                            );
-                          },
+                        return FadeTransition(
+                          opacity: CurveTween(curve: Curves.easeInOutCirc)
+                              .animate(animation),
+                          child: child,
+                        );
+                      },
                     ),
                   ),
                   GoRoute(
@@ -667,48 +561,25 @@ class AppNavigation {
                         ),
                         transitionsBuilder:
                             (context, animation, secondaryAnimation, child) {
-                              return FadeTransition(
-                                opacity: CurvedAnimation(
-                                  parent: animation,
-                                  curve: Curves.easeInOutCirc,
-                                ),
-                                child: child,
-                              );
-                            },
+                          return FadeTransition(
+                            opacity: CurvedAnimation(
+                              parent: animation,
+                              curve: Curves.easeInOutCirc,
+                            ),
+                            child: child,
+                          );
+                        },
                       );
                     },
                   ),
-                  // GoRoute(
-                  //   path: 'view-specific-gift-request',
-                  //   pageBuilder: (context, state) => CustomTransitionPage(
-                  //     fullscreenDialog: false,
-                  //     key: state.pageKey,
-                  //     child: ViewSpecificGiftRequest(
-                  //       giftsRepository: GiftsRepository(
-                  //         ApiService(const FlutterSecureStorage()),
-                  //       ),
-                  //     ),
-                  //     transitionsBuilder:
-                  //         (context, animation, secondaryAnimation, child) {
-                  //           return FadeTransition(
-                  //             opacity: CurveTween(
-                  //               curve: Curves.easeInOutCirc,
-                  //             ).animate(animation),
-                  //             child: child,
-                  //           );
-                  //         },
-                  //   ),
-                  // ),
                   GoRoute(
                     path: 'view-specific-gift-request',
                     builder: (context, state) {
-                      // Expecting state.extra to be a Map<String, dynamic>
                       final extra = state.extra as Map<String, dynamic>? ?? {};
                       final gift = extra['gift'] as SpecialGiftRequest?;
-                      final isPending =
-                          extra['isPending'] as bool? ?? false; // ✅ read flag
+                      final isPending = extra['isPending'] as bool? ?? false;
                       final isApproved = extra['isApproved'] as bool? ?? false;
-                        final isChecked = extra['isChecked'] as bool? ?? false; 
+                      final isChecked = extra['isChecked'] as bool? ?? false;
                       return ViewSpecificGiftRequest(
                         giftsRepository: GiftsRepository(
                           ApiService(const FlutterSecureStorage()),
@@ -724,7 +595,6 @@ class AppNavigation {
               ),
             ],
           ),
-
           GoRoute(
             path: '/members',
             pageBuilder: (context, state) => CustomTransitionPage(
@@ -737,13 +607,12 @@ class AppNavigation {
               ),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(
-                      opacity: CurveTween(
-                        curve: Curves.easeInOutCirc,
-                      ).animate(animation),
-                      child: child,
-                    );
-                  },
+                return FadeTransition(
+                  opacity: CurveTween(curve: Curves.easeInOutCirc)
+                      .animate(animation),
+                  child: child,
+                );
+              },
             ),
           ),
           GoRoute(
@@ -754,13 +623,12 @@ class AppNavigation {
               child: const DailyWalkingGuestScreen(),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(
-                      opacity: CurveTween(
-                        curve: Curves.easeInOutCirc,
-                      ).animate(animation),
-                      child: child,
-                    );
-                  },
+                return FadeTransition(
+                  opacity: CurveTween(curve: Curves.easeInOutCirc)
+                      .animate(animation),
+                  child: child,
+                );
+              },
             ),
           ),
           GoRoute(
@@ -768,43 +636,44 @@ class AppNavigation {
             builder: (context, state) => const ReportsScreen(),
           ),
           GoRoute(
-  path: '/guest-bookings',
-  pageBuilder: (context, state) => CustomTransitionPage(
-    fullscreenDialog: true,
-    key: state.pageKey,
-    child: GuestBookingScreen(
-      bookingRepository: GuestBookingRepository(
-        ApiService(const FlutterSecureStorage()),
-      ),
-    ),
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      return FadeTransition(
-        opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
-        child: child,
-      );
-    },
-  ),
-  routes: [
-    GoRoute(
-      path: 'view-booking',
-      builder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>? ?? {};
-        final booking = extra['booking'] as GuestBooking?;
-        final isPending = extra['isPending'] as bool? ?? false;
-        return ViewGuestBooking(
-          bookingRepository: GuestBookingRepository(
-            ApiService(const FlutterSecureStorage()),
+            path: '/guest-bookings',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              fullscreenDialog: true,
+              key: state.pageKey,
+              child: GuestBookingScreen(
+                bookingRepository: GuestBookingRepository(
+                  ApiService(const FlutterSecureStorage()),
+                ),
+              ),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                return FadeTransition(
+                  opacity: CurveTween(curve: Curves.easeInOutCirc)
+                      .animate(animation),
+                  child: child,
+                );
+              },
+            ),
+            routes: [
+              GoRoute(
+                path: 'view-booking',
+                builder: (context, state) {
+                  final extra = state.extra as Map<String, dynamic>? ?? {};
+                  final booking = extra['booking'] as GuestBooking?;
+                  final isPending = extra['isPending'] as bool? ?? false;
+                  return ViewGuestBooking(
+                    bookingRepository: GuestBookingRepository(
+                      ApiService(const FlutterSecureStorage()),
+                    ),
+                    booking: booking,
+                    isPending: isPending,
+                  );
+                },
+              ),
+            ],
           ),
-          booking: booking,
-          isPending: isPending,
-        );
-      },
-    ),
-  ],
-),
         ],
       ),
-      // GoRoute(path: '/menu', builder: (context, state) => const MenuScreen()),
       GoRoute(
         path: '/menu',
         pageBuilder: (context, state) => CustomTransitionPage(
@@ -813,73 +682,49 @@ class AppNavigation {
           child: const MenuScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(
-              opacity: CurveTween(
-                curve: Curves.easeInOutCirc,
-              ).animate(animation),
+              opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
               child: child,
             );
           },
         ),
         routes: [
-          // GoRoute(
-          //   path: 'chats',
-          //   pageBuilder: (context, state) => CustomTransitionPage(
-          //     fullscreenDialog: false,
-          //     key: state.pageKey,
-          //     child: const ChatScreen(),
-          //     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          //       return FadeTransition(
-          //         opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
-          //         child: child,
-          //       );
-          //     },
-          //   ),
-          // ),
           GoRoute(
             path: 'chats',
             pageBuilder: (context, state) {
-              // Extract notification data from state.extra
               final notificationData = state.extra as Map<String, dynamic>?;
-
               return CustomTransitionPage(
                 fullscreenDialog: false,
                 key: state.pageKey,
-                child: ChatScreen(
-                  notificationData: notificationData,
-                ), // Pass notification data
+                child: ChatScreen(notificationData: notificationData),
                 transitionsBuilder:
                     (context, animation, secondaryAnimation, child) {
-                      return FadeTransition(
-                        opacity: CurveTween(
-                          curve: Curves.easeInOutCirc,
-                        ).animate(animation),
-                        child: child,
-                      );
-                    },
+                  return FadeTransition(
+                    opacity: CurveTween(curve: Curves.easeInOutCirc)
+                        .animate(animation),
+                    child: child,
+                  );
+                },
               );
             },
           ),
           GoRoute(
-            path:
-                'approve-reject', // ✅ Changed from '/approve-reject' to 'approve-reject'
+            path: 'approve-reject',
             builder: (context, state) => const ApproveScreen(),
             routes: [
               GoRoute(
-                path:
-                    '/reservations', // ✅ Changed from '/reservations' to 'reservations'
+                path: '/reservations',
                 pageBuilder: (context, state) => CustomTransitionPage(
                   fullscreenDialog: true,
                   key: state.pageKey,
                   child: const ReservationScreen(hideAddButton: true),
                   transitionsBuilder:
                       (context, animation, secondaryAnimation, child) {
-                        return FadeTransition(
-                          opacity: CurveTween(
-                            curve: Curves.easeInOutCirc,
-                          ).animate(animation),
-                          child: child,
-                        );
-                      },
+                    return FadeTransition(
+                      opacity: CurveTween(curve: Curves.easeInOutCirc)
+                          .animate(animation),
+                      child: child,
+                    );
+                  },
                 ),
                 routes: [
                   GoRoute(
@@ -891,13 +736,12 @@ class AppNavigation {
                         child: const NewReservationScreen(),
                         transitionsBuilder:
                             (context, animation, secondaryAnimation, child) {
-                              return FadeTransition(
-                                opacity: CurveTween(
-                                  curve: Curves.easeInOutCirc,
-                                ).animate(animation),
-                                child: child,
-                              );
-                            },
+                          return FadeTransition(
+                            opacity: CurveTween(curve: Curves.easeInOutCirc)
+                                .animate(animation),
+                            child: child,
+                          );
+                        },
                       );
                     },
                     routes: [
@@ -913,25 +757,19 @@ class AppNavigation {
                             key: state.pageKey,
                             child: AirTicketsSelectionScreen(
                               AirportRepository(
-                                ApiService(const FlutterSecureStorage()),
-                              ),
+                                  ApiService(const FlutterSecureStorage())),
                               arrivalDate: arrivalDate,
                               departureDate: departureDate,
                             ),
-                            transitionsBuilder:
-                                (
-                                  context,
-                                  animation,
-                                  secondaryAnimation,
-                                  child,
-                                ) {
-                                  return FadeTransition(
-                                    opacity: CurveTween(
-                                      curve: Curves.easeInOutCirc,
-                                    ).animate(animation),
-                                    child: child,
-                                  );
-                                },
+                            transitionsBuilder: (context, animation,
+                                secondaryAnimation, child) {
+                              return FadeTransition(
+                                opacity:
+                                    CurveTween(curve: Curves.easeInOutCirc)
+                                        .animate(animation),
+                                child: child,
+                              );
+                            },
                           );
                         },
                       ),
@@ -946,13 +784,12 @@ class AppNavigation {
                         child: const ReservationViewScreen(),
                         transitionsBuilder:
                             (context, animation, secondaryAnimation, child) {
-                              return FadeTransition(
-                                opacity: CurveTween(
-                                  curve: Curves.easeInOutCirc,
-                                ).animate(animation),
-                                child: child,
-                              );
-                            },
+                          return FadeTransition(
+                            opacity: CurveTween(curve: Curves.easeInOutCirc)
+                                .animate(animation),
+                            child: child,
+                          );
+                        },
                       );
                     },
                   ),
@@ -971,13 +808,12 @@ class AppNavigation {
                   ),
                   transitionsBuilder:
                       (context, animation, secondaryAnimation, child) {
-                        return FadeTransition(
-                          opacity: CurveTween(
-                            curve: Curves.easeInOutCirc,
-                          ).animate(animation),
-                          child: child,
-                        );
-                      },
+                    return FadeTransition(
+                      opacity: CurveTween(curve: Curves.easeInOutCirc)
+                          .animate(animation),
+                      child: child,
+                    );
+                  },
                 ),
                 routes: [
                   GoRoute(
@@ -992,13 +828,12 @@ class AppNavigation {
                       ),
                       transitionsBuilder:
                           (context, animation, secondaryAnimation, child) {
-                            return FadeTransition(
-                              opacity: CurveTween(
-                                curve: Curves.easeInOutCirc,
-                              ).animate(animation),
-                              child: child,
-                            );
-                          },
+                        return FadeTransition(
+                          opacity: CurveTween(curve: Curves.easeInOutCirc)
+                              .animate(animation),
+                          child: child,
+                        );
+                      },
                     ),
                   ),
                   GoRoute(
@@ -1016,48 +851,25 @@ class AppNavigation {
                         ),
                         transitionsBuilder:
                             (context, animation, secondaryAnimation, child) {
-                              return FadeTransition(
-                                opacity: CurvedAnimation(
-                                  parent: animation,
-                                  curve: Curves.easeInOutCirc,
-                                ),
-                                child: child,
-                              );
-                            },
+                          return FadeTransition(
+                            opacity: CurvedAnimation(
+                              parent: animation,
+                              curve: Curves.easeInOutCirc,
+                            ),
+                            child: child,
+                          );
+                        },
                       );
                     },
                   ),
-                  // GoRoute(
-                  //   path: 'view-specific-gift-request',
-                  //   pageBuilder: (context, state) => CustomTransitionPage(
-                  //     fullscreenDialog: false,
-                  //     key: state.pageKey,
-                  //     child: ViewSpecificGiftRequest(
-                  //       giftsRepository: GiftsRepository(
-                  //         ApiService(const FlutterSecureStorage()),
-                  //       ),
-                  //     ),
-                  //     transitionsBuilder:
-                  //         (context, animation, secondaryAnimation, child) {
-                  //           return FadeTransition(
-                  //             opacity: CurveTween(
-                  //               curve: Curves.easeInOutCirc,
-                  //             ).animate(animation),
-                  //             child: child,
-                  //           );
-                  //         },
-                  //   ),
-                  // ),
                   GoRoute(
                     path: 'view-specific-gift-request',
                     builder: (context, state) {
-                      // Expecting state.extra to be a Map<String, dynamic>
                       final extra = state.extra as Map<String, dynamic>? ?? {};
                       final gift = extra['gift'] as SpecialGiftRequest?;
-                      final isPending =
-                          extra['isPending'] as bool? ?? false; // 
+                      final isPending = extra['isPending'] as bool? ?? false;
                       final isApproved = extra['isApproved'] as bool? ?? false;
-                        final isChecked = extra['isChecked'] as bool? ?? false; 
+                      final isChecked = extra['isChecked'] as bool? ?? false;
                       return ViewSpecificGiftRequest(
                         giftsRepository: GiftsRepository(
                           ApiService(const FlutterSecureStorage()),
@@ -1084,22 +896,25 @@ class AppNavigation {
                   ),
                   transitionsBuilder:
                       (context, animation, secondaryAnimation, child) {
-                        return FadeTransition(
-                          opacity: CurveTween(
-                            curve: Curves.easeInOutCirc,
-                          ).animate(animation),
-                          child: child,
-                        );
-                      },
+                    return FadeTransition(
+                      opacity: CurveTween(curve: Curves.easeInOutCirc)
+                          .animate(animation),
+                      child: child,
+                    );
+                  },
                 ),
                 routes: [
+                  // ── View Birthday Gift Request ─────────────────────────────
+                  // Now passes isChecked so the detail screen knows which tab
+                  // opened it and renders the correct buttons.
                   GoRoute(
                     path: 'view-birthday-gift-request',
                     builder: (context, state) {
                       final extra = state.extra as Map<String, dynamic>? ?? {};
                       final gift = extra['gift'] as BirthdayIncressGiftRequest?;
-                      final isPending = extra['isPending'] as bool? ?? false;
+                      final isPending  = extra['isPending']  as bool? ?? false;
                       final isApproved = extra['isApproved'] as bool? ?? false;
+                      final isChecked  = extra['isChecked']  as bool? ?? false; // ← fixed
                       return ViewBirthdayGiftRequest(
                         giftsRepository: GiftsRepository(
                           ApiService(const FlutterSecureStorage()),
@@ -1107,61 +922,42 @@ class AppNavigation {
                         gift: gift,
                         isPending: isPending,
                         isApproved: isApproved,
+                        isChecked: isChecked, // ← passed through
                       );
                     },
                   ),
                   GoRoute(
-  path: 'prv-gifts/:mid',
-  pageBuilder: (context, state) {
-    final String mid = state.pathParameters['mid']!;
-    return CustomTransitionPage(
-      fullscreenDialog: false,
-      key: state.pageKey,
-      child: PrvGiftScreen(
-        memberId: mid,
-        giftsRepository: GiftsRepository(
-          ApiService(const FlutterSecureStorage()),
-        ),
-      ),
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity: CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeInOutCirc,
-          ),
-          child: child,
-        );
-      },
-    );
-  },
-),
-
-
+                    path: 'prv-gifts/:mid',
+                    pageBuilder: (context, state) {
+                      final String mid = state.pathParameters['mid']!;
+                      return CustomTransitionPage(
+                        fullscreenDialog: false,
+                        key: state.pageKey,
+                        child: PrvGiftScreen(
+                          memberId: mid,
+                          giftsRepository: GiftsRepository(
+                            ApiService(const FlutterSecureStorage()),
+                          ),
+                        ),
+                        transitionsBuilder:
+                            (context, animation, secondaryAnimation, child) {
+                          return FadeTransition(
+                            opacity: CurvedAnimation(
+                              parent: animation,
+                              curve: Curves.easeInOutCirc,
+                            ),
+                            child: child,
+                          );
+                        },
+                      );
+                    },
+                  ),
                 ],
               ),
             ],
           ),
         ],
       ),
-
-      // GoRoute(
-      //   path: '/menu',
-      //   pageBuilder: (context, state) => CustomTransitionPage(
-      //     transitionDuration: const Duration(milliseconds: 400),
-      //     fullscreenDialog: true,
-      //     key: state.pageKey,
-      //     child: const MenuScreen(),
-      //     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      //       return SlideTransition(
-      //         position: Tween<Offset>(
-      //           begin: const Offset(-1.0, 0.0),
-      //           end: const Offset(0.0, 0.0),
-      //         ).animate(animation),
-      //         child: child,
-      //       );
-      //     },
-      //   ),
-      // ),
     ],
   );
 }

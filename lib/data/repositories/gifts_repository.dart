@@ -76,6 +76,7 @@ class GiftsRepository {
   }
 
   Future<List<GuestGift>> getGuestGifts(String mid) async {
+    print('getGuestGifts called with mid: $mid');
     final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
@@ -1055,6 +1056,7 @@ class GiftsRepository {
   ///birthday gift price increase request end
   // Add these methods to your existing GiftsRepository class
  Future<List<BirthdayIncressGiftRequest>> getBirthdayIncressGift(int iid, String text1) async {
+  print('getBirthdayIncressGift called with iid: $iid, text1: $text1');
     final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",

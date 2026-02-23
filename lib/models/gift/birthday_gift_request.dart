@@ -61,6 +61,9 @@ class BirthdayIncressGiftRequest {
   final String? descApp;
   final String? prvGiftAmount;
   final String? validDates;
+    final bool checkBy;
+  final String? checkApp;
+  final String? checkAppByTime;
   BirthdayIncressGiftRequest({
     required this.idNo,
     required this.mid,
@@ -124,6 +127,9 @@ class BirthdayIncressGiftRequest {
     this.descApp,
      this.validDates,
      this.prvGiftAmount,
+     required this.checkBy,
+    this.checkApp,
+    this.checkAppByTime,
   });
 
   factory BirthdayIncressGiftRequest.fromJson(Map<String, dynamic> json) {
@@ -196,6 +202,9 @@ class BirthdayIncressGiftRequest {
       descApp: json['Gift_Desc_App'],
       prvGiftAmount: json['Priv_Gift_Amt'],
        validDates: parseValidDates(json['VDate']),
+           checkBy: json['Check_By'] == true || json['Check_By'] == 1,
+      checkApp: json['Check_App']?.toString(),
+      checkAppByTime: json['Check_AppBy_Time']?.toString(),
     );
   }
 
@@ -263,6 +272,9 @@ class BirthdayIncressGiftRequest {
       'Gift_Desc_App': descApp,
       'Priv_Gift_Amt': prvGiftAmount,
       'VDate': validDates,
+      'Check_By': checkBy,
+      'Check_App': checkApp,
+      'Check_AppBy_Time': checkAppByTime,
     };
   }
 }

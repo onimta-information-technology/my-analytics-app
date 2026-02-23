@@ -62,7 +62,6 @@ class SpecialGiftRequest {
   final String? validDates;
   final bool checkBy;
   final String? checkApp;
-
   final String? checkAppByTime;
   SpecialGiftRequest({
     required this.idNo,
@@ -128,7 +127,6 @@ class SpecialGiftRequest {
     this.validDates,
     required this.checkBy,
     this.checkApp,
-
     this.checkAppByTime,
   });
 

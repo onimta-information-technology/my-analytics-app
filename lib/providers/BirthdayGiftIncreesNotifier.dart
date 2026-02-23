@@ -18,6 +18,9 @@ class BirthdayGiftIncreesNotifier extends StateNotifier<BirthdayGiftIncreesState
         case 98890:
           state = state.copyWith(pendingBirthdayGift: birthdayGiftList);
           break;
+        case 98890:
+          state = state.copyWith(pendingBirthdayGift: birthdayGiftList);
+          break;
         case 98891:
           state = state.copyWith(approvedBirthdayGift: birthdayGiftList);
           break;

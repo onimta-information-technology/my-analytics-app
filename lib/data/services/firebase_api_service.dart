@@ -180,6 +180,7 @@ class FirebaseApiService {
       'name': name,
       'email': timestamp,
       'fcmToken': fcmToken,
+      'appId': "2",
     });
 
     // Save user name to SharedPreferences

@@ -14,7 +14,8 @@ import 'package:intl/intl.dart';
 class MemberSummaryScreen extends ConsumerStatefulWidget {
   final MemberProfileRepository memberProfileRepository;
 
-  const MemberSummaryScreen({required this.memberProfileRepository, super.key});
+  const MemberSummaryScreen(
+      {required this.memberProfileRepository, super.key});
 
   @override
   ConsumerState<MemberSummaryScreen> createState() => _GuestPerformanceState();
@@ -23,12 +24,14 @@ class MemberSummaryScreen extends ConsumerStatefulWidget {
 class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
   final TextEditingController _startDateController = TextEditingController();
   final TextEditingController _endDateController = TextEditingController();
-  final ValueNotifier<DateTime?> startDateNotifier = ValueNotifier<DateTime?>(
-    null,
-  );
-  final ValueNotifier<DateTime?> endDateNotifier = ValueNotifier<DateTime?>(
-    null,
-  );
+  final ValueNotifier<DateTime?> startDateNotifier =
+      ValueNotifier<DateTime?>(null);
+  final ValueNotifier<DateTime?> endDateNotifier =
+      ValueNotifier<DateTime?>(null);
+
+  bool _isLoading = false;
+  DateTime? _dateFrom;
+  DateTime? _dateTo;
 
   @override
   void initState() {
@@ -39,19 +42,12 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
     _endDateController.text = formattedDate;
   }
 
-  bool _isLoading = false;
-  DateTime? _dateFrom;
-  DateTime? _dateTo;
-
   Future<void> _getGuestImage() async {
     final guest = ref.read(selectedGuestProvider);
-    if (guest!.memImage2 != null) return;
-
-    if (guest.memImage2 == null) {
-      await ref
-          .read(selectedGuestProvider.notifier)
-          .getGuestImage(9021, guest.mid);
-    } else {}
+    if (guest == null || guest.memImage2 != null) return;
+    await ref
+        .read(selectedGuestProvider.notifier)
+        .getGuestImage(9021, guest.mid);
   }
 
   Future<void> _selectArrivalDate(BuildContext context) async {
@@ -80,21 +76,17 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
 
   Future<void> _getLoyalitySummary() async {
     try {
-      if (_startDateController.text == "" || _endDateController.text == "") {
+      if (_startDateController.text.isEmpty || _endDateController.text.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Please select start and end dates.")),
         );
         return;
       }
 
-      final guest = ref.watch(selectedGuestProvider);
-      setState(() {
-        _isLoading = true;
-      });
+      final guest = ref.read(selectedGuestProvider);
+      setState(() => _isLoading = true);
 
-      await ref
-          .read(memberSummaryProvider.notifier)
-          .getMemberSummary(
+      await ref.read(memberSummaryProvider.notifier).getMemberSummary(
             playerId: guest!.mid,
             dateFrom: startDateNotifier.value != null
                 ? DateFormat('yyyy-MM-dd').format(startDateNotifier.value!)
@@ -104,13 +96,9 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                 : '',
           );
 
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
@@ -119,23 +107,9 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
     return DateFormat('dd MMM yyyy').format(date);
   }
 
-  String _formatDate2(String dateString) {
-    if (dateString == "") return "N/A";
-    final date = DateTime.parse(dateString);
-    return DateFormat('yyyy-MM-dd').format(date);
-  }
-
-  String _timeFormat(String dateString) {
-    if (dateString == "") return "N/A";
-    final date = DateTime.parse(dateString);
-    return DateFormat('HH:mm:ss').format(date);
-  }
-
-  String _parseNumberFormat(double? value) {
-    if (value == null || value == 0) return "0.00";
-    final formatter = NumberFormat('#,##0');
-    String formattedNumber = formatter.format(value);
-    return formattedNumber;
+  String _formatAmount(double value) {
+    final formatter = NumberFormat('#,##0.##');
+    return formatter.format(value);
   }
 
   final Map<String, String> ratingImageMap = {
@@ -146,11 +120,15 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
     "PLATINUM": "assets/images/ratings/PLATINUM.png",
     "SILVER": "assets/images/ratings/SILVER.png",
   };
+
   @override
   Widget build(BuildContext context) {
     final fontSettings = ref.watch(fontSettingsProvider);
     final guest = ref.watch(selectedGuestProvider);
-    final memberSummary = ref.watch(memberSummaryProvider);
+    final memberSummaryResult = ref.watch(memberSummaryProvider);
+    final memberSummary = memberSummaryResult.table;
+    final table1 = memberSummaryResult.table1;
+
     if (guest == null) {
       return Scaffold(
         appBar: AppBar(title: const Text("Guest Profile")),
@@ -159,8 +137,8 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
     }
 
     final dateFilter = ref.watch(dateFilterProvider);
-
     String formattedDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
     if (dateFilter.dateFrom == null) {
       startDateNotifier.value = DateTime.parse(formattedDate);
       _dateFrom = DateTime.parse(formattedDate);
@@ -184,22 +162,18 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
       body: Stack(
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(
-              vertical: 10.0,
-              horizontal: 15.0,
-            ),
+            padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 15.0),
             child: SingleChildScrollView(
               child: Column(
                 children: [
+                  // ── Profile Card ──────────────────────────────────────────
                   Stack(
                     children: [
                       Card(
                         elevation: 5,
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
-                            vertical: 20.0,
-                            horizontal: 5.0,
-                          ),
+                              vertical: 20.0, horizontal: 5.0),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             mainAxisSize: MainAxisSize.min,
@@ -233,8 +207,7 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                                 child: guest.memImage2 != null
                                                     ? Image.memory(
                                                         base64Decode(
-                                                          guest.memImage2!,
-                                                        ),
+                                                            guest.memImage2!),
                                                         fit: BoxFit.contain,
                                                       )
                                                     : Image.asset(
@@ -254,11 +227,9 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                       radius: 70,
                                       backgroundImage: guest.memImage2 != null
                                           ? MemoryImage(
-                                              base64Decode(guest.memImage2!),
-                                            )
+                                              base64Decode(guest.memImage2!))
                                           : const AssetImage(
-                                              'assets/images/placeholder_image.jpg',
-                                            ),
+                                              'assets/images/placeholder_image.jpg'),
                                       backgroundColor: Colors.grey[200],
                                     ),
                                   ),
@@ -270,9 +241,8 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                   "${guest.mid} -  ${guest.memberName}",
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w900),
                                 ),
                               ),
                               const SizedBox(height: 5),
@@ -281,9 +251,9 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                   "M P - ${guest.gName}",
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 20,
                                     color: Color.fromARGB(255, 158, 0, 148),
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w900,
                                   ),
                                 ),
                               ),
@@ -291,19 +261,15 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(
-                                    Icons.calendar_today,
-                                    size: 16,
-                                    color: Colors.grey,
-                                  ),
+                                  const Icon(Icons.calendar_today,
+                                      size: 16, color: Colors.grey),
                                   const SizedBox(width: 8),
                                   Text(
                                     "Last Visit on -  ${formatDate(guest.lastVisitDate)}",
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.normal,
-                                    ),
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold),
                                   ),
                                 ],
                               ),
@@ -317,35 +283,30 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                         child: Card(
                           elevation: 5,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6),
-                          ),
+                              borderRadius: BorderRadius.circular(6)),
                           child: Padding(
                             padding: const EdgeInsets.all(0),
                             child: SizedBox(
                               width: 80,
                               height: 30,
-                              child: imagePath != null
-                                  ? Hero(
-                                      tag: "rating-image",
-                                      child: Image.asset(
-                                        imagePath,
-                                        fit: BoxFit.contain,
-                                      ),
-                                    )
-                                  : Hero(
-                                      tag: "rating-image",
-                                      child: Image.asset(
-                                        "assets/images/ratings/CLASSIC.png",
-                                        fit: BoxFit.contain,
-                                      ),
-                                    ),
+                              child: Hero(
+                                tag: "rating-image",
+                                child: Image.asset(
+                                  imagePath ??
+                                      "assets/images/ratings/CLASSIC.png",
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 16.0),
+
+                  // ── Date Pickers ──────────────────────────────────────────
                   Row(
                     children: [
                       Expanded(
@@ -360,21 +321,16 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                               ),
                               readOnly: true,
                               style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
+                                  fontWeight: FontWeight.w900, fontSize: 18),
                               decoration: InputDecoration(
                                 labelText: "Start Date",
                                 labelStyle: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                ),
+                                    fontWeight: FontWeight.w900, fontSize: 18),
                                 border: const OutlineInputBorder(),
                                 suffixIcon: IconButton(
                                   icon: const Icon(Icons.calendar_today),
-                                  onPressed: () {
-                                    _selectArrivalDate(context);
-                                  },
+                                  onPressed: () =>
+                                      _selectArrivalDate(context),
                                 ),
                               ),
                             );
@@ -394,21 +350,16 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                               ),
                               readOnly: true,
                               style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
+                                  fontWeight: FontWeight.w900, fontSize: 18),
                               decoration: InputDecoration(
                                 labelText: "End Date",
                                 labelStyle: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                ),
+                                    fontWeight: FontWeight.w900, fontSize: 18),
                                 border: const OutlineInputBorder(),
                                 suffixIcon: IconButton(
                                   icon: const Icon(Icons.calendar_today),
-                                  onPressed: () {
-                                    _selectDepartureDate(context);
-                                  },
+                                  onPressed: () =>
+                                      _selectDepartureDate(context),
                                 ),
                               ),
                             );
@@ -417,7 +368,10 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 16),
+
+                  // ── Search Button ─────────────────────────────────────────
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -426,38 +380,32 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                         backgroundColor: Constants.kSecondaryColor,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                            borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(
-                          vertical: 16,
-                          horizontal: 20,
-                        ),
+                            vertical: 16, horizontal: 20),
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.search, size: 20),
                           SizedBox(width: 10),
-                          Text(
-                            "Search",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          Text("Search",
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 16.0),
+
+                  // ── Summary Card (from Table1) ────────────────────────────
                   memberSummary.isEmpty
                       ? Container(
                           height: 200,
                           alignment: Alignment.center,
-                          child: const Text(
-                            "No data available",
-                            style: TextStyle(color: Colors.grey),
-                          ),
+                          child: const Text("No data available",
+                              style: TextStyle(color: Colors.grey)),
                         )
                       : SizedBox(
                           width: double.infinity,
@@ -468,6 +416,7 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  // Total Cash In
                                   Row(
                                     mainAxisAlignment:
                                         MainAxisAlignment.spaceBetween,
@@ -475,31 +424,28 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                       Text(
                                         "Total Cash In (Est):",
                                         style: TextStyle(
-                                          color: Colors.black,
-                                          fontSize: fontSettings.fontSize,
-                                          fontWeight: FontWeight.bold,
+                                          fontSize: fontSettings.fontSize+3,
+                                          fontWeight:  fontSettings.fontWeight,
                                         ),
                                       ),
                                       Text(
-                                        memberSummary
-                                            .firstWhere(
-                                              (entry) =>
-                                                  entry.descrip == "TOTAL",
-                                            )
-                                            .inAmount,
+                                        table1 != null
+                                            ? _formatAmount(table1.mDrop)
+                                            : "N/A",
                                         style: TextStyle(
-                                          color: Colors.black,
-                                          fontSize: fontSettings.fontSize,
-                                          fontWeight: FontWeight.bold,
+                                          fontSize: fontSettings.fontSize+3,
+                                          fontWeight:  fontSettings.fontWeight,
                                           fontFamily: 'monospace',
                                           fontFeatures: const [
-                                            FontFeature.tabularFigures(),
+                                            FontFeature.tabularFigures()
                                           ],
                                         ),
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 8.0),
+
+                                  // Total Cash Out
                                   Row(
                                     mainAxisAlignment:
                                         MainAxisAlignment.spaceBetween,
@@ -507,54 +453,57 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                       Text(
                                         "Total Cash Out (Est):",
                                         style: TextStyle(
-                                          color: Colors.black,
-                                          fontSize: fontSettings.fontSize,
-                                          fontWeight: FontWeight.bold,
+                                           fontSize: fontSettings.fontSize+3,
+                                          fontWeight:  fontSettings.fontWeight,
                                         ),
                                       ),
                                       Text(
-                                        memberSummary
-                                            .firstWhere(
-                                              (entry) =>
-                                                  entry.descrip == "TOTAL",
-                                            )
-                                            .outAmount,
+                                        table1 != null
+                                            ? _formatAmount(table1.cashOut)
+                                            : "N/A",
                                         style: TextStyle(
-                                          color: Colors.black,
-                                          fontSize: fontSettings.fontSize,
-                                          fontWeight: FontWeight.bold,
+                                           fontSize: fontSettings.fontSize+3,
+                                          fontWeight:  fontSettings.fontWeight,
                                           fontFamily: 'monospace',
                                           fontFeatures: const [
-                                            FontFeature.tabularFigures(),
+                                            FontFeature.tabularFigures()
                                           ],
                                         ),
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 8.0),
+
+                                  // Win / Loss
                                   Row(
                                     mainAxisAlignment:
                                         MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
-                                        memberSummary.last.descrip == "WIN"
+                                        table1 != null && table1.res >= 0
                                             ? "Win Amount (Est):"
                                             : "Loss Amount (Est):",
                                         style: TextStyle(
-                                          color: Colors.black,
-                                          fontSize: fontSettings.fontSize,
-                                          fontWeight: FontWeight.bold,
+                                           fontSize: fontSettings.fontSize+3,
+                                          fontWeight:  fontSettings.fontWeight,
+                                          color: table1 != null && table1.res >= 0
+                                              ? Colors.green
+                                              : Colors.red,
                                         ),
                                       ),
                                       Text(
-                                        memberSummary.last.inAmount,
+                                        table1 != null
+                                            ? _formatAmount(table1.res.abs())
+                                            : "N/A",
                                         style: TextStyle(
-                                          color: Colors.black,
-                                          fontSize: fontSettings.fontSize,
-                                          fontWeight: FontWeight.bold,
+                                           fontSize: fontSettings.fontSize+3,
+                                          fontWeight:  fontSettings.fontWeight,
                                           fontFamily: 'monospace',
+                                          color: table1 != null && table1.res >= 0
+                                              ? Colors.green
+                                              : Colors.red,
                                           fontFeatures: const [
-                                            FontFeature.tabularFigures(),
+                                            FontFeature.tabularFigures()
                                           ],
                                         ),
                                       ),
@@ -565,6 +514,8 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                             ),
                           ),
                         ),
+
+                  // ── Detail Table (from Table) ─────────────────────────────
                   if (memberSummary.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -583,224 +534,88 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                             7: IntrinsicColumnWidth(),
                           },
                           children: [
+                            // Header Row
                             TableRow(
                               decoration: BoxDecoration(
-                                color: Constants.kPrimaryColor.withAlpha(50),
+                                color:
+                                    Constants.kPrimaryColor.withAlpha(50),
                               ),
                               children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "DESCRIPTION",
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: FontWeight.w900,
+                                "DESCRIPTION",
+                                "IN",
+                                "OUT",
+                                "TDATE",
+                                "TTIME",
+                                "CURRENCY",
+                                "INSERT DATE",
+                                "RN",
+                              ]
+                                  .map(
+                                    (header) => Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        header,
+                                        style: TextStyle(
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "IN",
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "OUT",
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "TDATE",
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "TTIME",
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "CURRENCY",
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "INSERT DATE",
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "RN",
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                                  )
+                                  .toList(),
                             ),
+
+                            // Data Rows
                             ...memberSummary.map((entry) {
                               return TableRow(
                                 children: [
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      entry.descrip ?? "N/A",
-                                      textAlign: TextAlign.start,
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
-                                      ),
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      entry.inAmount ?? "N/A",
-                                      textAlign: TextAlign.end,
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
-                                        fontFamily: 'monospace',
-                                        fontFeatures: const [
-                                          FontFeature.tabularFigures(),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      entry.outAmount ?? "N/A",
-                                      textAlign: TextAlign.end,
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
-                                        fontFamily: 'monospace',
-                                        fontFeatures: const [
-                                          FontFeature.tabularFigures(),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      entry.tDate.toString(),
-                                      textAlign: TextAlign.end,
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
-                                        fontFamily: 'monospace',
-                                        fontFeatures: const [
-                                          FontFeature.tabularFigures(),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      entry.tTime.toString(),
-                                      textAlign: TextAlign.end,
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
-                                        fontFamily: 'monospace',
-                                        fontFeatures: const [
-                                          FontFeature.tabularFigures(),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      entry.cur ?? "N/A",
-                                      textAlign: TextAlign.end,
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
-                                      ),
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      entry.insertDate.toString(),
-                                      textAlign: TextAlign.end,
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
-                                        fontFamily: 'monospace',
-                                        fontFeatures: const [
-                                          FontFeature.tabularFigures(),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      entry.rn.toString(),
-                                      textAlign: TextAlign.end,
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
-                                        fontFamily: 'monospace',
-                                        fontFeatures: const [
-                                          FontFeature.tabularFigures(),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
+                                  _tableCell(entry.descrip.isNotEmpty
+                                      ? entry.descrip
+                                      : "N/A", fontSettings,
+                                      align: TextAlign.start),
+                                  _tableCell(
+                                      entry.inAmount.isNotEmpty
+                                          ? entry.inAmount
+                                          : "N/A",
+                                      fontSettings,
+                                      align: TextAlign.end,
+                                      mono: true),
+                                  _tableCell(
+                                      entry.outAmount.isNotEmpty
+                                          ? entry.outAmount
+                                          : "N/A",
+                                      fontSettings,
+                                      align: TextAlign.end,
+                                      mono: true),
+                                  _tableCell(
+                                      entry.tDate.isNotEmpty
+                                          ? entry.tDate
+                                          : "N/A",
+                                      fontSettings,
+                                      align: TextAlign.end,
+                                      mono: true),
+                                  _tableCell(
+                                      entry.tTime.isNotEmpty
+                                          ? entry.tTime
+                                          : "N/A",
+                                      fontSettings,
+                                      align: TextAlign.end,
+                                      mono: true),
+                                  _tableCell(
+                                      entry.cur.isNotEmpty
+                                          ? entry.cur
+                                          : "N/A",
+                                      fontSettings,
+                                      align: TextAlign.end),
+                                  _tableCell(
+                                      entry.insertDate.isNotEmpty
+                                          ? entry.insertDate
+                                          : "N/A",
+                                      fontSettings,
+                                      align: TextAlign.end,
+                                      mono: true),
+                                  _tableCell(entry.rn.toString(), fontSettings,
+                                      align: TextAlign.end, mono: true),
                                 ],
                               );
                             }),
@@ -812,21 +627,45 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
               ),
             ),
           ),
+
+          // ── Loading Overlay ───────────────────────────────────────────────
           if (_isLoading)
             Container(
               decoration: const BoxDecoration(
-                color: Color.fromARGB(135, 117, 115, 115),
-              ),
+                  color: Color.fromARGB(135, 117, 115, 115)),
               child: const Center(
                 child: RefreshProgressIndicator(
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    Constants.kSecondaryColor,
-                  ),
+                      Constants.kSecondaryColor),
                 ),
               ),
             ),
+
           const Watermark(),
         ],
+      ),
+    );
+  }
+
+  // ── Helper: Table Cell ────────────────────────────────────────────────────
+  Widget _tableCell(
+    String text,
+    fontSettings, {
+    TextAlign align = TextAlign.start,
+    bool mono = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Text(
+        text,
+        textAlign: align,
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: fontSettings.fontSize,
+          fontWeight: fontSettings.fontWeight,
+          fontFamily: mono ? 'monospace' : null,
+          fontFeatures: mono ? const [FontFeature.tabularFigures()] : null,
+        ),
       ),
     );
   }

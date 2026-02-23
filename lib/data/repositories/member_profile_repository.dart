@@ -249,75 +249,80 @@ print(  'Raw trip history data: $data');
     }
   }
 
-  Future<List<MemberSummary>> getMemberSummary({
-    required String playerId,
-    required String dateFrom,
-    required String dateTo,
-  }) async {
-    print('getMemberSummary called with playerId: $playerId, dateFrom: $dateFrom, dateTo: $dateTo');
-    final deviceId = await DeviceId.get();
-    final response = await apiService.post('CommonExecute', {
-      "HasReturnData": "T",
-      "Parameters": [
-        {
-          "Para_Data": 9020,
-          "Para_Direction": "Input",
-          "Para_Lenth": 1,
-          "Para_Name": "@Iid",
-          "Para_Type": "int",
-        },
-        {
-          "Para_Data": playerId,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text1",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": dateFrom,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text2",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": dateTo,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text3",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": deviceId,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text30",
-          "Para_Type": "varchar",
-        },
-      ],
-      "SpName": "sp_CRM_Common_API",
-      "con": "1",
-    });
+ Future<MemberSummaryResult> getMemberSummary({
+  required String playerId,
+  required String dateFrom,
+  required String dateTo,
+}) async {
+  print('getMemberSummary called with playerId: $playerId, dateFrom: $dateFrom, dateTo: $dateTo');
+  final deviceId = await DeviceId.get();
 
-    if (response['CommonResult'] != null &&
-        response['CommonResult']['Table'] is List &&
-        response['CommonResult']['Table'].isNotEmpty) {
-      final tableData = response['CommonResult']['Table'];
-print('Member Summary Table Data: $tableData');
-      List<MemberSummary> memberSummaries = [];
+  final response = await apiService.post('CommonExecute', {
+    "HasReturnData": "T",
+    "Parameters": [
+      {
+        "Para_Data": 9020,
+        "Para_Direction": "Input",
+        "Para_Lenth": 1,
+        "Para_Name": "@Iid",
+        "Para_Type": "int",
+      },
+      {
+        "Para_Data": playerId,
+        "Para_Direction": "Input",
+        "Para_Lenth": 100,
+        "Para_Name": "@Text1",
+        "Para_Type": "varchar",
+      },
+      {
+        "Para_Data": dateFrom,
+        "Para_Direction": "Input",
+        "Para_Lenth": 100,
+        "Para_Name": "@Text2",
+        "Para_Type": "varchar",
+      },
+      {
+        "Para_Data": dateTo,
+        "Para_Direction": "Input",
+        "Para_Lenth": 100,
+        "Para_Name": "@Text3",
+        "Para_Type": "varchar",
+      },
+      {
+        "Para_Data": deviceId,
+        "Para_Direction": "Input",
+        "Para_Lenth": 100,
+        "Para_Name": "@Text30",
+        "Para_Type": "varchar",
+      },
+    ],
+    "SpName": "sp_CRM_Common_API",
+    "con": "1",
+  });
 
-      if (tableData.length > 0) {
-        for (var json in tableData) {
-          MemberSummary memberSummary = MemberSummary.fromJson(json);
-          memberSummaries.add(memberSummary);
-        }
-
-        return memberSummaries;
-      } else {
-        throw Exception('Data retrieval failed: no data found');
-      }
-    } else {
-      throw Exception('Data retrieval failed: unexpected response structure');
-    }
+  final commonResult = response['CommonResult'];
+  if (commonResult == null) {
+    throw Exception('Data retrieval failed: unexpected response structure');
   }
+
+  // Parse Table
+  List<MemberSummary> memberSummaries = [];
+  final tableData = commonResult['Table'];
+  if (tableData is List && tableData.isNotEmpty) {
+    memberSummaries = tableData
+        .map((json) => MemberSummary.fromJson(json))
+        .toList();
+    print('Member Summary Table Data: $memberSummaries');
+  }
+
+  // Parse Table1
+  MemberSummaryTable1? table1;
+  final table1Data = commonResult['Table1'];
+  if (table1Data is List && table1Data.isNotEmpty) {
+    table1 = MemberSummaryTable1.fromJson(table1Data[0]);
+    print('Member Summary Table1 Data - M_Drop: ${table1.mDrop}, Cash_Out: ${table1.cashOut}, Res: ${table1.res}');
+  }
+
+  return MemberSummaryResult(table: memberSummaries, table1: table1);
+}
 }

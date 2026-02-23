@@ -616,7 +616,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                             "M P - ${guest.gName}",
                             textAlign: TextAlign.center,
                             style: const TextStyle(
-                              fontSize: 17,
+                              fontSize: 20,
                               color: Color.fromARGB(255, 158, 0, 148),
                               fontWeight: FontWeight.bold,
                             ),
@@ -636,7 +636,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                               "Last Visit on -  ${formatDate(guest.lastVisitDate)}",
                               textAlign: TextAlign.center,
                               style: const TextStyle(
-                                fontSize: 18,
+                                fontSize: 20,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),

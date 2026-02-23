@@ -4,10 +4,11 @@ import 'package:ballys_reservation_app/models/member/member_summary.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-class MemberSummaryNotifier extends StateNotifier<List<MemberSummary>> {
+class MemberSummaryNotifier extends StateNotifier<MemberSummaryResult> {
   final MemberProfileRepository memberProfileRepository;
 
-  MemberSummaryNotifier(this.memberProfileRepository) : super([]);
+  MemberSummaryNotifier(this.memberProfileRepository)
+      : super(MemberSummaryResult(table: []));
 
   Future<void> getMemberSummary({
     required String playerId,
@@ -15,16 +16,20 @@ class MemberSummaryNotifier extends StateNotifier<List<MemberSummary>> {
     required String dateTo,
   }) async {
     try {
-      final memberSummaries = await memberProfileRepository.getMemberSummary(
-          dateFrom: dateFrom, dateTo: dateTo, playerId: playerId);
-      state = memberSummaries;
+      final result = await memberProfileRepository.getMemberSummary(
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+        playerId: playerId,
+      );
+      state = result;
     } catch (e) {
-      state = [];
+      print('MemberSummaryNotifier error: $e');
+      state = MemberSummaryResult(table: []);
     }
   }
 
   void reset() {
-    state = [];
+    state = MemberSummaryResult(table: []);
   }
 }
 
@@ -42,7 +47,7 @@ final memberProfileRepositoryProvider = Provider((ref) {
 });
 
 final memberSummaryProvider =
-    StateNotifierProvider<MemberSummaryNotifier, List<MemberSummary>>((ref) {
+    StateNotifierProvider<MemberSummaryNotifier, MemberSummaryResult>((ref) {
   final memberProfileRepository = ref.read(memberProfileRepositoryProvider);
   return MemberSummaryNotifier(memberProfileRepository);
 });

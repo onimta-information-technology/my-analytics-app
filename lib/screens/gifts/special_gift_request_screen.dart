@@ -510,7 +510,7 @@ if (checkedBy != null) ...[
                                 const SizedBox(width: 6),
                                 Text('Check Time: ',
                                     style: TextStyle(
-                                        fontSize: fontSettings.fontSize +2,
+                                        fontSize: fontSettings.fontSize,
                                         fontWeight: fontSettings.fontWeight)),
                                 Expanded(
                                   child: Text(
@@ -518,7 +518,7 @@ if (checkedBy != null) ...[
                                     style: TextStyle(
                                         color: const Color.fromARGB(
                                             255, 92, 17, 255),
-                                        fontSize: fontSettings.fontSize +2,
+                                        fontSize: fontSettings.fontSize,
                                         fontWeight: fontSettings.fontWeight),
                                     overflow: TextOverflow.ellipsis,
                                   ),

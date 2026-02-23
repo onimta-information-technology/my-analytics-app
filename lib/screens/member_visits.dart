@@ -81,7 +81,7 @@ class MemberVisits extends ConsumerWidget {
                                       child: Text(
                                         "${guest.mid} - ${guest.memberName}",
                                         style: TextStyle(
-                                          fontSize: fontSettings.fontSize,
+                                          fontSize: fontSettings.fontSize+2,
                                           fontWeight: fontSettings.fontWeight,
                                         ),
                                       ),
@@ -93,7 +93,7 @@ class MemberVisits extends ConsumerWidget {
                                   children: [
                                     const Icon(
                                       Icons.calendar_today,
-                                      color: Color.fromARGB(255, 89, 88, 88),
+                                      color: Color.fromARGB(255, 0, 0, 0),
                                       size: 18,
                                     ),
                                     const SizedBox(width: 8),
@@ -101,7 +101,8 @@ class MemberVisits extends ConsumerWidget {
                                       'Last visit on ${DateFormat('dd MMM yyyy').format(DateTime.parse(guest.lastVisitDate))}',
                                       style: TextStyle(
                                         fontSize: fontSettings.fontSize,
-                                        color: Colors.grey[600],
+                                        fontWeight: fontSettings.fontWeight,
+                                        color: Color.fromARGB(255, 0, 0, 0),
                                       ),
                                     ),
                                   ],

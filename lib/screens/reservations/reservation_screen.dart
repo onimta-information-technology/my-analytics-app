@@ -78,14 +78,17 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
   }
 
   /// Format DateTime to "DD/MM/YYYY  HH:MM"
-  String _formatDateTime(DateTime dt) {
-    final day = dt.day.toString().padLeft(2, '0');
-    final month = dt.month.toString().padLeft(2, '0');
-    final year = dt.year.toString();
-    final hour = dt.hour.toString().padLeft(2, '0');
-    final minute = dt.minute.toString().padLeft(2, '0');
-    return '$day/$month/$year  $hour:$minute';
-  }
+String _formatDateTime(DateTime dt) {
+  final day = dt.day.toString().padLeft(2, '0');
+  final month = dt.month.toString().padLeft(2, '0');
+  final year = dt.year.toString();
+  final hour = dt.hour;
+  final minute = dt.minute.toString().padLeft(2, '0');
+  final period = hour >= 12 ? 'PM' : 'AM';
+  final hour12 = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+  final hourStr = hour12.toString().padLeft(2, '0');
+  return '$day/$month/$year  $hourStr:$minute $period';
+}
 
   final Map<String, String> ratingImageMap = {
     "CLASSIC": "assets/images/ratings/CLASSIC.png",
@@ -408,14 +411,14 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
                               Icon(
                                 _getStatusIcon(reservation.requestStatus),
                                 size: 16,
-                                color: Colors.black,
+                                  color: const Color.fromARGB(255, 255, 255, 255),
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 reservation.requestStatus,
                                 style: TextStyle(
                                   fontSize: fontSettings.fontSize,
-                                  color: Colors.black,
+                                  color: const Color.fromARGB(255, 255, 255, 255),
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),

@@ -209,7 +209,7 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
               title: Text(
                 booking.mid,
                 style: TextStyle(
-                  color: Colors.black,
+                    color: Color.fromARGB(255, 0, 0, 0),
                   fontSize: fontSettings.fontSize + 2,
                   fontWeight: FontWeight.bold,
                 ),
@@ -229,16 +229,17 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
                       Text(
                         'Start: ',
                         style: TextStyle(
-                          fontSize: fontSettings.fontSize,
-                          fontWeight: FontWeight.bold,
+                              color: Color.fromARGB(255, 0, 0, 0),
+                          fontSize: fontSettings.fontSize+2,
+                          fontWeight:  fontSettings.fontWeight,
                         ),
                       ),
                       Expanded(
                         child: Text(
                           _formatDate(booking.pkgStart),
                           style: TextStyle(
-                            color: Colors.black87,
-                            fontSize: fontSettings.fontSize,
+                              color: Color.fromARGB(255, 0, 0, 0),
+                            fontSize: fontSettings.fontSize+2,
                             fontWeight: fontSettings.fontWeight,
                           ),
                         ),
@@ -257,16 +258,17 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
                       Text(
                         'End: ',
                         style: TextStyle(
-                          fontSize: fontSettings.fontSize,
-                          fontWeight: FontWeight.bold,
+                              color: Color.fromARGB(255, 0, 0, 0),
+                          fontSize: fontSettings.fontSize+2,
+                          fontWeight:  fontSettings.fontWeight,
                         ),
                       ),
                       Expanded(
                         child: Text(
                           _formatDate(booking.pkgEnd),
                           style: TextStyle(
-                            color: Colors.black87,
-                            fontSize: fontSettings.fontSize,
+                              color: Color.fromARGB(255, 0, 0, 0),
+                            fontSize: fontSettings.fontSize+2,
                             fontWeight: fontSettings.fontWeight,
                           ),
                         ),
@@ -278,23 +280,24 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
                     children: [
                       const Icon(
                         Icons.access_time,
-                        color: Colors.grey,
+                         color: Color.fromARGB(255, 0, 0, 0),
                         size: 16,
                       ),
                       const SizedBox(width: 6),
                       Text(
                         'Inserted: ',
                         style: TextStyle(
-                          fontSize: fontSettings.fontSize,
-                          fontWeight: FontWeight.bold,
+                              color: Color.fromARGB(255, 0, 0, 0),
+                          fontSize: fontSettings.fontSize+2,
+                          fontWeight:  fontSettings.fontWeight,
                         ),
                       ),
                       Expanded(
                         child: Text(
                           _formatDateTime(booking.insertDate),
                           style: TextStyle(
-                         //   color: const Color.fromARGB(137, 0, 0, 0),
-                            fontSize: fontSettings.fontSize,
+                            color: Color.fromARGB(255, 0, 0, 0),
+                            fontSize: fontSettings.fontSize+2,
                             fontWeight: fontSettings.fontWeight,
                           ),
                         ),

@@ -31,9 +31,6 @@ class _BirthdayGiftRequestScreenState
     with TickerProviderStateMixin {
   late TabController _tabController;
   bool _isLoading = false;
-  bool isPending = false;
-  bool isApproved = false;
-  bool _hasGiftAppPermission = false;
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -101,7 +98,7 @@ class _BirthdayGiftRequestScreenState
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this); // 4 tabs now
+    _tabController = TabController(length: 4, vsync: this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final birthdayGiftSp = ref.read(birthdayGiftIncreesProvider);
@@ -155,16 +152,16 @@ class _BirthdayGiftRequestScreenState
     try {
       await ref
           .read(birthdayGiftIncreesProvider.notifier)
-          .getBirthdayGiftData(98890, salesCode);
+          .getBirthdayGiftData(98890, salesCode); // pending
       await ref
           .read(birthdayGiftIncreesProvider.notifier)
           .getBirthdayGiftData(788790, salesCode); // checked
       await ref
           .read(birthdayGiftIncreesProvider.notifier)
-          .getBirthdayGiftData(98891, salesCode);
+          .getBirthdayGiftData(98891, salesCode); // approved
       await ref
           .read(birthdayGiftIncreesProvider.notifier)
-          .getBirthdayGiftData(98893, salesCode);
+          .getBirthdayGiftData(98893, salesCode); // rejected
     } finally {
       setState(() => _isLoading = false);
     }
@@ -185,7 +182,6 @@ class _BirthdayGiftRequestScreenState
 
   @override
   Widget build(BuildContext context) {
-    final fontSettings = ref.watch(fontSettingsProvider);
     final birthdayGiftsp = ref.watch(birthdayGiftIncreesProvider);
 
     return Scaffold(
@@ -206,15 +202,17 @@ class _BirthdayGiftRequestScreenState
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.pink,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
           tabs: [
-            _buildTab('Pending',
-                birthdayGiftsp.pendingBirthdayGift.length, Colors.orange),
-            _buildTab('Checked',
-                birthdayGiftsp.checkedBirthdayGift.length, Colors.blue),
-            _buildTab('Approved',
-                birthdayGiftsp.approvedBirthdayGift.length, Colors.green),
-            _buildTab('Rejected',
-                birthdayGiftsp.rejectBirthdayGift.length, Colors.red),
+            _buildTab(
+                'Pending', birthdayGiftsp.pendingBirthdayGift.length, Colors.orange),
+            _buildTab(
+                'Checked', birthdayGiftsp.checkedBirthdayGift.length, Colors.blue),
+            _buildTab(
+                'Approved', birthdayGiftsp.approvedBirthdayGift.length, Colors.green),
+            _buildTab(
+                'Rejected', birthdayGiftsp.rejectBirthdayGift.length, Colors.red),
           ],
         ),
       ),
@@ -223,14 +221,30 @@ class _BirthdayGiftRequestScreenState
           TabBarView(
             controller: _tabController,
             children: [
-              _buildGiftList(birthdayGiftsp.pendingBirthdayGift,
-                  isPending: true, isApproved: false, isChecked: false),
-              _buildGiftList(birthdayGiftsp.checkedBirthdayGift,
-                  isPending: false, isApproved: false, isChecked: true),
-              _buildGiftList(birthdayGiftsp.approvedBirthdayGift,
-                  isPending: false, isApproved: true, isChecked: false),
-              _buildGiftList(birthdayGiftsp.rejectBirthdayGift,
-                  isPending: false, isApproved: false, isChecked: false),
+              _buildGiftList(
+                birthdayGiftsp.pendingBirthdayGift,
+                isPending: true,
+                isApproved: false,
+                isChecked: false,
+              ),
+              _buildGiftList(
+                birthdayGiftsp.checkedBirthdayGift,
+                isPending: false,
+                isApproved: false,
+                isChecked: true,
+              ),
+              _buildGiftList(
+                birthdayGiftsp.approvedBirthdayGift,
+                isPending: false,
+                isApproved: true,
+                isChecked: false,
+              ),
+              _buildGiftList(
+                birthdayGiftsp.rejectBirthdayGift,
+                isPending: false,
+                isApproved: false,
+                isChecked: false,
+              ),
             ],
           ),
           if (_isLoading)
@@ -320,7 +334,8 @@ class _BirthdayGiftRequestScreenState
             Color? actionColor;
 
             if (!isPending) {
-              if (isChecked &&
+              // FIX: Show "Checked By" on both Checked tab AND Approved tab
+              if ((isChecked || isApproved) &&
                   gift.checkApp != null &&
                   gift.checkApp!.isNotEmpty) {
                 actionBy = gift.checkApp;
@@ -433,14 +448,15 @@ class _BirthdayGiftRequestScreenState
                               const SizedBox(width: 6),
                               Text('Requested By: ',
                                   style: TextStyle(
-                                      fontSize: fontSettings.fontSize,
+                                        color: Colors.black87,
+                                      fontSize: fontSettings.fontSize+2,
                                       fontWeight: fontSettings.fontWeight)),
                               Expanded(
                                 child: Text(
                                   gift.reqBy.isNotEmpty ? gift.reqBy : 'N/A',
                                   style: TextStyle(
                                     color: const Color.fromARGB(225, 0, 0, 0),
-                                    fontSize: fontSettings.fontSize,
+                                    fontSize: fontSettings.fontSize+2,
                                     fontWeight: fontSettings.fontWeight,
                                   ),
                                   overflow: TextOverflow.ellipsis,
@@ -466,14 +482,15 @@ class _BirthdayGiftRequestScreenState
                                 const SizedBox(width: 6),
                                 Text('$actionLabel: ',
                                     style: TextStyle(
-                                        fontSize: fontSettings.fontSize,
+                                         color: Colors.black87,
+                                        fontSize: fontSettings.fontSize+2,
                                         fontWeight: fontSettings.fontWeight)),
                                 Expanded(
                                   child: Text(
                                     actionBy,
                                     style: TextStyle(
                                         color: actionColor,
-                                        fontSize: fontSettings.fontSize,
+                                        fontSize: fontSettings.fontSize+2,
                                         fontWeight: fontSettings.fontWeight),
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -482,8 +499,8 @@ class _BirthdayGiftRequestScreenState
                             ),
                           ],
 
-                          // Check Approved Time (Checked tab only)
-                          if (isChecked &&
+                          // FIX: Show "Checked At" on both Checked tab AND Approved tab
+                          if ((isChecked || isApproved) &&
                               gift.checkAppByTime != null &&
                               gift.checkAppByTime!.isNotEmpty) ...[
                             const SizedBox(height: 6),
@@ -494,11 +511,12 @@ class _BirthdayGiftRequestScreenState
                                 const SizedBox(width: 6),
                                 Text('Checked At: ',
                                     style: TextStyle(
-                                        fontSize: fontSettings.fontSize,
+                                         color: Colors.black87,
+                                        fontSize: fontSettings.fontSize+2,
                                         fontWeight: fontSettings.fontWeight)),
                                 Expanded(
                                   child: Text(
-                                    gift.checkAppByTime!,
+                                    _formatDate(gift.checkAppByTime!),
                                     style: TextStyle(
                                         color: Colors.blue,
                                         fontSize: fontSettings.fontSize,
@@ -510,7 +528,6 @@ class _BirthdayGiftRequestScreenState
                             ),
                           ],
 
-                        
                           // Previous Gift Amount
                           if (gift.prvGiftAmount != null &&
                               gift.prvGiftAmount!.isNotEmpty) ...[
@@ -524,7 +541,7 @@ class _BirthdayGiftRequestScreenState
                                     style: TextStyle(
                                       color: const Color.fromARGB(
                                           255, 44, 55, 255),
-                                      fontSize: fontSettings.fontSize,
+                                      fontSize: fontSettings.fontSize+2,
                                       fontWeight: fontSettings.fontWeight,
                                     )),
                                 Expanded(
@@ -553,7 +570,7 @@ class _BirthdayGiftRequestScreenState
                                   style: TextStyle(
                                     color: const Color.fromARGB(
                                         255, 30, 160, 69),
-                                    fontSize: fontSettings.fontSize,
+                                    fontSize: fontSettings.fontSize+2,
                                     fontWeight: fontSettings.fontWeight,
                                   )),
                               Expanded(
@@ -570,8 +587,9 @@ class _BirthdayGiftRequestScreenState
                               ),
                             ],
                           ),
-  // Valid For (Approved only)
-                          if (isChecked || isApproved &&
+
+                          // FIX: Valid For — correct parentheses to avoid operator precedence bug
+                          if ((isChecked || isApproved) &&
                               gift.validDates != null &&
                               gift.validDates!.isNotEmpty) ...[
                             const SizedBox(height: 6),
@@ -582,14 +600,14 @@ class _BirthdayGiftRequestScreenState
                                 const SizedBox(width: 6),
                                 Text('Valid For: ',
                                     style: TextStyle(
-                                        fontSize: fontSettings.fontSize,
+                                        fontSize: fontSettings.fontSize+2,
                                         fontWeight: fontSettings.fontWeight)),
                                 Expanded(
                                   child: Text(
                                     '${gift.validDates} days',
                                     style: TextStyle(
                                         color: Colors.deepPurple,
-                                        fontSize: fontSettings.fontSize,
+                                        fontSize: fontSettings.fontSize+2,
                                         fontWeight: fontSettings.fontWeight),
                                     overflow: TextOverflow.ellipsis,
                                   ),

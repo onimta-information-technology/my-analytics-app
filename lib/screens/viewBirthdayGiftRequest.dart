@@ -569,50 +569,50 @@ class _ViewBirthdayGiftRequestState
                     // ── REVERSE at top (Approved / Rejected only) ───────────
                     if (topSection != null) topSection,
 
-                    // ── Checked By banner (Checked tab only) ────────────────
-                    if (widget.isChecked &&
-                        widget.gift?.checkApp != null &&
-                        widget.gift!.checkApp!.isNotEmpty)
-                      Container(
-                        width: double.infinity,
-                        margin: const EdgeInsets.only(bottom: 16),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.blue.shade200),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.fact_check, color: Colors.blue.shade600),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Checked By: ${widget.gift!.checkApp}',
-                                    style: TextStyle(
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.blue.shade800,
-                                    ),
-                                  ),
-                                  if (widget.gift?.checkAppByTime != null &&
-                                      widget.gift!.checkAppByTime!.isNotEmpty)
-                                    Text(
-                                      'At: ${widget.gift!.checkAppByTime}',
-                                      style: TextStyle(
-                                          fontSize: fontSettings.fontSize - 1,
-                                          color: Colors.blue.shade600),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    // // ── Checked By banner (Checked tab only) ────────────────
+                    // if (widget.isChecked &&
+                    //     widget.gift?.checkApp != null &&
+                    //     widget.gift!.checkApp!.isNotEmpty)
+                    //   Container(
+                    //     width: double.infinity,
+                    //     margin: const EdgeInsets.only(bottom: 16),
+                    //     padding: const EdgeInsets.symmetric(
+                    //         horizontal: 16, vertical: 12),
+                    //     decoration: BoxDecoration(
+                    //       color: Colors.blue.shade50,
+                    //       borderRadius: BorderRadius.circular(12),
+                    //       border: Border.all(color: Colors.blue.shade200),
+                    //     ),
+                    //     child: Row(
+                    //       children: [
+                    //         Icon(Icons.fact_check, color: Colors.blue.shade600),
+                    //         const SizedBox(width: 10),
+                    //         Expanded(
+                    //           child: Column(
+                    //             crossAxisAlignment: CrossAxisAlignment.start,
+                    //             children: [
+                    //               Text(
+                    //                 'Checked By: ${widget.gift!.checkApp}',
+                    //                 style: TextStyle(
+                    //                   fontSize: fontSettings.fontSize,
+                    //                   fontWeight: FontWeight.bold,
+                    //                   color: Colors.blue.shade800,
+                    //                 ),
+                    //               ),
+                    //               if (widget.gift?.checkAppByTime != null &&
+                    //                   widget.gift!.checkAppByTime!.isNotEmpty)
+                    //                 Text(
+                    //                   'At: ${widget.gift!.checkAppByTime}',
+                    //                   style: TextStyle(
+                    //                       fontSize: fontSettings.fontSize - 1,
+                    //                       color: Colors.blue.shade600),
+                    //                 ),
+                    //             ],
+                    //           ),
+                    //         ),
+                    //       ],
+                    //     ),
+                    //   ),
 
                     // ── From / To Date ──────────────────────────────────────
                     TextFormField(
@@ -914,7 +914,144 @@ class _ViewBirthdayGiftRequestState
                       ),
                       style: _inputTextStyle(fontSettings),
                     ),
+// ── Checked By & Check Date Card ──────────────────────────────────────────
+if (!widget.isPending &&
+    widget.gift != null &&
+    widget.gift!.checkApp != null &&
+    widget.gift!.checkApp!.isNotEmpty) ...[
+  const SizedBox(height: 16),
+  Container(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        colors: [
+          const Color.fromARGB(255, 92, 17, 255).withOpacity(0.08),
+          const Color.fromARGB(255, 92, 17, 255).withOpacity(0.03),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(
+        color: const Color.fromARGB(255, 92, 17, 255).withOpacity(0.4),
+        width: 1.5,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: const Color.fromARGB(255, 92, 17, 255).withOpacity(0.08),
+          blurRadius: 8,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(14.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header ──────────────────────────────────────────────────
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color.fromARGB(255, 92, 17, 255),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.rule_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                "Checked Information",
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize + 2,
+                  fontWeight: FontWeight.bold,
+                  color: const Color.fromARGB(255, 92, 17, 255),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(
+            color: Color.fromARGB(80, 92, 17, 255),
+            height: 1,
+          ),
+          const SizedBox(height: 12),
 
+          // ── Checked By Row ───────────────────────────────────────────
+          Row(
+            children: [
+              const Icon(
+                Icons.person_outline,
+                color: Color.fromARGB(255, 92, 17, 255),
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                "Checked By:",
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize,
+                  fontWeight: fontSettings.fontWeight,
+                   color: Color.fromARGB(255, 0, 0, 0)
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  widget.gift!.checkApp!,
+                  style: TextStyle(
+                    fontSize: fontSettings.fontSize + 1,
+                    fontWeight: FontWeight.bold,
+                    color: const Color.fromARGB(255, 92, 17, 255),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // ── Check Date Row ───────────────────────────────────────────
+          Row(
+            children: [
+              const Icon(
+                Icons.schedule,
+                color: Color.fromARGB(255, 92, 17, 255),
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                "Check Date:",
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize,
+                  fontWeight: fontSettings.fontWeight,
+                  color: Color.fromARGB(255, 0, 0, 0)           ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  widget.gift!.checkAppByTime != null &&
+                          widget.gift!.checkAppByTime!.isNotEmpty
+                      ? _formatDateandTime(widget.gift!.checkAppByTime)
+                      : 'N/A',
+                  style: TextStyle(
+                    fontSize: fontSettings.fontSize,
+                    fontWeight: FontWeight.bold,
+                    color: const Color.fromARGB(255, 92, 17, 255),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  ),
+],
                     // ── Previous Gift Amount ────────────────────────────────
                     const SizedBox(height: 16),
                     TextFormField(

@@ -424,24 +424,54 @@ class _SpecialGiftRequestScreenState
                           const SizedBox(height: 6),
 
                           // Insert date
+                          // Row(
+                          //   children: [
+                          //     const Icon(
+                          //       Icons.access_time,
+                          //       color: Color.fromARGB(255, 0, 0, 0),
+                          //       size: 16,
+                          //     ),
+                          //     const SizedBox(width: 6),
+                          //     Text(
+                          //       _formatDate(gift.insertDate),
+                          //       style: TextStyle(
+                          //         color: const Color.fromARGB(255, 2, 2, 2),
+                          //         fontSize: fontSettings.fontSize - 1,
+                          //         fontWeight: fontSettings.fontWeight,
+                          //       ),
+                          //     ),
+                          //   ],
+                          // ),
                           Row(
                             children: [
                               const Icon(
-                                Icons.access_time,
+                                  Icons.access_time,
                                 color: Color.fromARGB(255, 0, 0, 0),
                                 size: 16,
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                _formatDate(gift.insertDate),
+                                'Requested : ',
                                 style: TextStyle(
-                                  color: const Color.fromARGB(255, 2, 2, 2),
-                                  fontSize: fontSettings.fontSize - 1,
+                                  color: Colors.black87,
+                                  fontSize: fontSettings.fontSize + 2,
                                   fontWeight: fontSettings.fontWeight,
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  _formatDate(gift.insertDate),
+                                  style: TextStyle(
+                                    color: Colors.black87,
+                                    fontSize: fontSettings.fontSize + 2,
+                                    fontWeight: fontSettings.fontWeight,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
                           ),
+
                           const SizedBox(height: 6),
 
                           // Requested By

@@ -6,6 +6,7 @@ import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/components/developer_banner.dart';
 import 'package:ballys_reservation_app/components/localNotificationService.dart';
 import 'package:ballys_reservation_app/data/services/versioncehck_service.dart';
+import 'package:ballys_reservation_app/models/Guest/guest_booking.dart';
 import 'package:ballys_reservation_app/navigation/app_navigation.dart';
 import 'package:ballys_reservation_app/providers/auth_provider.dart';
 import 'package:ballys_reservation_app/utils/badge_sync_helper.dart';
@@ -34,9 +35,6 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     final badgeService = BadgeService();
     await badgeService.initialize();
 
-    // Try to read the system/global badge counter (plugin) to avoid
-    // overwriting a badge set by the OS (APNs payload). Fall back to
-    // the locally saved count.
     int systemBadge = 0;
     try {
       systemBadge = await AwesomeNotifications().getGlobalBadgeCounter();
@@ -48,7 +46,6 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     final base = systemBadge > savedCount ? systemBadge : savedCount;
     await badgeService.updateBadge(base + 1);
 
-    // Sync with server for accurate count
     try {
       await BadgeSyncHelper.syncBadgeWithServer();
     } catch (e) {
@@ -72,7 +69,7 @@ void main() async {
 
   // Initialize local notifications (WITHOUT requesting permission)
   await NotificationService().initializeLocalNotifications();
-  
+
   // Initialize badge service
   await BadgeService().initialize();
 
@@ -108,10 +105,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     super.didChangeAppLifecycleState(state);
 
     if (state == AppLifecycleState.resumed) {
-      // Check if user is logged in before syncing
       _syncBadgeIfLoggedIn();
     } else if (state == AppLifecycleState.paused) {
-      // Update badge when going to background (only if logged in)
       _syncBadgeIfLoggedIn();
     }
   }
@@ -120,7 +115,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     try {
       final prefs = await SharedPreferences.getInstance();
       final isLoggedIn = prefs.getBool('is_logged_in') ?? false;
-      
+
       if (isLoggedIn) {
         BadgeSyncHelper.syncBadgeWithServer();
       }
@@ -129,20 +124,23 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     }
   }
 
-  // Setup listeners WITHOUT requesting permissions
   Future<void> _setupFirebaseListenersOnly() async {
-    // Listen for token refresh (only matters after login)
+    // Listen for token refresh
     FirebaseMessaging.instance.onTokenRefresh.listen((String token) {
-      // Update token on your server (will be handled after login)
+      // Token updated — handled after login
     });
 
-    // Handle foreground messages (only matters after login)
+    // Handle foreground messages
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      _showForegroundNotification(message);
-      _badgeService.addBadge(1);
+      // Only show notification UI for non-guest-booking messages
+      // (guest booking reload is handled in chat_screen.dart)
+      if (message.data['msg_type'] != '35') {
+        _showForegroundNotification(message);
+        _badgeService.addBadge(1);
+      }
     });
 
-    // Handle notification taps when app is in background
+    // Handle notification tap when app is in background
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       BadgeSyncHelper.syncBadgeWithServer();
       _handleNotificationTap(message);
@@ -160,12 +158,36 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 
   Future<void> _showForegroundNotification(RemoteMessage message) async {
-    // Use NotificationService to show the notification
     await _notificationService.showForegroundNotification(message);
   }
 
   void _handleNotificationTap(RemoteMessage message) {
-    // Parse the notification data
+    // ─── Guest Booking Notification (msg_type: 35) ───────────────────────────
+    if (message.data['msg_type'] == '35') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Future.delayed(const Duration(milliseconds: 500), () {
+          final context = navigatorKey.currentContext;
+          if (context != null && context.mounted) {
+            final booking = GuestBooking(
+              idNo: 0, // Not available in notification payload
+              mid: message.data['MID'] ?? '',
+              pkgStart: message.data['Pkg_Start'] ?? '',
+              pkgEnd: message.data['Pkg_End'] ?? '',
+              insertDate: message.data['InsertDate'] ?? '',
+              pkgStatus: false, // Incoming notifications are always pending
+            );
+
+            context.go('/guest-bookings/view-booking', extra: {
+              'booking': booking,
+              'isPending': true,
+            });
+          }
+        });
+      });
+      return; // Skip chat handling
+    }
+
+    // ─── Chat Notification ────────────────────────────────────────────────────
     Map<String, dynamic>? chatData;
     String? detailsJson = message.data['Details'];
 
@@ -181,7 +203,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       } catch (e) {}
     }
 
-    // Check for direct chat data in message.data
     if (chatData == null &&
         (message.data['type'] == 'chat' ||
             message.data['screen'] == 'chat' ||
@@ -194,9 +215,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       };
     }
 
-    // Use WidgetsBinding to ensure navigation happens after frame is rendered
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Wait a bit longer to ensure the app is fully in foreground
       Future.delayed(const Duration(milliseconds: 500), () {
         final context = navigatorKey.currentContext;
         if (context != null && context.mounted) {
@@ -218,7 +237,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       theme: ThemeData(
         useMaterial3: true,
         primarySwatch: Colors.amber,
-        textTheme: TextTheme(bodyMedium: TextStyle(fontFamily: 'ABCArizonaFlare')),
+        textTheme: TextTheme(
+          bodyMedium: TextStyle(fontFamily: 'ABCArizonaFlare'),
+        ),
         bottomNavigationBarTheme: BottomNavigationBarThemeData(
           backgroundColor: customGoldColor,
           elevation: 20.0,
@@ -228,14 +249,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       ),
       routerConfig: AppNavigation.router,
       builder: (context, child) {
-      // return DeveloperBanner(
-      // child :MediaQuery(
- return MediaQuery(
+        // return DeveloperBanner(
+        // child: MediaQuery(
+        return MediaQuery(
           data: MediaQuery.of(context).copyWith(
             textScaler: TextScaler.noScaling,
           ),
           child: child!,
-      // ),
+          // ),
         );
       },
     );
@@ -276,14 +297,9 @@ class _SplashScreenState extends State<SplashScreen> {
             .timeout(Duration(seconds: 2));
 
         final response = await request.close().timeout(Duration(seconds: 2));
-
         client.close();
 
-        if (response.statusCode == 204 || response.statusCode == 200) {
-          return true;
-        } else {
-          return false;
-        }
+        return response.statusCode == 204 || response.statusCode == 200;
       } on SocketException catch (_) {
         client.close();
         return false;
@@ -448,7 +464,7 @@ class _SplashScreenState extends State<SplashScreen> {
       });
       return;
     }
-    
+
     final versionCheck = await VersionCheckService.checkVersion();
     if (!versionCheck['isLatest']) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -458,17 +474,59 @@ class _SplashScreenState extends State<SplashScreen> {
     }
 
     // Check if app was opened from a terminated state via notification
-    RemoteMessage? initialMessage = await FirebaseMessaging.instance
-        .getInitialMessage();
+    RemoteMessage? initialMessage =
+        await FirebaseMessaging.instance.getInitialMessage();
 
     // Check awesome notifications for initial action
     ReceivedAction? receivedAction = await AwesomeNotifications()
         .getInitialNotificationAction(removeFromActionEvents: true);
-    
+
     // Initialize badge service
     await BadgeService().initialize();
-    
-    // Extract chat details from notification
+
+    // ─── Guest Booking: terminated app tapped notification ──────────────────
+    if (initialMessage != null && initialMessage.data['msg_type'] == '35') {
+      Future.delayed(const Duration(seconds: 3), () async {
+        final expiry = await StorageUtil.getExpiry();
+        if (expiry != null) {
+          final expiryTime = DateTime.parse(expiry);
+          if (DateTime.now().isBefore(expiryTime)) {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('is_logged_in', true);
+
+            final container = ProviderScope.containerOf(context);
+            final authRepo = container.read(authRepositoryProvider);
+            TokenRefreshService().start(authRepo);
+
+            final booking = GuestBooking(
+              idNo: 0, // Not available in notification payload
+              mid: initialMessage.data['MID'] ?? '',
+              pkgStart: initialMessage.data['Pkg_Start'] ?? '',
+              pkgEnd: initialMessage.data['Pkg_End'] ?? '',
+              insertDate: initialMessage.data['InsertDate'] ?? '',
+              pkgStatus: false, // Notification-triggered bookings are pending
+            );
+
+            context.go('/guest-bookings/view-booking', extra: {
+              'booking': booking,
+              'isPending': true,
+            });
+          } else {
+            await StorageUtil.clearUserData();
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('is_logged_in', false);
+            context.go('/login');
+          }
+        } else {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('is_logged_in', false);
+          context.go('/login');
+        }
+      });
+      return; // Skip normal chat/home routing
+    }
+
+    // ─── Chat / Normal notification routing ─────────────────────────────────
     Map<String, dynamic>? notificationChatData;
 
     if (initialMessage != null) {
@@ -501,10 +559,12 @@ class _SplashScreenState extends State<SplashScreen> {
           // Mark as logged in
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('is_logged_in', true);
+
           final container = ProviderScope.containerOf(context);
-  final authRepo = container.read(authRepositoryProvider);
-  TokenRefreshService().start(authRepo);
-          // Check if opened from notification
+          final authRepo = container.read(authRepositoryProvider);
+          TokenRefreshService().start(authRepo);
+
+          // Navigate based on notification data
           if (notificationChatData != null &&
               notificationChatData['chatId'] != '') {
             context.go('/menu/chats', extra: notificationChatData);
@@ -513,18 +573,17 @@ class _SplashScreenState extends State<SplashScreen> {
           }
         } else {
           await StorageUtil.clearUserData();
-          
-          // Mark as logged out
+
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('is_logged_in', false);
-          
+
           context.go('/login');
         }
       } else {
         // Not logged in
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('is_logged_in', false);
-        
+
         context.go('/login');
       }
     });

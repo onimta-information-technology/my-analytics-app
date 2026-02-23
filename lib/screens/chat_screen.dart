@@ -2,10 +2,12 @@ import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/components/notification_banner.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
+import 'package:ballys_reservation_app/providers/guest_booking_provider.dart';
 import 'package:ballys_reservation_app/screens/chatDetail_screen.dart';
 import 'package:ballys_reservation_app/utils/badge_sync_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -86,14 +88,24 @@ class _ChatScreenState extends State<ChatScreen>
 
     }
   }
-
+Future<void> _reloadGuestBookings() async {
+  try {
+    final container = ProviderScope.containerOf(context);
+    await container.read(guestBookingProvider.notifier).getAllBookings();
+  } catch (e) {
+    print('Error reloading guest bookings: $e');
+  }
+}
   void _setupNotificationListener() {
     // Listen for foreground messages
     _messageSubscription = FirebaseMessaging.onMessage.listen((
       RemoteMessage message,
     ) {
       
-
+if (message.data['msg_type'] == '35') {
+      _reloadGuestBookings();
+      return;
+    }
       // Check if it's a chat notification
       if (message.data['msg_type'] == '11' ||
           message.data['type'] == 'chat' ||

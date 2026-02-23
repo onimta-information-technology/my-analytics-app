@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_booking_repository.dart';
@@ -5,6 +6,7 @@ import 'package:ballys_reservation_app/models/Guest/guest_booking.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/guest_booking_provider.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -27,10 +29,16 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
   late TabController _tabController;
   bool _isLoading = false;
 
+  // ✅ Notification listener subscription
+  StreamSubscription<RemoteMessage>? _messageSubscription;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+
+    // ✅ Start listening for guest booking notifications
+    _setupNotificationListener();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final bookingState = ref.read(guestBookingProvider);
@@ -42,6 +50,25 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
 
       _loadBookingData();
     });
+  }
+
+  // ✅ Listen for foreground msg_type 35 and auto-reload
+  void _setupNotificationListener() {
+    _messageSubscription = FirebaseMessaging.onMessage.listen((
+      RemoteMessage message,
+    ) {
+      if (message.data['msg_type'] == '35') {
+        _loadBookingData();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    // ✅ Cancel subscription to avoid memory leaks
+    _messageSubscription?.cancel();
+    super.dispose();
   }
 
   String _formatDate(String? dateStr) {
@@ -71,14 +98,10 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
     try {
       await ref.read(guestBookingProvider.notifier).getAllBookings();
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   @override
@@ -88,7 +111,7 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
 
     return Scaffold(
       appBar: AppBar(
-         leading: IconButton(
+        leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
             if (context.canPop()) {
@@ -209,7 +232,7 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
               title: Text(
                 booking.mid,
                 style: TextStyle(
-                    color: Color.fromARGB(255, 0, 0, 0),
+                  color: const Color.fromARGB(255, 0, 0, 0),
                   fontSize: fontSettings.fontSize + 2,
                   fontWeight: FontWeight.bold,
                 ),
@@ -229,17 +252,17 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
                       Text(
                         'Start: ',
                         style: TextStyle(
-                              color: Color.fromARGB(255, 0, 0, 0),
-                          fontSize: fontSettings.fontSize+2,
-                          fontWeight:  fontSettings.fontWeight,
+                          color: const Color.fromARGB(255, 0, 0, 0),
+                          fontSize: fontSettings.fontSize + 2,
+                          fontWeight: fontSettings.fontWeight,
                         ),
                       ),
                       Expanded(
                         child: Text(
                           _formatDate(booking.pkgStart),
                           style: TextStyle(
-                              color: Color.fromARGB(255, 0, 0, 0),
-                            fontSize: fontSettings.fontSize+2,
+                            color: const Color.fromARGB(255, 0, 0, 0),
+                            fontSize: fontSettings.fontSize + 2,
                             fontWeight: fontSettings.fontWeight,
                           ),
                         ),
@@ -258,17 +281,17 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
                       Text(
                         'End: ',
                         style: TextStyle(
-                              color: Color.fromARGB(255, 0, 0, 0),
-                          fontSize: fontSettings.fontSize+2,
-                          fontWeight:  fontSettings.fontWeight,
+                          color: const Color.fromARGB(255, 0, 0, 0),
+                          fontSize: fontSettings.fontSize + 2,
+                          fontWeight: fontSettings.fontWeight,
                         ),
                       ),
                       Expanded(
                         child: Text(
                           _formatDate(booking.pkgEnd),
                           style: TextStyle(
-                              color: Color.fromARGB(255, 0, 0, 0),
-                            fontSize: fontSettings.fontSize+2,
+                            color: const Color.fromARGB(255, 0, 0, 0),
+                            fontSize: fontSettings.fontSize + 2,
                             fontWeight: fontSettings.fontWeight,
                           ),
                         ),
@@ -280,24 +303,24 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
                     children: [
                       const Icon(
                         Icons.access_time,
-                         color: Color.fromARGB(255, 0, 0, 0),
+                        color: Color.fromARGB(255, 0, 0, 0),
                         size: 16,
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'Rquesed at: ',
+                        'Requested at: ',
                         style: TextStyle(
-                              color: Color.fromARGB(255, 0, 0, 0),
-                          fontSize: fontSettings.fontSize+2,
-                          fontWeight:  fontSettings.fontWeight,
+                          color: const Color.fromARGB(255, 0, 0, 0),
+                          fontSize: fontSettings.fontSize + 2,
+                          fontWeight: fontSettings.fontWeight,
                         ),
                       ),
                       Expanded(
                         child: Text(
                           _formatDateTime(booking.insertDate),
                           style: TextStyle(
-                            color: Color.fromARGB(255, 0, 0, 0),
-                            fontSize: fontSettings.fontSize+2,
+                            color: const Color.fromARGB(255, 0, 0, 0),
+                            fontSize: fontSettings.fontSize + 2,
                             fontWeight: fontSettings.fontWeight,
                           ),
                         ),

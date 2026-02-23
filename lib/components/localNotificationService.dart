@@ -79,6 +79,8 @@ class NotificationService {
   }
 
   Future<void> showForegroundNotification(RemoteMessage message) async {
+    print('Received foreground message: ${message.messageId}');
+        print('Received foreground message: ${message.data}');
     try {
       String? notificationChatId;
       

@@ -174,54 +174,54 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Booking ID Card
-                  Card(
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Constants.kPrimaryColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(
-                              Icons.confirmation_number,
-                              size: 30,
-                              color: Constants.kPrimaryColor,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Booking ID',
-                                style: TextStyle(
-                                  fontSize: fontSettings.fontSize,
-                                  color: const Color.fromARGB(255, 0, 0, 0),
-                                  fontWeight: fontSettings.fontWeight,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '#${widget.booking?.idNo ?? 'N/A'}',
-                                style: TextStyle(
-                                  fontSize: fontSettings.fontSize + 4,
-                                  fontWeight: FontWeight.bold,
-                                  color: Constants.kPrimaryColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  // Card(
+                  //   elevation: 4,
+                  //   shape: RoundedRectangleBorder(
+                  //     borderRadius: BorderRadius.circular(12),
+                  //   ),
+                  //   child: Padding(
+                  //     padding: const EdgeInsets.all(16.0),
+                  //     child: Row(
+                  //       children: [
+                  //         Container(
+                  //           padding: const EdgeInsets.all(12),
+                  //           decoration: BoxDecoration(
+                  //             color: Constants.kPrimaryColor.withOpacity(0.1),
+                  //             borderRadius: BorderRadius.circular(8),
+                  //           ),
+                  //           child: const Icon(
+                  //             Icons.confirmation_number,
+                  //             size: 30,
+                  //             color: Constants.kPrimaryColor,
+                  //           ),
+                  //         ),
+                  //         const SizedBox(width: 16),
+                  //         Column(
+                  //           crossAxisAlignment: CrossAxisAlignment.start,
+                  //           children: [
+                  //             Text(
+                  //               'Booking ID',
+                  //               style: TextStyle(
+                  //                 fontSize: fontSettings.fontSize,
+                  //                 color: const Color.fromARGB(255, 0, 0, 0),
+                  //                 fontWeight: fontSettings.fontWeight,
+                  //               ),
+                  //             ),
+                  //             const SizedBox(height: 4),
+                  //             Text(
+                  //               '#${widget.booking?.idNo ?? 'N/A'}',
+                  //               style: TextStyle(
+                  //                 fontSize: fontSettings.fontSize + 4,
+                  //                 fontWeight: FontWeight.bold,
+                  //                 color: Constants.kPrimaryColor,
+                  //               ),
+                  //             ),
+                  //           ],
+                  //         ),
+                  //       ],
+                  //     ),
+                  //   ),
+                  // ),
 
                   // const SizedBox(height: 24),
                   GuestDisplayCardById(
@@ -265,6 +265,7 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
                           decoration: InputDecoration(
                             labelText: "Member ID",
                             labelStyle: TextStyle(
+                               color: const Color.fromARGB(255, 0, 0, 0),
                               fontSize: fontSettings.fontSize,
                               fontWeight: fontSettings.fontWeight,
                             ),
@@ -331,8 +332,9 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
                     readOnly: true,
                     style: _inputTextStyle(fontSettings),
                     decoration: InputDecoration(
-                      labelText: "Package Start Date",
+                      labelText: "Arrival Date",
                       labelStyle: TextStyle(
+                         color: const Color.fromARGB(255, 0, 0, 0),
                         fontSize: fontSettings.fontSize,
                         fontWeight: fontSettings.fontWeight,
                       ),
@@ -356,8 +358,9 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
                     readOnly: true,
                     style: _inputTextStyle(fontSettings),
                     decoration: InputDecoration(
-                      labelText: "Package End Date",
+                      labelText: "Departure Date",
                       labelStyle: TextStyle(
+                        color: const Color.fromARGB(255, 0, 0, 0),
                         fontSize: fontSettings.fontSize,
                         fontWeight: fontSettings.fontWeight,
                       ),
@@ -378,8 +381,9 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
                     readOnly: true,
                     style: _inputTextStyle(fontSettings),
                     decoration: InputDecoration(
-                      labelText: "Created Date & Time",
+                      labelText: "Requested Date & Time",
                       labelStyle: TextStyle(
+                        color: const Color.fromARGB(255, 0, 0, 0),
                         fontSize: fontSettings.fontSize,
                         fontWeight: fontSettings.fontWeight,
                       ),

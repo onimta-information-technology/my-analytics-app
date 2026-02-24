@@ -360,7 +360,7 @@ String _formatDateTime(DateTime dt) {
                           children: [
                             const Icon(
                               Icons.schedule,
-                              size: 15,
+                              size: 20,
                               color: Colors.blueGrey,
                             ),
                             const SizedBox(width: 4),
@@ -384,7 +384,7 @@ String _formatDateTime(DateTime dt) {
                                 reservation.requestStatus == 'Approved'
                                     ? Icons.check_circle_outline
                                     : Icons.cancel_outlined,
-                                size: 15,
+                                size: 20,
                                 color: reservation.requestStatus == 'Approved'
                                     ? Colors.green
                                     : Colors.red,
@@ -419,7 +419,7 @@ String _formatDateTime(DateTime dt) {
                             children: [
                               Icon(
                                 _getStatusIcon(reservation.requestStatus),
-                                size: 16,
+                                size: 20,
                                   color: const Color.fromARGB(255, 255, 255, 255),
                               ),
                               const SizedBox(width: 4),

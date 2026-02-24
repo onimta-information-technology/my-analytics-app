@@ -22,9 +22,9 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(seconds: 1),
+        duration: const Duration(milliseconds: 700),
       vsync: this,
-    );
+    )..repeat(reverse: true);
     _loadSalesCode();
     // Fetch pending counts when screen loads
     Future.microtask(() {
@@ -205,30 +205,33 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
                             ),
                           ),
                           // Red dot indicator for pending items
-                          if (hasPendingItems)
-                            Positioned(
-                              top: 8,
-                              right: 8,
-                              child: Container(
-                                width: 16,
-                                height: 16,
-                                decoration: BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 2,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.3),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                       if (hasPendingItems)
+  Positioned(
+    top: 8,
+    right: 8,
+    child: FadeTransition(
+      opacity: _controller,
+      child: Container(
+        width: 16,
+        height: 16,
+        decoration: BoxDecoration(
+          color: Colors.red,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Colors.white,
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+      ),
+    ),
+  ),
                         ],
                       ),
                     ),

@@ -250,7 +250,7 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'Start: ',
+                        'Arrival Date: ',
                         style: TextStyle(
                           color: const Color.fromARGB(255, 0, 0, 0),
                           fontSize: fontSettings.fontSize + 2,
@@ -279,7 +279,7 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'End: ',
+                        'Departure Date: ',
                         style: TextStyle(
                           color: const Color.fromARGB(255, 0, 0, 0),
                           fontSize: fontSettings.fontSize + 2,
@@ -308,10 +308,10 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'Requested at: ',
+                        'Requested: ',
                         style: TextStyle(
                           color: const Color.fromARGB(255, 0, 0, 0),
-                          fontSize: fontSettings.fontSize + 2,
+                          fontSize: fontSettings.fontSize + 1,
                           fontWeight: fontSettings.fontWeight,
                         ),
                       ),
@@ -320,7 +320,7 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
                           _formatDateTime(booking.insertDate),
                           style: TextStyle(
                             color: const Color.fromARGB(255, 0, 0, 0),
-                            fontSize: fontSettings.fontSize + 2,
+                            fontSize: fontSettings.fontSize + 1,
                             fontWeight: fontSettings.fontWeight,
                           ),
                         ),

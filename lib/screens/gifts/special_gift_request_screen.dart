@@ -454,7 +454,7 @@ class _SpecialGiftRequestScreenState
                                 'Requested : ',
                                 style: TextStyle(
                                   color: Colors.black87,
-                                  fontSize: fontSettings.fontSize + 2,
+                                  fontSize: fontSettings.fontSize + 1,
                                   fontWeight: fontSettings.fontWeight,
                                 ),
                               ),
@@ -463,7 +463,7 @@ class _SpecialGiftRequestScreenState
                                   _formatDate(gift.insertDate),
                                   style: TextStyle(
                                     color: Colors.black87,
-                                    fontSize: fontSettings.fontSize + 2,
+                                    fontSize: fontSettings.fontSize + 1,
                                     fontWeight: fontSettings.fontWeight,
                                   ),
                                   overflow: TextOverflow.ellipsis,
@@ -472,7 +472,7 @@ class _SpecialGiftRequestScreenState
                             ],
                           ),
 
-                          const SizedBox(height: 6),
+                         const SizedBox(height: 6),
 
                           // Requested By
                           Row(

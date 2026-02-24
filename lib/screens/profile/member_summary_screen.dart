@@ -653,8 +653,8 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                     children: [
                                       Text(
                                         table1 != null && table1.res >= 0
-                                            ? "Win Amount (Est):"
-                                            : "Loss Amount (Est):",
+                                            ? "Win (Est):"
+                                            : "Loss (Est):",
                                         style: TextStyle(
                                            fontSize: fontSettings.fontSize+3,
                                           fontWeight:  fontSettings.fontWeight,

@@ -477,8 +477,8 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                     "${guest.mid} -  ${guest.memberName}",
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.bold,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w900,
                                     ),
                                   ),
                                 ),
@@ -488,9 +488,9 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                     "M P - ${guest.gName}",
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(
-                                      fontSize: 16,
+                                      fontSize: 20,
                                       color: Color.fromARGB(255, 158, 0, 148),
-                                      fontWeight: FontWeight.bold,
+                                      fontWeight: FontWeight.w900,
                                     ),
                                   ),
                                 ),
@@ -500,7 +500,7 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                   children: [
                                     const Icon(
                                       Icons.calendar_today,
-                                      size: 16,
+                                      size: 20,
                                       color: Colors.grey,
                                     ),
                                     const SizedBox(width: 8),
@@ -508,8 +508,8 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                       "Last Visit on -  ${formatDate(guest.lastVisitDate)}",
                                       textAlign: TextAlign.center,
                                       style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.normal,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ],
@@ -569,8 +569,8 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                 ),
                                 readOnly: true,
                                 style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 18,
                                 ),
                                 decoration: InputDecoration(
                                   labelText: "Start Date",
@@ -603,8 +603,8 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                 ),
                                 readOnly: true,
                                 style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 18,
                                 ),
                                 decoration: InputDecoration(
                                   labelText: "End Date",

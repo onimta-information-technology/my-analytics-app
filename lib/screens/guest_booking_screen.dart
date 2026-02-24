@@ -160,7 +160,7 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
                 ),
               ),
             ),
-          const Watermark(),
+        //  const Watermark(),
         ],
       ),
     );

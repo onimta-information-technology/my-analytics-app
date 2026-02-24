@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/providers/guest_booking_provider.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:ballys_reservation_app/providers/pending_count_provider.dart';
 import 'package:flutter/material.dart';
@@ -29,6 +30,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
     // Fetch pending counts when screen loads
     Future.microtask(() {
       ref.read(pendingCountProvider.notifier).fetch();
+      ref.read(guestBookingProvider.notifier).getAllBookings();
     });
   }
 
@@ -64,7 +66,8 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
       loading: () => false,
       error: (e, st) => false,
     );
-
+final guestBookingState = ref.watch(guestBookingProvider);
+final hasPendingGuestBookings = guestBookingState.pendingBookings.isNotEmpty;
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -393,34 +396,131 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
                         ),
                       ),
                     ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          context.push('/guest-bookings');
-                        },
-                        child: const Card(
-                          color: Color.fromARGB(174, 134, 132, 16),
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(vertical: 30),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.book_online,
-                                  size: 60,
-                                  color: Colors.white,
-                                ),
-                                Text(
-                                  'Gest Booking ',
-                                  style: TextStyle(
-                                    fontSize: 16.0,
-                                    fontWeight: FontWeight.normal,
-                                    color: Colors.white,
+//                    Expanded(
+//   child: Stack(                          // ✅ Wrap in Stack
+//     children: [
+//       GestureDetector(
+//         onTap: () {
+//           context.push('/guest-bookings');
+//         },
+//         child: const Card(
+//           color: Color.fromARGB(174, 134, 132, 16),
+//           child: Padding(
+//             padding: EdgeInsets.symmetric(vertical: 30),
+//             child: Column(
+//               children: [
+//                 Icon(
+//                   Icons.book_online,
+//                   size: 60,
+//                   color: Colors.white,
+//                 ),
+//                 Text(
+//                   'Guest Booking',
+//                   style: TextStyle(
+//                     fontSize: 16.0,
+//                     fontWeight: FontWeight.normal,
+//                     color: Colors.white,
+//                   ),
+//                 ),
+//               ],
+//             ),
+//           ),
+//         ),
+//       ),
+//       // ✅ Blinking red dot when there are pending guest bookings
+//       if (hasPendingGuestBookings)
+//         Positioned(
+//           top: 8,
+//           right: 8,
+//           child: FadeTransition(
+//             opacity: _controller,        // reuses existing AnimationController
+//             child: Container(
+//               width: 16,
+//               height: 16,
+//               decoration: BoxDecoration(
+//                 color: Colors.red,
+//                 shape: BoxShape.circle,
+//                 border: Border.all(
+//                   color: Colors.white,
+//                   width: 2,
+//                 ),
+//                 boxShadow: [
+//                   BoxShadow(
+//                     color: Colors.black.withOpacity(0.3),
+//                     blurRadius: 4,
+//                     offset: const Offset(0, 2),
+//                   ),
+//                 ],
+//               ),
+//             ),
+//           ),
+//         ),
+//     ],
+//   ),
+// ),
+ Expanded(
+                      child: Stack(
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                            context.push('/guest-bookings');
+                            },
+                            child: Card(
+                             color: Color.fromARGB(174, 134, 132, 16),
+                              child: const SizedBox(
+                                width: double.infinity,
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 30),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                  Icons.book_online,
+                  size: 60,
+                  color: Colors.white,
+                ),
+                                      Text(
+                                        'Guest Booking',
+                                        style: TextStyle(
+                                          fontSize: 16.0,
+                                          fontWeight: FontWeight.normal,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
+                              ),
                             ),
                           ),
-                        ),
+                          // Red dot indicator for pending items
+                       if (hasPendingGuestBookings)
+  Positioned(
+    top: 8,
+    right: 8,
+    child: FadeTransition(
+      opacity: _controller,
+      child: Container(
+        width: 16,
+        height: 16,
+        decoration: BoxDecoration(
+          color: Colors.red,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Colors.white,
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+      ),
+    ),
+  ),
+                        ],
                       ),
                     ),
                   ],

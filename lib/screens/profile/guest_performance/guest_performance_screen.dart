@@ -505,7 +505,7 @@ Future<void> _selectDepartureDate(BuildContext context) async {
       appBar: AppBar(
         title: const Text(
           "Guest Performance",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
         ),
         actions: [
           PopupMenuButton<int>(
@@ -523,7 +523,7 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                   leading: Icon(Icons.attach_money),
                   title: Text(
                     'Loyalty Summary',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(fontWeight: FontWeight.bold,fontSize: 20),
                   ),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -535,7 +535,7 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                   leading: Icon(Icons.local_taxi),
                   title: Text(
                     'Trip Information',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(fontWeight: FontWeight.bold,fontSize: 20),
                   ),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -547,7 +547,7 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                   leading: Icon(Icons.airplanemode_active),
                   title: Text(
                     'Air Ticket Reservation',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(fontWeight: FontWeight.bold,fontSize: 20),
                   ),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -559,7 +559,7 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                   leading: Icon(Icons.hotel),
                   title: Text(
                     'Hotel Reservation',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(fontWeight: FontWeight.bold,fontSize: 20),
                   ),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -571,7 +571,7 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                   leading: Icon(Icons.local_cafe),
                   title: Text(
                     'F & B',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(fontWeight: FontWeight.bold,fontSize: 20),
                   ),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -583,7 +583,7 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                   leading: Icon(Icons.sports_esports),
                   title: Text(
                     'Games Summary',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(fontWeight: FontWeight.bold,fontSize: 20),
                   ),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -686,8 +686,8 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                   "${guest.mid} -  ${guest.memberName}",
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.bold,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w900,
                                   ),
                                 ),
                               ),
@@ -697,9 +697,9 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                   "M P - ${guest.gName}",
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 20,
                                     color: Color.fromARGB(255, 158, 0, 148),
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w900,
                                   ),
                                 ),
                               ),
@@ -717,8 +717,8 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                     "Last Visit on -  ${formatDate(guest.lastVisitDate)}",
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.normal,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ],
@@ -776,8 +776,8 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                               ),
                               readOnly: true,
                               style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 18,
                               ),
                               decoration: InputDecoration(
                                 labelText: "Start Date",
@@ -810,8 +810,8 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                               ),
                               readOnly: true,
                               style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 18,
                               ),
                               decoration: InputDecoration(
                                 labelText: "End Date",
@@ -857,7 +857,7 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                           Text(
                             "Search",
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 17,
                               fontWeight: FontWeight.bold,
                             ),
                           ),

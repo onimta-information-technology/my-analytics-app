@@ -11,7 +11,13 @@ import 'package:dropdown_search/dropdown_search.dart';
 
 class HotelAndRoomSelectionBottomSheet extends ConsumerStatefulWidget {
   final HotelRepository hotelRepository;
-  const HotelAndRoomSelectionBottomSheet(this.hotelRepository, {super.key});
+  final VoidCallback? onClose;
+
+  const HotelAndRoomSelectionBottomSheet(
+    this.hotelRepository, {
+    this.onClose,
+    super.key,
+  });
 
   @override
   ConsumerState<HotelAndRoomSelectionBottomSheet> createState() =>
@@ -20,7 +26,6 @@ class HotelAndRoomSelectionBottomSheet extends ConsumerStatefulWidget {
 
 class _HotelAndRoomSelectionBottomSheetState
     extends ConsumerState<HotelAndRoomSelectionBottomSheet> {
-  final TextEditingController _hotelRoomController = TextEditingController();
   final TextEditingController _dateRangeController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -36,6 +41,16 @@ class _HotelAndRoomSelectionBottomSheetState
   void initState() {
     super.initState();
     hotelList = List.from(ref.read(selectedHotelProvider));
+  }
+
+  @override
+  void dispose() {
+    _dateRangeController.dispose();
+    _scrollController.dispose();
+    roomCategoriesNotifier.dispose();
+    roomTypesNotifier.dispose();
+    costNotifier.dispose();
+    super.dispose();
   }
 
   bool editMode = false;
@@ -59,7 +74,6 @@ class _HotelAndRoomSelectionBottomSheetState
   String? sMealPlanName;
   Map<String, dynamic>? selectedRoomType;
 
-  int? selectedHotelAndRoom;
   int? numberOfNights;
 
   dynamic selectedCost;
@@ -95,10 +109,8 @@ class _HotelAndRoomSelectionBottomSheetState
       setState(() {
         selectedDateRange = pickedDateRange;
         numberOfNights = pickedDateRange.duration.inDays;
-
         arrivalDate = pickedDateRange.start;
         departureDate = pickedDateRange.end;
-
         _dateRangeController.text =
             "${DateFormat('yyyy-MM-dd').format(pickedDateRange.start)} - ${DateFormat('yyyy-MM-dd').format(pickedDateRange.end)}";
       });
@@ -106,35 +118,31 @@ class _HotelAndRoomSelectionBottomSheetState
     }
   }
 
-  void _updateAdults(count) {
+  void _updateAdults(int count) {
     if (count >= 1) {
-      setState(() {
-        numberOfAdults = count;
-      });
+      setState(() => numberOfAdults = count);
       _clearSelectedCost();
     }
   }
 
-  void _updateChildren(count) {
+  void _updateChildren(int count) {
     if (count >= 0) {
-      setState(() {
-        numberOfChildren = count;
-      });
+      setState(() => numberOfChildren = count);
       _clearSelectedCost();
     }
   }
 
-  void _updateRooms(count) {
+  void _updateRooms(int count) {
     if (count >= 1) {
-      setState(() {
-        numberOfRooms = count;
-      });
+      setState(() => numberOfRooms = count);
       _clearSelectedCost();
     }
   }
 
-  Future<void> getSelectedHotelRoomCategories(double hotelId,
-      {bool clearSelection = true}) async {
+  Future<void> getSelectedHotelRoomCategories(
+    double hotelId, {
+    bool clearSelection = true,
+  }) async {
     try {
       final response =
           await widget.hotelRepository.getSelectedHotelRoomCategories(hotelId);
@@ -155,8 +163,11 @@ class _HotelAndRoomSelectionBottomSheetState
     }
   }
 
-  Future<void> getSelectedHotelCategoryRoomTypes(double hotelId, int categoryId,
-      {bool clearSelection = true}) async {
+  Future<void> getSelectedHotelCategoryRoomTypes(
+    double hotelId,
+    int categoryId, {
+    bool clearSelection = true,
+  }) async {
     try {
       final response = await widget.hotelRepository
           .getSelectedHotelCategoryRoomTypes(hotelId, categoryId);
@@ -176,17 +187,18 @@ class _HotelAndRoomSelectionBottomSheetState
   Future<List<HotelCostResponse>?> getHotelCosts() async {
     try {
       final response = await widget.hotelRepository.getHotelCosts(
-          hotelName: selectedHotelName!,
-          roomCategory: selectedRoomCategoryName!,
-          roomType: sRoomTypeName!,
-          mealPlan: sMealPlanName!);
+        hotelName: selectedHotelName!,
+        roomCategory: selectedRoomCategoryName!,
+        roomType: sRoomTypeName!,
+        mealPlan: sMealPlanName!,
+      );
       return response;
     } catch (e) {
       return null;
     }
   }
 
-  void _setHotel(hotel) {
+  void _setHotel(Map<String, dynamic>? hotel) {
     selectedHotel = hotel;
     selectedHotelId = hotel?['Hotel_IID'];
     selectedHotelName = hotel?['HotelName'] ?? '';
@@ -196,26 +208,23 @@ class _HotelAndRoomSelectionBottomSheetState
       roomCategoriesNotifier.value = [];
       roomTypesNotifier.value = [];
       getSelectedHotelRoomCategories(selectedHotelId!);
-    } else {
-      // ref.read(roomCategoryProvider.notifier).state = []; // Reset categories
     }
   }
 
-  void _setRoomCategory(roomCategory) {
+  void _setRoomCategory(Map<String, dynamic>? roomCategory) {
     selectedRoomCategory = roomCategory;
     selectedRoomCategoryId = roomCategory?['CatCode'];
     selectedRoomCategoryName = roomCategory?['CatName'] ?? '';
     _clearSelectedCost();
+
     if (selectedHotelId != null && selectedRoomCategoryId != null) {
       roomTypesNotifier.value = [];
       getSelectedHotelCategoryRoomTypes(
           selectedHotelId!, selectedRoomCategoryId!);
-    } else {
-      // ref.read(roomCategoryProvider.notifier).state = []; // Reset categories
     }
   }
 
-  void _setRoomType(roomtype) {
+  void _setRoomType(Map<String, dynamic>? roomtype) {
     selectedRoomType = roomtype;
     selectedRoomTypeId = roomtype?['ID'];
     sRoomTypeName = roomtype?['RoomType'] ?? '';
@@ -230,12 +239,11 @@ class _HotelAndRoomSelectionBottomSheetState
       double calculation = ((cost.netRate! * numberOfNights!) * cost.usRate!) *
           numberOfAdults *
           numberOfRooms;
-
       costNotifier.value = NumberFormat().format(calculation.round());
     });
   }
 
-  void __editHotel(HotelDescip hotel, int index) {
+  void _editHotel(HotelDescip hotel, int index) {
     setState(() {
       editMode = true;
       editIndex = index;
@@ -260,12 +268,14 @@ class _HotelAndRoomSelectionBottomSheetState
       selectedRoomCategoryName = hotel.roomCategoryName;
       selectedRoomCategory = {
         "CatCode": hotel.roomCategoryId,
-        "CatName": hotel.roomCategoryName
+        "CatName": hotel.roomCategoryName,
       };
 
       getSelectedHotelCategoryRoomTypes(
-          selectedHotelId!, selectedRoomCategoryId!,
-          clearSelection: false);
+        selectedHotelId!,
+        selectedRoomCategoryId!,
+        clearSelection: false,
+      );
 
       selectedRoomTypeId = hotel.roomTypeId;
       selectedRoomTypeName = hotel.roomTypeName;
@@ -273,7 +283,7 @@ class _HotelAndRoomSelectionBottomSheetState
       selectedRoomType = {
         "ID": hotel.roomTypeId,
         "RoomType": parts[0].trim(),
-        "MealPlan": parts[1].trim()
+        "MealPlan": parts[1].trim(),
       };
       sRoomTypeName = parts[0].trim();
       sMealPlanName = parts[1].trim();
@@ -282,16 +292,39 @@ class _HotelAndRoomSelectionBottomSheetState
       costIndex = hotel.costIndex;
     });
 
-   
+    // Scroll to top so user sees the form
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
   }
 
   void _removeHotel(int index) {
-    setState(() {
-      hotelList.removeAt(index);
-    });
+    setState(() => hotelList.removeAt(index));
   }
 
   void _saveHotelSelection() {
+    if (selectedDateRange == null ||
+        selectedHotelId == null ||
+        selectedRoomCategoryId == null ||
+        selectedRoomTypeId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please complete all selections.")),
+      );
+      return;
+    }
+
+    if (costNotifier.value == "0") {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text("Please calculate the cost to proceed.")),
+      );
+      return;
+    }
+
     final hotel = HotelDescip(
       hotel: selectedHotelId,
       hotelName: selectedHotelName,
@@ -310,30 +343,12 @@ class _HotelAndRoomSelectionBottomSheetState
       costIndex: costIndex,
     );
 
-    if (selectedDateRange == null ||
-        selectedHotelId == null ||
-        selectedRoomCategoryId == null ||
-        selectedRoomTypeId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please complete all selections.")),
-      );
-      return;
-    }
-
-    if (costNotifier.value == "0") {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please calculate the cost to proceed.")),
-      );
-      return;
-    }
-
     setState(() {
       if (editMode) {
         hotelList[editIndex!] = hotel;
       } else {
         hotelList.add(hotel);
       }
-    
     });
 
     _clearSelection();
@@ -342,6 +357,14 @@ class _HotelAndRoomSelectionBottomSheetState
   void _acceptChanges() {
     ref.read(selectedHotelProvider.notifier).addHotels(hotelList);
     Navigator.pop(context);
+  }
+
+  void _closeSheet() {
+    if (widget.onClose != null) {
+      widget.onClose!();
+    } else {
+      Navigator.pop(context);
+    }
   }
 
   void _clearSelectedCost() {
@@ -396,26 +419,29 @@ class _HotelAndRoomSelectionBottomSheetState
         selectedDateRange == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text("Please select Date range ,hotel, category and room type.")),
+          content: Text(
+              "Please select Date range, hotel, category and room type."),
+        ),
       );
       return;
     }
     final hotelCosts = await getHotelCosts();
     showModalBottomSheet(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       builder: (BuildContext context) {
         return CostCalculatorBottomSheet(
-            onBackPressed: () {
-              Navigator.pop(context);
-            },
-            onItemSelected: _handleItemSelected,
-            hotelCosts: hotelCosts ?? []);
+          onBackPressed: () => Navigator.pop(context),
+          onItemSelected: _handleItemSelected,
+          hotelCosts: hotelCosts ?? [],
+        );
       },
     );
   }
 
   Widget _buildCounter(
-      String label, int count, int type, Function(int) onCountChange) {
+      String label, int count, Function(int) onCountChange) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -423,8 +449,8 @@ class _HotelAndRoomSelectionBottomSheetState
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(label,
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                style: const TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.bold)),
             Row(
               children: [
                 GestureDetector(
@@ -467,622 +493,573 @@ class _HotelAndRoomSelectionBottomSheetState
     );
   }
 
+  // Shared dialog popup props for all dropdowns
+  PopupPropsMultiSelection<Map<String, dynamic>> _dialogPopupProps({
+    required Widget Function(BuildContext, Map<String, dynamic>, bool, bool)
+        itemBuilder,
+  }) {
+    return PopupPropsMultiSelection.dialog(
+      showSearchBox: true,
+      searchFieldProps: const TextFieldProps(autofocus: true),
+      itemBuilder: itemBuilder,
+      dialogProps: DialogProps(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        elevation: 8,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // final roomCategories = ref.watch(roomCategoryProvider);
-    final hotelsDropDownKey = GlobalKey<DropdownSearchState>();
-    final roomCategoriesDropDownKey = GlobalKey<DropdownSearchState>();
-    final roomTypeDropDownKey = GlobalKey<DropdownSearchState>();
-
-    return StatefulBuilder(
-      builder: (BuildContext context, StateSetter setModalState) {
-        return FractionallySizedBox(
-          heightFactor: 0.8,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return FractionallySizedBox(
+      heightFactor: 0.9,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Header Row ──────────────────────────────────────
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
                   "Select Hotels & Rooms",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: SizedBox(
-                    height: 400,
-                    child: SingleChildScrollView(
-                      controller: _scrollController,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minHeight: MediaQuery.of(context).size.height *
-                              0.8, // Minimum height
+                IconButton(
+                  tooltip: "Close",
+                  icon: const Icon(Icons.close),
+                  onPressed: _closeSheet,
+                ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            // ── Scrollable Body ─────────────────────────────────
+            Expanded(
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: MediaQuery.of(context).size.height * 0.8,
+                  ),
+                  child: IntrinsicHeight(
+                    child: Column(
+                      children: [
+                        // ── Date Range ─────────────────────────
+                         const SizedBox(height: 5),
+                        TextFormField(
+                          controller: _dateRangeController,
+                          readOnly: true,
+                          decoration: InputDecoration(
+                            labelText: "Select Date Range",
+                            labelStyle: const TextStyle(
+                                fontSize: 20, fontWeight: FontWeight.bold),
+                            border: const OutlineInputBorder(),
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.calendar_today),
+                              onPressed: () =>
+                                  _selectDateRange(context),
+                            ),
+                          ),
                         ),
-                        child: IntrinsicHeight(
-                          child: Column(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.only(top: 10),
-                                child: TextFormField(
-                                  controller: _dateRangeController,
-                                  readOnly: true,
-                                  decoration: InputDecoration(
-                                    labelText: "Select Date Range",
-                                    border: const OutlineInputBorder(),
-                                    suffixIcon: IconButton(
-                                      icon: const Icon(Icons.calendar_today),
-                                      onPressed: () async {
-                                        _selectDateRange(context);
-                                      },
-                                    ),
+                        if (selectedDateRange != null)
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 6.0),
+                              child: Text(
+                                "$numberOfNights night(s)",
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 16),
+
+                        // ── Counters ───────────────────────────
+                        _buildCounter(
+                            "Adults", numberOfAdults, _updateAdults),
+                        const SizedBox(height: 16),
+                        _buildCounter(
+                            "Children", numberOfChildren, _updateChildren),
+                        const SizedBox(height: 16),
+                        _buildCounter(
+                            "Rooms", numberOfRooms, _updateRooms),
+                        const SizedBox(height: 16),
+
+                        // ── Hotel Dropdown ─────────────────────
+                        DropdownSearch<Map<String, dynamic>>(
+                          selectedItem: selectedHotel,
+                          items: (filter, infiniteScrollProps) =>
+                              ref
+                                  .watch(hotelsProvider.notifier)
+                                  .hotelsAsMap,
+                          itemAsString: (item) =>
+                              item['HotelName'] ?? '',
+                          compareFn: (a, b) =>
+                              a['Hotel_IID'] == b['Hotel_IID'],
+                          decoratorProps: const DropDownDecoratorProps(
+                            decoration: InputDecoration(
+                              labelText: 'Select Hotel',
+                              labelStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          onChanged: _setHotel,
+                          popupProps: PopupProps.dialog(
+                            showSearchBox: true,
+                            searchFieldProps:
+                                const TextFieldProps(autofocus: true),
+                            itemBuilder: (context, item, isSelected,
+                                isFocused) {
+                              return ListTile(
+                                title: Text(item['HotelName'] ?? '', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                
+                                selected: isSelected,
+                                tileColor: isFocused
+                                    ? Colors.grey.shade200
+                                    : null,
+                              );
+                            },
+                            dialogProps: DialogProps(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // ── Room Category Dropdown ─────────────
+                        ValueListenableBuilder<List<Map<String, dynamic>>>(
+                          valueListenable: roomCategoriesNotifier,
+                          builder: (context, roomCategories, _) {
+                            return DropdownSearch<Map<String, dynamic>>(
+                              selectedItem: selectedRoomCategory,
+                              items: (filter, infiniteScrollProps) =>
+                                  roomCategories,
+                              itemAsString: (item) =>
+                                  item['CatName'] ?? '',
+                              compareFn: (a, b) =>
+                                  a['CatCode'] == b['CatCode'],
+                              decoratorProps:
+                                  const DropDownDecoratorProps(
+                                decoration: InputDecoration(
+                                  labelText: 'Select Category',
+                                  labelStyle:  TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                              onChanged: _setRoomCategory,
+                              popupProps: PopupProps.dialog(
+                                showSearchBox: true,
+                                searchFieldProps: const TextFieldProps(
+                                    autofocus: true),
+                                itemBuilder: (context, item, isSelected,
+                                    isFocused) {
+                                  return ListTile(
+                                    title:
+                                        Text(item['CatName'] ?? '',style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                    selected: isSelected,
+                                    tileColor: isFocused
+                                        ? Colors.grey.shade200
+                                        : null,
+                                  );
+                                },
+                                dialogProps: DialogProps(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(12),
                                   ),
                                 ),
                               ),
-                              if (selectedDateRange != null) ...[
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(top: 8.0),
-                                    child: Text(
-                                      "$numberOfNights night(s)",
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontStyle: FontStyle.italic,
-                                      ),
-                                    ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // ── Room Type Dropdown ─────────────────
+                        ValueListenableBuilder<List<Map<String, dynamic>>>(
+                          valueListenable: roomTypesNotifier,
+                          builder: (context, roomTypes, _) {
+                            return DropdownSearch<Map<String, dynamic>>(
+                              selectedItem: selectedRoomType,
+                              items: (filter, infiniteScrollProps) =>
+                                  roomTypes,
+                              itemAsString: (item) {
+                                final rt = item['RoomType'] ?? '';
+                                final mp = item['MealPlan'] ?? '';
+                                return '$rt - $mp';
+                              },
+                              compareFn: (a, b) => a['ID'] == b['ID'],
+                              decoratorProps:
+                                  const DropDownDecoratorProps(
+                                decoration: InputDecoration(
+                                  labelText: 'Select Room Type',
+                                   labelStyle:  TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                              onChanged: _setRoomType,
+                              popupProps: PopupProps.dialog(
+                                showSearchBox: true,
+                                searchFieldProps: const TextFieldProps(
+                                    autofocus: true),
+                                itemBuilder: (context, item, isSelected,
+                                    isFocused) {
+                                  final rt = item['RoomType'] ?? '';
+                                  final mp = item['MealPlan'] ?? '';
+                                  return ListTile(
+                                    title: Text('$rt - $mp', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                    selected: isSelected,
+                                    tileColor: isFocused
+                                        ? Colors.grey.shade200
+                                        : null,
+                                  );
+                                },
+                                dialogProps: DialogProps(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(12),
                                   ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // ── Cost Calculator Button ─────────────
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () =>
+                                _showCostCalculator(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Constants.kPrimaryColor,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 16, horizontal: 20),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.calculate, size: 20),
+                                SizedBox(width: 10),
+                                Text(
+                                  "Cost Calculator",
+                                  style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold),
                                 ),
                               ],
-                              const SizedBox(height: 16),
-                              _buildCounter("Adults", numberOfAdults, 1,
-                                  (count) => _updateAdults(count)),
-                              const SizedBox(height: 16),
-                              _buildCounter("Children", numberOfChildren, 1,
-                                  (count) => _updateChildren(count)),
-                              const SizedBox(height: 16),
-                              _buildCounter("Rooms", numberOfRooms, 2,
-                                  (count) => _updateRooms(count)),
-                              const SizedBox(height: 16),
-                              DropdownSearch<Map<String, dynamic>>(
-                                key: hotelsDropDownKey,
-                                selectedItem: selectedHotel,
-                                items: (filter, infiniteScrollProps) => ref
-                                    .watch(hotelsProvider.notifier)
-                                    .hotelsAsMap,
-                                itemAsString: (item) => item['HotelName'] ?? '',
-                                compareFn: (item1, item2) =>
-                                    item1['Hotel_IID'] == item2['Hotel_IID'],
-                                decoratorProps: const DropDownDecoratorProps(
-                                  decoration: InputDecoration(
-                                    labelText: 'Select Hotel',
-                                    border: OutlineInputBorder(),
-                                  ),
-                                ),
-                                onChanged: (selectedHotel) {
-                                  _setHotel(selectedHotel);
-                                },
-                                // selectedItem: selectedHotelAndRoom,
-                                popupProps: PopupProps.menu(
-                                  fit: FlexFit.loose,
-                                  constraints: const BoxConstraints(),
-                                  showSearchBox: true,
-                                  searchFieldProps:
-                                      const TextFieldProps(autofocus: true),
-                                  itemBuilder: (BuildContext context,
-                                      Map<String, dynamic> item,
-                                      bool isSelected,
-                                      bool isFocused) {
-                                    return Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical:
-                                              0.5), // Reduce padding further
-                                      child: ListTile(
-                                        minVerticalPadding: 0.2,
-                                        // contentPadding: EdgeInsets.zero,
-                                        title: Text(item['HotelName'] ?? ''),
-                                        selected: isSelected,
-                                        tileColor: isFocused
-                                            ? Colors.grey.shade300
-                                            : null, // Optional: highlight focused item
-                                      ),
-                                    );
-                                  },
-                                  onDismissed: () {
-                                    // Prevent the bottom sheet from closing when dropdown is interacted with.
-                                    // You can keep this empty or add custom behavior if needed.
-                                  },
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              ValueListenableBuilder<
-                                  List<Map<String, dynamic>>>(
-                                valueListenable: roomCategoriesNotifier,
-                                builder: (context, roomCategories, child) {
-                                  return DropdownSearch<Map<String, dynamic>>(
-                                    key: roomCategoriesDropDownKey,
-                                    selectedItem: selectedRoomCategory,
-                                    items: (filter, infiniteScrollProps) =>
-                                        roomCategories,
-                                    itemAsString: (item) =>
-                                        item['CatName'] ?? '',
-                                    compareFn: (item1, item2) =>
-                                        item1['CatCode'] == item2['CatCode'],
-                                    decoratorProps:
-                                        const DropDownDecoratorProps(
-                                      decoration: InputDecoration(
-                                        labelText: 'Select Category',
-                                        border: OutlineInputBorder(),
-                                      ),
-                                    ),
-                                    onChanged: (selectedRoomCategory) {
-                                      _setRoomCategory(selectedRoomCategory);
-                                    },
-                                    // selectedItem: selectedHotelAndRoom,
-                                    popupProps: PopupProps.menu(
-                                      fit: FlexFit.loose,
-                                      constraints: const BoxConstraints(),
-                                      showSearchBox: true,
-                                      searchFieldProps:
-                                          const TextFieldProps(autofocus: true),
-                                      itemBuilder: (BuildContext context,
-                                          Map<String, dynamic> item,
-                                          bool isSelected,
-                                          bool isFocused) {
-                                        return Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              vertical:
-                                                  0.5), // Reduce padding further
-                                          child: ListTile(
-                                            minVerticalPadding: 0.2,
-                                            // contentPadding: EdgeInsets.zero,
-                                            title: Text(item['CatName'] ?? ''),
-                                            selected: isSelected,
-                                            tileColor: isFocused
-                                                ? Colors.grey.shade300
-                                                : null, // Optional: highlight focused item
-                                          ),
-                                        );
-                                      },
-                                      onDismissed: () {
-                                        // Prevent the bottom sheet from closing when dropdown is interacted with.
-                                        // You can keep this empty or add custom behavior if needed.
-                                      },
-                                    ),
-                                  );
-                                },
-                              ),
-                              const SizedBox(height: 16),
-                              ValueListenableBuilder<
-                                  List<Map<String, dynamic>>>(
-                                valueListenable: roomTypesNotifier,
-                                builder: (context, roomTypes, child) {
-                                  return DropdownSearch<Map<String, dynamic>>(
-                                    key: roomTypeDropDownKey,
-                                    selectedItem: selectedRoomType,
-                                    items: (filter, infiniteScrollProps) =>
-                                        roomTypes,
-                                    itemAsString: (item) {
-                                      final roomType = item['RoomType'] ?? '';
-                                      final mealPlan = item['MealPlan'] ?? '';
-                                      return '$roomType - $mealPlan';
-                                    },
-                                    compareFn: (item1, item2) =>
-                                        item1['ID'] == item2['ID'],
-                                    decoratorProps:
-                                        const DropDownDecoratorProps(
-                                      decoration: InputDecoration(
-                                        labelText: 'Select Room Type',
-                                        border: OutlineInputBorder(),
-                                      ),
-                                    ),
-                                    onChanged: (selectedRoomType) {
-                                      _setRoomType(selectedRoomType);
-                                    },
-                                    // selectedItem: selectedHotelAndRoom,
-                                    popupProps: PopupProps.menu(
-                                      fit: FlexFit.loose,
-                                      constraints: const BoxConstraints(),
-                                      showSearchBox: true,
-                                      searchFieldProps:
-                                          const TextFieldProps(autofocus: true),
-                                      itemBuilder: (BuildContext context,
-                                          Map<String, dynamic> item,
-                                          bool isSelected,
-                                          bool isFocused) {
-                                        final roomType = item['RoomType'] ?? '';
-                                        final mealPlan = item['MealPlan'] ?? '';
-                                        dynamic text = '$roomType - $mealPlan';
-                                        if (roomType == null) {
-                                          text = '';
-                                        }
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
 
-                                        return Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              vertical:
-                                                  0.5), // Reduce padding further
-                                          child: ListTile(
-                                            minVerticalPadding: 0.2,
-                                            // contentPadding: EdgeInsets.zero,
-                                            title: Text(text),
-                                            selected: isSelected,
-                                            tileColor: isFocused
-                                                ? Colors.grey.shade300
-                                                : null, // Optional: highlight focused item
-                                          ),
-                                        );
-                                      },
-                                      onDismissed: () {
-                                        // Prevent the bottom sheet from closing when dropdown is interacted with.
-                                        // You can keep this empty or add custom behavior if needed.
-                                      },
-                                    ),
-                                  );
-                                },
-                              ),
-                              const SizedBox(height: 16),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    _showCostCalculator(context);
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Constants.kPrimaryColor,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 16,
-                                      horizontal: 20,
-                                    ),
-                                  ),
-                                  child: const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.calculate, size: 20),
-                                      SizedBox(width: 10),
-                                      Text(
-                                        "Cost Calculator",
-                                        style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                    ],
-                                  ),
+                        // ── Estimated Cost ─────────────────────
+                        ValueListenableBuilder<String>(
+                          valueListenable: costNotifier,
+                          builder: (context, cost, _) {
+                            return Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                "Est. Cost LKR $cost",
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
                                 ),
                               ),
-                              const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  ValueListenableBuilder<String>(
-                                    valueListenable: costNotifier,
-                                    builder: (context, cost, child) {
-                                      return Text(
-                                        "Est. Cost LKR $cost",
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 15,
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ],
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // ── Add / Update Hotel Button ──────────
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            onPressed: _saveHotelSelection,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: editMode
+                                  ? Colors.green
+                                  : Constants.kSecondaryColor,
+                              side: BorderSide(
+                                color: editMode
+                                    ? Colors.green
+                                    : Constants.kSecondaryColor,
+                                width: 2,
                               ),
-                              const SizedBox(height: 16),
-                              Align(
-                                alignment: Alignment.bottomCenter,
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  child: editMode
-                                      ? OutlinedButton(
-                                          onPressed: _saveHotelSelection,
-                                          style: OutlinedButton.styleFrom(
-                                            foregroundColor: Colors.green,
-                                            side: const BorderSide(
-                                                color: Colors.green, width: 2),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 16),
-                                          ),
-                                          child: const Text(
-                                            "Update Hotel",
-                                            style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold),
-                                          ),
-                                        )
-                                      : OutlinedButton(
-                                          onPressed: _saveHotelSelection,
-                                          style: OutlinedButton.styleFrom(
-                                            foregroundColor:
-                                                Constants.kSecondaryColor,
-                                            side: const BorderSide(
-                                                color:
-                                                    Constants.kSecondaryColor,
-                                                width: 2),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 16),
-                                          ),
-                                          child: const Text(
-                                            "Add Hotel",
-                                            style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold),
-                                          ),
-                                        ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 16),
+                            ),
+                            child: Text(
+                              editMode ? "Update Hotel" : "Add Hotel",
+                              style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+
+                        // ── Cancel Edit Button ─────────────────
+                        if (editMode) ...[
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              onPressed: _clearSelection,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.grey,
+                                side: const BorderSide(
+                                    color: Colors.grey, width: 2),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(12),
                                 ),
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 16),
                               ),
-                              const SizedBox(height: 8),
-                              Align(
-                                alignment: Alignment.bottomCenter,
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  child: editMode
-                                      ? OutlinedButton(
-                                          onPressed: _clearSelection,
-                                          style: OutlinedButton.styleFrom(
-                                            foregroundColor: Colors.grey,
-                                            side: const BorderSide(
-                                                color: Colors.grey, width: 2),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 16),
-                                          ),
-                                          child: const Text(
-                                            "Cancel",
-                                            style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold),
-                                          ),
-                                        )
-                                      : null,
+                              child: const Text(
+                                "Cancel",
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 16),
+
+                        // ── Hotel List ─────────────────────────
+                        hotelList.isEmpty
+                            ? const Center(
+                                heightFactor: 4.0,
+                                child: Text(
+                                  'No hotels added yet.',
+                                  style: TextStyle(fontSize: 16),
                                 ),
-                              ),
-                              const SizedBox(
-                                height: 16,
-                              ),
-                              hotelList.isEmpty
-                                  ? const Center(
-                                      heightFactor: 6.0,
-                                      child: Text(
-                                        'No hotels available.',
-                                        style: TextStyle(fontSize: 16),
-                                      ),
-                                    )
-                                  : Column(
-                                      children: hotelList.map((hotel) {
-                                        int index = hotelList.indexOf(hotel);
-                                        return SizedBox(
-                                          width: double.infinity,
-                                          child: GestureDetector(
-                                            onDoubleTap: () {
-                                              if (_scrollController
-                                                  .hasClients) {
-                                                _scrollController.animateTo(
-                                                  0,
-                                                  duration: const Duration(
-                                                      milliseconds: 300),
-                                                  curve: Curves.easeInOut,
-                                                );
-                                              }
-                                              __editHotel(hotel, index);
-                                            },
-                                            child: Card(
-                                              margin:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 3,
-                                                      vertical: 8),
-                                              child: Stack(
+                              )
+                            : Column(
+                                children: hotelList.map((hotel) {
+                                  final index =
+                                      hotelList.indexOf(hotel);
+                                  return SizedBox(
+                                    width: double.infinity,
+                                    child: GestureDetector(
+                                      onDoubleTap: () =>
+                                          _editHotel(hotel, index),
+                                      child: Card(
+                                        margin:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 3,
+                                                vertical: 8),
+                                        child: Stack(
+                                          children: [
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.all(
+                                                      12.0),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment
+                                                        .start,
                                                 children: [
-                                                  Padding(
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                            12.0),
-                                                    child: Column(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
+                                                  Text(
+                                                    hotel.hotelName!,
+                                                    style: const TextStyle(
+                                                        fontSize: 18,
+                                                        fontWeight:
+                                                            FontWeight
+                                                                .bold),
+                                                  ),
+                                                  const SizedBox(
+                                                      height: 8),
+                                                  RichText(
+                                                    text: TextSpan(
                                                       children: [
-                                                        Text(
-                                                          hotel.hotelName!,
-                                                          style: const TextStyle(
-                                                              fontSize: 18,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold),
-                                                        ),
-                                                        const SizedBox(
-                                                            height: 8),
-                                                        RichText(
-                                                          text: TextSpan(
-                                                            children: [
-                                                              const TextSpan(
-                                                                text:
-                                                                    "Category: ",
-                                                                style:
-                                                                    TextStyle(
-                                                                  fontSize: 16,
-                                                                  color: Colors
-                                                                      .black,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w600,
-                                                                ),
-                                                              ),
-                                                              TextSpan(
-                                                                text: hotel
-                                                                    .roomCategoryName,
-                                                                style:
-                                                                    const TextStyle(
-                                                                  fontSize: 16,
-                                                                  color: Colors
-                                                                      .black,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .normal,
-                                                                ),
-                                                              ),
-                                                            ],
+                                                        const TextSpan(
+                                                          text:
+                                                              "Category: ",
+                                                          style: TextStyle(
+                                                            fontSize: 16,
+                                                            color: Colors
+                                                                .black,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .w600,
                                                           ),
                                                         ),
-                                                        const SizedBox(
-                                                            height: 5),
-                                                        RichText(
-                                                          text: TextSpan(
-                                                            children: [
-                                                              const TextSpan(
-                                                                text:
-                                                                    "Room Type: ",
-                                                                style:
-                                                                    TextStyle(
-                                                                  fontSize: 16,
-                                                                  color: Colors
-                                                                      .black,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w600,
-                                                                ),
-                                                              ),
-                                                              TextSpan(
-                                                                text: hotel
-                                                                    .roomTypeName,
-                                                                style:
-                                                                    const TextStyle(
-                                                                  fontSize: 16,
-                                                                  color: Colors
-                                                                      .black,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .normal,
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                        const SizedBox(
-                                                            height: 8),
-                                                        Row(
-                                                          mainAxisSize:
-                                                              MainAxisSize.min,
-                                                          mainAxisAlignment:
-                                                              MainAxisAlignment
-                                                                  .spaceBetween,
-                                                          children: [
-                                                            Text(
-                                                              "Guest Count: ${hotel.guestCount}",
-                                                              style:
-                                                                  const TextStyle(
-                                                                      fontSize:
-                                                                          14),
-                                                            ),
-                                                            const SizedBox(
-                                                                width: 20),
-                                                            Text(
-                                                              "Nights: ${hotel.noOfNights}",
-                                                              style:
-                                                                  const TextStyle(
-                                                                      fontSize:
-                                                                          14),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                        const SizedBox(
-                                                            height: 8),
-                                                        Text(
-                                                          "Estimated Cost: ${hotel.selectedCost}",
+                                                        TextSpan(
+                                                          text: hotel
+                                                              .roomCategoryName,
                                                           style: const TextStyle(
-                                                              fontSize: 16,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold),
+                                                            fontSize: 16,
+                                                            color: Colors
+                                                                .black,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .normal,
+                                                          ),
                                                         ),
                                                       ],
                                                     ),
                                                   ),
-                                                  Positioned(
-                                                    bottom: 0,
-                                                    right: 0,
-                                                    child: IconButton(
-                                                      icon: const Icon(
-                                                          Icons.delete,
-                                                          color: Colors.red),
-                                                      onPressed: () {
-                                                        _removeHotel(index);
-                                                      },
+                                                  const SizedBox(
+                                                      height: 5),
+                                                  RichText(
+                                                    text: TextSpan(
+                                                      children: [
+                                                        const TextSpan(
+                                                          text:
+                                                              "Room Type: ",
+                                                          style: TextStyle(
+                                                            fontSize: 16,
+                                                            color: Colors
+                                                                .black,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .w600,
+                                                          ),
+                                                        ),
+                                                        TextSpan(
+                                                          text: hotel
+                                                              .roomTypeName,
+                                                          style: const TextStyle(
+                                                            fontSize: 16,
+                                                            color: Colors
+                                                                .black,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .normal,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  const SizedBox(
+                                                      height: 8),
+                                                  Row(
+                                                    children: [
+                                                      Text(
+                                                        "Guest Count: ${hotel.guestCount}",
+                                                        style: const TextStyle(
+                                                            fontSize:
+                                                                14),
+                                                      ),
+                                                      const SizedBox(
+                                                          width: 20),
+                                                      Text(
+                                                        "Nights: ${hotel.noOfNights}",
+                                                        style: const TextStyle(
+                                                            fontSize:
+                                                                14),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(
+                                                      height: 8),
+                                                  Text(
+                                                    "Estimated Cost: ${hotel.selectedCost}",
+                                                    style: const TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight:
+                                                            FontWeight
+                                                                .bold),
+                                                  ),
+                                                  const SizedBox(
+                                                      height: 24),
+                                                  const Text(
+                                                    "Double-tap to edit",
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      color: Colors.grey,
+                                                      fontStyle:
+                                                          FontStyle.italic,
                                                     ),
                                                   ),
                                                 ],
                                               ),
                                             ),
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                              const SizedBox(
-                                height: 16,
-                              ),
-                              AnimatedOpacity(
-                                // opacity: hotelList.isNotEmpty ? 1.0 : 0.0,
-                                opacity: 1.0,
-                                duration: const Duration(milliseconds: 300),
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    onPressed: _acceptChanges,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor:
-                                          Constants.kSecondaryColor,
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 16,
-                                        horizontal: 20,
-                                      ),
-                                    ),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.save, size: 20),
-                                        SizedBox(width: 10),
-                                        Text(
-                                          "Accept Changes",
-                                          style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold),
+                                            Positioned(
+                                              bottom: 0,
+                                              right: 0,
+                                              child: IconButton(
+                                                icon: const Icon(
+                                                    Icons.delete,
+                                                    color: Colors.red),
+                                                onPressed: () =>
+                                                    _removeHotel(index),
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                      ],
+                                      ),
                                     ),
-                                  ),
-                                ),
+                                  );
+                                }).toList(),
                               ),
-                            ],
+
+                        const SizedBox(height: 16),
+
+                        // ── Accept Changes Button ──────────────
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _acceptChanges,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Constants.kSecondaryColor,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 16, horizontal: 20),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.save, size: 20),
+                                SizedBox(width: 10),
+                                Text(
+                                  "Accept Changes",
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 16),
+                      ],
                     ),
                   ),
-                )
-              ],
+                ),
+              ),
             ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Cost Calculator Bottom Sheet
+// ─────────────────────────────────────────────────────────────────────────────
 
 class CostCalculatorBottomSheet extends StatefulWidget {
   final Function onBackPressed;
@@ -1123,13 +1100,14 @@ class _CostCalculatorBottomSheetState extends State<CostCalculatorBottomSheet>
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
-          // Header with Back Button
+          // ── Header ──────────────────────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
                 "Cost Calculator",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style:
+                    TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               IconButton(
                 icon: const Icon(Icons.arrow_back),
@@ -1137,9 +1115,8 @@ class _CostCalculatorBottomSheetState extends State<CostCalculatorBottomSheet>
               ),
             ],
           ),
-          const SizedBox(height: 0),
 
-          // Tabs
+          // ── Tabs ─────────────────────────────────────────────
           TabBar(
             controller: _tabController,
             tabs: const [
@@ -1147,15 +1124,16 @@ class _CostCalculatorBottomSheetState extends State<CostCalculatorBottomSheet>
               Tab(text: "Guest's Prev Data"),
             ],
             labelColor: Colors.black,
-            indicatorColor: Theme.of(context).primaryColor,
+            indicatorColor: Colors.blue,
           ),
           const SizedBox(height: 16),
 
-          // Tab Views
+          // ── Tab Views ────────────────────────────────────────
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
+                // General tab
                 widget.hotelCosts == null || widget.hotelCosts!.isEmpty
                     ? const Center(
                         child: Text(
@@ -1164,57 +1142,56 @@ class _CostCalculatorBottomSheetState extends State<CostCalculatorBottomSheet>
                         ),
                       )
                     : ListView.builder(
-                        itemCount: widget.hotelCosts?.length ?? 0,
+                        itemCount: widget.hotelCosts!.length,
                         itemBuilder: (context, index) {
                           final cost = widget.hotelCosts![index];
                           return Card(
                             margin: const EdgeInsets.only(bottom: 12),
-                            child: Padding(
-                              padding: const EdgeInsets.all(2.0),
-                              child: ListTile(
-                                onTap: () {
-                                  widget.onItemSelected(cost, index);
-                                  Navigator.pop(
-                                      context); // Close the bottom sheet
-                                },
-                                title: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          "Check-In: ${DateFormat('yyyy-MM-dd').format(DateTime.parse(cost.checkIn!))}",
-                                          style: const TextStyle(fontSize: 14),
-                                        ),
-                                        Text(
-                                          "Check-Out: ${DateFormat('yyyy-MM-dd').format(DateTime.parse(cost.checkOut!))}",
-                                          style: const TextStyle(fontSize: 14),
-                                        ),
-                                      ],
-                                    ),
-                                    Column(
-                                      children: [
-                                        const Text("Net Rate: "),
-                                        Text(
-                                          cost.netRate!.toStringAsFixed(2),
-                                          style: const TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                      ],
-                                    )
-                                  ],
-                                ),
+                            child: ListTile(
+                              onTap: () {
+                                widget.onItemSelected(cost, index);
+                                Navigator.pop(context);
+                              },
+                              title: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "Check-In: ${DateFormat('yyyy-MM-dd').format(DateTime.parse(cost.checkIn!))}",
+                                        style: const TextStyle(
+                                            fontSize: 14),
+                                      ),
+                                      Text(
+                                        "Check-Out: ${DateFormat('yyyy-MM-dd').format(DateTime.parse(cost.checkOut!))}",
+                                        style: const TextStyle(
+                                            fontSize: 14),
+                                      ),
+                                    ],
+                                  ),
+                                  Column(
+                                    children: [
+                                      const Text("Net Rate: "),
+                                      Text(
+                                        cost.netRate!.toStringAsFixed(2),
+                                        style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight:
+                                                FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
                           );
                         },
                       ),
 
-                // Guest's Prev Data Tab
+                // Guest's Prev Data tab
                 const Center(
                   child: Text(
                     "No previous data available.",

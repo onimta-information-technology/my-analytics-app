@@ -45,7 +45,6 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
       TextEditingController();
   final TextEditingController _memberIdController = TextEditingController();
   final TextEditingController _memberNameController = TextEditingController();
-  final TextEditingController _hotelRoomController = TextEditingController();
 
   final ValueNotifier<String> hotelRoomNotifier = ValueNotifier<String>("");
   final ValueNotifier<String> airTicketsNotifier = ValueNotifier<String>("");
@@ -54,9 +53,6 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
   String _selectedPrefix = "BM";
   final TextEditingController _memberIdNumberController =
       TextEditingController();
-  DateTimeRange? selectedDateRange;
-  String? selectedHotelAndRoom;
-  int? numberOfNights;
 
   final TextEditingController _noOfNightsController = TextEditingController();
   final TextEditingController _arrivalDateController = TextEditingController();
@@ -90,18 +86,23 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
 
   @override
   void dispose() {
+    _reservationNoController.dispose();
     _memberIdController.dispose();
     _memberNameController.dispose();
+    _memberIdNumberController.dispose();
+    _noOfNightsController.dispose();
     _arrivalDateController.dispose();
     _departureDateController.dispose();
+    _remarksController.dispose();
+    hotelRoomNotifier.dispose();
+    airTicketsNotifier.dispose();
     super.dispose();
   }
 
   void _updateMemberIdFields(String fullMemberId) {
     if (fullMemberId.isNotEmpty) {
-      // Extract prefix and number from full member ID
-      String prefix = '';
-      String numberPart = '';
+      String prefix = 'BM';
+      String numberPart = fullMemberId;
 
       if (fullMemberId.startsWith('BM')) {
         prefix = 'BM';
@@ -112,10 +113,6 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
       } else if (fullMemberId.startsWith('BN')) {
         prefix = 'BN';
         numberPart = fullMemberId.substring(2);
-      } else {
-        // If no recognized prefix, treat as BM by default
-        prefix = 'BM';
-        numberPart = fullMemberId;
       }
 
       setState(() {
@@ -129,38 +126,31 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
   Future<void> _loadGuestDataInEditMode() async {
     if (!_isEditMode || _memberIdController.text.isEmpty) return;
 
-    // Check if guest data is already loaded in the provider
     final currentSelectedGuest = ref.read(selectedGuestProvider);
     if (currentSelectedGuest != null &&
         currentSelectedGuest.mid == _memberIdController.text) {
-      // Guest data is already loaded, no need to fetch again
-
       return;
     }
 
     try {
-      setState(() {
-        _isLoading = true;
-      });
+      setState(() => _isLoading = true);
 
       GuestRepository guestRepository = GuestRepository(
         ApiService(const FlutterSecureStorage()),
       );
 
-      // Search for guest by MID to get full guest information
       List<GuestSearchResponse> guests = await guestRepository.searchGuest(
-        9021, // Using 9021 as the search type for MID lookup
+        9021,
         _memberIdController.text,
       );
 
       if (guests.isNotEmpty) {
         final guestResponse = guests.first;
-        ref
-            .read(selectedGuestProvider.notifier)
-            .setSelectedGuest(
+        ref.read(selectedGuestProvider.notifier).setSelectedGuest(
               Guest(
                 mid: guestResponse.mid ?? _memberIdController.text,
-                memberName: guestResponse.mName ?? _memberNameController.text,
+                memberName:
+                    guestResponse.mName ?? _memberNameController.text,
                 country: "",
                 lastVisitDate: guestResponse.lvd?.toString() ?? "",
                 gift: "",
@@ -172,14 +162,9 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
               ),
             );
       }
-
-      setState(() {
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+    } catch (_) {
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -190,115 +175,81 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
     _noOfNightsController.text = selectedReservation.noOfNights.toString();
     final DateFormat dateFormat = DateFormat('yyyy-MM-dd');
     _arrivalDate = selectedReservation.arrDate;
-    _arrivalDateController.text = dateFormat.format(
-      selectedReservation.arrDate,
-    );
+    _arrivalDateController.text = dateFormat.format(selectedReservation.arrDate);
     _departureDate = selectedReservation.depDate;
-    _departureDateController.text = dateFormat.format(
-      selectedReservation.depDate,
-    );
-    // _airTicketRequisition =
-    //     selectedReservation.airticketReservationStatus == "T" ? "Yes" : "No";
+    _departureDateController.text =
+        dateFormat.format(selectedReservation.depDate);
 
-    bool hasAirTickets = false;
-
-    String status = selectedReservation.airticketReservationStatus
+    final String status = selectedReservation.airticketReservationStatus
         .toString()
         .toUpperCase()
         .trim();
-
-    // Check for various possible "Yes" values
-    hasAirTickets =
-        status == "T" ||
+    final bool hasAirTickets = status == "T" ||
         status == "TRUE" ||
         status == "YES" ||
         status == "Y" ||
         status == "1";
 
     _airTicketRequisition = hasAirTickets ? "Yes" : "No";
-
     _remarksController.text = selectedReservation.remarks;
   }
 
   Future<void> _getHotels() async {
     final hotels = ref.read(hotelsProvider);
-
     if (hotels.isEmpty) {
       await ref.read(hotelsProvider.notifier).getAllHotels();
     }
   }
 
   String getGuestAndRoomCounts(List<HotelDescip> hotels) {
-    final totalGuests = hotels.fold<int>(
-      0,
-      (sum, hotel) => sum + hotel.guestCount!,
-    );
-    final totalRooms = hotels.fold<int>(
-      0,
-      (sum, hotel) => sum + hotel.roomCount!,
-    );
+    final totalGuests =
+        hotels.fold<int>(0, (sum, hotel) => sum + hotel.guestCount!);
+    final totalRooms =
+        hotels.fold<int>(0, (sum, hotel) => sum + hotel.roomCount!);
 
-    String txt = "";
-
-    if (totalGuests == 1) {
-      txt += "$totalGuests GUEST";
-    } else {
-      txt += "$totalGuests GUESTS";
-    }
-
-    if (totalRooms == 1) {
-      txt += ", $totalRooms ROOM";
-    } else {
-      txt += ", $totalRooms ROOMS";
-    }
-
-    return txt;
+    final guestTxt =
+        totalGuests == 1 ? "$totalGuests GUEST" : "$totalGuests GUESTS";
+    final roomTxt =
+        totalRooms == 1 ? "$totalRooms ROOM" : "$totalRooms ROOMS";
+    return "$guestTxt, $roomTxt";
   }
 
   String getGuestAndTicketCounts(List<FlightBooking> flights) {
-    final totalGuests = flights.fold<int>(
-      0,
-      (sum, hotel) => sum + hotel.guestCount,
-    );
+    final totalGuests =
+        flights.fold<int>(0, (sum, f) => sum + f.guestCount);
     final totalTickets = flights.length;
 
-    String txt = "";
-
-    if (totalGuests == 1) {
-      txt += "$totalGuests GUEST";
-    } else {
-      txt += "$totalGuests GUESTS";
-    }
-
-    if (totalTickets == 1) {
-      txt += ", $totalTickets TICKET";
-    } else {
-      txt += ", $totalTickets TICKETS";
-    }
-
-    return txt;
+    final guestTxt =
+        totalGuests == 1 ? "$totalGuests GUEST" : "$totalGuests GUESTS";
+    final ticketTxt =
+        totalTickets == 1 ? "$totalTickets TICKET" : "$totalTickets TICKETS";
+    return "$guestTxt, $ticketTxt";
   }
 
+  // ── Key fix: isDismissible: false + enableDrag: false so that
+  //    dropdown dialog dismissal does NOT close the bottom sheet.
   void _openHotelAndRoomSelectorBottomSheet(BuildContext context) {
     FocusScope.of(context).requestFocus(FocusNode());
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      isDismissible: false,  // ← prevents tap-outside close
+      enableDrag: false,     // ← prevents swipe-down close
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (BuildContext context) {
         return HotelAndRoomSelectionBottomSheet(
           HotelRepository(ApiService(const FlutterSecureStorage())),
+          onClose: () => Navigator.pop(context), // ← X button callback
         );
       },
     );
-
   }
 
   void _openAirTicketsSelectorScreen(BuildContext context) {
     FocusScope.of(context).requestFocus(FocusNode());
-    context.go(
+    context.push(
       "/reservations/new-reservation/air-tickets-selection",
       extra: {
         'arrivalDate': _arrivalDateController.text,
@@ -306,13 +257,13 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
       },
     );
   }
+
   bool _canChangeAirTicketToNo() {
-    // In edit mode, if there are existing flights, don't allow changing to "No"
     if (_isEditMode) {
       final selectedFlights = ref.watch(selectedFlightProvider);
       return selectedFlights.isEmpty;
     }
-    return true; // Allow any change in new reservation mode
+    return true;
   }
 
   Future<void> _openMemberSearchBottomSheet(int iid) async {
@@ -320,16 +271,10 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
       ApiService(const FlutterSecureStorage()),
     );
 
-    String searchTerm = "";
-
-    if (iid == 8002) {
-      searchTerm = _memberIdController.text;
-    } else {
-      searchTerm = _memberNameController.text;
-    }
+    String searchTerm =
+        iid == 8002 ? _memberIdController.text : _memberNameController.text;
 
     if (searchTerm.length < 3) {
-      // Show modal with empty results and let user search from within modal
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
@@ -338,7 +283,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
         ),
         builder: (BuildContext context) {
           return MemberNewSearchBottomSheet(
-            guests: [], // Empty list initially
+            guests: [],
             initialSearchTerm: searchTerm,
             searchIid: iid,
             onSearch: (String term, int searchIid) async {
@@ -350,19 +295,13 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
-      List<GuestSearchResponse> guests = await guestRepository.searchGuest(
-        iid,
-        searchTerm,
-      );
+      List<GuestSearchResponse> guests =
+          await guestRepository.searchGuest(iid, searchTerm);
 
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
 
       showModalBottomSheet(
         context: context,
@@ -382,14 +321,10 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
         },
       );
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-
+      setState(() => _isLoading = false);
     }
   }
 
-  // Add this new method to handle search from within the modal
   Future<void> _performGuestSearch(String searchTerm, int iid) async {
     if (searchTerm.length < 3) return;
 
@@ -398,15 +333,11 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
     );
 
     try {
-      List<GuestSearchResponse> guests = await guestRepository.searchGuest(
-        iid,
-        searchTerm,
-      );
+      List<GuestSearchResponse> guests =
+          await guestRepository.searchGuest(iid, searchTerm);
 
-      // Close current modal
       Navigator.of(context).pop();
 
-      // Open new modal with updated results
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
@@ -425,7 +356,6 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
         },
       );
     } catch (e) {
-      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error searching guests: $e'),
@@ -442,14 +372,11 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
       hasError = false;
     });
 
-    // Only validate business logic, not required fields
-
-    // 1. Date validation - departure should be after arrival
     if (_arrivalDate != null && _departureDate != null) {
       if (_departureDate!.isBefore(_arrivalDate!) ||
           _departureDate!.isAtSameMomentAs(_arrivalDate!)) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('Departure date must be after arrival date'),
             backgroundColor: Colors.red,
           ),
@@ -458,40 +385,32 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
       }
     }
 
-    // 2. Hotel and flight selection validation
     final selectedHotels = ref.watch(selectedHotelProvider);
     final selectedFlights = ref.watch(selectedFlightProvider);
 
-    // At least one hotel or flight must be selected (business rule)
     if (selectedHotels.isEmpty && selectedFlights.isEmpty) {
-      setState(() {
-        _hotelError = "Please select at least one hotel or flight";
-      });
+      setState(() =>
+          _hotelError = "Please select at least one hotel or flight");
       hasError = true;
     }
 
-    // 3. Air ticket consistency validation
     if (_airTicketRequisition == "Yes" && selectedFlights.isEmpty) {
-      setState(() {
-        _airTicketError =
-            "Please select at least one flight when air ticket requisition is 'Yes'";
-      });
+      setState(() => _airTicketError =
+          "Please select at least one flight when air ticket requisition is 'Yes'");
       hasError = true;
     }
-    // 5. Flight dates validation
+
     if (selectedFlights.isNotEmpty &&
         _arrivalDate != null &&
         _departureDate != null) {
       for (var flight in selectedFlights) {
-        // Check if flight dates are within the reservation period
         if (flight.departureDate != null) {
-          DateTime flightDate = DateTime.parse(flight.departureDate.toString());
+          DateTime flightDate =
+              DateTime.parse(flight.departureDate.toString());
           if (flightDate.isBefore(_arrivalDate!) ||
               flightDate.isAfter(_departureDate!)) {
-            setState(() {
-              _airTicketError =
-                  "Flight dates must be within the reservation period";
-            });
+            setState(() => _airTicketError =
+                "Flight dates must be within the reservation period");
             hasError = true;
             break;
           }
@@ -500,12 +419,9 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
     }
 
     if (_isEditMode && _airTicketRequisition == "No") {
-      final selectedFlights = ref.watch(selectedFlightProvider);
       if (selectedFlights.isNotEmpty) {
-        setState(() {
-          _airTicketError =
-              "Cannot set to 'No' when flights are already booked. Please remove flights first.";
-        });
+        setState(() => _airTicketError =
+            "Cannot set to 'No' when flights are already booked. Please remove flights first.");
         hasError = true;
       }
     }
@@ -514,19 +430,16 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
   }
 
   Future<void> _selectArrivalDate(BuildContext context) async {
-    final DateTime? selectedArrivalDate = await showDatePicker(
+    final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _arrivalDate ?? DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
     );
-    if (selectedArrivalDate != null && selectedArrivalDate != _arrivalDate) {
+    if (picked != null && picked != _arrivalDate) {
       setState(() {
-        _arrivalDate = selectedArrivalDate;
-        _arrivalDateController.text = '${_arrivalDate!.toLocal()}'.split(
-          ' ',
-        )[0];
-        // Reset the departure date if the arrival date is changed
+        _arrivalDate = picked;
+        _arrivalDateController.text = '${picked.toLocal()}'.split(' ')[0];
         _departureDate = null;
         _departureDateController.clear();
       });
@@ -534,40 +447,29 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
   }
 
   Future<void> _selectDepartureDate(BuildContext context) async {
-    final DateTime? selectedDepartureDate = await showDatePicker(
+    final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _departureDate ?? _arrivalDate ?? DateTime.now(),
       firstDate: _arrivalDate ?? DateTime.now(),
       lastDate: DateTime(2101),
     );
-    if (selectedDepartureDate != null &&
-        selectedDepartureDate != _departureDate) {
+    if (picked != null && picked != _departureDate) {
       setState(() {
-        _departureDate = selectedDepartureDate;
-        _departureDateController.text = '${_departureDate!.toLocal()}'.split(
-          ' ',
-        )[0];
+        _departureDate = picked;
+        _departureDateController.text =
+            '${picked.toLocal()}'.split(' ')[0];
       });
     }
   }
 
   void _confirmReservation() async {
-   
     if (_isEditMode) {
-      if (!_validateUpdateFields()) {
-        return;
-      }
+      if (!_validateUpdateFields()) return;
     } else {
-      // For new reservations, use the existing form validation
-      if (!_formKey.currentState!.validate()) {
-        return;
-      }
-
-      // Plus the business logic validation
-      if (!_validateUpdateFields()) {
-        return;
-      }
+      if (!_formKey.currentState!.validate()) return;
+      if (!_validateUpdateFields()) return;
     }
+
     final selectedHotels = ref.watch(selectedHotelProvider);
     final selectedFlights = ref.watch(selectedFlightProvider);
 
@@ -577,68 +479,130 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
       hasError = false;
     });
 
-    //At least one hotel or flight must be selected
     if (selectedHotels.isEmpty && selectedFlights.isEmpty) {
-      setState(() {
-        _hotelError = "Please select at least one hotel or flight";
-      });
+      setState(() =>
+          _hotelError = "Please select at least one hotel or flight");
       hasError = true;
     }
-    //If Air Ticket Yes ,flights required
+
     if (_airTicketRequisition == "Yes" && selectedFlights.isEmpty) {
-      setState(() {
-        _airTicketError = "Please select at least one flight";
-      });
+      setState(() =>
+          _airTicketError = "Please select at least one flight");
       hasError = true;
     }
 
     if (hasError) return;
 
-    final resevation = NewReservation(
+    final reservation = NewReservation(
       bmNumber: _memberIdController.text,
-      //bmNumber: "$_selectedPrefix${_memberIdNumberController.text}",
       guestName: _memberNameController.text,
       hotelName: "",
       roomDetails: selectedHotels.map((room) => room.toJson()).toList(),
       noOfNights: 0,
       arrivalDate: _arrivalDate,
       departureDate: _departureDate,
-      hasAirTicketReservation: _airTicketRequisition == "Yes" ? "1" : "0",
+      hasAirTicketReservation:
+          _airTicketRequisition == "Yes" ? "1" : "0",
       remarks: _remarksController.text,
-      airTicketDetails: selectedFlights
-          .map((ticket) => ticket.toJson())
-          .toList(),
+      airTicketDetails:
+          selectedFlights.map((ticket) => ticket.toJson()).toList(),
     );
 
     if (_isEditMode) {
-      resevation.reservationNo = _reservationNoController.text;
+      reservation.reservationNo = _reservationNoController.text;
     }
 
     ReservationRepository reservationRepository = ReservationRepository(
       ApiService(const FlutterSecureStorage()),
     );
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       Reservation? response = !_isEditMode
-          ? await reservationRepository.saveReservation(resevation)
-          : await reservationRepository.updateReservation(resevation);
+          ? await reservationRepository.saveReservation(reservation)
+          : await reservationRepository.updateReservation(reservation);
+
       if (response != null) {
         ref
             .read(reservationProvider.notifier)
             .addReservationToPending(response);
       }
-      setState(() {
-        _isLoading = false;
-      });
+
+      setState(() => _isLoading = false);
       Navigator.of(context).pop(true);
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _navigateToProfile() async {
+    try {
+      final currentSelectedGuest = ref.read(selectedGuestProvider);
+      if (currentSelectedGuest != null &&
+          currentSelectedGuest.mid == _memberIdController.text) {
+        context.push('/home/profile');
+        return;
+      }
+
+      setState(() => _isLoading = true);
+
+      GuestRepository guestRepository = GuestRepository(
+        ApiService(const FlutterSecureStorage()),
+      );
+
+      List<GuestSearchResponse> guests =
+          await guestRepository.searchGuest(9021, _memberIdController.text);
+
+      setState(() => _isLoading = false);
+
+      Guest guest;
+      if (guests.isNotEmpty) {
+        final g = guests.first;
+        guest = Guest(
+          mid: g.mid ?? _memberIdController.text,
+          memberName: g.mName ?? _memberNameController.text,
+          country: "",
+          lastVisitDate: g.lvd?.toString() ?? "",
+          gift: "",
+          age: 0,
+          gRating: g.gRating ?? "",
+          mGroup: "",
+          gName: g.gName ?? "",
+          memImage2: g.memImage2,
+        );
+      } else {
+        guest = Guest(
+          mid: _memberIdController.text,
+          memberName: _memberNameController.text,
+          country: "",
+          lastVisitDate: "1990-01-01",
+          gift: "",
+          age: 0,
+          gRating: "",
+          mGroup: "",
+          gName: "",
+        );
+      }
+
+      ref.read(selectedGuestProvider.notifier).setSelectedGuest(guest);
+      context.push('/home/profile');
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ref.read(selectedGuestProvider.notifier).setSelectedGuest(
+            Guest(
+              mid: _memberIdController.text,
+              memberName: _memberNameController.text,
+              country: "",
+              lastVisitDate: "1990-01-01",
+              gift: "",
+              age: 0,
+              gRating: "",
+              mGroup: "",
+              gName: "",
+            ),
+          );
+      context.push('/home/profile');
     }
   }
 
@@ -646,6 +610,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
   Widget build(BuildContext context) {
     final selectedHotels = ref.watch(selectedHotelProvider);
     hotelRoomNotifier.value = getGuestAndRoomCounts(selectedHotels);
+
     final selectedFlights = ref.watch(selectedFlightProvider);
     airTicketsNotifier.value = getGuestAndTicketCounts(selectedFlights);
 
@@ -656,17 +621,17 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
       _memberNameController.text = newReservation.guestName!;
       _updateMemberIdFields(newReservation.bmNumber!);
     }
+
     final fontSettings = ref.watch(fontSettingsProvider);
 
     return GestureDetector(
-      onTap: () {
-        FocusScope.of(context).unfocus();
-      },
+      onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         appBar: AppBar(
-          
-          backgroundColor: !_isEditMode ? Colors.white : Colors.green,
-          foregroundColor: !_isEditMode ? Colors.black : Colors.white,
+          backgroundColor:
+              !_isEditMode ? Colors.white : Colors.green,
+          foregroundColor:
+              !_isEditMode ? Colors.black : Colors.white,
           title: Text(
             !_isEditMode ? "New Reservation" : "Update Reservation",
             style: TextStyle(
@@ -679,7 +644,6 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
           key: _formKey,
           child: PopScope(
             onPopInvokedWithResult: (bool didPop, dynamic result) {
-              // if (didPop) return;
               ref.read(newReservationProvider.notifier).resetState();
               ref.read(memberSearchProvider.notifier).resetState();
               ref
@@ -695,6 +659,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
                       children: [
+                        // ── Reservation No (edit mode only) ────
                         if (_isEditMode) ...[
                           TextFormField(
                             autofocus: false,
@@ -711,7 +676,8 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                                 fontWeight: fontSettings.fontWeight,
                               ),
                               border: const OutlineInputBorder(),
-                              contentPadding: const EdgeInsets.symmetric(
+                              contentPadding:
+                                  const EdgeInsets.symmetric(
                                 horizontal: 12.0,
                                 vertical: -5.0,
                               ),
@@ -719,9 +685,11 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                           ),
                           const SizedBox(height: 10.0),
                         ],
+
                         if (newReservation.bmNumber != null)
                           const SizedBox(height: 16.0),
 
+                        // ── MID + Profile Button ───────────────
                         Row(
                           children: [
                             Expanded(
@@ -731,66 +699,74 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                                       readOnly: true,
                                       style: TextStyle(
                                         fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                        fontWeight:
+                                            fontSettings.fontWeight,
                                       ),
                                       decoration: InputDecoration(
                                         labelText: "MID *",
                                         labelStyle: TextStyle(
                                           fontSize: fontSettings.fontSize,
-                                          fontWeight: fontSettings.fontWeight,
+                                          fontWeight:
+                                              fontSettings.fontWeight,
                                         ),
-                                        border: const OutlineInputBorder(),
+                                        border:
+                                            const OutlineInputBorder(),
                                         contentPadding:
                                             const EdgeInsets.symmetric(
-                                              horizontal: 12.0,
-                                              vertical: -5.0,
-                                            ),
+                                          horizontal: 12.0,
+                                          vertical: -5.0,
+                                        ),
                                       ),
                                     )
                                   : TextFormField(
-                                      controller: _memberIdNumberController,
-                                      keyboardType: TextInputType.number,
+                                      controller:
+                                          _memberIdNumberController,
+                                      keyboardType:
+                                          TextInputType.number,
                                       style: TextStyle(
                                         fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
+                                        fontWeight:
+                                            fontSettings.fontWeight,
                                       ),
                                       decoration: InputDecoration(
                                         labelText: "MID *",
                                         labelStyle: TextStyle(
                                           fontSize: fontSettings.fontSize,
-                                          fontWeight: fontSettings.fontWeight,
+                                          fontWeight:
+                                              fontSettings.fontWeight,
                                         ),
-                                        border: const OutlineInputBorder(),
-                                        // isDense: true,
+                                        border:
+                                            const OutlineInputBorder(),
                                         contentPadding:
                                             const EdgeInsets.symmetric(
-                                              horizontal: 12.0,
-                                              vertical: -5.0,
-                                            ),
+                                          horizontal: 12.0,
+                                          vertical: -5.0,
+                                        ),
                                         prefixIcon: Padding(
                                           padding: const EdgeInsets.only(
                                             left: 12,
                                             right: 4,
                                           ),
-                                          child: DropdownButtonHideUnderline(
+                                          child:
+                                              DropdownButtonHideUnderline(
                                             child: DropdownButton<String>(
                                               value: _selectedPrefix,
                                               style: TextStyle(
-                                                fontSize: fontSettings.fontSize,
-                                                fontWeight:
-                                                    fontSettings.fontWeight,
+                                                fontSize:
+                                                    fontSettings.fontSize,
+                                                fontWeight: fontSettings
+                                                    .fontWeight,
                                                 color: Colors.black,
                                               ),
-                                              items: ["BM", "BL", "BN"].map((
-                                                prefix,
-                                              ) {
+                                              items: ["BM", "BL", "BN"]
+                                                  .map((prefix) {
                                                 return DropdownMenuItem(
                                                   value: prefix,
                                                   child: Text(
                                                     prefix,
                                                     style: TextStyle(
-                                                      fontSize:
-                                                          fontSettings.fontSize,
+                                                      fontSize: fontSettings
+                                                          .fontSize,
                                                       fontWeight: fontSettings
                                                           .fontWeight,
                                                     ),
@@ -798,9 +774,9 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                                                 );
                                               }).toList(),
                                               onChanged: (value) {
-                                                setState(() {
-                                                  _selectedPrefix = value!;
-                                                });
+                                                setState(() =>
+                                                    _selectedPrefix =
+                                                        value!);
                                               },
                                             ),
                                           ),
@@ -808,10 +784,12 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                                         suffixIcon: IconButton(
                                           icon: const Icon(Icons.search),
                                           onPressed: () {
-                                            FocusScope.of(context).unfocus();
+                                            FocusScope.of(context)
+                                                .unfocus();
                                             _memberIdController.text =
                                                 '$_selectedPrefix${_memberIdNumberController.text}';
-                                            _openMemberSearchBottomSheet(8002);
+                                            _openMemberSearchBottomSheet(
+                                                8002);
                                           },
                                         ),
                                       ),
@@ -825,177 +803,50 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                                       onChanged: (value) {
                                         _memberNameController.text = '';
                                         ref
-                                            .read(
-                                              newReservationProvider.notifier,
-                                            )
+                                            .read(newReservationProvider
+                                                .notifier)
                                             .resetState();
                                       },
                                     ),
                             ),
                             const SizedBox(width: 10.0),
-
                             ElevatedButton(
                               onPressed: _isEditMode
-                                  ? () async {
-                                      try {
-                                        // Check if guest data is already available
-                                        final currentSelectedGuest = ref.read(
-                                          selectedGuestProvider,
-                                        );
-
-                                        if (currentSelectedGuest != null &&
-                                            currentSelectedGuest.mid ==
-                                                _memberIdController.text) {
-                                          // Guest data already loaded, navigate directly
-                                          context.push('/home/profile');
-                                          return;
-                                        }
-
-                                        // Set loading state only if we need to fetch data
-                                        setState(() {
-                                          _isLoading = true;
-                                        });
-
-                                        GuestRepository guestRepository =
-                                            GuestRepository(
-                                              ApiService(
-                                                const FlutterSecureStorage(),
-                                              ),
-                                            );
-
-                                        // Search for guest by MID to get full guest information
-                                        List<GuestSearchResponse>
-                                        guests = await guestRepository.searchGuest(
-                                          9021, // Using 9021 as the search type for MID lookup
-                                          _memberIdController.text,
-                                        );
-
-                                        setState(() {
-                                          _isLoading = false;
-                                        });
-
-                                        if (guests.isNotEmpty) {
-                                          // Set the selected guest with the retrieved information
-                                          final guestResponse = guests.first;
-                                          ref
-                                              .read(
-                                                selectedGuestProvider.notifier,
-                                              )
-                                              .setSelectedGuest(
-                                                Guest(
-                                                  mid:
-                                                      guestResponse.mid ??
-                                                      _memberIdController.text,
-                                                  memberName:
-                                                      guestResponse.mName ??
-                                                      _memberNameController
-                                                          .text,
-                                                  country: "",
-                                                  lastVisitDate:
-                                                      guestResponse.lvd
-                                                          .toString() ??
-                                                      "",
-                                                  gift: "",
-                                                  age: 0,
-                                                  gRating:
-                                                      guestResponse.gRating ??
-                                                      "",
-                                                  mGroup: "",
-                                                  gName:
-                                                      guestResponse.gName ?? "",
-                                                  memImage2:
-                                                      guestResponse.memImage2,
-                                                ),
-                                              );
-
-                                          // Navigate to profile
-                                          context.push('/home/profile');
-                                        } else {
-                                          // If no guest found, create a basic guest object with available info
-                                          ref
-                                              .read(
-                                                selectedGuestProvider.notifier,
-                                              )
-                                              .setSelectedGuest(
-                                                Guest(
-                                                  mid: _memberIdController.text,
-                                                  memberName:
-                                                      _memberNameController
-                                                          .text,
-                                                  country: "",
-                                                  lastVisitDate: "1990-01-01",
-                                                  gift: "",
-                                                  age: 0,
-                                                  gRating: "",
-                                                  mGroup: "",
-                                                  gName: "",
-                                                ),
-                                              );
-
-                                          context.push('/home/profile');
-                                        }
-                                      } catch (e) {
-                                        setState(() {
-                                          _isLoading = false;
-                                        });
-                                        // Still allow navigation with basic info if search fails
-                                        ref
-                                            .read(
-                                              selectedGuestProvider.notifier,
-                                            )
-                                            .setSelectedGuest(
-                                              Guest(
-                                                mid: _memberIdController.text,
-                                                memberName:
-                                                    _memberNameController.text,
-                                                country: "",
-                                                lastVisitDate: "1990-01-01",
-                                                gift: "",
-                                                age: 0,
-                                                gRating: "",
-                                                mGroup: "",
-                                                gName: "",
-                                              ),
-                                            );
-
-                                        context.push('/home/profile');
-                                      }
-                                    }
+                                  ? _navigateToProfile
                                   : (newReservation.bmNumber == null
-                                        ? null
-                                        : () {
-                                            context.push('/home/profile');
-                                          }),
+                                      ? null
+                                      : () =>
+                                          context.push('/home/profile')),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: _isEditMode
-                                    ? const Color.fromARGB(255, 70, 70, 70)
+                                    ? const Color.fromARGB(
+                                        255, 70, 70, 70)
                                     : (newReservation.bmNumber == null
-                                          ? Colors.grey.shade400
-                                          : const Color.fromARGB(
-                                              255,
-                                              70,
-                                              70,
-                                              70,
-                                            )),
+                                        ? Colors.grey.shade400
+                                        : const Color.fromARGB(
+                                            255, 70, 70, 70)),
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius:
+                                      BorderRadius.circular(12),
                                 ),
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 16,
                                   horizontal: 14,
                                 ),
                               ),
-                              child: const Icon(Icons.person_search, size: 25),
+                              child: const Icon(Icons.person_search,
+                                  size: 25),
                             ),
                           ],
                         ),
                         const SizedBox(height: 10.0),
-                        // Member Name field - simplified for edit mode
+
+                        // ── Member Name ────────────────────────
                         TextFormField(
                           autofocus: false,
                           controller: _memberNameController,
-                          readOnly: _isEditMode, // Make read-only in edit mode
+                          readOnly: _isEditMode,
                           style: TextStyle(
                             fontSize: fontSettings.fontSize,
                             fontWeight: fontSettings.fontWeight,
@@ -1007,20 +858,16 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                               fontWeight: fontSettings.fontWeight,
                             ),
                             border: const OutlineInputBorder(),
-                            //isDense: true,
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 12.0,
                               vertical: -5.0,
                             ),
-
-                            // Only show search icon when NOT in edit mode
                             suffixIcon: !_isEditMode
                                 ? IconButton(
                                     icon: const Icon(Icons.search),
                                     onPressed: () {
-                                      FocusScope.of(
-                                        context,
-                                      ).requestFocus(FocusNode());
+                                      FocusScope.of(context)
+                                          .requestFocus(FocusNode());
                                       _openMemberSearchBottomSheet(8003);
                                     },
                                   )
@@ -1036,33 +883,36 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                               ? (value) {
                                   _memberIdController.text = '';
                                   ref
-                                      .read(newReservationProvider.notifier)
+                                      .read(
+                                          newReservationProvider.notifier)
                                       .resetState();
                                 }
                               : null,
                         ),
 
+                        // ── Guest Card ─────────────────────────
                         GuestDisplayCard(
                           memberIdText: _memberIdController.text,
                           memberNameText: _memberNameController.text,
-                          showCard:
-                              (_isEditMode &&
+                          showCard: (_isEditMode &&
                                   _memberIdController.text.isNotEmpty &&
                                   _memberNameController.text.isNotEmpty) ||
                               (newReservation.bmNumber != null &&
                                   newReservation.guestName != null),
                         ),
                         const SizedBox(height: 10.0),
+
+                        // ── Hotels & Rooms Selector ────────────
                         ValueListenableBuilder<String>(
                           valueListenable: hotelRoomNotifier,
-                          builder: (context, value, child) {
+                          builder: (context, value, _) {
                             return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
                               children: [
                                 TextFormField(
-                                  controller: TextEditingController(
-                                    text: value,
-                                  ),
+                                  controller:
+                                      TextEditingController(text: value),
                                   readOnly: true,
                                   style: TextStyle(
                                     fontSize: fontSettings.fontSize,
@@ -1081,7 +931,8 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                                             : Colors.grey,
                                       ),
                                     ),
-                                    contentPadding: const EdgeInsets.symmetric(
+                                    contentPadding:
+                                        const EdgeInsets.symmetric(
                                       horizontal: 12.0,
                                       vertical: -5.0,
                                     ),
@@ -1097,35 +948,30 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                                         color: _hotelError != null
                                             ? Colors.red
                                             : const Color.fromARGB(
-                                                255,
-                                                103,
-                                                4,
-                                                125,
-                                              ),
+                                                255, 103, 4, 125),
                                       ),
                                     ),
                                     suffixIcon: IconButton(
-                                      icon: const Icon(Icons.arrow_drop_down),
+                                      icon: const Icon(
+                                          Icons.arrow_drop_down),
                                       onPressed: () =>
                                           _openHotelAndRoomSelectorBottomSheet(
-                                            context,
-                                          ),
+                                              context),
                                     ),
                                   ),
                                 ),
-                                // Error message for hotel selection
                                 if (_hotelError != null)
                                   Padding(
                                     padding: const EdgeInsets.only(
-                                      left: 12.0,
-                                      top: 4.0,
-                                    ),
+                                        left: 12.0, top: 4.0),
                                     child: Text(
                                       _hotelError!,
                                       style: TextStyle(
                                         color: Colors.red,
-                                        fontSize: fontSettings.fontSize * 0.75,
-                                        fontWeight: fontSettings.fontWeight,
+                                        fontSize:
+                                            fontSettings.fontSize * 0.75,
+                                        fontWeight:
+                                            fontSettings.fontWeight,
                                       ),
                                     ),
                                   ),
@@ -1134,6 +980,8 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                           },
                         ),
                         const SizedBox(height: 10.0),
+
+                        // ── Selected Hotels List ───────────────
                         selectedHotels.isEmpty
                             ? Center(
                                 heightFactor: 3.0,
@@ -1152,17 +1000,15 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                                     width: double.infinity,
                                     child: Card(
                                       color: const Color.fromARGB(
-                                        255,
-                                        228,
-                                        224,
-                                        224,
-                                      ),
-                                      margin: const EdgeInsets.symmetric(
+                                          255, 228, 224, 224),
+                                      margin:
+                                          const EdgeInsets.symmetric(
                                         horizontal: 3,
                                         vertical: 8,
                                       ),
                                       child: Padding(
-                                        padding: const EdgeInsets.all(12.0),
+                                        padding:
+                                            const EdgeInsets.all(12.0),
                                         child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
@@ -1173,7 +1019,8 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                                                 fontSize:
                                                     fontSettings.fontSize *
                                                     1.125,
-                                                fontWeight: FontWeight.bold,
+                                                fontWeight:
+                                                    FontWeight.bold,
                                               ),
                                             ),
                                             const SizedBox(height: 8),
@@ -1183,19 +1030,19 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                                                   TextSpan(
                                                     text: "Category: ",
                                                     style: TextStyle(
-                                                      fontSize:
-                                                          fontSettings.fontSize,
+                                                      fontSize: fontSettings
+                                                          .fontSize,
                                                       color: Colors.black,
                                                       fontWeight:
                                                           FontWeight.w600,
                                                     ),
                                                   ),
                                                   TextSpan(
-                                                    text:
-                                                        hotel.roomCategoryName,
+                                                    text: hotel
+                                                        .roomCategoryName,
                                                     style: TextStyle(
-                                                      fontSize:
-                                                          fontSettings.fontSize,
+                                                      fontSize: fontSettings
+                                                          .fontSize,
                                                       color: Colors.black,
                                                       fontWeight: fontSettings
                                                           .fontWeight,
@@ -1211,18 +1058,19 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                                                   TextSpan(
                                                     text: "Room Type: ",
                                                     style: TextStyle(
-                                                      fontSize:
-                                                          fontSettings.fontSize,
+                                                      fontSize: fontSettings
+                                                          .fontSize,
                                                       color: Colors.black,
                                                       fontWeight:
                                                           FontWeight.w600,
                                                     ),
                                                   ),
                                                   TextSpan(
-                                                    text: hotel.roomTypeName,
+                                                    text:
+                                                        hotel.roomTypeName,
                                                     style: TextStyle(
-                                                      fontSize:
-                                                          fontSettings.fontSize,
+                                                      fontSize: fontSettings
+                                                          .fontSize,
                                                       color: Colors.black,
                                                       fontWeight: fontSettings
                                                           .fontWeight,
@@ -1233,41 +1081,37 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                                             ),
                                             const SizedBox(height: 8),
                                             Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
                                               children: [
                                                 Text(
                                                   "Guests: ${hotel.guestCount}",
                                                   style: TextStyle(
-                                                    fontSize:
-                                                        fontSettings.fontSize *
+                                                    fontSize: fontSettings
+                                                            .fontSize *
                                                         0.875,
-                                                    fontWeight:
-                                                        fontSettings.fontWeight,
+                                                    fontWeight: fontSettings
+                                                        .fontWeight,
                                                   ),
                                                 ),
                                                 const SizedBox(width: 20),
                                                 Text(
                                                   "Nights: ${hotel.noOfNights}",
                                                   style: TextStyle(
-                                                    fontSize:
-                                                        fontSettings.fontSize *
+                                                    fontSize: fontSettings
+                                                            .fontSize *
                                                         0.875,
-                                                    fontWeight:
-                                                        fontSettings.fontWeight,
+                                                    fontWeight: fontSettings
+                                                        .fontWeight,
                                                   ),
                                                 ),
                                                 const SizedBox(width: 20),
                                                 Text(
                                                   "Rooms: ${hotel.roomCount}",
                                                   style: TextStyle(
-                                                    fontSize:
-                                                        fontSettings.fontSize *
+                                                    fontSize: fontSettings
+                                                            .fontSize *
                                                         0.875,
-                                                    fontWeight:
-                                                        fontSettings.fontWeight,
+                                                    fontWeight: fontSettings
+                                                        .fontWeight,
                                                   ),
                                                 ),
                                               ],
@@ -1276,8 +1120,10 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                                             Text(
                                               "Estimated Cost: ${hotel.selectedCost}",
                                               style: TextStyle(
-                                                fontSize: fontSettings.fontSize,
-                                                fontWeight: FontWeight.bold,
+                                                fontSize:
+                                                    fontSettings.fontSize,
+                                                fontWeight:
+                                                    FontWeight.bold,
                                               ),
                                             ),
                                           ],
@@ -1288,6 +1134,8 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                                 }).toList(),
                               ),
                         const SizedBox(height: 10.0),
+
+                        // ── Arrival Date ───────────────────────
                         TextFormField(
                           controller: _arrivalDateController,
                           readOnly: true,
@@ -1308,7 +1156,8 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                             ),
                             suffixIcon: IconButton(
                               icon: const Icon(Icons.calendar_today),
-                              onPressed: () => _selectArrivalDate(context),
+                              onPressed: () =>
+                                  _selectArrivalDate(context),
                             ),
                           ),
                           validator: (value) {
@@ -1319,6 +1168,8 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                           },
                         ),
                         const SizedBox(height: 10),
+
+                        // ── Departure Date ─────────────────────
                         TextFormField(
                           controller: _departureDateController,
                           readOnly: true,
@@ -1339,7 +1190,8 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                             ),
                             suffixIcon: IconButton(
                               icon: const Icon(Icons.calendar_today),
-                              onPressed: () => _selectDepartureDate(context),
+                              onPressed: () =>
+                                  _selectDepartureDate(context),
                             ),
                           ),
                           validator: (value) {
@@ -1355,6 +1207,8 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                           },
                         ),
                         const SizedBox(height: 10),
+
+                        // ── Air Ticket Requisition ─────────────
                         Align(
                           alignment: Alignment.topLeft,
                           child: Text(
@@ -1370,28 +1224,20 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                             Radio<String>(
                               value: "Yes",
                               groupValue: _airTicketRequisition,
-                              onChanged: (value) {
-                                setState(() {
-                                  _airTicketRequisition = value!;
-                                });
-                              },
+                              onChanged: (value) => setState(
+                                  () => _airTicketRequisition = value!),
                             ),
-                            Text(
-                              "Yes",
-                              style: TextStyle(
-                                fontSize: fontSettings.fontSize,
-                                fontWeight: fontSettings.fontWeight,
-                              ),
-                            ),
+                            Text("Yes",
+                                style: TextStyle(
+                                  fontSize: fontSettings.fontSize,
+                                  fontWeight: fontSettings.fontWeight,
+                                )),
                             Radio<String>(
                               value: "No",
                               groupValue: _airTicketRequisition,
                               onChanged: _canChangeAirTicketToNo()
-                                  ? (value) {
-                                      setState(() {
-                                        _airTicketRequisition = value!;
-                                      });
-                                    }
+                                  ? (value) => setState(
+                                      () => _airTicketRequisition = value!)
                                   : null,
                             ),
                             Text(
@@ -1406,123 +1252,112 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                             ),
                           ],
                         ),
-                        if (_airTicketRequisition == "Yes")
+
+                        // ── Air Tickets Selector ───────────────
+                        if (_airTicketRequisition == "Yes") ...[
+                          const SizedBox(height: 10.0),
                           Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const SizedBox(height: 10.0),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  ValueListenableBuilder<String>(
-                                    valueListenable: airTicketsNotifier,
-                                    builder: (context, value, child) {
-                                      return TextFormField(
-                                        controller: TextEditingController(
-                                          text: value,
-                                        ),
-                                        readOnly: true,
-                                        style: TextStyle(
-                                          fontSize: fontSettings.fontSize,
-                                          fontWeight: fontSettings.fontWeight,
-                                        ),
-                                        decoration: InputDecoration(
-                                          labelText: "Select Air Tickets",
-                                          labelStyle: TextStyle(
-                                            fontSize: fontSettings.fontSize,
-                                            fontWeight: fontSettings.fontWeight,
-                                          ),
-                                          border: OutlineInputBorder(
-                                            borderSide: BorderSide(
-                                              color: _airTicketError != null
-                                                  ? Colors.red
-                                                  : Colors.grey,
-                                            ),
-                                          ),
-                                          contentPadding:
-                                              const EdgeInsets.symmetric(
-                                                horizontal: 12.0,
-                                                vertical: -5.0,
-                                              ),
-                                          enabledBorder: OutlineInputBorder(
-                                            borderSide: BorderSide(
-                                              color: _airTicketError != null
-                                                  ? Colors.red
-                                                  : Colors.grey,
-                                            ),
-                                          ),
-                                          focusedBorder: OutlineInputBorder(
-                                            borderSide: BorderSide(
-                                              color: _airTicketError != null
-                                                  ? Colors.red
-                                                  : Colors.blue,
-                                            ),
-                                          ),
-                                          suffixIcon: IconButton(
-                                            icon: const Icon(
-                                              Icons.arrow_drop_down,
-                                            ),
-                                            onPressed: () =>
-                                                _openAirTicketsSelectorScreen(
-                                                  context,
-                                                ),
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                  // Error message for air ticket selection
-                                  if (_airTicketError != null)
-                                    Padding(
-                                      padding: const EdgeInsets.only(
-                                        left: 12.0,
-                                        top: 4.0,
+                              ValueListenableBuilder<String>(
+                                valueListenable: airTicketsNotifier,
+                                builder: (context, value, _) {
+                                  return TextFormField(
+                                    controller:
+                                        TextEditingController(text: value),
+                                    readOnly: true,
+                                    style: TextStyle(
+                                      fontSize: fontSettings.fontSize,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
+                                    decoration: InputDecoration(
+                                      labelText: "Select Air Tickets",
+                                      labelStyle: TextStyle(
+                                        fontSize: fontSettings.fontSize,
+                                        fontWeight:
+                                            fontSettings.fontWeight,
                                       ),
-                                      child: Text(
-                                        _airTicketError!,
-                                        style: TextStyle(
-                                          color: Colors.red,
-                                          fontSize:
-                                              fontSettings.fontSize * 0.75,
-                                          fontWeight: fontSettings.fontWeight,
+                                      border: OutlineInputBorder(
+                                        borderSide: BorderSide(
+                                          color: _airTicketError != null
+                                              ? Colors.red
+                                              : Colors.grey,
                                         ),
+                                      ),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                        horizontal: 12.0,
+                                        vertical: -5.0,
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(
+                                          color: _airTicketError != null
+                                              ? Colors.red
+                                              : Colors.grey,
+                                        ),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(
+                                          color: _airTicketError != null
+                                              ? Colors.red
+                                              : Colors.blue,
+                                        ),
+                                      ),
+                                      suffixIcon: IconButton(
+                                        icon: const Icon(
+                                            Icons.arrow_drop_down),
+                                        onPressed: () =>
+                                            _openAirTicketsSelectorScreen(
+                                                context),
                                       ),
                                     ),
-                                ],
+                                  );
+                                },
                               ),
-                            ],
-                          ),
-                        if (_airTicketRequisition == "Yes")
-                          Column(
-                            children: [
-                              const SizedBox(height: 16.0),
-                              selectedFlights.isEmpty
-                                  ? Center(
-                                      heightFactor: 6.0,
-                                      child: Text(
-                                        'No air tickets available.',
-                                        style: TextStyle(
-                                          fontSize: fontSettings.fontSize,
-                                          fontWeight: fontSettings.fontWeight,
-                                        ),
-                                      ),
-                                    )
-                                  : SizedBox(
-                                      child: Column(
-                                        children: selectedFlights.map((flight) {
-                                          final index = selectedFlights.indexOf(
-                                            flight,
-                                          );
-                                          return FlightCard(
-                                            flight: flight,
-                                            index: index,
-                                            showDelete: false,
-                                          );
-                                        }).toList(),
-                                      ),
+                              if (_airTicketError != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                      left: 12.0, top: 4.0),
+                                  child: Text(
+                                    _airTicketError!,
+                                    style: TextStyle(
+                                      color: Colors.red,
+                                      fontSize:
+                                          fontSettings.fontSize * 0.75,
+                                      fontWeight: fontSettings.fontWeight,
                                     ),
+                                  ),
+                                ),
                             ],
                           ),
+                          const SizedBox(height: 16.0),
+                          selectedFlights.isEmpty
+                              ? Center(
+                                  heightFactor: 6.0,
+                                  child: Text(
+                                    'No air tickets available.',
+                                    style: TextStyle(
+                                      fontSize: fontSettings.fontSize,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
+                                  ),
+                                )
+                              : Column(
+                                  children:
+                                      selectedFlights.map((flight) {
+                                    final index =
+                                        selectedFlights.indexOf(flight);
+                                    return FlightCard(
+                                      flight: flight,
+                                      index: index,
+                                      showDelete: false,
+                                    );
+                                  }).toList(),
+                                ),
+                        ],
                         const SizedBox(height: 10.0),
+
+                        // ── Remarks ────────────────────────────
                         TextFormField(
                           controller: _remarksController,
                           style: TextStyle(
@@ -1536,7 +1371,6 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                               fontSize: fontSettings.fontSize,
                               fontWeight: fontSettings.fontWeight,
                             ),
-
                             hintText: "Enter additional details...",
                             hintStyle: TextStyle(
                               fontSize: fontSettings.fontSize,
@@ -1549,11 +1383,10 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                           ),
                           maxLines: 5,
                           keyboardType: TextInputType.multiline,
-                          onChanged: (value) {
-                  
-                          },
                         ),
                         const SizedBox(height: 10.0),
+
+                        // ── Confirm / Update Button ────────────
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
@@ -1593,6 +1426,8 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                     ),
                   ),
                 ),
+
+                // ── Loading Overlay ──────────────────────────
                 if (_isLoading)
                   Container(
                     decoration: const BoxDecoration(
@@ -1606,7 +1441,6 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
                       ),
                     ),
                   ),
-                // const Watermark(),
               ],
             ),
           ),

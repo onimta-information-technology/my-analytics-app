@@ -105,6 +105,7 @@ String _formatDateTime(DateTime dt) {
 
     return Scaffold(
       appBar: AppBar(
+        
         title: const Text('Reservations'),
         actions: [
           IconButton(

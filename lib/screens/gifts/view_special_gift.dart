@@ -677,21 +677,21 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () {
-                                // final memberId =
-                                //     _memberIdController.text.trim();
-                                // if (memberId.isEmpty) {
-                                //   ScaffoldMessenger.of(context).showSnackBar(
-                                //     const SnackBar(
-                                //         content: Text(
-                                //             "Please enter a Member ID")),
-                                //   );
-                                //   return;
-                                // }
-                                // context.push(
-                                //     '/gifts/special-gift-requests/prv-gifts/$memberId');
+                                final memberId =
+                                    _memberIdController.text.trim();
+                                if (memberId.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content: Text(
+                                            "Please enter a Member ID")),
+                                  );
+                                  return;
+                                }
+                                context.push(
+                                    '/gifts/special-gift-requests/prv-gifts/$memberId', extra: {'iid': 88940});
                               },
                               icon: const Icon(Icons.card_giftcard),
-                              label: Text("Pending Gifts",
+                              label: Text("Pending Gift",
                                   style: TextStyle(
                                       fontSize: fontSettings.fontSize,
                                       fontWeight: fontSettings.fontWeight)),
@@ -720,10 +720,11 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                   return;
                                 }
                                 context.push(
-                                    '/gifts/special-gift-requests/prv-gifts/$memberId');
+                                    '/gifts/special-gift-requests/prv-gifts/$memberId', extra: {'iid': 8888},);
+                                    
                               },
                               icon: const Icon(Icons.card_giftcard),
-                              label: Text("Issued Gifts",
+                              label: Text("Issued Gift",
                                   style: TextStyle(
                                       fontSize: fontSettings.fontSize,
                                       fontWeight: fontSettings.fontWeight)),

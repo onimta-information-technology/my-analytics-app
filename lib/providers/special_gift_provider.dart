@@ -394,11 +394,11 @@ Future<String> sendSpecialGiftWhatsapp({
     return false;
   }
 
-  Future<void> getprvGift(String text1) async {
+  Future<void> getprvGift(String text1, int iid) async {
     try {
-      final prvgiftList = await giftRepository.getPrvGiftList(text1);
+      final prvgiftList = await giftRepository.getPrvGiftList(text1, iid: iid);
       state = state.copyWith(prvgiftList: prvgiftList);
-    } catch (e, stack) {
+    } catch (e, stack) { 
       print('Error in getprvGift: $e');
       print('Stack trace: $stack');
       state = state.copyWith(prvgiftList: []);

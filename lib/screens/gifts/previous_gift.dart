@@ -5,16 +5,18 @@ import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/special_gift_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 class PrvGiftScreen extends ConsumerStatefulWidget {
   final String memberId;
   final GiftsRepository giftsRepository;
-
+final int iid;
   const PrvGiftScreen({
     super.key,
     required this.memberId,
     required this.giftsRepository,
+    this.iid = 8888,
   });
 
   @override
@@ -131,6 +133,10 @@ class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => context.pop(),
+            ),
         title: Text("Previous Gifts for ${widget.memberId}"),
         actions: [
           // Rotation buttons
@@ -163,7 +169,7 @@ class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
       body: Stack(
         children: [
           FutureBuilder(
-            future: ref.read(giftProvider.notifier).getprvGift(widget.memberId),
+            future: ref.read(giftProvider.notifier).getprvGift(widget.memberId, widget.iid),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());

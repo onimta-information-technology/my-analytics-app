@@ -294,13 +294,14 @@ class GiftsRepository {
     }
   }
 
-  Future<List<PrevGift>> getPrvGiftList(String text1) async {
+  Future<List<PrevGift>> getPrvGiftList(String text1, {required int iid}) async {
+    print('getPrvGiftList called with text1: $text1, iid: $iid');
     final deviceId = await DeviceId.get();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
         {
-          "Para_Data": 8888,
+          "Para_Data": iid,
           "Para_Direction": "Input",
           "Para_Lenth": 1,
           "Para_Name": "@Iid",

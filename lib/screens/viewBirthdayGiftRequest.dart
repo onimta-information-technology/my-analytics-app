@@ -717,36 +717,71 @@ class _ViewBirthdayGiftRequestState
                                 )
                               : const Icon(Icons.person_search, size: 25),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              final memberId = _memberIdController.text.trim();
-                              if (memberId.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text("Please enter a Member ID")),
-                                );
-                                return;
-                              }
-                              context.push(
-                                '/menu/approve-reject/birthday-gifts/prv-gifts/$memberId',
-                              );
-                            },
-                            icon: const Icon(Icons.card_giftcard),
-                            label: Text("Previous Gift",
-                                style: TextStyle(
-                                    fontSize: fontSettings.fontSize,
-                                    fontWeight: fontSettings.fontWeight)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12)),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                        const SizedBox(width: 5),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                final memberId =
+                                    _memberIdController.text.trim();
+                                if (memberId.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content: Text(
+                                            "Please enter a Member ID")),
+                                  );
+                                  return;
+                                }
+                                context.push(
+                                    '/gifts/special-gift-requests/prv-gifts/$memberId', extra: {'iid': 988908});
+                              },
+                              icon: const Icon(Icons.card_giftcard),
+                              label: Text("Pending Gift",
+                                  style: TextStyle(
+                                      fontSize: fontSettings.fontSize,
+                                      fontWeight: fontSettings.fontWeight)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                              ),
                             ),
                           ),
-                        ),
+                           const SizedBox(width: 5),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                final memberId =
+                                    _memberIdController.text.trim();
+                                if (memberId.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content: Text(
+                                            "Please enter a Member ID")),
+                                  );
+                                  return;
+                                }
+                                context.push(
+                                    '/gifts/special-gift-requests/prv-gifts/$memberId', extra: {'iid': 8888},);
+                                    
+                              },
+                              icon: const Icon(Icons.card_giftcard),
+                              label: Text("Issued Gift",
+                                  style: TextStyle(
+                                      fontSize: fontSettings.fontSize,
+                                      fontWeight: fontSettings.fontWeight)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                            ),
+                          ),
                       ],
                     ),
 

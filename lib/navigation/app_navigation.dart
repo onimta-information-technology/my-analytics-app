@@ -550,6 +550,8 @@ class AppNavigation {
                     path: 'prv-gifts/:mid',
                     pageBuilder: (context, state) {
                       final String mid = state.pathParameters['mid']!;
+                       final extra = state.extra as Map<String, dynamic>? ?? {};
+                        final int iid = extra['iid'] as int? ?? 8888;
                       return CustomTransitionPage(
                         fullscreenDialog: false,
                         key: state.pageKey,
@@ -557,7 +559,10 @@ class AppNavigation {
                           memberId: mid,
                           giftsRepository: GiftsRepository(
                             ApiService(const FlutterSecureStorage()),
+                            
                           ),
+                          iid: iid,
+                          
                         ),
                         transitionsBuilder:
                             (context, animation, secondaryAnimation, child) {
@@ -840,6 +845,8 @@ class AppNavigation {
                     path: 'prv-gifts/:mid',
                     pageBuilder: (context, state) {
                       final String mid = state.pathParameters['mid']!;
+                      final extra = state.extra as Map<String, dynamic>? ?? {};
+    final int iid = extra['iid'] as int? ?? 8888;
                       return CustomTransitionPage(
                         fullscreenDialog: false,
                         key: state.pageKey,
@@ -848,6 +855,7 @@ class AppNavigation {
                           giftsRepository: GiftsRepository(
                             ApiService(const FlutterSecureStorage()),
                           ),
+                          iid: iid,
                         ),
                         transitionsBuilder:
                             (context, animation, secondaryAnimation, child) {
@@ -930,6 +938,8 @@ class AppNavigation {
                     path: 'prv-gifts/:mid',
                     pageBuilder: (context, state) {
                       final String mid = state.pathParameters['mid']!;
+                      final extra = state.extra as Map<String, dynamic>? ?? {};
+    final int iid = extra['iid'] as int? ?? 8888;
                       return CustomTransitionPage(
                         fullscreenDialog: false,
                         key: state.pageKey,
@@ -938,6 +948,7 @@ class AppNavigation {
                           giftsRepository: GiftsRepository(
                             ApiService(const FlutterSecureStorage()),
                           ),
+                          iid: iid,
                         ),
                         transitionsBuilder:
                             (context, animation, secondaryAnimation, child) {

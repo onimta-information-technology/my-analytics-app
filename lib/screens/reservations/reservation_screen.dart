@@ -25,12 +25,12 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final reservations = ref.watch(reservationProvider);
       if (reservations['Pending']!.isNotEmpty ||
           reservations['Approved']!.isNotEmpty ||
-          reservations['Rejected']!.isNotEmpty) {
+          reservations['Rejected']!.isNotEmpty||reservations['Checked']!.isNotEmpty) {
         return;
       }
       _loadReservationData();
@@ -124,12 +124,19 @@ String _formatDateTime(DateTime dt) {
         ],
         bottom: TabBar(
           controller: _tabController,
+           isScrollable: true, 
           indicatorColor: Colors.pink,
+           tabAlignment: TabAlignment.start,
           tabs: [
             _buildTab(
               'Pending',
               reservations['Pending']?.length ?? 0,
               Colors.orange,
+            ),
+             _buildTab(
+              'Checked',
+              reservations['Checked']?.length ?? 0,
+              Colors.blue,
             ),
             _buildTab(
               'Approved',
@@ -150,6 +157,7 @@ String _formatDateTime(DateTime dt) {
             controller: _tabController,
             children: [
               _buildReservationList(reservations['Pending'] ?? []),
+              _buildReservationList(reservations['Checked'] ?? []),
               _buildReservationList(reservations['Approved'] ?? []),
               _buildReservationList(reservations['Rejected'] ?? []),
             ],
@@ -233,7 +241,8 @@ String _formatDateTime(DateTime dt) {
             final reservation = filteredReservations[index];
             final isApprovedOrRejected =
                 reservation.requestStatus == 'Approved' ||
-                reservation.requestStatus == 'Rejected';
+                reservation.requestStatus == 'Rejected'||
+                  reservation.requestStatus == 'Checked';
 
             return Stack(
               children: [
@@ -564,6 +573,8 @@ String _formatDateTime(DateTime dt) {
         return Colors.green;
       case 'Rejected':
         return Colors.red;
+      case 'Checked':        
+        return Colors.blue;
       default:
         return Colors.orange;
     }
@@ -575,6 +586,8 @@ String _formatDateTime(DateTime dt) {
         return Icons.check_circle;
       case 'Rejected':
         return Icons.cancel;
+      case 'Checked':        
+        return Icons.fact_check;
       default:
         return Icons.hourglass_bottom;
     }

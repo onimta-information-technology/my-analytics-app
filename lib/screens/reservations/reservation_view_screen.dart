@@ -55,7 +55,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
   bool _isGuestLoading = false;
   bool _guestDataLoaded = false;
   bool _hasGiftAppPermission = false;
-  
+
   @override
   void initState() {
     super.initState();
@@ -77,7 +77,6 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                 : [],
           );
 
-      // Only load guest data if it hasn't been loaded yet
       if (selectedReservation != null && !_guestDataLoaded) {
         _loadGuestDataForView();
       }
@@ -100,42 +99,21 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
     });
   }
 
-  // void _showAccessDeniedDialog() {
-  //   showDialog(
-  //     context: context,
-  //     builder: (context) => AlertDialog(
-  //       title: const Row(
-  //         children: [
-  //           Icon(Icons.block, color: Colors.red),
-  //           SizedBox(width: 10),
-  //           Text('Access Denied'),
-  //         ],
-  //       ),
-  //       content: const Text(
-  //         'You do not have permission to Approve or Reject gift requests.',
-  //       ),
-  //       actions: [
-  //         TextButton(
-  //           onPressed: () => Navigator.of(context).pop(),
-  //           child: const Text('OK'),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-void _showAccessDeniedDialog() {
+  // ─────────────────────────────────────────────────────────────────────────
+  // Access Denied Dialog
+  // ─────────────────────────────────────────────────────────────────────────
+  void _showAccessDeniedDialog() {
     showDialog(
       context: context,
       barrierDismissible: true,
       builder: (BuildContext context) {
         return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           elevation: 0,
           backgroundColor: Colors.transparent,
           child: Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
@@ -164,7 +142,6 @@ void _showAccessDeniedDialog() {
                   ),
                 ),
                 const SizedBox(height: 20),
-                
                 const Text(
                   "Access Denied",
                   style: TextStyle(
@@ -174,8 +151,13 @@ void _showAccessDeniedDialog() {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 12),
-                
+                const SizedBox(height: 6),
+                Text(
+                  'You do not have permission to perform this action.',
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -205,20 +187,191 @@ void _showAccessDeniedDialog() {
       },
     );
   }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Remarks Dialog — matches app pattern with accent color + icon per action
+  // ─────────────────────────────────────────────────────────────────────────
+  Future<String?> _showRemarksDialog(
+    String title,
+    Color accentColor,
+    IconData icon,
+  ) async {
+    final TextEditingController remarksController = TextEditingController();
+
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // ── Icon circle ──────────────────────────────────────────
+                  Container(
+                    width: 70,
+                    height: 70,
+                    decoration: BoxDecoration(
+                      color: accentColor.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icon, size: 38, color: accentColor),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ── Title ────────────────────────────────────────────────
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2C3E50),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 6),
+
+                  // ── Subtitle ─────────────────────────────────────────────
+                  Text(
+                    'Please provide remarks to continue.',
+                    style:
+                        TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ── Remarks text field ───────────────────────────────────
+                  TextField(
+                    controller: remarksController,
+                    maxLines: 3,
+                    textInputAction: TextInputAction.done,
+                    decoration: InputDecoration(
+                      hintText: 'Enter your remarks here...',
+                      hintStyle: TextStyle(
+                        color: Colors.grey.shade400,
+                        fontSize: 14,
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey.shade50,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            BorderSide(color: Colors.grey.shade200),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            BorderSide(color: Colors.grey.shade200),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            BorderSide(color: accentColor, width: 1.5),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ── Buttons ──────────────────────────────────────────────
+                  Row(
+                    children: [
+                      // Cancel
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: OutlinedButton.styleFrom(
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            side: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          child: Text(
+                            'Cancel',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+
+                      // Confirm
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.of(context)
+                              .pop(remarksController.text),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: accentColor,
+                            foregroundColor: Colors.white,
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            'Confirm',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Guest data loader
+  // ─────────────────────────────────────────────────────────────────────────
   Future<void> _loadGuestDataForView() async {
     if (_memberIdController.text.isEmpty || _guestDataLoaded) return;
 
     try {
-      setState(() {
-        _isGuestLoading = true;
-      });
+      setState(() => _isGuestLoading = true);
 
       GuestRepository guestRepository = GuestRepository(
         ApiService(const FlutterSecureStorage()),
       );
 
       List<GuestSearchResponse> guests = await guestRepository.searchGuest(
-        9021, // Using 9021 as the search type for MID lookup
+        9021,
         _memberIdController.text,
       );
 
@@ -229,144 +382,62 @@ void _showAccessDeniedDialog() {
             .setSelectedGuest(
               Guest(
                 mid: guestResponse.mid ?? _memberIdController.text,
-                memberName: guestResponse.mName ?? _memberNameController.text,
+                memberName:
+                    guestResponse.mName ?? _memberNameController.text,
                 country: "",
                 lastVisitDate: guestResponse.lvd?.toString() ?? "",
-               
                 age: 0,
                 gRating: guestResponse.gRating ?? "",
                 mGroup: guestResponse.mGroup,
                 gName: guestResponse.gName ?? "",
                 memImage2: guestResponse.memImage2,
-              
               ),
             );
       }
 
-      // Mark guest data as loaded
       _guestDataLoaded = true;
-
-      setState(() {
-        _isGuestLoading = false;
-      });
+      setState(() => _isGuestLoading = false);
     } catch (e) {
-      setState(() {
-        _isGuestLoading = false;
-      });
+      setState(() => _isGuestLoading = false);
     }
   }
 
   Future<void> _getHotels() async {
     final hotels = ref.read(hotelsProvider);
-
     if (hotels.isEmpty) {
       await ref.read(hotelsProvider.notifier).getAllHotels();
     }
   }
 
   String getGuestAndRoomCounts(List<HotelDescip> hotels) {
-    final totalGuests = hotels.fold<int>(
-      0,
-      (sum, hotel) => sum + hotel.guestCount!,
-    );
-    final totalRooms = hotels.fold<int>(
-      0,
-      (sum, hotel) => sum + hotel.roomCount!,
-    );
+    final totalGuests =
+        hotels.fold<int>(0, (sum, hotel) => sum + hotel.guestCount!);
+    final totalRooms =
+        hotels.fold<int>(0, (sum, hotel) => sum + hotel.roomCount!);
 
-    String txt = "";
-
-    if (totalGuests == 1) {
-      txt += "$totalGuests GUEST";
-    } else {
-      txt += "$totalGuests GUESTS";
-    }
-
-    if (totalRooms == 1) {
-      txt += ", $totalRooms ROOM";
-    } else {
-      txt += ", $totalRooms ROOMS";
-    }
-
+    String txt =
+        totalGuests == 1 ? "$totalGuests GUEST" : "$totalGuests GUESTS";
+    txt += totalRooms == 1 ? ", $totalRooms ROOM" : ", $totalRooms ROOMS";
     return txt;
   }
 
   String getGuestAndTicketCounts(List<FlightBooking> flights) {
-    final totalGuests = flights.fold<int>(
-      0,
-      (sum, hotel) => sum + hotel.guestCount,
-    );
+    final totalGuests =
+        flights.fold<int>(0, (sum, f) => sum + f.guestCount);
     final totalTickets = flights.length;
 
-    String txt = "";
-
-    if (totalGuests == 1) {
-      txt += "$totalGuests GUEST";
-    } else {
-      txt += "$totalGuests GUESTS";
-    }
-
-    if (totalTickets == 1) {
-      txt += ", $totalTickets TICKET";
-    } else {
-      txt += ", $totalTickets TICKETS";
-    }
-
+    String txt =
+        totalGuests == 1 ? "$totalGuests GUEST" : "$totalGuests GUESTS";
+    txt += totalTickets == 1
+        ? ", $totalTickets TICKET"
+        : ", $totalTickets TICKETS";
     return txt;
   }
 
-  Future<String?> _showRemarksDialog(String title) async {
-    final TextEditingController remarksController = TextEditingController();
-
-    return showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return GestureDetector(
-          onTap: () {
-            FocusScope.of(context).unfocus();
-          },
-
-          child: AlertDialog(
-            title: Text(title),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Please enter remarks for this action:'),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: remarksController,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    hintText: 'Enter your remarks here...',
-                  ),
-                  maxLines: 3,
-                  textInputAction: TextInputAction.done,
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); // Cancel
-                },
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop(remarksController.text);
-                },
-                child: const Text('Confirm'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _approveReservation() async {
-    // Check permission first
+  // ─────────────────────────────────────────────────────────────────────────
+  // Actions
+  // ─────────────────────────────────────────────────────────────────────────
+  Future<void> _checkReservation() async {
     if (!_hasGiftAppPermission) {
       _showAccessDeniedDialog();
       return;
@@ -375,16 +446,68 @@ void _showAccessDeniedDialog() {
     final selectedReservation = ref.watch(selectedReservationProvider);
     if (selectedReservation == null) return;
 
-    // Show remarks dialog first
-    final remarks = await _showRemarksDialog('Approve Reservation');
-    if (remarks == null) return; // User cancelled
+    final remarks = await _showRemarksDialog(
+      'Check Reservation',
+      Colors.blue,
+      Icons.fact_check_outlined,
+    );
+    if (remarks == null) return;
 
     try {
-      setState(() {
-        _isLoading = true;
-      });
+      setState(() => _isLoading = true);
       final currentUserName = await StorageUtil.getUserName();
-      // Use the repository method through the provider
+      final success = await ref
+          .read(reservationProvider.notifier)
+          .approveOrRejectReservation(
+            memberID: selectedReservation.mid,
+            reservationNo: selectedReservation.reservNo,
+            currentUName: currentUserName ?? '',
+            status: "Checked",
+            remarks: remarks,
+          );
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Reservation checked successfully'),
+            backgroundColor: Colors.blue,
+          ),
+        );
+        if (mounted) Navigator.of(context).pop(true);
+      } else {
+        throw Exception('Failed to check reservation');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to check reservation: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _approveReservation() async {
+    if (!_hasGiftAppPermission) {
+      _showAccessDeniedDialog();
+      return;
+    }
+
+    final selectedReservation = ref.watch(selectedReservationProvider);
+    if (selectedReservation == null) return;
+
+    final remarks = await _showRemarksDialog(
+      'Approve Reservation',
+      Colors.green,
+      Icons.check_circle_outline,
+    );
+    if (remarks == null) return;
+
+    try {
+      setState(() => _isLoading = true);
+      final currentUserName = await StorageUtil.getUserName();
       final success = await ref
           .read(reservationProvider.notifier)
           .approveOrRejectReservation(
@@ -396,23 +519,17 @@ void _showAccessDeniedDialog() {
           );
 
       if (success) {
-        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Reservation approved successfully'),
             backgroundColor: Colors.green,
           ),
         );
-
-        // Navigate back and refresh the reservation list
-        if (mounted) {
-          Navigator.of(context).pop(true);
-        }
+        if (mounted) Navigator.of(context).pop(true);
       } else {
         throw Exception('Failed to approve reservation');
       }
     } catch (e) {
-      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to approve reservation: $e'),
@@ -420,14 +537,11 @@ void _showAccessDeniedDialog() {
         ),
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
   Future<void> _rejectReservation() async {
-    // Check permission first
     if (!_hasGiftAppPermission) {
       _showAccessDeniedDialog();
       return;
@@ -436,16 +550,16 @@ void _showAccessDeniedDialog() {
     final selectedReservation = ref.watch(selectedReservationProvider);
     if (selectedReservation == null) return;
 
-    // Show remarks dialog first
-    final remarks = await _showRemarksDialog('Reject Reservation');
-    if (remarks == null) return; // User cancelled
+    final remarks = await _showRemarksDialog(
+      'Reject Reservation',
+      Colors.red,
+      Icons.cancel_outlined,
+    );
+    if (remarks == null) return;
 
     try {
-      setState(() {
-        _isLoading = true;
-      });
+      setState(() => _isLoading = true);
       final currentUserName = await StorageUtil.getUserName();
-      // Use the repository method through the provider
       final success = await ref
           .read(reservationProvider.notifier)
           .approveOrRejectReservation(
@@ -457,23 +571,17 @@ void _showAccessDeniedDialog() {
           );
 
       if (success) {
-        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Reservation rejected successfully'),
             backgroundColor: Colors.orange,
           ),
         );
-
-        // Navigate back and refresh the reservation list
-        if (mounted) {
-          Navigator.of(context).pop(true);
-        }
+        if (mounted) Navigator.of(context).pop(true);
       } else {
         throw Exception('Failed to reject reservation');
       }
     } catch (e) {
-   
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to reject reservation: $e'),
@@ -481,12 +589,13 @@ void _showAccessDeniedDialog() {
         ),
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Build
+  // ─────────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final selectedReservation = ref.watch(selectedReservationProvider);
@@ -500,32 +609,26 @@ void _showAccessDeniedDialog() {
       _memberIdController.text = selectedReservation.mid;
       _memberNameController.text = selectedReservation.mName;
       final DateFormat dateFormat = DateFormat('yyyy-MM-dd');
-      _arrivalDateController.text = dateFormat.format(
-        selectedReservation.arrDate,
-      );
-      _departureDateController.text = dateFormat.format(
-        selectedReservation.depDate,
-      );
-      bool hasAirTickets = false;
+      _arrivalDateController.text =
+          dateFormat.format(selectedReservation.arrDate);
+      _departureDateController.text =
+          dateFormat.format(selectedReservation.depDate);
 
-      String status = selectedReservation.airticketReservationStatus
+      final String status = selectedReservation.airticketReservationStatus
           .toString()
           .toUpperCase()
           .trim();
-
-      // Check for various possible "Yes" values
-      hasAirTickets =
-          status == "T" ||
+      final bool hasAirTickets = status == "T" ||
           status == "TRUE" ||
           status == "YES" ||
           status == "Y" ||
           status == "1";
-
       _airTicketRequisition = hasAirTickets ? "Yes" : "No";
-     
       _remarksController.text = selectedReservation.remarks;
     }
+
     final fontSettings = ref.watch(fontSettingsProvider);
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -539,10 +642,9 @@ void _showAccessDeniedDialog() {
           },
         ),
         title: Text(
-          "Reservation - ${selectedReservation != null ? selectedReservation.reservNo : ''}",
+          "Reservation - ${selectedReservation?.reservNo ?? ''}",
           style: const TextStyle(fontSize: 18),
         ),
-
         actions: [
           PopScope(
             onPopInvokedWithResult: (bool didPop, dynamic result) {
@@ -554,28 +656,23 @@ void _showAccessDeniedDialog() {
             },
             child: Padding(
               padding: const EdgeInsets.only(right: 8.0),
-
               child: (selectedReservation?.requestStatus == 'Pending')
                   ? IconButton(
                       onPressed: () async {
-                        Future<void> navigateToEditReservation() async {
-                          final result = await context.push(
-                            "/reservations/new-reservation",
-                          );
-                          if (result == true) {
-                            if (mounted) {
-                              Navigator.of(context).pop(true);
-                            }
+                        Future<void> navigateToEdit() async {
+                          final result = await context
+                              .push("/reservations/new-reservation");
+                          if (result == true && mounted) {
+                            Navigator.of(context).pop(true);
                           }
                         }
 
-                        // Ensure guest data is loaded before navigation
                         if (_memberIdController.text.isNotEmpty &&
                             !_guestDataLoaded) {
                           await _loadGuestDataForView();
-                          await navigateToEditReservation();
+                          await navigateToEdit();
                         } else {
-                          await navigateToEditReservation();
+                          await navigateToEdit();
                         }
                       },
                       icon: const Icon(Icons.mode_edit_outline_sharp),
@@ -592,6 +689,7 @@ void _showAccessDeniedDialog() {
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
+                  // ── Reservation No ─────────────────────────────────────
                   TextFormField(
                     autofocus: false,
                     readOnly: true,
@@ -614,12 +712,14 @@ void _showAccessDeniedDialog() {
                     ),
                   ),
                   const SizedBox(height: 10.0),
+
+                  // ── Member ID + Search ─────────────────────────────────
                   Row(
                     children: [
-                      // Member ID field
                       Expanded(
                         child: TextFormField(
-                          keyboardType: const TextInputType.numberWithOptions(),
+                          keyboardType:
+                              const TextInputType.numberWithOptions(),
                           autofocus: false,
                           controller: _memberIdController,
                           style: TextStyle(
@@ -641,14 +741,11 @@ void _showAccessDeniedDialog() {
                           ),
                         ),
                       ),
-                      const SizedBox(
-                        width: 8,
-                      ), // spacing between field and button
-                      // Search Button
+                      const SizedBox(width: 8),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black, // Black background
-                          foregroundColor: Colors.white, // White text/icon
+                          backgroundColor: Colors.black,
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 14,
@@ -656,34 +753,24 @@ void _showAccessDeniedDialog() {
                         ),
                         onPressed: () async {
                           try {
-                            // Only load if not already loaded
                             if (!_guestDataLoaded &&
                                 _memberIdController.text.isNotEmpty) {
-                              setState(() {
-                                _isLoading = true;
-                              });
-
+                              setState(() => _isLoading = true);
                               await _loadGuestDataForView();
-
-                              setState(() {
-                                _isLoading = false;
-                              });
+                              setState(() => _isLoading = false);
                             }
-
                             context.push('/home/profile');
                           } catch (e) {
-                            setState(() {
-                              _isLoading = false;
-                            });
-
+                            setState(() => _isLoading = false);
                           }
                         },
                         child: const Icon(Icons.person_search, size: 25),
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 10.0),
+
+                  // ── Member Name ────────────────────────────────────────
                   TextFormField(
                     autofocus: false,
                     readOnly: true,
@@ -698,7 +785,7 @@ void _showAccessDeniedDialog() {
                         fontSize: fontSettings.fontSize,
                         fontWeight: fontSettings.fontWeight,
                       ),
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 12.0,
                         vertical: -5.0,
@@ -706,15 +793,18 @@ void _showAccessDeniedDialog() {
                     ),
                   ),
                   const SizedBox(height: 10.0),
+
+                  // ── Guest card ─────────────────────────────────────────
                   GuestDisplayCard(
                     memberIdText: _memberIdController.text,
                     memberNameText: _memberNameController.text,
-                    showCard:
-                        _memberIdController.text.isNotEmpty &&
+                    showCard: _memberIdController.text.isNotEmpty &&
                         _memberNameController.text.isNotEmpty,
                     isLoading: _isGuestLoading,
                   ),
                   const SizedBox(height: 10.0),
+
+                  // ── Hotel & Rooms summary ──────────────────────────────
                   ValueListenableBuilder<String>(
                     valueListenable: hotelRoomNotifier,
                     builder: (context, value, child) {
@@ -731,7 +821,7 @@ void _showAccessDeniedDialog() {
                             fontSize: fontSettings.fontSize,
                             fontWeight: fontSettings.fontWeight,
                           ),
-                          border: OutlineInputBorder(),
+                          border: const OutlineInputBorder(),
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 12.0,
                             vertical: -5.0,
@@ -741,6 +831,8 @@ void _showAccessDeniedDialog() {
                     },
                   ),
                   const SizedBox(height: 10.0),
+
+                  // ── Hotel cards ────────────────────────────────────────
                   selectedHotels.isEmpty
                       ? Center(
                           heightFactor: 3.0,
@@ -757,11 +849,10 @@ void _showAccessDeniedDialog() {
                             return SizedBox(
                               width: double.infinity,
                               child: Card(
-                                color: const Color.fromARGB(255, 228, 224, 224),
+                                color: const Color.fromARGB(
+                                    255, 228, 224, 224),
                                 margin: const EdgeInsets.symmetric(
-                                  horizontal: 3,
-                                  vertical: 8,
-                                ),
+                                    horizontal: 3, vertical: 8),
                                 child: Padding(
                                   padding: const EdgeInsets.all(12.0),
                                   child: Column(
@@ -772,7 +863,8 @@ void _showAccessDeniedDialog() {
                                         hotel.hotelName!,
                                         style: TextStyle(
                                           fontSize: fontSettings.fontSize,
-                                          fontWeight: fontSettings.fontWeight,
+                                          fontWeight:
+                                              fontSettings.fontWeight,
                                         ),
                                       ),
                                       const SizedBox(height: 8),
@@ -784,14 +876,17 @@ void _showAccessDeniedDialog() {
                                               style: TextStyle(
                                                 color: Colors.black,
                                                 fontSize:
-                                                    fontSettings.fontSize + 2,
-                                                fontWeight: FontWeight.bold,
+                                                    fontSettings.fontSize +
+                                                        2,
+                                                fontWeight:
+                                                    FontWeight.bold,
                                               ),
                                             ),
                                             TextSpan(
                                               text: hotel.roomCategoryName,
                                               style: TextStyle(
-                                                fontSize: fontSettings.fontSize,
+                                                fontSize:
+                                                    fontSettings.fontSize,
                                                 fontWeight:
                                                     fontSettings.fontWeight,
                                                 color: Colors.black,
@@ -809,7 +904,8 @@ void _showAccessDeniedDialog() {
                                               style: TextStyle(
                                                 color: Colors.black,
                                                 fontSize:
-                                                    fontSettings.fontSize + 2,
+                                                    fontSettings.fontSize +
+                                                        2,
                                                 fontWeight:
                                                     fontSettings.fontWeight,
                                               ),
@@ -818,7 +914,8 @@ void _showAccessDeniedDialog() {
                                               text: hotel.roomTypeName,
                                               style: TextStyle(
                                                 color: Colors.black,
-                                                fontSize: fontSettings.fontSize,
+                                                fontSize:
+                                                    fontSettings.fontSize,
                                                 fontWeight:
                                                     fontSettings.fontWeight,
                                               ),
@@ -864,8 +961,10 @@ void _showAccessDeniedDialog() {
                                       Text(
                                         "Estimated Cost: ${hotel.selectedCost}",
                                         style: TextStyle(
-                                          fontSize: fontSettings.fontSize + 2,
-                                          fontWeight: fontSettings.fontWeight,
+                                          fontSize:
+                                              fontSettings.fontSize + 2,
+                                          fontWeight:
+                                              fontSettings.fontWeight,
                                         ),
                                       ),
                                     ],
@@ -876,6 +975,8 @@ void _showAccessDeniedDialog() {
                           }).toList(),
                         ),
                   const SizedBox(height: 10.0),
+
+                  // ── Arrival Date ───────────────────────────────────────
                   TextFormField(
                     controller: _arrivalDateController,
                     style: TextStyle(
@@ -885,11 +986,9 @@ void _showAccessDeniedDialog() {
                     readOnly: true,
                     decoration: InputDecoration(
                       labelText: "Arrival Date",
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 12.0,
-                        vertical: -5.0,
-                      ),
+                      border: const OutlineInputBorder(),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12.0, vertical: -5.0),
                       labelStyle: TextStyle(
                         fontSize: fontSettings.fontSize,
                         fontWeight: fontSettings.fontWeight,
@@ -897,6 +996,8 @@ void _showAccessDeniedDialog() {
                     ),
                   ),
                   const SizedBox(height: 10),
+
+                  // ── Departure Date ─────────────────────────────────────
                   TextFormField(
                     controller: _departureDateController,
                     style: TextStyle(
@@ -910,14 +1011,14 @@ void _showAccessDeniedDialog() {
                         fontSize: fontSettings.fontSize,
                         fontWeight: fontSettings.fontWeight,
                       ),
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                       contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12.0,
-                        vertical: -5.0,
-                      ),
+                          horizontal: 12.0, vertical: -5.0),
                     ),
                   ),
                   const SizedBox(height: 10),
+
+                  // ── Air Ticket Requisition ─────────────────────────────
                   Align(
                     alignment: Alignment.topLeft,
                     child: Text(
@@ -933,77 +1034,60 @@ void _showAccessDeniedDialog() {
                       Radio<String>(
                         value: "Yes",
                         groupValue: _airTicketRequisition,
-                        onChanged: (value) {
-                          setState(() {
-                            _airTicketRequisition = value!;
-                          });
-                        },
+                        onChanged: (value) =>
+                            setState(() => _airTicketRequisition = value!),
                       ),
                       const Text("Yes", style: TextStyle(fontSize: 16)),
                       Radio<String>(
                         value: "No",
                         groupValue: _airTicketRequisition,
-                        onChanged: (value) {
-                          setState(() {
-                            _airTicketRequisition = value!;
-                          });
-                        },
+                        onChanged: (value) =>
+                            setState(() => _airTicketRequisition = value!),
                       ),
                       const Text("No", style: TextStyle(fontSize: 16)),
                     ],
                   ),
-                  if (_airTicketRequisition == "Yes")
-                    Column(
-                      children: [
-                        const SizedBox(height: 10.0),
-                        ValueListenableBuilder<String>(
-                          valueListenable: airTicketsNotifier,
-                          builder: (context, value, child) {
-                            return TextFormField(
-                              controller: TextEditingController(text: value),
-                              readOnly: true,
-                              decoration: const InputDecoration(
-                                labelText: "Select Air Tickets",
-                                border: OutlineInputBorder(),
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 12.0,
-                                  vertical: -5.0,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
+
+                  if (_airTicketRequisition == "Yes") ...[
+                    const SizedBox(height: 10.0),
+                    ValueListenableBuilder<String>(
+                      valueListenable: airTicketsNotifier,
+                      builder: (context, value, child) {
+                        return TextFormField(
+                          controller: TextEditingController(text: value),
+                          readOnly: true,
+                          decoration: const InputDecoration(
+                            labelText: "Select Air Tickets",
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12.0, vertical: -5.0),
+                          ),
+                        );
+                      },
                     ),
-                  if (_airTicketRequisition == "Yes")
-                    Column(
-                      children: [
-                        const SizedBox(height: 10.0),
-                        selectedFlights.isEmpty
-                            ? const Center(
-                                heightFactor: 6.0,
-                                child: Text(
-                                  'No air tickets available.',
-                                  style: TextStyle(fontSize: 16),
-                                ),
-                              )
-                            : SizedBox(
-                                child: Column(
-                                  children: selectedFlights.map((flight) {
-                                    final index = selectedFlights.indexOf(
-                                      flight,
-                                    );
-                                    return FlightCard(
-                                      flight: flight,
-                                      index: index,
-                                      showDelete: false,
-                                    );
-                                  }).toList(),
-                                ),
-                              ),
-                      ],
-                    ),
+                    const SizedBox(height: 10.0),
+                    selectedFlights.isEmpty
+                        ? const Center(
+                            heightFactor: 6.0,
+                            child: Text(
+                              'No air tickets available.',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          )
+                        : Column(
+                            children: selectedFlights.map((flight) {
+                              return FlightCard(
+                                flight: flight,
+                                index: selectedFlights.indexOf(flight),
+                                showDelete: false,
+                              );
+                            }).toList(),
+                          ),
+                  ],
+
                   const SizedBox(height: 10.0),
+
+                  // ── Remarks ────────────────────────────────────────────
                   TextFormField(
                     readOnly: true,
                     controller: _remarksController,
@@ -1023,90 +1107,122 @@ void _showAccessDeniedDialog() {
                         borderRadius: BorderRadius.circular(8.0),
                       ),
                     ),
-
                     maxLines: 5,
                     keyboardType: TextInputType.multiline,
-                    onChanged: (value) {
-                    
-                    },
                   ),
                   const SizedBox(height: 16.0),
+
+                  // ── Pending: Check + Reject ────────────────────────────
                   if (selectedReservation?.requestStatus == 'Pending')
                     Row(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         Expanded(
-                          child: SizedBox(
-                            child: ElevatedButton(
-                              onPressed: _approveReservation,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                  horizontal: 20,
-                                ),
+                          child: ElevatedButton.icon(
+                            onPressed: _checkReservation,
+                            icon: const Icon(Icons.fact_check, size: 20),
+                            label: const Text(
+                              "Check",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
                               ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.done, size: 20),
-                                  SizedBox(width: 10),
-                                  Text(
-                                    "Approve",
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 16, horizontal: 20),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 10.0),
+                        const SizedBox(width: 10),
                         Expanded(
-                          child: SizedBox(
-                            child: ElevatedButton(
-                              onPressed: _rejectReservation,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Constants.kSecondaryColor,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                  horizontal: 20,
-                                ),
+                          child: ElevatedButton.icon(
+                            onPressed: _rejectReservation,
+                            icon: const Icon(Icons.cancel, size: 20),
+                            label: const Text(
+                              "Reject",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
                               ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.cancel, size: 20),
-                                  SizedBox(width: 10),
-                                  Text(
-                                    "Reject",
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Constants.kSecondaryColor,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 16, horizontal: 20),
                             ),
                           ),
                         ),
                       ],
                     ),
+
+                  // ── Checked: Approve + Reject ──────────────────────────
+                  if (selectedReservation?.requestStatus == 'Checked')
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _approveReservation,
+                            icon: const Icon(Icons.done, size: 20),
+                            label: const Text(
+                              "Approve",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 16, horizontal: 20),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _rejectReservation,
+                            icon: const Icon(Icons.cancel, size: 20),
+                            label: const Text(
+                              "Reject",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Constants.kSecondaryColor,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 16, horizontal: 20),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
           ),
+
+          // ── Full-screen loading overlay ──────────────────────────────
           if (_isLoading && !_isGuestLoading)
             Container(
               decoration: const BoxDecoration(

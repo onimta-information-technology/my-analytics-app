@@ -55,6 +55,7 @@ class ReservationRepository {
         'Pending': [],
         'Approved': [],
         'Rejected': [],
+        'Checked': [],
       };
 
       for (var json in tableData) {
@@ -66,6 +67,9 @@ class ReservationRepository {
             break;
           case 'Approved':
             classifiedReservations['Approved']?.add(reservation);
+            break;
+          case 'Checked':
+            classifiedReservations['Checked']?.add(reservation);
             break;
           case 'Rejected':
             classifiedReservations['Rejected']?.add(reservation);
@@ -353,9 +357,11 @@ class ReservationRepository {
     required String currentUName,
     required String status,
     required String remarks,
+
   }) async {
     final deviceId = await DeviceId.get();
-
+print('Approving/Rejecting reservation with status: $status');
+print('Member ID: $memberID, Reservation No: $reservationNo, Current User: $currentUName, Remarks: $remarks');
     final requestBody = {
       "HasReturnData": "T",
       "Parameters": [
@@ -419,7 +425,7 @@ class ReservationRepository {
 
     try {
       final response = await apiService.post('CommonExecute', requestBody);
-
+print('Response from approve/reject API: $response');
       if (response['CommonResult'] != null) {
         return true;
       } else {

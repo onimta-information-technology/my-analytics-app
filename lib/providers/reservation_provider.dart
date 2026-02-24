@@ -9,10 +9,10 @@ class ReservationNotifier
   final ReservationRepository reservationRepository;
 
   ReservationNotifier(this.reservationRepository)
-    : super({'Pending': [], 'Approved': [], 'Rejected': []});
+    : super({'Pending': [], 'Approved': [], 'Rejected': [], 'Checked': []});
 
   Future<void> getReservationData() async {
-    state = {'Pending': [], 'Approved': [], 'Rejected': []};
+    state = {'Pending': [], 'Approved': [], 'Rejected': [], 'Checked': []};
 
     final reservations = await reservationRepository.getReservations();
 

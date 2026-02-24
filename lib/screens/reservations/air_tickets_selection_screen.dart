@@ -8,6 +8,7 @@ import 'package:ballys_reservation_app/models/reservation/airport_cost_response.
 import 'package:ballys_reservation_app/models/reservation/flight_booking.dart';
 import 'package:ballys_reservation_app/providers/airports_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_flight_provider.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -487,22 +488,115 @@ class _AirTicketsSelectionScreenState
     }
   }
 
-  Future<void> _selectDate(
-      BuildContext context, TextEditingController controller) async {
-    DateTime? pickedDate = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now().subtract(const Duration(days: 0)),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-    );
+  // Future<void> _selectDate(
+  //     BuildContext context, TextEditingController controller) async {
+  //   DateTime? pickedDate = await showDatePicker(
+  //     context: context,
+  //     initialDate: DateTime.now(),
+  //     firstDate: DateTime.now().subtract(const Duration(days: 0)),
+  //     lastDate: DateTime.now().add(const Duration(days: 365)),
+  //   );
 
-    if (pickedDate != null) {
-      setState(() {
-        controller.text = "${pickedDate.toLocal()}".split(' ')[0];
-      });
-    }
-  }
+  //   if (pickedDate != null) {
+  //     setState(() {
+  //       controller.text = "${pickedDate.toLocal()}".split(' ')[0];
+  //     });
+  //   }
+  // }
+Future<void> _selectDate(
+    BuildContext context, TextEditingController controller) async {
+  // Truncate to date only to avoid millisecond timing issues
+  final now = DateTime(
+    DateTime.now().year,
+    DateTime.now().month,
+    DateTime.now().day,
+  );
 
+  DateTime selectedDate = now;
+
+  await showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (BuildContext context) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              controller == _arrivalDateController
+                  ? "Select Arrival Date"
+                  : "Select Departure Date",
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ),
+          SizedBox(
+            height: 200,
+            child: CupertinoDatePicker(
+              mode: CupertinoDatePickerMode.date,
+              initialDateTime: now,          // ← use truncated 'now'
+              minimumDate: now,              // ← same truncated 'now'
+              maximumDate: DateTime(
+                now.year + 1,
+                now.month,
+                now.day,
+              ),
+              onDateTimeChanged: (DateTime newDate) {
+                selectedDate = newDate;
+              },
+            ),
+          ),
+          const Divider(height: 1),
+          TextButton(
+            onPressed: () {
+              // Validate departure is after arrival
+              if (controller == _departureDateController &&
+                  _arrivalDateController.text.isNotEmpty) {
+                final arrivalParsed = DateFormat('yyyy-MM-dd')
+                    .parse(_arrivalDateController.text);
+                if (!selectedDate.isAfter(arrivalParsed)) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Departure date must be after arrival date',
+                      ),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+              }
+              setState(() {
+                controller.text =
+                    DateFormat('yyyy-MM-dd').format(selectedDate);
+              });
+              Navigator.of(context).pop();
+            },
+            child: const Text(
+              "Confirm",
+              style: TextStyle(fontSize: 18, color: Colors.blue),
+            ),
+          ),
+          const Divider(height: 1),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              "Cancel",
+              style: TextStyle(fontSize: 18, color: Colors.blue),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      );
+    },
+  );
+}
   Widget _buildCounter(
       String label, int count, int type, Function(int) onCountChange) {
     return Column(

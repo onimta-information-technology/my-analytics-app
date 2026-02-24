@@ -137,7 +137,11 @@ class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
               icon: const Icon(Icons.arrow_back),
               onPressed: () => context.pop(),
             ),
-        title: Text("Previous Gifts for ${widget.memberId}"),
+       title: Text(
+  widget.iid == 8888
+      ? "Issued Gifts for ${widget.memberId}"
+      : "Pending Gifts for ${widget.memberId}",
+),
         actions: [
           // Rotation buttons
           IconButton(

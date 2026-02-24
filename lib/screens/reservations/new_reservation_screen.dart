@@ -26,6 +26,7 @@ import 'package:ballys_reservation_app/providers/selected_flight_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_hotel_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_reservation_provider.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -429,39 +430,187 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
     return !hasError;
   }
 
-  Future<void> _selectArrivalDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _arrivalDate ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
-    );
-    if (picked != null && picked != _arrivalDate) {
-      setState(() {
-        _arrivalDate = picked;
-        _arrivalDateController.text = '${picked.toLocal()}'.split(' ')[0];
-        _departureDate = null;
-        _departureDateController.clear();
-      });
-    }
-  }
+  // Future<void> _selectArrivalDate(BuildContext context) async {
+  //   final DateTime? picked = await showDatePicker(
+  //     context: context,
+  //     initialDate: _arrivalDate ?? DateTime.now(),
+  //     firstDate: DateTime(2000),
+  //     lastDate: DateTime(2101),
+  //   );
+  //   if (picked != null && picked != _arrivalDate) {
+  //     setState(() {
+  //       _arrivalDate = picked;
+  //       _arrivalDateController.text = '${picked.toLocal()}'.split(' ')[0];
+  //       _departureDate = null;
+  //       _departureDateController.clear();
+  //     });
+  //   }
+  // }
 
-  Future<void> _selectDepartureDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _departureDate ?? _arrivalDate ?? DateTime.now(),
-      firstDate: _arrivalDate ?? DateTime.now(),
-      lastDate: DateTime(2101),
-    );
-    if (picked != null && picked != _departureDate) {
-      setState(() {
-        _departureDate = picked;
-        _departureDateController.text =
-            '${picked.toLocal()}'.split(' ')[0];
-      });
-    }
-  }
+  // Future<void> _selectDepartureDate(BuildContext context) async {
+  //   final DateTime? picked = await showDatePicker(
+  //     context: context,
+  //     initialDate: _departureDate ?? _arrivalDate ?? DateTime.now(),
+  //     firstDate: _arrivalDate ?? DateTime.now(),
+  //     lastDate: DateTime(2101),
+  //   );
+  //   if (picked != null && picked != _departureDate) {
+  //     setState(() {
+  //       _departureDate = picked;
+  //       _departureDateController.text =
+  //           '${picked.toLocal()}'.split(' ')[0];
+  //     });
+  //   }
+  // }
+Future<void> _selectArrivalDate(BuildContext context) async {
+  DateTime selectedDate = _arrivalDate ?? DateTime.now();
 
+  await showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (BuildContext context) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              "Select Arrival Date",
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ),
+          SizedBox(
+            height: 200,
+            child: CupertinoDatePicker(
+              mode: CupertinoDatePickerMode.date,
+              initialDateTime: selectedDate,
+              minimumDate: DateTime(2000),
+              maximumDate: DateTime(2101),
+              onDateTimeChanged: (DateTime newDate) {
+                selectedDate = newDate;
+              },
+            ),
+          ),
+          const Divider(height: 1),
+          TextButton(
+            onPressed: () {
+              if (mounted) {
+                setState(() {
+                  _arrivalDate = selectedDate;
+                  _arrivalDateController.text =
+                      '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+                  // Reset departure when arrival changes
+                  _departureDate = null;
+                  _departureDateController.clear();
+                });
+              }
+              Navigator.of(context).pop();
+            },
+            child: const Text(
+              "Confirm",
+              style: TextStyle(fontSize: 18, color: Colors.blue),
+            ),
+          ),
+          const Divider(height: 1),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              "Cancel",
+              style: TextStyle(fontSize: 18, color: Colors.blue),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      );
+    },
+  );
+}
+
+Future<void> _selectDepartureDate(BuildContext context) async {
+  DateTime selectedDate = _departureDate ?? _arrivalDate ?? DateTime.now();
+
+  await showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (BuildContext context) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              "Select Departure Date",
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ),
+          SizedBox(
+            height: 200,
+            child: CupertinoDatePicker(
+              mode: CupertinoDatePickerMode.date,
+              initialDateTime: selectedDate,
+              minimumDate: _arrivalDate ?? DateTime(2000),
+              maximumDate: DateTime(2101),
+              onDateTimeChanged: (DateTime newDate) {
+                selectedDate = newDate;
+              },
+            ),
+          ),
+          const Divider(height: 1),
+          TextButton(
+            onPressed: () {
+              // Validate departure is after arrival
+              if (_arrivalDate != null &&
+                  !selectedDate.isAfter(_arrivalDate!)) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Departure date must be after arrival date',
+                    ),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+              if (mounted) {
+                setState(() {
+                  _departureDate = selectedDate;
+                  _departureDateController.text =
+                      '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+                });
+              }
+              Navigator.of(context).pop();
+            },
+            child: const Text(
+              "Confirm",
+              style: TextStyle(fontSize: 18, color: Colors.blue),
+            ),
+          ),
+          const Divider(height: 1),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              "Cancel",
+              style: TextStyle(fontSize: 18, color: Colors.blue),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      );
+    },
+  );
+}
   void _confirmReservation() async {
     if (_isEditMode) {
       if (!_validateUpdateFields()) return;

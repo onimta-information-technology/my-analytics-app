@@ -12,6 +12,7 @@ import 'package:ballys_reservation_app/providers/new_reservation_provider.dart';
 import 'package:ballys_reservation_app/providers/special_gift_provider.dart';
 import 'package:ballys_reservation_app/utils/formatter.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -226,20 +227,75 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
   }
 
   Future<void> _pickDate(
-    BuildContext context,
-    TextEditingController controller,
-  ) async {
-    final DateTime? date = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
-    );
+  BuildContext context,
+  TextEditingController controller,
+) async {
+  DateTime selectedDate = DateTime.now();
 
-    if (date != null) {
-      controller.text = "${date.day}/${date.month}/${date.year}";
-    }
-  }
+  await showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (BuildContext context) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              "Select date",
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ),
+          SizedBox(
+            height: 200,
+            child: CupertinoDatePicker(
+              mode: CupertinoDatePickerMode.date,
+              initialDateTime: selectedDate,
+              minimumDate: DateTime(2000),
+              maximumDate: DateTime(2101),
+              onDateTimeChanged: (DateTime newDate) {
+                selectedDate = newDate;
+              },
+            ),
+          ),
+          const Divider(height: 1),
+          TextButton(
+            onPressed: () {
+              controller.text =
+                  "${selectedDate.day}/${selectedDate.month}/${selectedDate.year}";
+              Navigator.of(context).pop();
+            },
+            child: const Text(
+              "Confirm",
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.blue,
+              ),
+            ),
+          ),
+          const Divider(height: 1),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              "Cancel",
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.blue,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      );
+    },
+  );
+}
 
   final Map<String, String> ratingImageMap = {
     "CLASSIC": "assets/images/ratings/CLASSIC.png",
@@ -257,36 +313,368 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
   }
 
   Future<void> _pickDateTime(
-    BuildContext context,
-    TextEditingController controller,
-  ) async {
-    final DateTime? date = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
-    );
+  BuildContext context,
+  TextEditingController controller,
+) async {
+  DateTime selectedDate = DateTime.now();
+  TimeOfDay selectedTime = TimeOfDay.now();
 
-    if (date == null) return;
+  // Step 1: Pick Date
+  final datePicked = await showModalBottomSheet<DateTime>(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (BuildContext context) {
+      int day = selectedDate.day;
+      int month = selectedDate.month;
+      int year = selectedDate.year;
 
-    final TimeOfDay? time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-    );
+      final FixedExtentScrollController dayController =
+          FixedExtentScrollController(initialItem: day - 1);
+      final FixedExtentScrollController monthController =
+          FixedExtentScrollController(initialItem: month - 1);
+      final FixedExtentScrollController yearController =
+          FixedExtentScrollController(initialItem: year - 2000);
 
-    if (time == null) return;
+      final List<String> monthNames = [
+        "January", "February", "March", "April",
+        "May", "June", "July", "August",
+        "September", "October", "November", "December"
+      ];
 
-    final DateTime dateTime = DateTime(
-      date.year,
-      date.month,
-      date.day,
-      time.hour,
-      time.minute,
-    );
+      return StatefulBuilder(
+        builder: (context, setModalState) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  "Select Date",
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ),
+              SizedBox(
+                height: 200,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Center highlight bar
+                    Container(
+                      height: 40,
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        // Day Column
+                        Expanded(
+                          child: ListWheelScrollView.useDelegate(
+                            controller: dayController,
+                            itemExtent: 40,
+                            perspective: 0.005,
+                            diameterRatio: 1.5,
+                            physics: const FixedExtentScrollPhysics(),
+                            onSelectedItemChanged: (index) {
+                              day = index + 1;
+                            },
+                            childDelegate: ListWheelChildBuilderDelegate(
+                              childCount: 31,
+                              builder: (context, index) {
+                                return Center(
+                                  child: Text(
+                                    "${index + 1}",
+                                    style: const TextStyle(fontSize: 18),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        // Month Column
+                        Expanded(
+                          flex: 2,
+                          child: ListWheelScrollView.useDelegate(
+                            controller: monthController,
+                            itemExtent: 40,
+                            perspective: 0.005,
+                            diameterRatio: 1.5,
+                            physics: const FixedExtentScrollPhysics(),
+                            onSelectedItemChanged: (index) {
+                              month = index + 1;
+                            },
+                            childDelegate: ListWheelChildBuilderDelegate(
+                              childCount: 12,
+                              builder: (context, index) {
+                                return Center(
+                                  child: Text(
+                                    monthNames[index],
+                                    style: const TextStyle(fontSize: 18),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        // Year Column
+                        Expanded(
+                          flex: 2,
+                          child: ListWheelScrollView.useDelegate(
+                            controller: yearController,
+                            itemExtent: 40,
+                            perspective: 0.005,
+                            diameterRatio: 1.5,
+                            physics: const FixedExtentScrollPhysics(),
+                            onSelectedItemChanged: (index) {
+                              year = 2000 + index;
+                            },
+                            childDelegate: ListWheelChildBuilderDelegate(
+                              childCount: 102,
+                              builder: (context, index) {
+                                return Center(
+                                  child: Text(
+                                    "${2000 + index}",
+                                    style: const TextStyle(fontSize: 18),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              TextButton(
+                onPressed: () {
+                  final maxDay = DateTime(year, month + 1, 0).day;
+                  final validDay = day > maxDay ? maxDay : day;
+                  Navigator.of(context).pop(DateTime(year, month, validDay));
+                },
+                child: const Text(
+                  "Confirm",
+                  style: TextStyle(fontSize: 18, color: Colors.blue),
+                ),
+              ),
+              const Divider(height: 1),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text(
+                  "Cancel",
+                  style: TextStyle(fontSize: 18, color: Colors.blue),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          );
+        },
+      );
+    },
+  );
 
-    controller.text =
-        "${dateTime.day}/${dateTime.month}/${dateTime.year} ${time.format(context)}";
-  }
+  if (datePicked == null) return;
+  selectedDate = datePicked;
+
+  // Step 2: Pick Time with AM/PM
+  final timePicked = await showModalBottomSheet<TimeOfDay>(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (BuildContext context) {
+      // Convert to 12-hour format
+      int hour = selectedTime.hourOfPeriod == 0 ? 12 : selectedTime.hourOfPeriod;
+      int minute = selectedTime.minute;
+      DayPeriod period = selectedTime.period;
+
+      final FixedExtentScrollController hourController =
+          FixedExtentScrollController(initialItem: hour - 1);
+      final FixedExtentScrollController minuteController =
+          FixedExtentScrollController(initialItem: minute);
+      final FixedExtentScrollController periodController =
+          FixedExtentScrollController(
+              initialItem: period == DayPeriod.am ? 0 : 1);
+
+      return StatefulBuilder(
+        builder: (context, setModalState) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  "Select Time",
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ),
+              SizedBox(
+                height: 200,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Center highlight bar
+                    Container(
+                      height: 40,
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        // Hour Column (1-12)
+                        Expanded(
+                          flex: 2,
+                          child: ListWheelScrollView.useDelegate(
+                            controller: hourController,
+                            itemExtent: 40,
+                            perspective: 0.005,
+                            diameterRatio: 1.5,
+                            physics: const FixedExtentScrollPhysics(),
+                            onSelectedItemChanged: (index) {
+                              hour = index + 1;
+                            },
+                            childDelegate: ListWheelChildBuilderDelegate(
+                              childCount: 12,
+                              builder: (context, index) {
+                                return Center(
+                                  child: Text(
+                                    (index + 1).toString().padLeft(2, '0'),
+                                    style: const TextStyle(fontSize: 18),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        // Colon separator
+                        const Text(
+                          ":",
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        // Minute Column (0-59)
+                        Expanded(
+                          flex: 2,
+                          child: ListWheelScrollView.useDelegate(
+                            controller: minuteController,
+                            itemExtent: 40,
+                            perspective: 0.005,
+                            diameterRatio: 1.5,
+                            physics: const FixedExtentScrollPhysics(),
+                            onSelectedItemChanged: (index) {
+                              minute = index;
+                            },
+                            childDelegate: ListWheelChildBuilderDelegate(
+                              childCount: 60,
+                              builder: (context, index) {
+                                return Center(
+                                  child: Text(
+                                    index.toString().padLeft(2, '0'),
+                                    style: const TextStyle(fontSize: 18),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        // AM/PM Column
+                        Expanded(
+                          child: ListWheelScrollView.useDelegate(
+                            controller: periodController,
+                            itemExtent: 40,
+                            perspective: 0.005,
+                            diameterRatio: 1.5,
+                            physics: const FixedExtentScrollPhysics(),
+                            onSelectedItemChanged: (index) {
+                              period =
+                                  index == 0 ? DayPeriod.am : DayPeriod.pm;
+                            },
+                            childDelegate: ListWheelChildBuilderDelegate(
+                              childCount: 2,
+                              builder: (context, index) {
+                                return Center(
+                                  child: Text(
+                                    index == 0 ? "AM" : "PM",
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              TextButton(
+                onPressed: () {
+                  // Convert back to 24-hour format
+                  int hour24;
+                  if (period == DayPeriod.am) {
+                    hour24 = hour == 12 ? 0 : hour;
+                  } else {
+                    hour24 = hour == 12 ? 12 : hour + 12;
+                  }
+                  Navigator.of(context).pop(
+                    TimeOfDay(hour: hour24, minute: minute),
+                  );
+                },
+                child: const Text(
+                  "Confirm",
+                  style: TextStyle(fontSize: 18, color: Colors.blue),
+                ),
+              ),
+              const Divider(height: 1),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text(
+                  "Cancel",
+                  style: TextStyle(fontSize: 18, color: Colors.blue),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          );
+        },
+      );
+    },
+  );
+
+  if (timePicked == null) return;
+  selectedTime = timePicked;
+
+  // Step 3: Format with AM/PM and set to controller
+  final hour12 = selectedTime.hourOfPeriod == 0 ? 12 : selectedTime.hourOfPeriod;
+  final minuteStr = selectedTime.minute.toString().padLeft(2, '0');
+  final periodStr = selectedTime.period == DayPeriod.am ? "AM" : "PM";
+
+  controller.text =
+      "${selectedDate.day}/${selectedDate.month}/${selectedDate.year} "
+      "${hour12.toString().padLeft(2, '0')}:$minuteStr $periodStr";
+}
 
   TextStyle _inputTextStyle(FontSettings fontSettings) {
     return TextStyle(

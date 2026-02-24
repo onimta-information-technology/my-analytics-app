@@ -18,6 +18,7 @@ import 'package:ballys_reservation_app/screens/profile/guest_performance/games_s
 import 'package:ballys_reservation_app/screens/profile/guest_performance/hotel_reservation.dart';
 import 'package:ballys_reservation_app/screens/profile/guest_performance/loyalty_summary.dart';
 import 'package:ballys_reservation_app/screens/profile/guest_performance/trip_information.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -109,33 +110,199 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
     }
   }
 
-  Future<void> _selectArrivalDate(BuildContext context) async {
-    final DateTime? selectedArrivalDate = await showDatePicker(
-      context: context,
-      initialDate: _dateFrom ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
-    );
-    if (selectedArrivalDate != null && selectedArrivalDate != _dateFrom) {
-      ref.read(dateFilterProvider.notifier).setDateFrom(selectedArrivalDate);
+  // Future<void> _selectArrivalDate(BuildContext context) async {
+  //   final DateTime? selectedArrivalDate = await showDatePicker(
+  //     context: context,
+  //     initialDate: _dateFrom ?? DateTime.now(),
+  //     firstDate: DateTime(2000),
+  //     lastDate: DateTime(2101),
+  //   );
+  //   if (selectedArrivalDate != null && selectedArrivalDate != _dateFrom) {
+  //     ref.read(dateFilterProvider.notifier).setDateFrom(selectedArrivalDate);
   
-    }
+  //   }
    
-  }
+  // }
 
-  Future<void> _selectDepartureDate(BuildContext context) async {
-    final DateTime? selectedDepartureDate = await showDatePicker(
-      context: context,
-      initialDate: _dateTo ?? _dateFrom ?? DateTime.now(),
-      firstDate: _dateFrom ?? DateTime.now(),
-      lastDate: DateTime(2101),
-    );
-    if (selectedDepartureDate != null && selectedDepartureDate != _dateTo) {
-      ref.read(dateFilterProvider.notifier).setDateTo(selectedDepartureDate);
+  // Future<void> _selectDepartureDate(BuildContext context) async {
+  //   final DateTime? selectedDepartureDate = await showDatePicker(
+  //     context: context,
+  //     initialDate: _dateTo ?? _dateFrom ?? DateTime.now(),
+  //     firstDate: _dateFrom ?? DateTime.now(),
+  //     lastDate: DateTime(2101),
+  //   );
+  //   if (selectedDepartureDate != null && selectedDepartureDate != _dateTo) {
+  //     ref.read(dateFilterProvider.notifier).setDateTo(selectedDepartureDate);
    
-    }
-  }
+  //   }
+  // }
+Future<void> _selectArrivalDate(BuildContext context) async {
+  final now = DateTime(
+    DateTime.now().year,
+    DateTime.now().month,
+    DateTime.now().day,
+  );
 
+  DateTime selectedDate = _dateFrom ?? now;
+
+  await showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (BuildContext context) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              "Select Start Date",
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ),
+          SizedBox(
+            height: 200,
+            child: CupertinoDatePicker(
+              mode: CupertinoDatePickerMode.date,
+              initialDateTime: selectedDate,
+              minimumDate: DateTime(2000),
+              maximumDate: DateTime(2101),
+              onDateTimeChanged: (DateTime newDate) {
+                selectedDate = newDate;
+              },
+            ),
+          ),
+          const Divider(height: 1),
+          TextButton(
+            onPressed: () {
+              ref
+                  .read(dateFilterProvider.notifier)
+                  .setDateFrom(selectedDate);
+              setState(() {
+                _dateFrom = selectedDate;
+                startDateNotifier.value = selectedDate;
+                // Reset end date if it's before new start date
+                if (_dateTo != null &&
+                    _dateTo!.isBefore(selectedDate)) {
+                  _dateTo = null;
+                  endDateNotifier.value = null;
+                  ref
+                      .read(dateFilterProvider.notifier)
+                      .setDateTo(selectedDate);
+                }
+              });
+              Navigator.of(context).pop();
+            },
+            child: const Text(
+              "Confirm",
+              style: TextStyle(fontSize: 18, color: Colors.blue),
+            ),
+          ),
+          const Divider(height: 1),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              "Cancel",
+              style: TextStyle(fontSize: 18, color: Colors.blue),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      );
+    },
+  );
+}
+
+Future<void> _selectDepartureDate(BuildContext context) async {
+  final now = DateTime(
+    DateTime.now().year,
+    DateTime.now().month,
+    DateTime.now().day,
+  );
+
+  DateTime selectedDate = _dateTo ?? _dateFrom ?? now;
+
+  await showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (BuildContext context) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              "Select End Date",
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ),
+          SizedBox(
+            height: 200,
+            child: CupertinoDatePicker(
+              mode: CupertinoDatePickerMode.date,
+              initialDateTime: selectedDate,
+              minimumDate: DateTime(2000),
+              maximumDate: DateTime(2101),
+              onDateTimeChanged: (DateTime newDate) {
+                selectedDate = newDate;
+              },
+            ),
+          ),
+          const Divider(height: 1),
+          TextButton(
+            onPressed: () {
+              // Validate end date is after start date
+              if (_dateFrom != null &&
+                  selectedDate.isBefore(_dateFrom!)) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'End date must be after start date',
+                    ),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+              ref
+                  .read(dateFilterProvider.notifier)
+                  .setDateTo(selectedDate);
+              setState(() {
+                _dateTo = selectedDate;
+                endDateNotifier.value = selectedDate;
+              });
+              Navigator.of(context).pop();
+            },
+            child: const Text(
+              "Confirm",
+              style: TextStyle(fontSize: 18, color: Colors.blue),
+            ),
+          ),
+          const Divider(height: 1),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              "Cancel",
+              style: TextStyle(fontSize: 18, color: Colors.blue),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      );
+    },
+  );
+}
   Future<void> _performAction() async {
     try {
       if (startDateNotifier.value == null || endDateNotifier.value == null) {

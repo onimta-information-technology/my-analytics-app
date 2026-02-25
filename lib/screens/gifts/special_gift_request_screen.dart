@@ -65,6 +65,11 @@ class _SpecialGiftRequestScreenState
     if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
       return gifts;
     }
+    final otgiChk = await StorageUtil.getOtgiChk();
+  final otgiApp = await StorageUtil.getOtgiApp();
+  if (otgiChk == true || otgiApp == true) {
+    return gifts;
+  }
     final currentUserName = await StorageUtil.getUserName();
     if (currentUserName == null) return [];
     return gifts
@@ -76,17 +81,49 @@ class _SpecialGiftRequestScreenState
         .toList();
   }
 
-  Future<bool> _canAccessGiftDetails(SpecialGiftRequest gift) async {
-    final giftApp = await StorageUtil.getGiftApp();
-    if (giftApp == true) return true;
-    final currentUserName = await StorageUtil.getUserName();
-    if (currentUserName != null &&
-        gift.reqBy.isNotEmpty &&
-        currentUserName.trim().toLowerCase() ==
-            gift.reqBy.trim().toLowerCase()) {
+  Future<bool> _canAccessGiftDetails(
+    SpecialGiftRequest gift, {
+    required bool isPending,
+    required bool isApproved,
+    required bool isChecked,
+  }) async {
+    final salesCode = await StorageUtil.getSalesCode();
+
+    if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
       return true;
     }
-    return false;
+
+    final currentUserName =
+        (await StorageUtil.getUserName())?.trim().toLowerCase() ?? '';
+    final reqBy = gift.reqBy.trim().toLowerCase();
+    final checkedBy = (gift.checkApp ?? '').trim().toLowerCase();
+    final approvedBy = (gift.firstAppBy ?? '').trim().toLowerCase();
+    final rejectedBy = (gift.deleteUser ?? '').trim().toLowerCase();
+
+    if (isPending) {
+      // Pending: otgiChk == true OR loginUser == reqBy
+      final otgiChk = await StorageUtil.getOtgiChk();
+      return otgiChk == true || currentUserName == reqBy;
+    }
+
+    if (isChecked) {
+      // Checked: otgiApp == true OR loginUser == reqBy OR loginUser == checkedBy
+      final otgiApp = await StorageUtil.getOtgiApp();
+      return otgiApp == true ||
+          currentUserName == reqBy ||
+          currentUserName == checkedBy;
+    }
+
+    if (isApproved) {
+      // Approved: otgiApp == true OR loginUser == reqBy OR loginUser == approvedBy
+      final otgiApp = await StorageUtil.getOtgiApp();
+      return otgiApp == true ||
+          currentUserName == reqBy ||
+          currentUserName == approvedBy;
+    }
+
+    // Rejected: loginUser == reqBy OR loginUser == rejectedBy
+    return currentUserName == reqBy || currentUserName == rejectedBy;
   }
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
@@ -236,7 +273,7 @@ class _SpecialGiftRequestScreenState
                 ),
               ),
             ),
-        //  const Watermark(),
+          //  const Watermark(),
         ],
       ),
       floatingActionButton: widget.hideAddButton
@@ -353,7 +390,12 @@ class _SpecialGiftRequestScreenState
                 InkWell(
                   borderRadius: BorderRadius.circular(10),
                   onTap: () async {
-                    final canAccess = await _canAccessGiftDetails(gift);
+                    final canAccess = await _canAccessGiftDetails(
+                      gift,
+                      isPending: isPending,
+                      isApproved: isApproved,
+                      isChecked: isChecked,
+                    );
                     if (!canAccess) {
                       if (mounted) _showAccessDeniedDialog();
                       return;
@@ -445,7 +487,7 @@ class _SpecialGiftRequestScreenState
                           Row(
                             children: [
                               const Icon(
-                                  Icons.access_time,
+                                Icons.access_time,
                                 color: Color.fromARGB(255, 0, 0, 0),
                                 size: 16,
                               ),
@@ -472,7 +514,7 @@ class _SpecialGiftRequestScreenState
                             ],
                           ),
 
-                         const SizedBox(height: 6),
+                          const SizedBox(height: 6),
 
                           // Requested By
                           Row(

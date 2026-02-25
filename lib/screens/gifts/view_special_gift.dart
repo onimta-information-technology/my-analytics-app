@@ -29,6 +29,7 @@ class ViewSpecificGiftRequest extends ConsumerStatefulWidget {
   final bool isPending;
   final bool isApproved;
   final bool isChecked;
+
   const ViewSpecificGiftRequest({
     super.key,
     required this.giftsRepository,
@@ -58,10 +59,9 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
       TextEditingController();
 
   String? _selectedGift;
-  String? _chipType;
   String _remarks = "";
   String? userName = "";
-  bool _hasGiftAppPermission = false;
+
   double drop = 0.0;
   double cashout = 0.0;
   double res = 0.0;
@@ -77,14 +77,14 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
 
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
-  final bool _showGuestData = false;
   bool _isEditable = false;
+
+  // ── Lifecycle ───────────────────────────────────────────────────────────────
 
   @override
   void initState() {
     super.initState();
     _loadUserCredentials();
-    _checkGiftAppPermission();
 
     if (widget.gift != null) {
       final g = widget.gift!;
@@ -110,7 +110,6 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
       flushactdrop = g.flushActDrop;
       avgbet = g.avebet;
 
-      // ── Pre-fill valid days from the gift's validDates field ──────────────
       if (g.validDates != null && g.validDates!.isNotEmpty) {
         final parsed = int.tryParse(g.validDates!);
         if (parsed == 30 || parsed == 60 || parsed == 90) {
@@ -144,12 +143,67 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
     super.dispose();
   }
 
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+
+  String _formatDate(String? dateString) {
+    if (dateString == null || dateString.isEmpty) return "N/A";
+    try {
+      final date = DateTime.parse(dateString);
+      return DateFormat('yyyy-MM-dd').format(date);
+    } catch (_) {
+      return dateString;
+    }
+  }
+
+  String _formatDateandTime(String? dateString) {
+    if (dateString == null || dateString.isEmpty) return "N/A";
+    try {
+      final date = DateTime.parse(dateString);
+      return DateFormat('yyyy-MM-dd HH:mm a').format(date);
+    } catch (_) {
+      return dateString;
+    }
+  }
+
+  String formatNumber(dynamic value) {
+    if (value == null) return "";
+    final num? number = num.tryParse(value.toString());
+    if (number == null) return value.toString();
+    return NumberFormat.decimalPattern().format(number);
+  }
+
+  TextStyle _inputTextStyle(FontSettings fontSettings) => TextStyle(
+        fontSize: fontSettings.fontSize + 2,
+        fontWeight: fontSettings.fontWeight,
+      );
+
+  TextStyle _inputTextStyleForAmount(FontSettings fontSettings) => TextStyle(
+        fontSize: fontSettings.fontSize + 5,
+        fontWeight: fontSettings.fontWeight,
+      );
+
+  final Map<String, String> ratingImageMap = {
+    "CLASSIC": "assets/images/ratings/CLASSIC.png",
+    "DIAMOND": "assets/images/ratings/DIAMOND.png",
+    "GOLD": "assets/images/ratings/GOLD.png",
+    "INFINITY": "assets/images/ratings/INFINITY.png",
+    "PLATINUM": "assets/images/ratings/PLATINUM.png",
+    "SILVER": "assets/images/ratings/SILVER.png",
+  };
+
+  // ── Data Loaders ────────────────────────────────────────────────────────────
+
+  Future<void> _loadUserCredentials() async {
+    final name = await StorageUtil.getUserName();
+    setState(() => userName = name);
+  }
+
   Future<void> _loadWhatsAppNumber() async {
     if (_memberIdController.text.isEmpty) return;
     try {
-      await ref.read(birthdayGiftProvider.notifier).fetchGiftData(
-            _memberIdController.text,
-          );
+      await ref
+          .read(birthdayGiftProvider.notifier)
+          .fetchGiftData(_memberIdController.text);
       final giftState = ref.read(birthdayGiftProvider);
       if (giftState.giftData != null &&
           giftState.giftData!.mobile.isNotEmpty) {
@@ -158,16 +212,74 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
         });
       }
     } catch (e) {
-      print('Error loading WhatsApp number: $e');
+      debugPrint('Error loading WhatsApp number: $e');
     }
   }
 
-  Future<void> _checkGiftAppPermission() async {
-    final giftApp = await StorageUtil.getGiftApp();
-    setState(() {
-      _hasGiftAppPermission = giftApp ?? false;
-    });
+  Future<void> _loadGuestDataForCard() async {
+    if (_memberIdController.text.isEmpty) return;
+    try {
+      setState(() => _isLoading = true);
+      GuestRepository guestRepository =
+          GuestRepository(ApiService(const FlutterSecureStorage()));
+      List<GuestSearchResponse> guests =
+          await guestRepository.searchGuest(9021, _memberIdController.text);
+      if (guests.isNotEmpty) {
+        final guestResponse = guests.first;
+        ref.read(selectedGuestProvider.notifier).setSelectedGuest(
+              Guest(
+                mid: guestResponse.mid ?? _memberIdController.text,
+                memberName:
+                    guestResponse.mName ?? _memberNameController.text,
+                country: "",
+                lastVisitDate: guestResponse.lvd?.toString() ?? "",
+                age: 0,
+                gRating: guestResponse.gRating ?? "",
+                mGroup: guestResponse.mGroup,
+                gName: guestResponse.gName ?? "",
+                memImage2: guestResponse.memImage2,
+              ),
+            );
+      }
+      setState(() => _isLoading = false);
+    } catch (e) {
+      debugPrint("Error loading guest data: $e");
+      setState(() => _isLoading = false);
+    }
   }
+
+  // ── Access Control ──────────────────────────────────────────────────────────
+
+  /// Returns true if the current user is allowed to reverse the gift
+  /// in the given tab (Approved or Rejected).
+  ///
+  /// Rules:
+  ///   AD001  → always allowed in both tabs
+  ///   Others → Approved tab: loginUser == firstAppBy (approvedBy)
+  ///            Rejected tab: loginUser == deleteUser (rejectedBy)
+  Future<bool> _canReverseGift({required bool isRejected}) async {
+    final salesCode = await StorageUtil.getSalesCode();
+    if (salesCode != null && salesCode.trim().toUpperCase() == 'AD002') {
+      return true;
+    }
+
+    final currentUser =
+        (await StorageUtil.getUserName())?.trim().toLowerCase() ?? '';
+
+    if (!isRejected) {
+      // Approved tab
+      final approvedBy =
+          (widget.gift?.firstAppBy ?? '').trim().toLowerCase();
+      return currentUser == approvedBy;
+    } else {
+      // Rejected tab
+      final rejectedBy =
+          (widget.gift?.deleteUser ?? '').trim().toLowerCase();
+      return currentUser == rejectedBy;
+    }
+  }
+
+  // ── Dialogs ─────────────────────────────────────────────────────────────────
 
   void _showAccessDeniedDialog() {
     showDialog(
@@ -186,9 +298,10 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5)),
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
               ],
             ),
             child: Column(
@@ -198,7 +311,9 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                      color: Colors.red.shade50, shape: BoxShape.circle),
+                    color: Colors.red.shade50,
+                    shape: BoxShape.circle,
+                  ),
                   child: Icon(Icons.lock_outline,
                       size: 50, color: Colors.red.shade400),
                 ),
@@ -237,110 +352,9 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
     );
   }
 
-  Future<void> _loadGuestDataForCard() async {
-    if (_memberIdController.text.isEmpty) return;
-    try {
-      setState(() => _isLoading = true);
-      GuestRepository guestRepository =
-          GuestRepository(ApiService(const FlutterSecureStorage()));
-      List<GuestSearchResponse> guests =
-          await guestRepository.searchGuest(9021, _memberIdController.text);
-      if (guests.isNotEmpty) {
-        final guestResponse = guests.first;
-        ref.read(selectedGuestProvider.notifier).setSelectedGuest(
-              Guest(
-                mid: guestResponse.mid ?? _memberIdController.text,
-                memberName:
-                    guestResponse.mName ?? _memberNameController.text,
-                country: "",
-                lastVisitDate: guestResponse.lvd?.toString() ?? "",
-                age: 0,
-                gRating: guestResponse.gRating ?? "",
-                mGroup: guestResponse.mGroup,
-                gName: guestResponse.gName ?? "",
-                memImage2: guestResponse.memImage2,
-              ),
-            );
-      }
-      setState(() => _isLoading = false);
-    } catch (e) {
-      print("Error loading guest data: $e");
-      setState(() => _isLoading = false);
-    }
-  }
+  // ── Widgets ─────────────────────────────────────────────────────────────────
 
-  Future<void> _loadUserCredentials() async {
-    final name = await StorageUtil.getUserName();
-    setState(() => userName = name);
-  }
-
-  String _formatDate(String? dateString) {
-    if (dateString == null || dateString.isEmpty) return "N/A";
-    try {
-      final date = DateTime.parse(dateString);
-      return DateFormat('yyyy-MM-dd').format(date);
-    } catch (_) {
-      return dateString;
-    }
-  }
-
-  String _formatDateandTime(String? dateString) {
-    if (dateString == null || dateString.isEmpty) return "N/A";
-    try {
-      final date = DateTime.parse(dateString);
-      return DateFormat('yyyy-MM-dd HH:mm a').format(date);
-    } catch (_) {
-      return dateString;
-    }
-  }
-
-  final Map<String, String> ratingImageMap = {
-    "CLASSIC": "assets/images/ratings/CLASSIC.png",
-    "DIAMOND": "assets/images/ratings/DIAMOND.png",
-    "GOLD": "assets/images/ratings/GOLD.png",
-    "INFINITY": "assets/images/ratings/INFINITY.png",
-    "PLATINUM": "assets/images/ratings/PLATINUM.png",
-    "SILVER": "assets/images/ratings/SILVER.png",
-  };
-
-  String formatNumber(dynamic value) {
-    if (value == null) return "";
-    final num? number = num.tryParse(value.toString());
-    if (number == null) return value.toString();
-    return NumberFormat.decimalPattern().format(number);
-  }
-
-  Future<void> _pickDateTime(
-    BuildContext context,
-    TextEditingController controller,
-  ) async {
-    final DateTime? date = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
-    );
-    if (date == null) return;
-    final TimeOfDay? time =
-        await showTimePicker(context: context, initialTime: TimeOfDay.now());
-    if (time == null) return;
-    final DateTime dateTime = DateTime(
-        date.year, date.month, date.day, time.hour, time.minute);
-    controller.text =
-        "${dateTime.day}/${dateTime.month}/${dateTime.year} ${time.format(context)}";
-  }
-
-  TextStyle _inputTextStyle(FontSettings fontSettings) => TextStyle(
-        fontSize: fontSettings.fontSize+2,
-        fontWeight: fontSettings.fontWeight,
-      );
-
-  TextStyle _inputTextStylefroammount(FontSettings fontSettings) => TextStyle(
-        fontSize: fontSettings.fontSize + 5,
-        fontWeight:  fontSettings.fontWeight,
-      );
-
-  // ─── Valid-days dropdown (editable) ─────────────────────────────────────────
+  /// Valid-days editable dropdown (Pending & Checked tabs)
   Widget _buildValidDaysDropdown(FontSettings fontSettings) {
     return DropdownButtonFormField<int>(
       value: _selectedValidDays,
@@ -352,26 +366,26 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
       decoration: InputDecoration(
         labelText: "Valid Days",
         labelStyle: TextStyle(
-          fontSize: fontSettings.fontSize,
-          fontWeight: fontSettings.fontWeight,
-        ),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            fontSize: fontSettings.fontSize,
+            fontWeight: fontSettings.fontWeight),
+        border:
+            OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       ),
       items: const [
         DropdownMenuItem(
             value: 30,
-            child:
-                Text("30 Days", style: TextStyle(fontWeight: FontWeight.bold))),
+            child: Text("30 Days",
+                style: TextStyle(fontWeight: FontWeight.bold))),
         DropdownMenuItem(
             value: 60,
-            child:
-                Text("60 Days", style: TextStyle(fontWeight: FontWeight.bold))),
+            child: Text("60 Days",
+                style: TextStyle(fontWeight: FontWeight.bold))),
         DropdownMenuItem(
             value: 90,
-            child:
-                Text("90 Days", style: TextStyle(fontWeight: FontWeight.bold))),
+            child: Text("90 Days",
+                style: TextStyle(fontWeight: FontWeight.bold))),
       ],
       onChanged: (value) => setState(() => _selectedValidDays = value),
       validator: (value) =>
@@ -379,20 +393,22 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
     );
   }
 
-  // ─── Valid-days read-only display (Approved / Rejected tabs) ─────────────────
+  /// Valid-days read-only display (Approved & Rejected tabs)
   Widget _buildValidDaysReadOnly(FontSettings fontSettings) {
     final validDates = widget.gift?.validDates;
-    if (validDates == null || validDates.isEmpty) return const SizedBox.shrink();
+    if (validDates == null || validDates.isEmpty) {
+      return const SizedBox.shrink();
+    }
     return TextFormField(
       readOnly: true,
       initialValue: '$validDates days',
       decoration: InputDecoration(
         labelText: "Valid Days",
         labelStyle: TextStyle(
-          fontSize: fontSettings.fontSize,
-          fontWeight: fontSettings.fontWeight,
-        ),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            fontSize: fontSettings.fontSize,
+            fontWeight: fontSettings.fontWeight),
+        border:
+            OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         prefixIcon:
@@ -406,17 +422,28 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
     );
   }
 
-  // ─── Reverse button (Approved & Rejected only) ────────────────────────────────
+  /// Reverse button shell — uses FutureBuilder to check permission.
+  /// The button is completely hidden if the user is not allowed.
   Widget _buildReverseButton(FontSettings fontSettings, bool isRejected) {
+    return FutureBuilder<bool>(
+      future: _canReverseGift(isRejected: isRejected),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox.shrink();
+        }
+        if (snapshot.data != true) return const SizedBox.shrink();
+        return _buildReverseButtonUI(fontSettings, isRejected);
+      },
+    );
+  }
+
+  /// The actual Reverse Gift button UI (only rendered when allowed).
+  Widget _buildReverseButtonUI(FontSettings fontSettings, bool isRejected) {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 16),
       child: ElevatedButton.icon(
         onPressed: () async {
-          if (!_hasGiftAppPermission) {
-            _showAccessDeniedDialog();
-            return;
-          }
           final confirmed = await showDialog<bool>(
             context: context,
             builder: (dialogContext) => AlertDialog(
@@ -425,20 +452,24 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                   'Are you sure you want to reverse this gift?'),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  onPressed: () =>
+                      Navigator.of(dialogContext).pop(false),
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  onPressed: () =>
+                      Navigator.of(dialogContext).pop(true),
                   style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white),
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
                   child: const Text('Reverse'),
                 ),
               ],
             ),
           );
           if (confirmed != true) return;
+
           setState(() => _isLoading = true);
           try {
             final success = isRejected
@@ -456,35 +487,44 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                     );
             setState(() => _isLoading = false);
             if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(success
-                  ? 'Gift reversed successfully'
-                  : 'Failed to reverse gift'),
-              backgroundColor: success ? Colors.green : Colors.red,
-            ));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(success
+                    ? 'Gift reversed successfully'
+                    : 'Failed to reverse gift'),
+                backgroundColor: success ? Colors.green : Colors.red,
+              ),
+            );
             if (success) Navigator.of(context).pop(true);
           } catch (e) {
             setState(() => _isLoading = false);
             if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+              SnackBar(
+                  content: Text('Error: $e'),
+                  backgroundColor: Colors.red),
+            );
           }
         },
         icon: const Icon(Icons.undo, size: 20),
-        label: Text('Reverse Gift',
-            style: TextStyle(
-                fontSize: fontSettings.fontSize,
-                fontWeight: FontWeight.w600)),
+        label: Text(
+          'Reverse Gift',
+          style: TextStyle(
+              fontSize: fontSettings.fontSize,
+              fontWeight: FontWeight.w600),
+        ),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.orange,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 14),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );
   }
+
+  // ── Build ───────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -503,7 +543,8 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
     final bool showRejectedReverse =
         !widget.isApproved && !widget.isPending && !widget.isChecked;
 
-    final bool canEditFields = widget.isPending || widget.isChecked || _isEditable;
+    final bool canEditFields =
+        widget.isPending || widget.isChecked || _isEditable;
 
     return Scaffold(
       appBar: AppBar(
@@ -520,9 +561,8 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
         title: Text(
           'Special Gift Request',
           style: TextStyle(
-            fontSize: fontSettings.fontSize,
-            fontWeight: fontSettings.fontWeight,
-          ),
+              fontSize: fontSettings.fontSize,
+              fontWeight: fontSettings.fontWeight),
         ),
       ),
       body: PopScope(
@@ -539,17 +579,19 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                   key: _formKey,
                   child: Column(
                     children: [
-                      // ── Reverse button: Approved tab ──────────────────────
+                      // ── Reverse button: Approved tab ──────────────────
                       if (showApprovedSection)
                         _buildReverseButton(fontSettings, false),
 
-                      // ── Reverse button: Rejected tab ──────────────────────
+                      // ── Reverse button: Rejected tab ──────────────────
                       if (showRejectedReverse)
                         _buildReverseButton(fontSettings, true),
 
-                      // ── NO reverse button for Checked tab ─────────────────
+                      // ── NO reverse button for Pending / Checked tabs ──
 
                       const SizedBox(height: 5.0),
+
+                      // ── From Date ─────────────────────────────────────
                       TextFormField(
                         controller: _fromDateController,
                         readOnly: true,
@@ -557,15 +599,16 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                         decoration: InputDecoration(
                           labelText: "From Date & Time",
                           labelStyle: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: fontSettings.fontWeight,
-                          ),
+                              fontSize: fontSettings.fontSize,
+                              fontWeight: fontSettings.fontWeight),
                           border: const OutlineInputBorder(),
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 12.0, vertical: -5.0),
                         ),
                       ),
                       const SizedBox(height: 16.0),
+
+                      // ── To Date ───────────────────────────────────────
                       TextFormField(
                         controller: _toDateController,
                         readOnly: true,
@@ -573,9 +616,8 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                         decoration: InputDecoration(
                           labelText: "To Date & Time",
                           labelStyle: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: fontSettings.fontWeight,
-                          ),
+                              fontSize: fontSettings.fontSize,
+                              fontWeight: fontSettings.fontWeight),
                           border: const OutlineInputBorder(),
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 12.0, vertical: -5.0),
@@ -583,6 +625,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                       ),
                       const SizedBox(height: 5.0),
 
+                      // ── Guest Card ────────────────────────────────────
                       GuestDisplayCardSpecialGiftview(
                         memberIdText: _memberIdController.text,
                         memberNameText: _memberNameController.text,
@@ -593,8 +636,10 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                       ),
                       const SizedBox(height: 16.0),
 
+                      // ── Action Row ────────────────────────────────────
                       Row(
                         children: [
+                          // Profile button
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.black,
@@ -620,45 +665,46 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                               const FlutterSecureStorage()));
                                       List<GuestSearchResponse> guests =
                                           await guestRepository.searchGuest(
-                                              9021, _memberIdController.text);
+                                              9021,
+                                              _memberIdController.text);
                                       setState(() => _isLoading = false);
                                       if (guests.isNotEmpty) {
                                         final guestResponse = guests.first;
                                         ref
-                                            .read(
-                                                selectedGuestProvider.notifier)
+                                            .read(selectedGuestProvider
+                                                .notifier)
                                             .setSelectedGuest(Guest(
-                                              mid: guestResponse.mid ??
-                                                  _memberIdController.text,
-                                              memberName: guestResponse.mName ??
-                                                  _memberNameController.text,
-                                              country: "",
-                                              lastVisitDate:
-                                                  guestResponse.lvd?.toString() ??
-                                                      "",
-                                              age: 0,
-                                              gRating:
-                                                  guestResponse.gRating ?? "",
-                                              mGroup: guestResponse.mGroup,
-                                              gName: guestResponse.gName ?? "",
-                                              memImage2: guestResponse.memImage2,
-                                            ));
+                                          mid: guestResponse.mid ??
+                                              _memberIdController.text,
+                                          memberName: guestResponse.mName ??
+                                              _memberNameController.text,
+                                          country: "",
+                                          lastVisitDate:
+                                              guestResponse.lvd?.toString() ??
+                                                  "",
+                                          age: 0,
+                                          gRating:
+                                              guestResponse.gRating ?? "",
+                                          mGroup: guestResponse.mGroup,
+                                          gName: guestResponse.gName ?? "",
+                                          memImage2: guestResponse.memImage2,
+                                        ));
                                         context.push('/home/profile');
                                       } else {
                                         ref
-                                            .read(
-                                                selectedGuestProvider.notifier)
+                                            .read(selectedGuestProvider
+                                                .notifier)
                                             .setSelectedGuest(Guest(
-                                              mid: _memberIdController.text,
-                                              memberName:
-                                                  _memberNameController.text,
-                                              country: "",
-                                              lastVisitDate: "1990-01-01",
-                                              age: 0,
-                                              gRating: "",
-                                              mGroup: "",
-                                              gName: "",
-                                            ));
+                                          mid: _memberIdController.text,
+                                          memberName:
+                                              _memberNameController.text,
+                                          country: "",
+                                          lastVisitDate: "1990-01-01",
+                                          age: 0,
+                                          gRating: "",
+                                          mGroup: "",
+                                          gName: "",
+                                        ));
                                         context.push('/home/profile');
                                       }
                                     } catch (e) {
@@ -670,10 +716,14 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                     width: 20,
                                     height: 20,
                                     child: CircularProgressIndicator(
-                                        strokeWidth: 2, color: Colors.white))
+                                        strokeWidth: 2,
+                                        color: Colors.white),
+                                  )
                                 : const Icon(Icons.person_search, size: 25),
                           ),
                           const SizedBox(width: 5),
+
+                          // Pending Gift button
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () {
@@ -682,13 +732,15 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                 if (memberId.isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                        content: Text(
-                                            "Please enter a Member ID")),
+                                        content:
+                                            Text("Please enter a Member ID")),
                                   );
                                   return;
                                 }
                                 context.push(
-                                    '/gifts/special-gift-requests/prv-gifts/$memberId', extra: {'iid': 88940});
+                                  '/gifts/special-gift-requests/prv-gifts/$memberId',
+                                  extra: {'iid': 88940},
+                                );
                               },
                               icon: const Icon(Icons.card_giftcard),
                               label: Text("Pending Gift",
@@ -705,7 +757,9 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                               ),
                             ),
                           ),
-                           const SizedBox(width: 5),
+                          const SizedBox(width: 5),
+
+                          // Issued Gift button
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () {
@@ -714,14 +768,15 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                 if (memberId.isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                        content: Text(
-                                            "Please enter a Member ID")),
+                                        content:
+                                            Text("Please enter a Member ID")),
                                   );
                                   return;
                                 }
                                 context.push(
-                                    '/gifts/special-gift-requests/prv-gifts/$memberId', extra: {'iid': 8888},);
-                                    
+                                  '/gifts/special-gift-requests/prv-gifts/$memberId',
+                                  extra: {'iid': 8888},
+                                );
                               },
                               icon: const Icon(Icons.card_giftcard),
                               label: Text("Issued Gift",
@@ -752,95 +807,111 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      Builder(
-                        builder: (context) {
-                          final rows = [
-                            {"Field": "Drop (Est)", "Value": drop},
-                            {"Field": "Cash Out (Est)", "Value": cashout},
-                            {"Field": "Result (Est)", "Value": res},
-                            {"Field": "Actual Drop (Est)", "Value": actdrop},
-                            {"Field": "Coupons (Est)", "Value": mcoupen},
-                            {"Field": "Commission Paid (Est)", "Value": paidcom},
-                            {"Field": "Points (Est)", "Value": gpoints},
-                            {"Field": "Flush Coupon (Est)", "Value": gflushcoupen},
-                            {"Field": "Total Coupon (Est)", "Value": tcoupon},
-                            {"Field": "Flush Actual Drop (Est)", "Value": flushactdrop},
-                            {"Field": "Avg Bet (Est)", "Value": avgbet},
-                          ];
-                          return Container(
-                            margin: const EdgeInsets.only(top: 5),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.shade400),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: DataTable(
-                              dataRowMinHeight: 48,
-                              dataRowMaxHeight: 56,
-                              headingRowColor: WidgetStateProperty.all(
-                                  Colors.amber.shade100),
-                              border:
-                                  TableBorder.all(color: Colors.grey.shade300),
-                              columns: [
-                                DataColumn(
-                                    label: Text("Field",
-                                        style: TextStyle(
-                                            fontSize: fontSettings.fontSize,
-                                            fontWeight:
-                                                fontSettings.fontWeight))),
-                                DataColumn(
-                                    label: Text("Value",
-                                        style: TextStyle(
-                                            fontSize: fontSettings.fontSize,
-                                            fontWeight:
-                                                fontSettings.fontWeight))),
-                              ],
-                              rows: rows.map((row) {
-                                final shouldHighlight = [
-                                  "Actual Drop (Est)",
-                                  "Result (Est)",
-                                  "Coupons (Est)",
-                                  "Points (Est)",
-                                  "Avg Bet (Est)",
-                                ].contains(row["Field"]);
-                                return DataRow(
-                                  color: shouldHighlight
-                                      ? WidgetStateProperty.all(
-                                          const Color(0xFFCCFFCC))
-                                      : null,
-                                  cells: [
-                                    DataCell(Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(row["Field"].toString(),
-                                          style: TextStyle(
-                                              fontSize: fontSettings.fontSize+2,
-                                              fontWeight: shouldHighlight
-                                                  ? FontWeight.bold
-                                                  : fontSettings.fontWeight)),
-                                    )),
-                                    DataCell(Align(
-                                      alignment: Alignment.centerRight,
-                                      child: Text(
-                                          formatNumber(row["Value"]),
-                                          style: TextStyle(
-                                              fontSize: fontSettings.fontSize+2,
-                                              fontWeight: shouldHighlight
-                                                  ? fontSettings.fontWeight
-                                                  : fontSettings.fontWeight,
-                                              fontFamily: 'monospace',
-                                              fontFeatures: const [
-                                                FontFeature.tabularFigures()
-                                              ])),
-                                    )),
-                                  ],
-                                );
-                              }).toList(),
-                            ),
-                          );
-                        },
-                      ),
+
+                      // ── Guest Data Table ──────────────────────────────
+                      Builder(builder: (context) {
+                        final rows = [
+                          {"Field": "Drop (Est)", "Value": drop},
+                          {"Field": "Cash Out (Est)", "Value": cashout},
+                          {"Field": "Result (Est)", "Value": res},
+                          {"Field": "Actual Drop (Est)", "Value": actdrop},
+                          {"Field": "Coupons (Est)", "Value": mcoupen},
+                          {
+                            "Field": "Commission Paid (Est)",
+                            "Value": paidcom
+                          },
+                          {"Field": "Points (Est)", "Value": gpoints},
+                          {
+                            "Field": "Flush Coupon (Est)",
+                            "Value": gflushcoupen
+                          },
+                          {"Field": "Total Coupon (Est)", "Value": tcoupon},
+                          {
+                            "Field": "Flush Actual Drop (Est)",
+                            "Value": flushactdrop
+                          },
+                          {"Field": "Avg Bet (Est)", "Value": avgbet},
+                        ];
+                        const highlightedFields = [
+                          "Actual Drop (Est)",
+                          "Result (Est)",
+                          "Coupons (Est)",
+                          "Points (Est)",
+                          "Avg Bet (Est)",
+                        ];
+                        return Container(
+                          margin: const EdgeInsets.only(top: 5),
+                          decoration: BoxDecoration(
+                            border:
+                                Border.all(color: Colors.grey.shade400),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: DataTable(
+                            dataRowMinHeight: 48,
+                            dataRowMaxHeight: 56,
+                            headingRowColor: WidgetStateProperty.all(
+                                Colors.amber.shade100),
+                            border:
+                                TableBorder.all(color: Colors.grey.shade300),
+                            columns: [
+                              DataColumn(
+                                  label: Text("Field",
+                                      style: TextStyle(
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight:
+                                              fontSettings.fontWeight))),
+                              DataColumn(
+                                  label: Text("Value",
+                                      style: TextStyle(
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight:
+                                              fontSettings.fontWeight))),
+                            ],
+                            rows: rows.map((row) {
+                              final shouldHighlight = highlightedFields
+                                  .contains(row["Field"]);
+                              return DataRow(
+                                color: shouldHighlight
+                                    ? WidgetStateProperty.all(
+                                        const Color(0xFFCCFFCC))
+                                    : null,
+                                cells: [
+                                  DataCell(Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      row["Field"].toString(),
+                                      style: TextStyle(
+                                        fontSize: fontSettings.fontSize + 2,
+                                        fontWeight: shouldHighlight
+                                            ? FontWeight.bold
+                                            : fontSettings.fontWeight,
+                                      ),
+                                    ),
+                                  )),
+                                  DataCell(Align(
+                                    alignment: Alignment.centerRight,
+                                    child: Text(
+                                      formatNumber(row["Value"]),
+                                      style: TextStyle(
+                                        fontSize: fontSettings.fontSize + 2,
+                                        fontWeight: fontSettings.fontWeight,
+                                        fontFamily: 'monospace',
+                                        fontFeatures: const [
+                                          FontFeature.tabularFigures()
+                                        ],
+                                      ),
+                                    ),
+                                  )),
+                                ],
+                              );
+                            }).toList(),
+                          ),
+                        );
+                      }),
 
                       const SizedBox(height: 16.0),
 
+                      // ── Arrival / Departure ───────────────────────────
                       Row(
                         children: [
                           Expanded(
@@ -851,7 +922,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                               decoration: InputDecoration(
                                 labelText: "Arrival Date",
                                 labelStyle: TextStyle(
-                                    fontSize: fontSettings.fontSize+1,
+                                    fontSize: fontSettings.fontSize + 1,
                                     fontWeight: fontSettings.fontWeight),
                                 border: const OutlineInputBorder(),
                                 contentPadding: const EdgeInsets.symmetric(
@@ -879,6 +950,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                         ],
                       ),
 
+                      // ── Gift For / Chip Type ──────────────────────────
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -914,156 +986,163 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             ),
                             style: _inputTextStyle(fontSettings),
                           ),
-// ── Checked By & Check Date Card ──────────────────────────────────────────
-if (!widget.isPending &&
-    widget.gift != null &&
-    widget.gift!.checkApp != null &&
-    widget.gift!.checkApp!.isNotEmpty) ...[
-  const SizedBox(height: 16),
-  Container(
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        colors: [
-          const Color.fromARGB(255, 92, 17, 255).withOpacity(0.08),
-          const Color.fromARGB(255, 92, 17, 255).withOpacity(0.03),
-        ],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(
-        color: const Color.fromARGB(255, 92, 17, 255).withOpacity(0.4),
-        width: 1.5,
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: const Color.fromARGB(255, 92, 17, 255).withOpacity(0.08),
-          blurRadius: 8,
-          offset: const Offset(0, 3),
-        ),
-      ],
-    ),
-    child: Padding(
-      padding: const EdgeInsets.all(14.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Header ──────────────────────────────────────────────────
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 92, 17, 255),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.rule_rounded,
-                  color: Colors.white,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                "Checked Information",
-                style: TextStyle(
-                  fontSize: fontSettings.fontSize + 2,
-                  fontWeight: FontWeight.bold,
-                  color: const Color.fromARGB(255, 92, 17, 255),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Divider(
-            color: Color.fromARGB(80, 92, 17, 255),
-            height: 1,
-          ),
-          const SizedBox(height: 12),
 
-          // ── Checked By Row ───────────────────────────────────────────
-          Row(
-            children: [
-              const Icon(
-                Icons.person_outline,
-                color: Color.fromARGB(255, 92, 17, 255),
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                "Checked By:",
-                style: TextStyle(
-                  fontSize: fontSettings.fontSize,
-                  fontWeight: fontSettings.fontWeight,
-                   color: Color.fromARGB(255, 0, 0, 0)
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  widget.gift!.checkApp!,
-                  style: TextStyle(
-                    fontSize: fontSettings.fontSize + 1,
-                    fontWeight: FontWeight.bold,
-                    color: const Color.fromARGB(255, 92, 17, 255),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
+                          // ── Checked Information Card ──────────────────
+                          if (!widget.isPending &&
+                              widget.gift != null &&
+                              widget.gift!.checkApp != null &&
+                              widget.gift!.checkApp!.isNotEmpty) ...[
+                            const SizedBox(height: 16),
+                            Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    const Color.fromARGB(255, 92, 17, 255)
+                                        .withOpacity(0.08),
+                                    const Color.fromARGB(255, 92, 17, 255)
+                                        .withOpacity(0.03),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: const Color.fromARGB(255, 92, 17, 255)
+                                      .withOpacity(0.4),
+                                  width: 1.5,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color:
+                                        const Color.fromARGB(255, 92, 17, 255)
+                                            .withOpacity(0.08),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(14.0),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(6),
+                                          decoration: BoxDecoration(
+                                            color: const Color.fromARGB(
+                                                255, 92, 17, 255),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: const Icon(
+                                              Icons.rule_rounded,
+                                              color: Colors.white,
+                                              size: 18),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Text(
+                                          "Checked Information",
+                                          style: TextStyle(
+                                            fontSize:
+                                                fontSettings.fontSize + 2,
+                                            fontWeight: FontWeight.bold,
+                                            color: const Color.fromARGB(
+                                                255, 92, 17, 255),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Divider(
+                                        color:
+                                            Color.fromARGB(80, 92, 17, 255),
+                                        height: 1),
+                                    const SizedBox(height: 12),
+                                    // Checked By
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.person_outline,
+                                            color: Color.fromARGB(
+                                                255, 92, 17, 255),
+                                            size: 18),
+                                        const SizedBox(width: 8),
+                                        Text("Checked By:",
+                                            style: TextStyle(
+                                                fontSize: fontSettings.fontSize,
+                                                fontWeight:
+                                                    fontSettings.fontWeight,
+                                                color: Colors.black)),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            widget.gift!.checkApp!,
+                                            style: TextStyle(
+                                              fontSize:
+                                                  fontSettings.fontSize + 1,
+                                              fontWeight: FontWeight.bold,
+                                              color: const Color.fromARGB(
+                                                  255, 92, 17, 255),
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    // Check Date
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.schedule,
+                                            color: Color.fromARGB(
+                                                255, 92, 17, 255),
+                                            size: 18),
+                                        const SizedBox(width: 8),
+                                        Text("Check Date:",
+                                            style: TextStyle(
+                                                fontSize: fontSettings.fontSize,
+                                                fontWeight:
+                                                    fontSettings.fontWeight,
+                                                color: Colors.black)),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            widget.gift!.checkAppByTime !=
+                                                        null &&
+                                                    widget.gift!.checkAppByTime!
+                                                        .isNotEmpty
+                                                ? _formatDateandTime(widget
+                                                    .gift!.checkAppByTime)
+                                                : 'N/A',
+                                            style: TextStyle(
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight: FontWeight.bold,
+                                              color: const Color.fromARGB(
+                                                  255, 92, 17, 255),
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
 
-          // ── Check Date Row ───────────────────────────────────────────
-          Row(
-            children: [
-              const Icon(
-                Icons.schedule,
-                color: Color.fromARGB(255, 92, 17, 255),
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                "Check Date:",
-                style: TextStyle(
-                  fontSize: fontSettings.fontSize,
-                  fontWeight: fontSettings.fontWeight,
-                  color: Color.fromARGB(255, 0, 0, 0)           ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  widget.gift!.checkAppByTime != null &&
-                          widget.gift!.checkAppByTime!.isNotEmpty
-                      ? _formatDateandTime(widget.gift!.checkAppByTime)
-                      : 'N/A',
-                  style: TextStyle(
-                    fontSize: fontSettings.fontSize,
-                    fontWeight: FontWeight.bold,
-                    color: const Color.fromARGB(255, 92, 17, 255),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ),
-  ),
-],
-                          // ── Edit toggle: Pending tab ────────────────────────
+                          // ── Edit Toggle (Pending tab) ─────────────────
                           if (widget.isPending)
                             Row(
                               mainAxisAlignment:
                                   MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  "Amount & Remarks",
-                                  style: TextStyle(
-                                      fontSize: fontSettings.fontSize + 2,
-                                      fontWeight: FontWeight.bold),
-                                ),
+                                Text("Amount & Remarks",
+                                    style: TextStyle(
+                                        fontSize: fontSettings.fontSize + 2,
+                                        fontWeight: FontWeight.bold)),
                                 IconButton(
                                   icon: const Icon(Icons.edit,
                                       color: Colors.blue),
@@ -1073,18 +1152,16 @@ if (!widget.isPending &&
                               ],
                             ),
 
-                          // ── Edit toggle: Checked tab ────────────────────────
+                          // ── Edit Toggle (Checked tab) ─────────────────
                           if (widget.isChecked)
                             Row(
                               mainAxisAlignment:
                                   MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  "Amount & Remarks",
-                                  style: TextStyle(
-                                      fontSize: fontSettings.fontSize + 2,
-                                      fontWeight: FontWeight.bold),
-                                ),
+                                Text("Amount & Remarks",
+                                    style: TextStyle(
+                                        fontSize: fontSettings.fontSize + 2,
+                                        fontWeight: FontWeight.bold)),
                                 IconButton(
                                   icon: const Icon(Icons.edit,
                                       color: Colors.blue),
@@ -1095,10 +1172,12 @@ if (!widget.isPending &&
                             ),
 
                           const SizedBox(height: 16.0),
+
+                          // ── Amount ────────────────────────────────────
                           TextFormField(
                             controller: _amountController,
                             readOnly: !canEditFields,
-                            style: _inputTextStylefroammount(fontSettings),
+                            style: _inputTextStyleForAmount(fontSettings),
                             decoration: InputDecoration(
                               labelText: "Amount",
                               labelStyle: TextStyle(
@@ -1120,19 +1199,19 @@ if (!widget.isPending &&
                         ],
                       ),
 
-                      // ── Valid Days: editable dropdown (Pending & Checked tabs) ──
+                      // ── Valid Days ────────────────────────────────────
                       if (widget.isPending || widget.isChecked) ...[
                         const SizedBox(height: 16),
                         _buildValidDaysDropdown(fontSettings),
                       ],
-
-                      // ── Valid Days: read-only display (Approved & Rejected tabs) ──
                       if (!widget.isPending && !widget.isChecked) ...[
                         const SizedBox(height: 16),
                         _buildValidDaysReadOnly(fontSettings),
                       ],
 
                       const SizedBox(height: 16),
+
+                      // ── Remarks ───────────────────────────────────────
                       TextFormField(
                         controller: _remarksController,
                         readOnly: !canEditFields,
@@ -1156,54 +1235,41 @@ if (!widget.isPending &&
                       ),
                       const SizedBox(height: 16.0),
 
-                      // ════════════════════════════════════════════════════════
+                      // ════════════════════════════════════════════════════
                       // PENDING TAB: "Check By" + "Reject" buttons
-                      // ════════════════════════════════════════════════════════
+                      // ════════════════════════════════════════════════════
                       if (showPendingButtons)
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
-                            // CHECK BY button
+                            // CHECK BY
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () async {
-                                  if (!_hasGiftAppPermission) {
-                                    _showAccessDeniedDialog();
-                                    return;
-                                  }
                                   if (widget.gift == null) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text(
-                                              "Gift request not found")),
-                                    );
+                                    ScaffoldMessenger.of(context)
+                                        .showSnackBar(const SnackBar(
+                                            content: Text(
+                                                "Gift request not found")));
                                     return;
                                   }
                                   if (_selectedValidDays == null) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content:
-                                            Text("Please select valid days"),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
+                                    ScaffoldMessenger.of(context)
+                                        .showSnackBar(const SnackBar(
+                                      content:
+                                          Text("Please select valid days"),
+                                      backgroundColor: Colors.red,
+                                    ));
                                     return;
                                   }
-
-                                  final reqid = widget.gift!.idNo;
-                                  final remarks = _remarksController.text;
-                                  final amount = _amountController.text;
-                                  final uname = userName ?? "";
-
                                   setState(() => _isLoading = true);
                                   try {
                                     final success = await ref
                                         .read(giftProvider.notifier)
                                         .checkBySpecialGiftFromUI(
-                                          reqid: reqid,
-                                          remarks: remarks,
-                                          amount: amount,
-                                          userName: uname,
+                                          reqid: widget.gift!.idNo,
+                                          remarks: _remarksController.text,
+                                          amount: _amountController.text,
+                                          userName: userName ?? "",
                                           validDates:
                                               _selectedValidDays.toString(),
                                         );
@@ -1223,8 +1289,8 @@ if (!widget.isPending &&
                                       ));
                                     }
                                   } catch (e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
+                                    ScaffoldMessenger.of(context)
+                                        .showSnackBar(SnackBar(
                                             content: Text("Error: $e")));
                                   } finally {
                                     setState(() => _isLoading = false);
@@ -1244,31 +1310,24 @@ if (!widget.isPending &&
                               ),
                             ),
                             const SizedBox(width: 16),
-                            // REJECT button
+                            // REJECT
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () async {
-                                  if (!_hasGiftAppPermission) {
-                                    _showAccessDeniedDialog();
-                                    return;
-                                  }
                                   if (widget.gift == null) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text(
-                                              "Gift request not found")),
-                                    );
+                                    ScaffoldMessenger.of(context)
+                                        .showSnackBar(const SnackBar(
+                                            content: Text(
+                                                "Gift request not found")));
                                     return;
                                   }
-                                  final reqid = widget.gift!.idNo;
-                                  final uname = userName ?? "";
                                   setState(() => _isLoading = true);
                                   try {
                                     final success = await ref
                                         .read(giftProvider.notifier)
                                         .rejectSpecialGiftFromUI(
-                                          reqid: reqid,
-                                          userName: uname,
+                                          reqid: widget.gift!.idNo,
+                                          userName: userName ?? "",
                                         );
                                     if (success) {
                                       ScaffoldMessenger.of(context)
@@ -1288,8 +1347,8 @@ if (!widget.isPending &&
                                                   Text("Reject Failed")));
                                     }
                                   } catch (e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
+                                    ScaffoldMessenger.of(context)
+                                        .showSnackBar(SnackBar(
                                             content: Text("Error: $e")));
                                   } finally {
                                     setState(() => _isLoading = false);
@@ -1311,54 +1370,41 @@ if (!widget.isPending &&
                           ],
                         ),
 
-                      // ════════════════════════════════════════════════════════
+                      // ════════════════════════════════════════════════════
                       // CHECKED TAB: "Approve" + "Reject" buttons
-                      // ════════════════════════════════════════════════════════
+                      // ════════════════════════════════════════════════════
                       if (showCheckedButtons)
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
-                            // APPROVE button
+                            // APPROVE
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () async {
-                                  if (!_hasGiftAppPermission) {
-                                    _showAccessDeniedDialog();
-                                    return;
-                                  }
                                   if (widget.gift == null) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text(
-                                              "Gift request not found")),
-                                    );
+                                    ScaffoldMessenger.of(context)
+                                        .showSnackBar(const SnackBar(
+                                            content: Text(
+                                                "Gift request not found")));
                                     return;
                                   }
                                   if (_selectedValidDays == null) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content:
-                                            Text("Please select valid days"),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
+                                    ScaffoldMessenger.of(context)
+                                        .showSnackBar(const SnackBar(
+                                      content:
+                                          Text("Please select valid days"),
+                                      backgroundColor: Colors.red,
+                                    ));
                                     return;
                                   }
-
-                                  final reqid = widget.gift!.idNo;
-                                  final remarks = _remarksController.text;
-                                  final amount = _amountController.text;
-                                  final uname = userName ?? "";
-
                                   setState(() => _isLoading = true);
                                   try {
                                     final success = await ref
                                         .read(giftProvider.notifier)
                                         .sendApprovedSpecialGiftFromUI(
-                                          reqid: reqid,
-                                          remarks: remarks,
-                                          amount: amount,
-                                          userName: uname,
+                                          reqid: widget.gift!.idNo,
+                                          remarks: _remarksController.text,
+                                          amount: _amountController.text,
+                                          userName: userName ?? "",
                                           validDates:
                                               _selectedValidDays.toString(),
                                         );
@@ -1377,8 +1423,8 @@ if (!widget.isPending &&
                                                   Text("Approval Failed")));
                                     }
                                   } catch (e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
+                                    ScaffoldMessenger.of(context)
+                                        .showSnackBar(SnackBar(
                                             content: Text("Error: $e")));
                                   } finally {
                                     setState(() => _isLoading = false);
@@ -1398,31 +1444,24 @@ if (!widget.isPending &&
                               ),
                             ),
                             const SizedBox(width: 16),
-                            // REJECT button
+                            // REJECT
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () async {
-                                  if (!_hasGiftAppPermission) {
-                                    _showAccessDeniedDialog();
-                                    return;
-                                  }
                                   if (widget.gift == null) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text(
-                                              "Gift request not found")),
-                                    );
+                                    ScaffoldMessenger.of(context)
+                                        .showSnackBar(const SnackBar(
+                                            content: Text(
+                                                "Gift request not found")));
                                     return;
                                   }
-                                  final reqid = widget.gift!.idNo;
-                                  final uname = userName ?? "";
                                   setState(() => _isLoading = true);
                                   try {
                                     final success = await ref
                                         .read(giftProvider.notifier)
                                         .rejectSpecialGiftFromUI(
-                                          reqid: reqid,
-                                          userName: uname,
+                                          reqid: widget.gift!.idNo,
+                                          userName: userName ?? "",
                                         );
                                     if (success) {
                                       ScaffoldMessenger.of(context)
@@ -1442,8 +1481,8 @@ if (!widget.isPending &&
                                                   Text("Reject Failed")));
                                     }
                                   } catch (e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
+                                    ScaffoldMessenger.of(context)
+                                        .showSnackBar(SnackBar(
                                             content: Text("Error: $e")));
                                   } finally {
                                     setState(() => _isLoading = false);
@@ -1465,9 +1504,9 @@ if (!widget.isPending &&
                           ],
                         ),
 
-                      // ════════════════════════════════════════════════════════
+                      // ════════════════════════════════════════════════════
                       // APPROVED TAB: WhatsApp section
-                      // ════════════════════════════════════════════════════════
+                      // ════════════════════════════════════════════════════
                       if (showApprovedSection)
                         Padding(
                           padding: const EdgeInsets.only(top: 16.0),
@@ -1500,8 +1539,7 @@ if (!widget.isPending &&
                                               .showSnackBar(const SnackBar(
                                             content: Text(
                                                 'WhatsApp number refreshed'),
-                                            duration:
-                                                Duration(seconds: 1),
+                                            duration: Duration(seconds: 1),
                                           ));
                                         },
                                         tooltip: 'Refresh WhatsApp Number',
@@ -1513,8 +1551,7 @@ if (!widget.isPending &&
                                     padding: const EdgeInsets.all(4),
                                     decoration: BoxDecoration(
                                       color: Colors.green.shade50,
-                                      borderRadius:
-                                          BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
                                           color: Colors.green.shade300),
                                     ),
@@ -1528,8 +1565,7 @@ if (!widget.isPending &&
                                             "Amount: ${_amountController.text}",
                                             style: const TextStyle(
                                                 fontSize: 20,
-                                                fontWeight:
-                                                    FontWeight.bold),
+                                                fontWeight: FontWeight.bold),
                                           ),
                                         ),
                                       ],
@@ -1583,7 +1619,7 @@ if (!widget.isPending &&
                                     "Note: Please enter the WhatsApp number with the country code",
                                     style: TextStyle(
                                         fontSize: 12,
-                                        color: Color.fromARGB(255, 0, 0, 0),
+                                        color: Colors.black,
                                         fontStyle: FontStyle.italic),
                                   ),
                                   const SizedBox(height: 16),
@@ -1624,19 +1660,18 @@ if (!widget.isPending &&
                                               .text
                                               .replaceAll(' ', '')
                                               .toUpperCase();
-                                          final giftFor = _selectedGift
-                                                  ?.replaceAll('_', ' ') ??
-                                              'SPECIAL GIFT';
+                                          final giftFor =
+                                              _selectedGift?.replaceAll(
+                                                      '_', ' ') ??
+                                                  'SPECIAL GIFT';
                                           final result = await ref
                                               .read(giftProvider.notifier)
                                               .sendSpecialGiftWhatsapp(
-                                                whatsappNumber:
-                                                    whatsappNumber,
+                                                whatsappNumber: whatsappNumber,
                                                 bmNumber:
                                                     _memberIdController.text,
                                                 memberName:
-                                                    _memberNameController
-                                                        .text,
+                                                    _memberNameController.text,
                                                 giftValue: cleanAmount,
                                                 chipType: chipType,
                                                 giftFor: giftFor,
@@ -1649,8 +1684,7 @@ if (!widget.isPending &&
                                               content: Text(
                                                   'Gift details sent successfully via WhatsApp!'),
                                               backgroundColor: Colors.green,
-                                              duration:
-                                                  Duration(seconds: 3),
+                                              duration: Duration(seconds: 3),
                                             ));
                                           } else if (result ==
                                               "WhatsApp not available") {
@@ -1659,14 +1693,13 @@ if (!widget.isPending &&
                                               content: Text(
                                                   'WhatsApp is not installed or available on this device'),
                                               backgroundColor: Colors.orange,
-                                              duration:
-                                                  Duration(seconds: 3),
+                                              duration: Duration(seconds: 3),
                                             ));
                                           } else {
                                             ScaffoldMessenger.of(context)
                                                 .showSnackBar(SnackBar(
-                                              content: Text(
-                                                  'Failed to send: $result'),
+                                              content:
+                                                  Text('Failed to send: $result'),
                                               backgroundColor: Colors.orange,
                                               duration:
                                                   const Duration(seconds: 3),
@@ -1710,8 +1743,7 @@ if (!widget.isPending &&
                                               textAlign: TextAlign.center,
                                               style: TextStyle(
                                                   fontSize: 15,
-                                                  fontWeight:
-                                                      FontWeight.bold),
+                                                  fontWeight: FontWeight.bold),
                                             ),
                                           ),
                                         ],
@@ -1728,18 +1760,6 @@ if (!widget.isPending &&
                 ),
               ),
             ),
-            // if (_isLoading)
-            //   Positioned.fill(
-            //     child: Container(
-            //       color: const Color.fromARGB(135, 117, 115, 115),
-            //       child: const Center(
-            //         child: RefreshProgressIndicator(
-            //           valueColor: AlwaysStoppedAnimation<Color>(
-            //               Constants.kSecondaryColor),
-            //         ),
-            //       ),
-            //     ),
-            //   ),
             const Watermark(),
           ],
         ),

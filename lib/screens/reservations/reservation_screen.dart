@@ -47,30 +47,77 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
     List<Reservation> reservations,
   ) async {
     final salesCode = await StorageUtil.getSalesCode();
-    if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
+    if (salesCode != null && salesCode.trim().toUpperCase() == 'AD002') {
       return reservations;
     }
-    final currentUserName = await StorageUtil.getUserName();
+     final resChk = await StorageUtil.getResChk();
+  final resApp = await StorageUtil.getResApp();
+  print(  "Filtering reservations for user. resChk: $resChk, resApp: $resApp"
+  );
+  if (resChk == true || resApp == true) {
+    return reservations;
+  }
+   final currentUserName = await StorageUtil.getUserName();
     if (currentUserName == null) return [];
     return reservations.where((reservation) {
       return reservation.reqBy.trim().toLowerCase() ==
           currentUserName.trim().toLowerCase();
     }).toList();
+  
   }
 
-  Future<bool> _canAccessReservationDetails(Reservation reservation) async {
-    final giftApp = await StorageUtil.getGiftApp();
-    if (giftApp == true) return true;
-    final currentUserName = await StorageUtil.getUserName();
-    if (currentUserName != null &&
-        reservation.reqBy.isNotEmpty &&
-        currentUserName.trim().toLowerCase() ==
-            reservation.reqBy.trim().toLowerCase()) {
-      return true;
-    }
-    return false;
+  // Future<bool> _canAccessReservationDetails(Reservation reservation) async {
+  //   final giftApp = await StorageUtil.getGiftApp();
+  //   if (giftApp == true) return true;
+  //   final currentUserName = await StorageUtil.getUserName();
+  //   if (currentUserName != null &&
+  //       reservation.reqBy.isNotEmpty &&
+  //       currentUserName.trim().toLowerCase() ==
+  //           reservation.reqBy.trim().toLowerCase()) {
+  //     return true;
+  //   }
+  //   return false;
+  // }
+Future<bool> _canAccessReservationDetails(
+  Reservation reservation,
+  int tabIndex, // 0=Pending, 1=Checked, 2=Approved, 3=Rejected
+) async {
+  // AD001 can access everything
+  final salesCode = await StorageUtil.getSalesCode();
+  if (salesCode != null && salesCode.trim().toUpperCase() == 'AD002') {
+    return true;
   }
 
+  final currentUserName = await StorageUtil.getUserName();
+  if (currentUserName == null) return false;
+
+  final normalizedUser   = currentUserName.trim().toLowerCase();
+  final normalizedReqBy  = reservation.reqBy.trim().toLowerCase();
+  final normalizedIsAppBy = reservation.isAppBy?.trim().toLowerCase() ?? '';
+
+  final isRequester        = normalizedUser == normalizedReqBy;
+  final isApproverOrHandler = normalizedUser == normalizedIsAppBy;
+
+  switch (tabIndex) {
+    case 0: // Pending
+      final resChk = await StorageUtil.getResChk();
+      return (resChk == true) || isRequester;
+
+    case 1: // Checked
+      final resApp = await StorageUtil.getResApp();
+      return (resApp == true) || isRequester || isApproverOrHandler;
+
+    case 2: // Approved
+      final resApp = await StorageUtil.getResApp();
+      return (resApp == true) || isRequester || isApproverOrHandler;
+
+    case 3: // Rejected
+      return isRequester || isApproverOrHandler;
+
+    default:
+      return false;
+  }
+}
   @override
   void dispose() {
     _tabController.dispose();
@@ -439,7 +486,7 @@ String _formatDateTime(DateTime dt) {
                     ),
                     onTap: () async {
                       final canAccess = await _canAccessReservationDetails(
-                        reservation,
+                        reservation,_tabController.index,
                       );
 
                       if (!canAccess) {

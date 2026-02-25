@@ -7,15 +7,28 @@ class User {
   final String? mobileNumber;
   final bool? memProfSH;
   final bool? giftApp;
-  User(
-      {required this.userName,
-      required this.userLevel,
-      required this.salesCode,
-      required this.marketingCode,
-      this.mobileNumber,
-       this.loginId,
-         this.memProfSH,
-          this.giftApp,});
+  final bool? resApp;
+  final bool? resChk;
+  final bool? otgiApp;
+  final bool? otgiChk;
+  final bool? bgApp;
+  final bool? bgChk;
+  User({
+    required this.userName,
+    required this.userLevel,
+    required this.salesCode,
+    required this.marketingCode,
+    this.mobileNumber,
+    this.loginId,
+    this.memProfSH,
+    this.giftApp,
+    this.resApp,
+    this.resChk,
+    this.otgiApp,
+    this.otgiChk,
+    this.bgApp,    
+    this.bgChk,
+  });
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
@@ -25,8 +38,14 @@ class User {
       marketingCode: json['Marketing_Code'],
       mobileNumber: json['Mobile'],
       loginId: json['LoginID']?.toString(),
-       memProfSH: json['Mem_Prof_SH'], 
-       giftApp: json['Gift_App'],
+      memProfSH: json['Mem_Prof_SH'],
+      giftApp: json['Gift_App'],
+      resApp: json['R_App'],
+      resChk: json['R_Chk'],
+      otgiApp: json['G_App'],
+      otgiChk: json['G_CHK'],
+      bgApp: json['BG_APP'],
+      bgChk: json['BG_CHK'],
     );
   }
 }

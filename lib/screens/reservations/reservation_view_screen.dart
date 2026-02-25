@@ -55,12 +55,12 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
   bool _isLoading = false;
   bool _isGuestLoading = false;
   bool _guestDataLoaded = false;
-  bool _hasGiftAppPermission = false;
+  // bool _hasGiftAppPermission = false;
 
   @override
   void initState() {
     super.initState();
-    _checkGiftAppPermission();
+    // _checkGiftAppPermission();
     _getHotels();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       FocusScope.of(context).requestFocus(FocusNode());
@@ -93,12 +93,12 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
     super.dispose();
   }
 
-  Future<void> _checkGiftAppPermission() async {
-    final giftApp = await StorageUtil.getGiftApp();
-    setState(() {
-      _hasGiftAppPermission = giftApp ?? false;
-    });
-  }
+  // Future<void> _checkGiftAppPermission() async {
+  //   final giftApp = await StorageUtil.getGiftApp();
+  //   setState(() {
+  //     _hasGiftAppPermission = giftApp ?? false;
+  //   });
+  // }
 
   // ─────────────────────────────────────────────────────────────────────────
   // Access Denied Dialog
@@ -439,10 +439,10 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
   // Actions
   // ─────────────────────────────────────────────────────────────────────────
   Future<void> _checkReservation() async {
-    if (!_hasGiftAppPermission) {
-      _showAccessDeniedDialog();
-      return;
-    }
+    // if (!_hasGiftAppPermission) {
+    //   _showAccessDeniedDialog();
+    //   return;
+    // }
 
     final selectedReservation = ref.watch(selectedReservationProvider);
     if (selectedReservation == null) return;
@@ -491,10 +491,10 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
   }
 
   Future<void> _approveReservation() async {
-    if (!_hasGiftAppPermission) {
-      _showAccessDeniedDialog();
-      return;
-    }
+    // if (!_hasGiftAppPermission) {
+    //   _showAccessDeniedDialog();
+    //   return;
+    // }
 
     final selectedReservation = ref.watch(selectedReservationProvider);
     if (selectedReservation == null) return;
@@ -543,10 +543,10 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
   }
 
   Future<void> _rejectReservation() async {
-    if (!_hasGiftAppPermission) {
-      _showAccessDeniedDialog();
-      return;
-    }
+    // if (!_hasGiftAppPermission) {
+    //   _showAccessDeniedDialog();
+    //   return;
+    // }
 
     final selectedReservation = ref.watch(selectedReservationProvider);
     if (selectedReservation == null) return;

@@ -47,11 +47,13 @@ class _ViewBirthdayGiftRequestState
   final TextEditingController _fromDateController = TextEditingController();
   final TextEditingController _toDateController = TextEditingController();
   final TextEditingController _arrivalDateController = TextEditingController();
-  final TextEditingController _departureDateController = TextEditingController();
+  final TextEditingController _departureDateController =
+      TextEditingController();
   final TextEditingController _chipController = TextEditingController();
   final TextEditingController _remarksController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
-  final TextEditingController _previousGiftAmountController = TextEditingController();
+  final TextEditingController _previousGiftAmountController =
+      TextEditingController();
 
   String _remarks = "";
   String? userName = "";
@@ -67,17 +69,22 @@ class _ViewBirthdayGiftRequestState
   double flushactdrop = 0.0;
   double avgbet = 0.0;
   int? _selectedValidDays;
-  bool _hasGiftAppPermission = false;
 
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _isEditable = false;
 
+  // ── Permission state ────────────────────────────────────────────────────────
+  bool _canReverseApproved = false;
+  bool _canReverseRejected = false;
+
+  // ── Lifecycle ───────────────────────────────────────────────────────────────
+
   @override
   void initState() {
     super.initState();
     _loadUserCredentials();
-    _checkGiftAppPermission();
+    _loadReversePermissions();
 
     if (widget.gift != null) {
       final g = widget.gift!;
@@ -110,77 +117,31 @@ class _ViewBirthdayGiftRequestState
     }
   }
 
-  Future<void> _checkGiftAppPermission() async {
-    final giftApp = await StorageUtil.getGiftApp();
-    setState(() => _hasGiftAppPermission = giftApp ?? false);
+  // ── Permission helpers ──────────────────────────────────────────────────────
+
+  /// Loads reverse permissions once and stores in state so the UI
+  /// can show/hide the button without flickering.
+  Future<void> _loadReversePermissions() async {
+    final salesCode = await StorageUtil.getSalesCode();
+    final isAdmin =
+        salesCode != null && salesCode.trim().toUpperCase() == 'AD001';
+    final currentUser =
+        (await StorageUtil.getUserName())?.trim().toLowerCase() ?? '';
+
+    final approvedBy =
+        (widget.gift?.firstAppBy ?? '').trim().toLowerCase();
+    final rejectedBy =
+        (widget.gift?.deleteUser ?? '').trim().toLowerCase();
+
+    setState(() {
+      // Approved tab: AD001 OR loginUser == approvedBy
+      _canReverseApproved = isAdmin || currentUser == approvedBy;
+      // Rejected tab: AD001 OR loginUser == rejectedBy
+      _canReverseRejected = isAdmin || currentUser == rejectedBy;
+    });
   }
 
-  void _showAccessDeniedDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                      color: Colors.red.shade50, shape: BoxShape.circle),
-                  child: Icon(Icons.lock_outline,
-                      size: 50, color: Colors.red.shade400),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  "Access Denied",
-                  style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2C3E50)),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Constants.kPrimaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      elevation: 0,
-                    ),
-                    child: const Text("Got It",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
+  // ── Guest data ──────────────────────────────────────────────────────────────
 
   Future<void> _loadGuestDataForCard() async {
     if (_memberIdController.text.isEmpty) return;
@@ -218,6 +179,8 @@ class _ViewBirthdayGiftRequestState
     setState(() => userName = name);
   }
 
+  // ── Formatters ──────────────────────────────────────────────────────────────
+
   String _formatDate(String? dateString) {
     if (dateString == null || dateString.isEmpty) return "N/A";
     try {
@@ -243,6 +206,8 @@ class _ViewBirthdayGiftRequestState
     return NumberFormat.decimalPattern().format(number);
   }
 
+  // ── Text styles ─────────────────────────────────────────────────────────────
+
   TextStyle _inputTextStyle(FontSettings fontSettings) => TextStyle(
         fontSize: fontSettings.fontSize,
         fontWeight: fontSettings.fontWeight,
@@ -253,6 +218,8 @@ class _ViewBirthdayGiftRequestState
         fontWeight: FontWeight.bold,
         color: const Color.fromARGB(255, 255, 0, 0),
       );
+
+  // ── Validation ──────────────────────────────────────────────────────────────
 
   bool _validateValidDays() {
     if (_selectedValidDays == null) {
@@ -267,10 +234,9 @@ class _ViewBirthdayGiftRequestState
     return true;
   }
 
-  // ── Action handlers ──────────────────────────────────────────────────────────
+  // ── Action handlers ─────────────────────────────────────────────────────────
 
   Future<void> _doCheck() async {
-    if (!_hasGiftAppPermission) { _showAccessDeniedDialog(); return; }
     if (widget.gift == null) return;
     if (!_validateValidDays()) return;
 
@@ -287,20 +253,21 @@ class _ViewBirthdayGiftRequestState
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(success ? "Request Checked Successfully" : "Check Failed"),
+        content:
+            Text(success ? "Request Checked Successfully" : "Check Failed"),
         backgroundColor: success ? Colors.blue : Colors.red,
       ));
       if (success) Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Error: $e")));
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
   Future<void> _doApprove() async {
-    if (!_hasGiftAppPermission) { _showAccessDeniedDialog(); return; }
     if (widget.gift == null) return;
     if (!_validateValidDays()) return;
 
@@ -317,19 +284,20 @@ class _ViewBirthdayGiftRequestState
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(success ? "Request Approved Successfully" : "Approval Failed"),
+        content: Text(
+            success ? "Request Approved Successfully" : "Approval Failed"),
       ));
       if (success) Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Error: $e")));
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
   Future<void> _doReject() async {
-    if (!_hasGiftAppPermission) { _showAccessDeniedDialog(); return; }
     if (widget.gift == null) return;
 
     setState(() => _isLoading = true);
@@ -342,19 +310,20 @@ class _ViewBirthdayGiftRequestState
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(success ? "Request Rejected Successfully" : "Rejection Failed"),
+        content:
+            Text(success ? "Request Rejected Successfully" : "Rejection Failed"),
       ));
       if (success) Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Error: $e")));
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
   Future<void> _doReverse({required bool isRejected}) async {
-    if (!_hasGiftAppPermission) { _showAccessDeniedDialog(); return; }
     if (widget.gift == null) return;
 
     final confirmed = await showDialog<bool>(
@@ -414,32 +383,50 @@ class _ViewBirthdayGiftRequestState
     }
   }
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // TOP section:
-  //   • APPROVED tab  → orange Reverse button at top
-  //   • REJECTED tab  → orange Reverse button at top
-  //   • PENDING tab   → nothing at top
-  //   • CHECKED tab   → nothing at top  ← key fix
-  // ────────────────────────────────────────────────────────────────────────────
-  Widget? _buildTopSection(FontSettings fs) {
+  // ── Section builders ────────────────────────────────────────────────────────
+
+  /// Returns the Reverse button at the top ONLY when the current user
+  /// has permission. Otherwise returns an empty widget — no dialog shown.
+  Widget _buildTopSection(FontSettings fs) {
+    // Approved tab
     if (widget.isApproved) {
+      if (!_canReverseApproved) return const SizedBox.shrink();
       return _reverseBtn(isRejected: false, fs: fs);
     }
-    // Rejected = not pending, not approved, not checked
+
+    // Rejected tab (not pending, not approved, not checked)
     if (!widget.isPending && !widget.isApproved && !widget.isChecked) {
+      if (!_canReverseRejected) return const SizedBox.shrink();
       return _reverseBtn(isRejected: true, fs: fs);
     }
-    return null; // Pending & Checked → no reverse at top
+
+    // Pending / Checked → no reverse button
+    return const SizedBox.shrink();
   }
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // BOTTOM section:
-  //   • PENDING tab  → CHECK | REJECT  (side by side)
-  //   • CHECKED tab  → APPROVE | REJECT  (side by side)
-  //   • APPROVED tab → nothing at bottom
-  //   • REJECTED tab → nothing at bottom
-  // ────────────────────────────────────────────────────────────────────────────
-  Widget? _buildBottomSection(FontSettings fs) {
+  Widget _reverseBtn({required bool isRejected, required FontSettings fs}) =>
+      Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 16),
+        child: ElevatedButton.icon(
+          onPressed: () => _doReverse(isRejected: isRejected),
+          icon: const Icon(Icons.undo, size: 20),
+          label: Text(
+            'Reverse Gift',
+            style:
+                TextStyle(fontSize: fs.fontSize, fontWeight: FontWeight.w600),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.orange,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+      );
+
+  Widget _buildBottomSection(FontSettings fs) {
     if (widget.isPending) {
       return Row(
         children: [
@@ -512,34 +499,15 @@ class _ViewBirthdayGiftRequestState
       );
     }
 
-    return null; // Approved / Rejected → no bottom buttons
+    // Approved / Rejected → no bottom buttons
+    return const SizedBox.shrink();
   }
-
-  Widget _reverseBtn({required bool isRejected, required FontSettings fs}) =>
-      Container(
-        width: double.infinity,
-        margin: const EdgeInsets.only(bottom: 16),
-        child: ElevatedButton.icon(
-          onPressed: () => _doReverse(isRejected: isRejected),
-          icon: const Icon(Icons.undo, size: 20),
-          label: Text('Reverse Gift',
-              style: TextStyle(fontSize: fs.fontSize, fontWeight: FontWeight.w600)),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-      );
 
   // ── Build ────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final fontSettings = ref.watch(fontSettingsProvider);
-    final topSection = _buildTopSection(fontSettings);
-    final bottomSection = _buildBottomSection(fontSettings);
 
     return Scaffold(
       appBar: AppBar(
@@ -566,53 +534,8 @@ class _ViewBirthdayGiftRequestState
                 key: _formKey,
                 child: Column(
                   children: [
-                    // ── REVERSE at top (Approved / Rejected only) ───────────
-                    if (topSection != null) topSection,
-
-                    // // ── Checked By banner (Checked tab only) ────────────────
-                    // if (widget.isChecked &&
-                    //     widget.gift?.checkApp != null &&
-                    //     widget.gift!.checkApp!.isNotEmpty)
-                    //   Container(
-                    //     width: double.infinity,
-                    //     margin: const EdgeInsets.only(bottom: 16),
-                    //     padding: const EdgeInsets.symmetric(
-                    //         horizontal: 16, vertical: 12),
-                    //     decoration: BoxDecoration(
-                    //       color: Colors.blue.shade50,
-                    //       borderRadius: BorderRadius.circular(12),
-                    //       border: Border.all(color: Colors.blue.shade200),
-                    //     ),
-                    //     child: Row(
-                    //       children: [
-                    //         Icon(Icons.fact_check, color: Colors.blue.shade600),
-                    //         const SizedBox(width: 10),
-                    //         Expanded(
-                    //           child: Column(
-                    //             crossAxisAlignment: CrossAxisAlignment.start,
-                    //             children: [
-                    //               Text(
-                    //                 'Checked By: ${widget.gift!.checkApp}',
-                    //                 style: TextStyle(
-                    //                   fontSize: fontSettings.fontSize,
-                    //                   fontWeight: FontWeight.bold,
-                    //                   color: Colors.blue.shade800,
-                    //                 ),
-                    //               ),
-                    //               if (widget.gift?.checkAppByTime != null &&
-                    //                   widget.gift!.checkAppByTime!.isNotEmpty)
-                    //                 Text(
-                    //                   'At: ${widget.gift!.checkAppByTime}',
-                    //                   style: TextStyle(
-                    //                       fontSize: fontSettings.fontSize - 1,
-                    //                       color: Colors.blue.shade600),
-                    //                 ),
-                    //             ],
-                    //           ),
-                    //         ),
-                    //       ],
-                    //     ),
-                    //   ),
+                    // ── Reverse button (Approved / Rejected tabs, permission-gated) ──
+                    _buildTopSection(fontSettings),
 
                     // ── From / To Date ──────────────────────────────────────
                     TextFormField(
@@ -690,12 +613,16 @@ class _ViewBirthdayGiftRequestState
                                     if (guests.isNotEmpty) {
                                       final gr = guests.first;
                                       ref
-                                          .read(selectedGuestProvider.notifier)
+                                          .read(
+                                              selectedGuestProvider.notifier)
                                           .setSelectedGuest(Guest(
-                                            mid: gr.mid ?? _memberIdController.text,
-                                            memberName: gr.mName ?? _memberNameController.text,
+                                            mid: gr.mid ??
+                                                _memberIdController.text,
+                                            memberName: gr.mName ??
+                                                _memberNameController.text,
                                             country: "",
-                                            lastVisitDate: gr.lvd?.toString() ?? "",
+                                            lastVisitDate:
+                                                gr.lvd?.toString() ?? "",
                                             age: 0,
                                             gRating: gr.gRating ?? "",
                                             mGroup: gr.mGroup,
@@ -713,75 +640,79 @@ class _ViewBirthdayGiftRequestState
                                   width: 20,
                                   height: 20,
                                   child: CircularProgressIndicator(
-                                      strokeWidth: 2, color: Colors.white),
+                                      strokeWidth: 2,
+                                      color: Colors.white),
                                 )
                               : const Icon(Icons.person_search, size: 25),
                         ),
                         const SizedBox(width: 5),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                final memberId =
-                                    _memberIdController.text.trim();
-                                if (memberId.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                        content: Text(
-                                            "Please enter a Member ID")),
-                                  );
-                                  return;
-                                }
-                                context.push(
-                                    '/gifts/special-gift-requests/prv-gifts/$memberId', extra: {'iid': 988908});
-                              },
-                              icon: const Icon(Icons.card_giftcard),
-                              label: Text("Pending Gift",
-                                  style: TextStyle(
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 12),
-                              ),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              final memberId =
+                                  _memberIdController.text.trim();
+                              if (memberId.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content:
+                                          Text("Please enter a Member ID")),
+                                );
+                                return;
+                              }
+                              context.push(
+                                '/gifts/special-gift-requests/prv-gifts/$memberId',
+                                extra: {'iid': 988908},
+                              );
+                            },
+                            icon: const Icon(Icons.card_giftcard),
+                            label: Text("Pending Gift",
+                                style: TextStyle(
+                                    fontSize: fontSettings.fontSize,
+                                    fontWeight: fontSettings.fontWeight)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 12),
                             ),
                           ),
-                           const SizedBox(width: 5),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                final memberId =
-                                    _memberIdController.text.trim();
-                                if (memberId.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                        content: Text(
-                                            "Please enter a Member ID")),
-                                  );
-                                  return;
-                                }
-                                context.push(
-                                    '/gifts/special-gift-requests/prv-gifts/$memberId', extra: {'iid': 8888},);
-                                    
-                              },
-                              icon: const Icon(Icons.card_giftcard),
-                              label: Text("Issued Gift",
-                                  style: TextStyle(
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 12),
-                              ),
+                        ),
+                        const SizedBox(width: 5),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              final memberId =
+                                  _memberIdController.text.trim();
+                              if (memberId.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content:
+                                          Text("Please enter a Member ID")),
+                                );
+                                return;
+                              }
+                              context.push(
+                                '/gifts/special-gift-requests/prv-gifts/$memberId',
+                                extra: {'iid': 8888},
+                              );
+                            },
+                            icon: const Icon(Icons.card_giftcard),
+                            label: Text("Issued Gift",
+                                style: TextStyle(
+                                    fontSize: fontSettings.fontSize,
+                                    fontWeight: fontSettings.fontWeight)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 12),
                             ),
                           ),
+                        ),
                       ],
                     ),
 
@@ -806,7 +737,10 @@ class _ViewBirthdayGiftRequestState
                         {"Field": "Points (Est)", "Value": gpoints},
                         {"Field": "Flush Coupon (Est)", "Value": gflushcoupen},
                         {"Field": "Total Coupon (Est)", "Value": tcoupon},
-                        {"Field": "Flush Actual Drop (Est)", "Value": flushactdrop},
+                        {
+                          "Field": "Flush Actual Drop (Est)",
+                          "Value": flushactdrop
+                        },
                         {"Field": "Avg Bet (Est)", "Value": avgbet},
                       ];
                       return Container(
@@ -818,20 +752,23 @@ class _ViewBirthdayGiftRequestState
                         child: DataTable(
                           dataRowMinHeight: 48,
                           dataRowMaxHeight: 56,
-                          headingRowColor:
-                              WidgetStateProperty.all(Colors.amber.shade100),
-                          border: TableBorder.all(color: Colors.grey.shade300),
+                          headingRowColor: WidgetStateProperty.all(
+                              Colors.amber.shade100),
+                          border:
+                              TableBorder.all(color: Colors.grey.shade300),
                           columns: [
                             DataColumn(
                                 label: Text("Field",
                                     style: TextStyle(
                                         fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight))),
+                                        fontWeight:
+                                            fontSettings.fontWeight))),
                             DataColumn(
                                 label: Text("Value",
                                     style: TextStyle(
                                         fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight))),
+                                        fontWeight:
+                                            fontSettings.fontWeight))),
                           ],
                           rows: rows.map((row) {
                             final shouldHighlight = [
@@ -858,7 +795,8 @@ class _ViewBirthdayGiftRequestState
                                 )),
                                 DataCell(Align(
                                   alignment: Alignment.centerRight,
-                                  child: Text(formatNumber(row["Value"]),
+                                  child: Text(
+                                      formatNumber(row["Value"]),
                                       style: TextStyle(
                                         fontSize: fontSettings.fontSize,
                                         fontWeight: shouldHighlight
@@ -877,7 +815,7 @@ class _ViewBirthdayGiftRequestState
                       );
                     }),
 
-                    // ── Arrival / Departure ────────────────────────────────
+                    // ── Arrival / Departure ─────────────────────────────────
                     const SizedBox(height: 16.0),
                     Row(
                       children: [
@@ -921,7 +859,8 @@ class _ViewBirthdayGiftRequestState
                     const SizedBox(height: 16),
                     TextFormField(
                       readOnly: true,
-                      controller: TextEditingController(text: "Birthday Gift"),
+                      controller:
+                          TextEditingController(text: "Birthday Gift"),
                       decoration: InputDecoration(
                         labelText: "Gift For",
                         labelStyle: TextStyle(
@@ -949,144 +888,156 @@ class _ViewBirthdayGiftRequestState
                       ),
                       style: _inputTextStyle(fontSettings),
                     ),
-// ── Checked By & Check Date Card ──────────────────────────────────────────
-if (!widget.isPending &&
-    widget.gift != null &&
-    widget.gift!.checkApp != null &&
-    widget.gift!.checkApp!.isNotEmpty) ...[
-  const SizedBox(height: 16),
-  Container(
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        colors: [
-          const Color.fromARGB(255, 92, 17, 255).withOpacity(0.08),
-          const Color.fromARGB(255, 92, 17, 255).withOpacity(0.03),
-        ],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(
-        color: const Color.fromARGB(255, 92, 17, 255).withOpacity(0.4),
-        width: 1.5,
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: const Color.fromARGB(255, 92, 17, 255).withOpacity(0.08),
-          blurRadius: 8,
-          offset: const Offset(0, 3),
-        ),
-      ],
-    ),
-    child: Padding(
-      padding: const EdgeInsets.all(14.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Header ──────────────────────────────────────────────────
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 92, 17, 255),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.rule_rounded,
-                  color: Colors.white,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                "Checked Information",
-                style: TextStyle(
-                  fontSize: fontSettings.fontSize + 2,
-                  fontWeight: FontWeight.bold,
-                  color: const Color.fromARGB(255, 92, 17, 255),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Divider(
-            color: Color.fromARGB(80, 92, 17, 255),
-            height: 1,
-          ),
-          const SizedBox(height: 12),
 
-          // ── Checked By Row ───────────────────────────────────────────
-          Row(
-            children: [
-              const Icon(
-                Icons.person_outline,
-                color: Color.fromARGB(255, 92, 17, 255),
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                "Checked By:",
-                style: TextStyle(
-                  fontSize: fontSettings.fontSize,
-                  fontWeight: fontSettings.fontWeight,
-                   color: Color.fromARGB(255, 0, 0, 0)
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  widget.gift!.checkApp!,
-                  style: TextStyle(
-                    fontSize: fontSettings.fontSize + 1,
-                    fontWeight: FontWeight.bold,
-                    color: const Color.fromARGB(255, 92, 17, 255),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
+                    // ── Checked By & Check Date Card ────────────────────────
+                    if (!widget.isPending &&
+                        widget.gift != null &&
+                        widget.gift!.checkApp != null &&
+                        widget.gift!.checkApp!.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              const Color.fromARGB(255, 92, 17, 255)
+                                  .withOpacity(0.08),
+                              const Color.fromARGB(255, 92, 17, 255)
+                                  .withOpacity(0.03),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color.fromARGB(255, 92, 17, 255)
+                                .withOpacity(0.4),
+                            width: 1.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color.fromARGB(255, 92, 17, 255)
+                                  .withOpacity(0.08),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(14.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Header
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: const Color.fromARGB(
+                                          255, 92, 17, 255),
+                                      borderRadius:
+                                          BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(
+                                      Icons.rule_rounded,
+                                      color: Colors.white,
+                                      size: 18,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    "Checked Information",
+                                    style: TextStyle(
+                                      fontSize: fontSettings.fontSize + 2,
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color.fromARGB(
+                                          255, 92, 17, 255),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              const Divider(
+                                color: Color.fromARGB(80, 92, 17, 255),
+                                height: 1,
+                              ),
+                              const SizedBox(height: 12),
+                              // Checked By
+                              Row(
+                                children: [
+                                  const Icon(Icons.person_outline,
+                                      color:
+                                          Color.fromARGB(255, 92, 17, 255),
+                                      size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    "Checked By:",
+                                    style: TextStyle(
+                                      fontSize: fontSettings.fontSize,
+                                      fontWeight: fontSettings.fontWeight,
+                                      color:
+                                          const Color.fromARGB(255, 0, 0, 0),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      widget.gift!.checkApp!,
+                                      style: TextStyle(
+                                        fontSize: fontSettings.fontSize + 1,
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color.fromARGB(
+                                            255, 92, 17, 255),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              // Check Date
+                              Row(
+                                children: [
+                                  const Icon(Icons.schedule,
+                                      color:
+                                          Color.fromARGB(255, 92, 17, 255),
+                                      size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    "Check Date:",
+                                    style: TextStyle(
+                                      fontSize: fontSettings.fontSize,
+                                      fontWeight: fontSettings.fontWeight,
+                                      color:
+                                          const Color.fromARGB(255, 0, 0, 0),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      widget.gift!.checkAppByTime != null &&
+                                              widget.gift!.checkAppByTime!
+                                                  .isNotEmpty
+                                          ? _formatDateandTime(
+                                              widget.gift!.checkAppByTime)
+                                          : 'N/A',
+                                      style: TextStyle(
+                                        fontSize: fontSettings.fontSize,
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color.fromARGB(
+                                            255, 92, 17, 255),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
 
-          // ── Check Date Row ───────────────────────────────────────────
-          Row(
-            children: [
-              const Icon(
-                Icons.schedule,
-                color: Color.fromARGB(255, 92, 17, 255),
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                "Check Date:",
-                style: TextStyle(
-                  fontSize: fontSettings.fontSize,
-                  fontWeight: fontSettings.fontWeight,
-                  color: Color.fromARGB(255, 0, 0, 0)           ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  widget.gift!.checkAppByTime != null &&
-                          widget.gift!.checkAppByTime!.isNotEmpty
-                      ? _formatDateandTime(widget.gift!.checkAppByTime)
-                      : 'N/A',
-                  style: TextStyle(
-                    fontSize: fontSettings.fontSize,
-                    fontWeight: FontWeight.bold,
-                    color: const Color.fromARGB(255, 92, 17, 255),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ),
-  ),
-],
                     // ── Previous Gift Amount ────────────────────────────────
                     const SizedBox(height: 16),
                     TextFormField(
@@ -1114,7 +1065,8 @@ if (!widget.isPending &&
                                   fontSize: fontSettings.fontSize + 2,
                                   fontWeight: FontWeight.bold)),
                           IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
+                            icon:
+                                const Icon(Icons.edit, color: Colors.blue),
                             onPressed: () =>
                                 setState(() => _isEditable = !_isEditable),
                           ),
@@ -1169,20 +1121,24 @@ if (!widget.isPending &&
                           DropdownMenuItem(
                               value: 30,
                               child: Text("30 Days",
-                                  style: TextStyle(fontWeight: FontWeight.bold))),
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold))),
                           DropdownMenuItem(
                               value: 60,
                               child: Text("60 Days",
-                                  style: TextStyle(fontWeight: FontWeight.bold))),
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold))),
                           DropdownMenuItem(
                               value: 90,
                               child: Text("90 Days",
-                                  style: TextStyle(fontWeight: FontWeight.bold))),
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold))),
                         ],
                         onChanged: (value) =>
                             setState(() => _selectedValidDays = value),
-                        validator: (value) =>
-                            value == null ? "Please select valid days" : null,
+                        validator: (value) => value == null
+                            ? "Please select valid days"
+                            : null,
                       ),
                     ],
 
@@ -1211,10 +1167,8 @@ if (!widget.isPending &&
                     ),
 
                     // ── Bottom action row (Pending / Checked only) ──────────
-                    if (bottomSection != null) ...[
-                      const SizedBox(height: 16.0),
-                      bottomSection,
-                    ],
+                    const SizedBox(height: 16.0),
+                    _buildBottomSection(fontSettings),
 
                     const SizedBox(height: 16),
                   ],

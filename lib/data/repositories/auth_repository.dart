@@ -110,6 +110,13 @@ print("hellooo");
           mobileNumber: tableData['Mobile'].toString(),
           memProfSH: tableData['Mem_Prof_SH'],
           giftApp: tableData['Gift_App'],
+          resApp: tableData['R_App'],
+          resChk: tableData['R_Chk'],
+          otgiApp: tableData['G_App'],
+          otgiChk: tableData['G_CHK'],
+          bgApp: tableData['BG_APP'],
+          bgChk: tableData['BG_CHK'],
+
         );
       } else {
         // Handle login failure cases

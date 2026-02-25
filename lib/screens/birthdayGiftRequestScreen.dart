@@ -67,7 +67,11 @@ class _BirthdayGiftRequestScreenState
     if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
       return gifts;
     }
-
+ final bgChk = await StorageUtil.getBgChk();
+  final bgApp = await StorageUtil.getBgApp();
+  if (bgChk == true || bgApp == true) {
+    return gifts;
+  }
     final currentUserName = await StorageUtil.getUserName();
     if (currentUserName == null) return [];
 
@@ -78,23 +82,66 @@ class _BirthdayGiftRequestScreenState
   }
 
   // Check access permission for detail view
-  Future<bool> _canAccessGiftDetails(BirthdayIncressGiftRequest gift) async {
-    final giftApp = await StorageUtil.getGiftApp();
-    if (giftApp == true) return true;
+  // Future<bool> _canAccessGiftDetails(BirthdayIncressGiftRequest gift) async {
+  //   final giftApp = await StorageUtil.getGiftApp();
+  //   if (giftApp == true) return true;
 
-    final currentUserName = await StorageUtil.getUserName();
-    if (currentUserName != null &&
-        gift.reqBy.isNotEmpty &&
-        currentUserName.trim().toLowerCase() ==
-            gift.reqBy.trim().toLowerCase()) {
-      return true;
-    }
+  //   final currentUserName = await StorageUtil.getUserName();
+  //   if (currentUserName != null &&
+  //       gift.reqBy.isNotEmpty &&
+  //       currentUserName.trim().toLowerCase() ==
+  //           gift.reqBy.trim().toLowerCase()) {
+  //     return true;
+  //   }
 
-    return false;
-  }
+  //   return false;
+  // }
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
+Future<bool> _canAccessGiftDetails(
+  BirthdayIncressGiftRequest gift, {
+  required bool isPending,
+  required bool isApproved,
+  required bool isChecked,
+}) async {
+  final salesCode = await StorageUtil.getSalesCode();
 
+  // AD001 can access everything
+  if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
+    return true;
+  }
+
+  final currentUserName = (await StorageUtil.getUserName())?.trim().toLowerCase() ?? '';
+  final reqBy = gift.reqBy.trim().toLowerCase();
+  final checkedBy = (gift.checkApp ?? '').trim().toLowerCase();
+  final approvedBy = (gift.firstAppBy ?? '').trim().toLowerCase();
+  final rejectedBy = (gift.deleteUser ?? '').trim().toLowerCase();
+
+  if (isPending) {
+    // Pending: otgiChk == true OR loginUser == reqBy
+    final bgChk = await StorageUtil.getBgChk();
+    return bgChk == true || currentUserName == reqBy;
+  }
+
+  if (isChecked) {
+    // Checked: otgiApp == true OR loginUser == reqBy OR loginUser == checkedBy
+    final bgApp = await StorageUtil.getBgApp();
+    return bgApp == true ||
+        currentUserName == reqBy ||
+        currentUserName == checkedBy;
+  }
+
+  if (isApproved) {
+    // Approved: otgiApp == true OR loginUser == reqBy OR loginUser == approvedBy
+    final bgApp = await StorageUtil.getBgApp();
+    return bgApp == true ||
+        currentUserName == reqBy ||
+        currentUserName == approvedBy;
+  }
+
+  // Rejected: loginUser == reqBy OR loginUser == rejectedBy
+  return currentUserName == reqBy || currentUserName == rejectedBy;
+}
   @override
   void initState() {
     super.initState();
@@ -359,7 +406,12 @@ class _BirthdayGiftRequestScreenState
                 InkWell(
                   borderRadius: BorderRadius.circular(10),
                   onTap: () async {
-                    final canAccess = await _canAccessGiftDetails(gift);
+                  final canAccess = await _canAccessGiftDetails(
+    gift,
+    isPending: isPending,
+    isApproved: isApproved,
+    isChecked: isChecked,
+  );
                     if (!canAccess) {
                       if (mounted) _showAccessDeniedDialog();
                       return;

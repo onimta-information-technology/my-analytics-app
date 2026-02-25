@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:ballys_reservation_app/components/flight_card.dart';
+import 'package:ballys_reservation_app/components/guest_deatils_view_spGift.dart';
 import 'package:ballys_reservation_app/components/guest_details_card.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
@@ -795,13 +796,21 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                   const SizedBox(height: 10.0),
 
                   // ── Guest card ─────────────────────────────────────────
-                  GuestDisplayCard(
-                    memberIdText: _memberIdController.text,
-                    memberNameText: _memberNameController.text,
-                    showCard: _memberIdController.text.isNotEmpty &&
-                        _memberNameController.text.isNotEmpty,
-                    isLoading: _isGuestLoading,
-                  ),
+                  // GuestDisplayCard(
+                  //   memberIdText: _memberIdController.text,
+                  //   memberNameText: _memberNameController.text,
+                  //   showCard: _memberIdController.text.isNotEmpty &&
+                  //       _memberNameController.text.isNotEmpty,
+                  //   isLoading: _isGuestLoading,
+                  // ),
+                    GuestDisplayCardSpecialGiftview(
+                        memberIdText: _memberIdController.text,
+                        memberNameText: _memberNameController.text,
+                        showCard: _memberIdController.text.isNotEmpty &&
+                            _memberNameController.text.isNotEmpty,
+                        isLoading: _isGuestLoading,
+                        showLastVisitDate: true,
+                      ),
                   const SizedBox(height: 10.0),
 
                   // ── Hotel & Rooms summary ──────────────────────────────

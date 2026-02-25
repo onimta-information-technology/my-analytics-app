@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:ballys_reservation_app/components/bottom_sheets/member_search-new_sheet.dart';
 import 'package:ballys_reservation_app/components/bottom_sheets/member_search_by_mid_bottom_sheet.dart';
 import 'package:ballys_reservation_app/components/flight_card.dart';
+import 'package:ballys_reservation_app/components/guest_deatils_view_spGift.dart';
 import 'package:ballys_reservation_app/components/guest_details_card.dart';
 import 'package:ballys_reservation_app/components/hotel_selection.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
@@ -1041,15 +1042,23 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                         ),
 
                         // ── Guest Card ─────────────────────────
-                        GuestDisplayCard(
-                          memberIdText: _memberIdController.text,
-                          memberNameText: _memberNameController.text,
-                          showCard: (_isEditMode &&
-                                  _memberIdController.text.isNotEmpty &&
-                                  _memberNameController.text.isNotEmpty) ||
-                              (newReservation.bmNumber != null &&
-                                  newReservation.guestName != null),
-                        ),
+                        // GuestDisplayCard(
+                        //   memberIdText: _memberIdController.text,
+                        //   memberNameText: _memberNameController.text,
+                        //   showCard: (_isEditMode &&
+                        //           _memberIdController.text.isNotEmpty &&
+                        //           _memberNameController.text.isNotEmpty) ||
+                        //       (newReservation.bmNumber != null &&
+                        //           newReservation.guestName != null),
+                        // ),
+                        GuestDisplayCardSpecialGiftview(
+                        memberIdText: _memberIdController.text,
+                        memberNameText: _memberNameController.text,
+                        showCard: _memberIdController.text.isNotEmpty &&
+                            _memberNameController.text.isNotEmpty,
+                       
+                        showLastVisitDate: true,
+                      ),
                         const SizedBox(height: 10.0),
 
                         // ── Hotels & Rooms Selector ────────────

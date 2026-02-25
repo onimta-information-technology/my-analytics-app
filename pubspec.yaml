@@ -150,6 +150,16 @@ flutter:
     - assets/events/Halloween ghost.json
     - assets/events/Searching.json
     - assets/events/Diwali.json
+    - assets/icon/menu_screen/birthday.json
+    - assets/icon/menu_screen/reservation.json
+    - assets/icon/menu_screen/home.json
+    - assets/icon/menu_screen/approve.json
+    - assets/icon/menu_screen/inactiveMember.json
+    - assets/icon/menu_screen/user.json
+    - assets/icon/menu_screen/walk.json
+    - assets/icon/menu_screen/gift.json
+    - assets/icon/menu_screen/booking.json
+    - assets/icon/menu_screen/packageGuest.json
 
   fonts:
     - family: ABCArizonaFlare

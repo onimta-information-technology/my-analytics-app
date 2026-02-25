@@ -152,9 +152,10 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
                                 ),
                               ),
                               const SizedBox(height: 16),
-                              
+
                               // Show MDrop and CashOut if provided (from Result view)
-                              if (widget.mDrop != null && widget.cashOut != null) ...[
+                              if (widget.mDrop != null &&
+                                  widget.cashOut != null) ...[
                                 _buildSummaryItem(
                                   title: "TOTAL DROP",
                                   value: _formatCurrency(widget.mDrop!),
@@ -196,9 +197,13 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
                                 ),
                                 const SizedBox(height: 12),
                               ],
-                              
+
                               _buildSummaryItem(
-                                title: "WIN/LOST",
+                                title: widget.winSpecificMember > 0
+                                    ? "LOSS"
+                                    : widget.winSpecificMember < 0
+                                    ? "WIN"
+                                    : "N/A",
                                 value: NumberFormat("#,##0.##").format(
                                   widget.winSpecificMember.toDouble() * 1000,
                                 ),
@@ -279,18 +284,40 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
                                     ),
                                     const SizedBox(width: 8),
                                   ],
+                                  // Flexible(
+                                  //   child:
+                                  //    Text(
+                                  //     member.memId,
+                                  //     style: TextStyle(
+                                  //       fontSize: fontSettings.fontSize + 2,
+                                  //       fontWeight: FontWeight.bold,
+                                  //       color: isLoading
+                                  //           ? Colors.grey
+                                  //           : Colors.blue,
+                                  //     ),
+                                       
+                                  //   ),
+                                   
+                                  // ),
+                                  if (!isLoading) ...[
+  const SizedBox(width: 6),
+  const Icon(
+    Icons.touch_app,
+    size: 20,
+    color: Color.fromARGB(255, 230, 0, 0),
+  ),
+],
                                   Flexible(
-                                    child: Text(
-                                      member.memId,
-                                      style: TextStyle(
-                                        fontSize: fontSettings.fontSize + 2,
-                                        fontWeight: FontWeight.bold,
-                                        color: isLoading
-                                            ? Colors.grey
-                                            : Colors.blue,
-                                      ),
-                                    ),
-                                  ),
+  child: Text(
+    member.memId,
+    style: TextStyle(
+      fontSize: fontSettings.fontSize + 2,
+      fontWeight: FontWeight.bold,
+      color: isLoading ? Colors.grey : Colors.blue,
+    ),
+  ),
+),
+
                                 ],
                               ),
                             ),
@@ -310,11 +337,11 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            'Win/Lost',
+                           member.winLost > 0 ? 'LOSS' : member.winLost < 0 ? 'WIN' : 'N/A',
                             style: TextStyle(
                               fontSize: fontSettings.fontSize - 1,
                               fontWeight: fontSettings.fontWeight,
-                              color: Colors.grey[600],
+                              color: const Color.fromARGB(255, 0, 0, 0),
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -323,6 +350,7 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
                                 ? 'N/A'
                                 : _formatCurrency(member.winLost),
                             style: TextStyle(
+                         
                               fontSize: fontSettings.fontSize + 2,
                               fontWeight: FontWeight.bold,
                               color: _getAmountColor(member.winLost),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class FlightCard extends StatelessWidget {
   final dynamic flight;
@@ -39,13 +40,15 @@ class FlightCard extends StatelessWidget {
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.flight_takeoff,
-                                    color: Colors.blue),
+                                const Icon(
+                                  Icons.flight_takeoff,
+                                  color: Colors.blue,
+                                ),
                                 const SizedBox(width: 8),
                                 Text(
                                   "${flight.airports!.departure!.dFrom.airportCode} → ${flight.airports!.departure!.dTo.airportCode}",
                                   style: const TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 17,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -55,13 +58,15 @@ class FlightCard extends StatelessWidget {
                             if (flight.airports!.returnFlight != null)
                               Row(
                                 children: [
-                                  const Icon(Icons.flight_land,
-                                      color: Colors.green),
+                                  const Icon(
+                                    Icons.flight_land,
+                                    color: Colors.green,
+                                  ),
                                   const SizedBox(width: 8),
                                   Text(
                                     "${flight.airports!.returnFlight!.rFrom.airportCode} → ${flight.airports!.returnFlight!.rTo.airportCode}",
                                     style: const TextStyle(
-                                      fontSize: 16,
+                                      fontSize: 17,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -71,7 +76,7 @@ class FlightCard extends StatelessWidget {
                             Text(
                               "Class: ${flight.airTicketClassName}",
                               style: const TextStyle(
-                                fontSize: 14,
+                                fontSize: 17,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -85,23 +90,43 @@ class FlightCard extends StatelessWidget {
                             const Text(
                               "Guests",
                               style: TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.w600),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               "${flight.guestCount}",
                               style: const TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.bold),
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 5),
+                    Text(
+                      "Arrival Date: ${flight.arrivalDate != null ? DateFormat('yyyy-MM-dd').format(flight.departureDate!) : 'N/A'}",
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      "Departure Date: ${flight.departureDate != null ? DateFormat('yyyy-MM-dd').format(flight.departureDate!) : 'N/A'}",
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
                     Text(
                       "Estimated Cost: ${flight.selectedCost}",
                       style: const TextStyle(
-                        fontSize: 16,
+                        fontSize: 17,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

@@ -684,7 +684,7 @@ Future<void> _selectDate(
                         alignment: Alignment.topLeft,
                         child: Text(
                           "Departure",
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                          style: TextStyle(fontWeight: FontWeight.bold,fontSize: 17),
                         ),
                       ),
                       const SizedBox(height: 5),
@@ -753,7 +753,7 @@ Future<void> _selectDate(
                               alignment: Alignment.topLeft,
                               child: Text(
                                 "Return",
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                                style: TextStyle(fontWeight: FontWeight.bold,fontSize: 17),
                               ),
                             ),
                             const SizedBox(height: 5),
@@ -810,6 +810,7 @@ Future<void> _selectDate(
                         readOnly: true,
                         decoration: InputDecoration(
                           labelText: "Arrival Date",
+                          labelStyle: TextStyle(fontSize: 20, color: const Color.fromARGB(255, 0, 0, 0),fontWeight: FontWeight.bold),
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8.0)),
                           prefixIcon: const Icon(Icons.calendar_today),
@@ -822,6 +823,7 @@ Future<void> _selectDate(
                           children: [
                             Checkbox(
                               value: _isSameAsHotelForArrival,
+                              
                               onChanged: (value) {
                                 setState(() {
                                   _isSameAsHotelForArrival = value!;
@@ -832,7 +834,7 @@ Future<void> _selectDate(
                                 });
                               },
                             ),
-                            const Text("Same as flight reservation"),
+                            const Text("Same as flight reservation",style: TextStyle(fontSize: 18)),
                           ],
                         ),
                       const SizedBox(height: 16),
@@ -841,6 +843,7 @@ Future<void> _selectDate(
                         readOnly: true,
                         decoration: InputDecoration(
                           labelText: "Departure Date",
+                          labelStyle: TextStyle(fontSize: 20, color: const Color.fromARGB(255, 0, 0, 0),fontWeight: FontWeight.bold),
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8.0)),
                           prefixIcon: const Icon(Icons.calendar_today),
@@ -864,7 +867,7 @@ Future<void> _selectDate(
                                 });
                               },
                             ),
-                            const Text("Same as flight reservation"),
+                        const Text("Same as flight reservation",style: TextStyle(fontSize: 18)),
                           ],
                         ),
                       const SizedBox(height: 16),
@@ -873,7 +876,8 @@ Future<void> _selectDate(
                         child: Text(
                           "Silk Route Facility",
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 18,
+                               fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
@@ -913,7 +917,8 @@ Future<void> _selectDate(
                         child: Text(
                           "Airport Transpotation",
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
@@ -1120,10 +1125,11 @@ Future<void> _selectDate(
                         child: SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: _acceptChanges,
+                            onPressed:  flightList.isNotEmpty ? _acceptChanges : null,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Constants.kSecondaryColor,
                               foregroundColor: Colors.white,
+                               disabledBackgroundColor: Colors.grey.shade300,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),

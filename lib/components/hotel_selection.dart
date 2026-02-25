@@ -553,6 +553,10 @@ class _HotelAndRoomSelectionBottomSheetState
                         TextFormField(
                           controller: _dateRangeController,
                           readOnly: true,
+                          style: const TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.bold,
+  ),
                           decoration: InputDecoration(
                             labelText: "Select Date Range",
                             labelStyle: const TextStyle(
@@ -573,8 +577,9 @@ class _HotelAndRoomSelectionBottomSheetState
                               child: Text(
                                 "$numberOfNights night(s)",
                                 style: const TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 20,
                                   fontStyle: FontStyle.italic,
+                                
                                 ),
                               ),
                             ),
@@ -610,6 +615,19 @@ class _HotelAndRoomSelectionBottomSheetState
                               border: OutlineInputBorder(),
                             ),
                           ),
+                          suffixProps: DropdownSuffixProps(
+    dropdownButtonProps: DropdownButtonProps(
+      iconClosed: Icon(Icons.arrow_drop_down, size: 30),
+      iconOpened: Icon(Icons.arrow_drop_up, size: 30),
+    ),
+  ),
+  // 👇 This controls the selected value text size
+  dropdownBuilder: (context, selectedItem) {
+    return Text(
+      selectedItem?['HotelName'] ?? '',
+      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+    );
+  },
                           onChanged: _setHotel,
                           popupProps: PopupProps.dialog(
                             showSearchBox: true,
@@ -655,6 +673,19 @@ class _HotelAndRoomSelectionBottomSheetState
                                   border: OutlineInputBorder(),
                                 ),
                               ),
+                              suffixProps: DropdownSuffixProps(
+    dropdownButtonProps: DropdownButtonProps(
+      iconClosed: Icon(Icons.arrow_drop_down, size: 30),
+      iconOpened: Icon(Icons.arrow_drop_up, size: 30),
+    ),
+  ),
+  // 👇 This controls the selected value text size
+  dropdownBuilder: (context, selectedItem) {
+    return Text(
+      selectedItem?['CatName'] ?? '',
+      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+    );
+  },
                               onChanged: _setRoomCategory,
                               popupProps: PopupProps.dialog(
                                 showSearchBox: true,
@@ -705,6 +736,14 @@ class _HotelAndRoomSelectionBottomSheetState
                                   border: OutlineInputBorder(),
                                 ),
                               ),
+                              dropdownBuilder: (context, selectedItem) {
+        final rt = selectedItem?['RoomType'] ?? '';
+        final mp = selectedItem?['MealPlan'] ?? '';
+        return Text(
+          selectedItem == null ? '' : '$rt - $mp',
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        );
+      },
                               onChanged: _setRoomType,
                               popupProps: PopupProps.dialog(
                                 showSearchBox: true,
@@ -948,7 +987,83 @@ class _HotelAndRoomSelectionBottomSheetState
                                                         ),
                                                       ],
                                                     ),
+                                                  ),   const SizedBox(
+                                                      height: 5),
+                                                   RichText(
+                                                    text: TextSpan(
+                                                      children: [
+                                                        const TextSpan(
+                                                          text:
+                                                              "Arrival Date: ",
+                                                          style: TextStyle(
+                                                            fontSize: 16,
+                                                            color: Colors
+                                                                .black,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .w600,
+                                                          ),
+                                                        ),
+                                                        TextSpan(
+                                                          text: hotel
+                                                              .arrivalDate !=
+                                                              null
+                                                              ? DateFormat(
+                                                                      'yyyy-MM-dd')
+                                                                  .format(hotel
+                                                                      .arrivalDate!)
+                                                              : '',
+                                                          style: const TextStyle(
+                                                            fontSize: 16,
+                                                            color: Colors
+                                                                .black,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .normal,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
                                                   ),
+                                                   const SizedBox(
+                                                      height: 5),
+                                                   RichText(
+                                                    text: TextSpan(
+                                                      children: [
+                                                        const TextSpan(
+                                                          text:
+                                                              "Departure Date: ",
+                                                          style: TextStyle(
+                                                            fontSize: 16,
+                                                            color: Colors
+                                                                .black,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .w600,
+                                                          ),
+                                                        ),
+                                                        TextSpan(
+                                                          text: hotel
+                                                              .arrivalDate !=
+                                                              null
+                                                              ? DateFormat(
+                                                                      'yyyy-MM-dd')
+                                                                  .format(hotel
+                                                                      .departureDate!)
+                                                              : '',
+                                                          style: const TextStyle(
+                                                            fontSize: 16,
+                                                            color: Colors
+                                                                .black,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .normal,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                               
                                                   const SizedBox(
                                                       height: 8),
                                                   Row(
@@ -957,7 +1072,7 @@ class _HotelAndRoomSelectionBottomSheetState
                                                         "Guest Count: ${hotel.guestCount}",
                                                         style: const TextStyle(
                                                             fontSize:
-                                                                14),
+                                                                16),
                                                       ),
                                                       const SizedBox(
                                                           width: 20),
@@ -965,7 +1080,7 @@ class _HotelAndRoomSelectionBottomSheetState
                                                         "Nights: ${hotel.noOfNights}",
                                                         style: const TextStyle(
                                                             fontSize:
-                                                                14),
+                                                                16),
                                                       ),
                                                     ],
                                                   ),
@@ -1018,10 +1133,11 @@ class _HotelAndRoomSelectionBottomSheetState
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: _acceptChanges,
+                            onPressed:hotelList.isNotEmpty ? _acceptChanges : null,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Constants.kSecondaryColor,
                               foregroundColor: Colors.white,
+                               disabledBackgroundColor: Colors.grey.shade300,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -1163,12 +1279,12 @@ class _CostCalculatorBottomSheetState extends State<CostCalculatorBottomSheet>
                                       Text(
                                         "Check-In: ${DateFormat('yyyy-MM-dd').format(DateTime.parse(cost.checkIn!))}",
                                         style: const TextStyle(
-                                            fontSize: 14),
+                                            fontSize: 17,fontWeight: FontWeight.bold),
                                       ),
                                       Text(
                                         "Check-Out: ${DateFormat('yyyy-MM-dd').format(DateTime.parse(cost.checkOut!))}",
                                         style: const TextStyle(
-                                            fontSize: 14),
+                                            fontSize: 17,fontWeight: FontWeight.bold),
                                       ),
                                     ],
                                   ),
@@ -1178,7 +1294,7 @@ class _CostCalculatorBottomSheetState extends State<CostCalculatorBottomSheet>
                                       Text(
                                         cost.netRate!.toStringAsFixed(2),
                                         style: const TextStyle(
-                                            fontSize: 16,
+                                            fontSize: 17,
                                             fontWeight:
                                                 FontWeight.bold),
                                       ),

@@ -550,8 +550,8 @@ Future<void> _selectDepartureDate(BuildContext context) async {
             child: Text(
               "Select Departure Date",
               style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade600,
+                fontSize: 20,
+                color: const Color.fromARGB(255, 0, 0, 0),
               ),
             ),
           ),
@@ -564,6 +564,7 @@ Future<void> _selectDepartureDate(BuildContext context) async {
               maximumDate: DateTime(2101),
               onDateTimeChanged: (DateTime newDate) {
                 selectedDate = newDate;
+                
               },
             ),
           ),
@@ -1228,6 +1229,72 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                                 ],
                                               ),
                                             ),
+                                             const SizedBox(height: 5),
+                                            RichText(
+                                              text: TextSpan(
+                                                children: [
+                                                  TextSpan(
+                                                    text: "Arrival Date: ",
+                                                    style: TextStyle(
+                                                      fontSize: fontSettings
+                                                          .fontSize,
+                                                      color: Colors.black,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                  TextSpan(
+                                                    text:
+                                                        hotel.arrivalDate != null
+                                                            ? DateFormat(
+                                                                    'yyyy-MM-dd')
+                                                                .format(hotel
+                                                                    .arrivalDate!)
+                                                            : '',
+                                                    style: TextStyle(
+                                                      fontSize: fontSettings
+                                                          .fontSize,
+                                                      color: Colors.black,
+                                                      fontWeight: fontSettings
+                                                          .fontWeight,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                             const SizedBox(height: 5),
+                                            RichText(
+                                              text: TextSpan(
+                                                children: [
+                                                  TextSpan(
+                                                    text: "Departure Date: ",
+                                                    style: TextStyle(
+                                                      fontSize: fontSettings
+                                                          .fontSize,
+                                                      color: Colors.black,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                  TextSpan(
+                                                    text:
+                                                        hotel.departureDate != null
+                                                            ? DateFormat(
+                                                                    'yyyy-MM-dd')
+                                                                .format(hotel
+                                                                    .departureDate!)
+                                                            : '',
+                                                    style: TextStyle(
+                                                      fontSize: fontSettings
+                                                          .fontSize,
+                                                      color: Colors.black,
+                                                      fontWeight: fontSettings
+                                                          .fontWeight,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
                                             const SizedBox(height: 8),
                                             Row(
                                               children: [
@@ -1235,8 +1302,7 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                                   "Guests: ${hotel.guestCount}",
                                                   style: TextStyle(
                                                     fontSize: fontSettings
-                                                            .fontSize *
-                                                        0.875,
+                                                            .fontSize,
                                                     fontWeight: fontSettings
                                                         .fontWeight,
                                                   ),
@@ -1246,8 +1312,7 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                                   "Nights: ${hotel.noOfNights}",
                                                   style: TextStyle(
                                                     fontSize: fontSettings
-                                                            .fontSize *
-                                                        0.875,
+                                                            .fontSize,
                                                     fontWeight: fontSettings
                                                         .fontWeight,
                                                   ),
@@ -1257,8 +1322,7 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                                   "Rooms: ${hotel.roomCount}",
                                                   style: TextStyle(
                                                     fontSize: fontSettings
-                                                            .fontSize *
-                                                        0.875,
+                                                            .fontSize,
                                                     fontWeight: fontSettings
                                                         .fontWeight,
                                                   ),

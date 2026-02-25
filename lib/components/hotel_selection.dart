@@ -144,10 +144,11 @@ class _HotelAndRoomSelectionBottomSheetState
     bool clearSelection = true,
   }) async {
     try {
-      final response =
-          await widget.hotelRepository.getSelectedHotelRoomCategories(hotelId);
-      roomCategoriesNotifier.value =
-          response.map((category) => category.toJson()).toList();
+      final response = await widget.hotelRepository
+          .getSelectedHotelRoomCategories(hotelId);
+      roomCategoriesNotifier.value = response
+          .map((category) => category.toJson())
+          .toList();
 
       if (clearSelection) {
         selectedRoomCategory = null;
@@ -171,8 +172,9 @@ class _HotelAndRoomSelectionBottomSheetState
     try {
       final response = await widget.hotelRepository
           .getSelectedHotelCategoryRoomTypes(hotelId, categoryId);
-      roomTypesNotifier.value =
-          response.map((category) => category.toJson()).toList();
+      roomTypesNotifier.value = response
+          .map((category) => category.toJson())
+          .toList();
 
       if (clearSelection) {
         selectedRoomType = null;
@@ -220,7 +222,9 @@ class _HotelAndRoomSelectionBottomSheetState
     if (selectedHotelId != null && selectedRoomCategoryId != null) {
       roomTypesNotifier.value = [];
       getSelectedHotelCategoryRoomTypes(
-          selectedHotelId!, selectedRoomCategoryId!);
+        selectedHotelId!,
+        selectedRoomCategoryId!,
+      );
     }
   }
 
@@ -236,7 +240,8 @@ class _HotelAndRoomSelectionBottomSheetState
   void _handleItemSelected(HotelCostResponse cost, int index) {
     setState(() {
       costIndex = index;
-      double calculation = ((cost.netRate! * numberOfNights!) * cost.usRate!) *
+      double calculation =
+          ((cost.netRate! * numberOfNights!) * cost.usRate!) *
           numberOfAdults *
           numberOfRooms;
       costNotifier.value = NumberFormat().format(calculation.round());
@@ -317,13 +322,7 @@ class _HotelAndRoomSelectionBottomSheetState
       return;
     }
 
-    if (costNotifier.value == "0") {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("Please calculate the cost to proceed.")),
-      );
-      return;
-    }
+    // Cost is optional — no blocking if not calculated
 
     final hotel = HotelDescip(
       hotel: selectedHotelId,
@@ -420,7 +419,8 @@ class _HotelAndRoomSelectionBottomSheetState
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-              "Please select Date range, hotel, category and room type."),
+            "Please select Date range, hotel, category and room type.",
+          ),
         ),
       );
       return;
@@ -440,17 +440,17 @@ class _HotelAndRoomSelectionBottomSheetState
     );
   }
 
-  Widget _buildCounter(
-      String label, int count, Function(int) onCountChange) {
+  Widget _buildCounter(String label, int count, Function(int) onCountChange) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
             Row(
               children: [
                 GestureDetector(
@@ -493,24 +493,6 @@ class _HotelAndRoomSelectionBottomSheetState
     );
   }
 
-  // Shared dialog popup props for all dropdowns
-  PopupPropsMultiSelection<Map<String, dynamic>> _dialogPopupProps({
-    required Widget Function(BuildContext, Map<String, dynamic>, bool, bool)
-        itemBuilder,
-  }) {
-    return PopupPropsMultiSelection.dialog(
-      showSearchBox: true,
-      searchFieldProps: const TextFieldProps(autofocus: true),
-      itemBuilder: itemBuilder,
-      dialogProps: DialogProps(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        elevation: 8,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return FractionallySizedBox(
@@ -526,8 +508,7 @@ class _HotelAndRoomSelectionBottomSheetState
               children: [
                 const Text(
                   "Select Hotels & Rooms",
-                  style: TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 IconButton(
                   tooltip: "Close",
@@ -549,23 +530,24 @@ class _HotelAndRoomSelectionBottomSheetState
                     child: Column(
                       children: [
                         // ── Date Range ─────────────────────────
-                         const SizedBox(height: 5),
+                        const SizedBox(height: 5),
                         TextFormField(
                           controller: _dateRangeController,
                           readOnly: true,
                           style: const TextStyle(
-    fontSize: 20,
-    fontWeight: FontWeight.bold,
-  ),
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                           decoration: InputDecoration(
                             labelText: "Select Date Range",
                             labelStyle: const TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.bold),
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
                             border: const OutlineInputBorder(),
                             suffixIcon: IconButton(
                               icon: const Icon(Icons.calendar_today),
-                              onPressed: () =>
-                                  _selectDateRange(context),
+                              onPressed: () => _selectDateRange(context),
                             ),
                           ),
                         ),
@@ -579,7 +561,6 @@ class _HotelAndRoomSelectionBottomSheetState
                                 style: const TextStyle(
                                   fontSize: 20,
                                   fontStyle: FontStyle.italic,
-                                
                                 ),
                               ),
                             ),
@@ -587,63 +568,71 @@ class _HotelAndRoomSelectionBottomSheetState
                         const SizedBox(height: 16),
 
                         // ── Counters ───────────────────────────
-                        _buildCounter(
-                            "Adults", numberOfAdults, _updateAdults),
+                        _buildCounter("Adults", numberOfAdults, _updateAdults),
                         const SizedBox(height: 16),
                         _buildCounter(
-                            "Children", numberOfChildren, _updateChildren),
+                          "Children",
+                          numberOfChildren,
+                          _updateChildren,
+                        ),
                         const SizedBox(height: 16),
-                        _buildCounter(
-                            "Rooms", numberOfRooms, _updateRooms),
+                        _buildCounter("Rooms", numberOfRooms, _updateRooms),
                         const SizedBox(height: 16),
 
                         // ── Hotel Dropdown ─────────────────────
                         DropdownSearch<Map<String, dynamic>>(
                           selectedItem: selectedHotel,
                           items: (filter, infiniteScrollProps) =>
-                              ref
-                                  .watch(hotelsProvider.notifier)
-                                  .hotelsAsMap,
-                          itemAsString: (item) =>
-                              item['HotelName'] ?? '',
-                          compareFn: (a, b) =>
-                              a['Hotel_IID'] == b['Hotel_IID'],
+                              ref.watch(hotelsProvider.notifier).hotelsAsMap,
+                          itemAsString: (item) => item['HotelName'] ?? '',
+                          compareFn: (a, b) => a['Hotel_IID'] == b['Hotel_IID'],
                           decoratorProps: const DropDownDecoratorProps(
                             decoration: InputDecoration(
                               labelText: 'Select Hotel',
-                              labelStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                              labelStyle: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
                               border: OutlineInputBorder(),
                             ),
                           ),
                           suffixProps: DropdownSuffixProps(
-    dropdownButtonProps: DropdownButtonProps(
-      iconClosed: Icon(Icons.arrow_drop_down, size: 30),
-      iconOpened: Icon(Icons.arrow_drop_up, size: 30),
-    ),
-  ),
-  // 👇 This controls the selected value text size
-  dropdownBuilder: (context, selectedItem) {
-    return Text(
-      selectedItem?['HotelName'] ?? '',
-      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-    );
-  },
+                            dropdownButtonProps: DropdownButtonProps(
+                              iconClosed: Icon(Icons.arrow_drop_down, size: 30),
+                              iconOpened: Icon(Icons.arrow_drop_up, size: 30),
+                            ),
+                          ),
+                          dropdownBuilder: (context, selectedItem) {
+                            return Text(
+                              selectedItem?['HotelName'] ?? '',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            );
+                          },
                           onChanged: _setHotel,
                           popupProps: PopupProps.dialog(
                             showSearchBox: true,
-                            searchFieldProps:
-                                const TextFieldProps(autofocus: true),
-                            itemBuilder: (context, item, isSelected,
-                                isFocused) {
-                              return ListTile(
-                                title: Text(item['HotelName'] ?? '', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                                
-                                selected: isSelected,
-                                tileColor: isFocused
-                                    ? Colors.grey.shade200
-                                    : null,
-                              );
-                            },
+                            searchFieldProps: const TextFieldProps(
+                              autofocus: true,
+                            ),
+                            itemBuilder:
+                                (context, item, isSelected, isFocused) {
+                                  return ListTile(
+                                    title: Text(
+                                      item['HotelName'] ?? '',
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    selected: isSelected,
+                                    tileColor: isFocused
+                                        ? Colors.grey.shade200
+                                        : null,
+                                  );
+                                },
                             dialogProps: DialogProps(
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -661,51 +650,64 @@ class _HotelAndRoomSelectionBottomSheetState
                               selectedItem: selectedRoomCategory,
                               items: (filter, infiniteScrollProps) =>
                                   roomCategories,
-                              itemAsString: (item) =>
-                                  item['CatName'] ?? '',
-                              compareFn: (a, b) =>
-                                  a['CatCode'] == b['CatCode'],
-                              decoratorProps:
-                                  const DropDownDecoratorProps(
+                              itemAsString: (item) => item['CatName'] ?? '',
+                              compareFn: (a, b) => a['CatCode'] == b['CatCode'],
+                              decoratorProps: const DropDownDecoratorProps(
                                 decoration: InputDecoration(
                                   labelText: 'Select Category',
-                                  labelStyle:  TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                  labelStyle: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                   border: OutlineInputBorder(),
                                 ),
                               ),
                               suffixProps: DropdownSuffixProps(
-    dropdownButtonProps: DropdownButtonProps(
-      iconClosed: Icon(Icons.arrow_drop_down, size: 30),
-      iconOpened: Icon(Icons.arrow_drop_up, size: 30),
-    ),
-  ),
-  // 👇 This controls the selected value text size
-  dropdownBuilder: (context, selectedItem) {
-    return Text(
-      selectedItem?['CatName'] ?? '',
-      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-    );
-  },
+                                dropdownButtonProps: DropdownButtonProps(
+                                  iconClosed: Icon(
+                                    Icons.arrow_drop_down,
+                                    size: 30,
+                                  ),
+                                  iconOpened: Icon(
+                                    Icons.arrow_drop_up,
+                                    size: 30,
+                                  ),
+                                ),
+                              ),
+                              dropdownBuilder: (context, selectedItem) {
+                                return Text(
+                                  selectedItem?['CatName'] ?? '',
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                );
+                              },
                               onChanged: _setRoomCategory,
                               popupProps: PopupProps.dialog(
                                 showSearchBox: true,
                                 searchFieldProps: const TextFieldProps(
-                                    autofocus: true),
-                                itemBuilder: (context, item, isSelected,
-                                    isFocused) {
-                                  return ListTile(
-                                    title:
-                                        Text(item['CatName'] ?? '',style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                                    selected: isSelected,
-                                    tileColor: isFocused
-                                        ? Colors.grey.shade200
-                                        : null,
-                                  );
-                                },
+                                  autofocus: true,
+                                ),
+                                itemBuilder:
+                                    (context, item, isSelected, isFocused) {
+                                      return ListTile(
+                                        title: Text(
+                                          item['CatName'] ?? '',
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        selected: isSelected,
+                                        tileColor: isFocused
+                                            ? Colors.grey.shade200
+                                            : null,
+                                      );
+                                    },
                                 dialogProps: DialogProps(
                                   shape: RoundedRectangleBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
                               ),
@@ -720,51 +722,61 @@ class _HotelAndRoomSelectionBottomSheetState
                           builder: (context, roomTypes, _) {
                             return DropdownSearch<Map<String, dynamic>>(
                               selectedItem: selectedRoomType,
-                              items: (filter, infiniteScrollProps) =>
-                                  roomTypes,
+                              items: (filter, infiniteScrollProps) => roomTypes,
                               itemAsString: (item) {
                                 final rt = item['RoomType'] ?? '';
                                 final mp = item['MealPlan'] ?? '';
                                 return '$rt - $mp';
                               },
                               compareFn: (a, b) => a['ID'] == b['ID'],
-                              decoratorProps:
-                                  const DropDownDecoratorProps(
+                              decoratorProps: const DropDownDecoratorProps(
                                 decoration: InputDecoration(
                                   labelText: 'Select Room Type',
-                                   labelStyle:  TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                  labelStyle: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                   border: OutlineInputBorder(),
                                 ),
                               ),
                               dropdownBuilder: (context, selectedItem) {
-        final rt = selectedItem?['RoomType'] ?? '';
-        final mp = selectedItem?['MealPlan'] ?? '';
-        return Text(
-          selectedItem == null ? '' : '$rt - $mp',
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        );
-      },
+                                final rt = selectedItem?['RoomType'] ?? '';
+                                final mp = selectedItem?['MealPlan'] ?? '';
+                                return Text(
+                                  selectedItem == null ? '' : '$rt - $mp',
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                );
+                              },
                               onChanged: _setRoomType,
                               popupProps: PopupProps.dialog(
                                 showSearchBox: true,
                                 searchFieldProps: const TextFieldProps(
-                                    autofocus: true),
-                                itemBuilder: (context, item, isSelected,
-                                    isFocused) {
-                                  final rt = item['RoomType'] ?? '';
-                                  final mp = item['MealPlan'] ?? '';
-                                  return ListTile(
-                                    title: Text('$rt - $mp', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                                    selected: isSelected,
-                                    tileColor: isFocused
-                                        ? Colors.grey.shade200
-                                        : null,
-                                  );
-                                },
+                                  autofocus: true,
+                                ),
+                                itemBuilder:
+                                    (context, item, isSelected, isFocused) {
+                                      final rt = item['RoomType'] ?? '';
+                                      final mp = item['MealPlan'] ?? '';
+                                      return ListTile(
+                                        title: Text(
+                                          '$rt - $mp',
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        selected: isSelected,
+                                        tileColor: isFocused
+                                            ? Colors.grey.shade200
+                                            : null,
+                                      );
+                                    },
                                 dialogProps: DialogProps(
                                   shape: RoundedRectangleBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
                               ),
@@ -777,8 +789,7 @@ class _HotelAndRoomSelectionBottomSheetState
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: () =>
-                                _showCostCalculator(context),
+                            onPressed: () => _showCostCalculator(context),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Constants.kPrimaryColor,
                               foregroundColor: Colors.white,
@@ -786,7 +797,9 @@ class _HotelAndRoomSelectionBottomSheetState
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               padding: const EdgeInsets.symmetric(
-                                  vertical: 16, horizontal: 20),
+                                vertical: 16,
+                                horizontal: 20,
+                              ),
                             ),
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,
@@ -796,8 +809,9 @@ class _HotelAndRoomSelectionBottomSheetState
                                 Text(
                                   "Cost Calculator",
                                   style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold),
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ],
                             ),
@@ -809,13 +823,19 @@ class _HotelAndRoomSelectionBottomSheetState
                         ValueListenableBuilder<String>(
                           valueListenable: costNotifier,
                           builder: (context, cost, _) {
+                            final hasNoCost = cost == "0";
                             return Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                "Est. Cost LKR $cost",
-                                style: const TextStyle(
+                                hasNoCost
+                                    ? "Est. Cost: No cost calculation done"
+                                    : "Est. Cost LKR $cost",
+                                style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 20,
+                                  color: hasNoCost
+                                      ? const Color.fromARGB(255, 255, 30, 0)
+                                      : Colors.black,
                                 ),
                               ),
                             );
@@ -841,14 +861,14 @@ class _HotelAndRoomSelectionBottomSheetState
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 16),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
                             ),
                             child: Text(
                               editMode ? "Update Hotel" : "Add Hotel",
                               style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold),
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),
@@ -863,19 +883,22 @@ class _HotelAndRoomSelectionBottomSheetState
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.grey,
                                 side: const BorderSide(
-                                    color: Colors.grey, width: 2),
+                                  color: Colors.grey,
+                                  width: 2,
+                                ),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                                 padding: const EdgeInsets.symmetric(
-                                    vertical: 16),
+                                  vertical: 16,
+                                ),
                               ),
                               child: const Text(
                                 "Cancel",
                                 style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),
@@ -893,209 +916,216 @@ class _HotelAndRoomSelectionBottomSheetState
                               )
                             : Column(
                                 children: hotelList.map((hotel) {
-                                  final index =
-                                      hotelList.indexOf(hotel);
+                                  final index = hotelList.indexOf(hotel);
                                   return SizedBox(
                                     width: double.infinity,
                                     child: GestureDetector(
                                       onDoubleTap: () =>
                                           _editHotel(hotel, index),
                                       child: Card(
-                                        margin:
-                                            const EdgeInsets.symmetric(
-                                                horizontal: 3,
-                                                vertical: 8),
+                                        margin: const EdgeInsets.symmetric(
+                                          horizontal: 3,
+                                          vertical: 8,
+                                        ),
                                         child: Stack(
                                           children: [
                                             Padding(
-                                              padding:
-                                                  const EdgeInsets.all(
-                                                      12.0),
+                                              padding: const EdgeInsets.all(
+                                                12.0,
+                                              ),
                                               child: Column(
                                                 crossAxisAlignment:
-                                                    CrossAxisAlignment
-                                                        .start,
+                                                    CrossAxisAlignment.start,
                                                 children: [
                                                   Text(
                                                     hotel.hotelName!,
                                                     style: const TextStyle(
-                                                        fontSize: 18,
-                                                        fontWeight:
-                                                            FontWeight
-                                                                .bold),
+                                                      fontSize: 19,
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                    ),
                                                   ),
-                                                  const SizedBox(
-                                                      height: 8),
+                                                  const SizedBox(height: 8),
                                                   RichText(
                                                     text: TextSpan(
                                                       children: [
                                                         const TextSpan(
-                                                          text:
-                                                              "Category: ",
+                                                          text: "Category: ",
                                                           style: TextStyle(
-                                                            fontSize: 16,
-                                                            color: Colors
-                                                                .black,
+                                                            fontSize: 18,
+                                                            color: Colors.black,
                                                             fontWeight:
-                                                                FontWeight
-                                                                    .w600,
+                                                                FontWeight.bold,
                                                           ),
                                                         ),
                                                         TextSpan(
                                                           text: hotel
                                                               .roomCategoryName,
-                                                          style: const TextStyle(
-                                                            fontSize: 16,
-                                                            color: Colors
-                                                                .black,
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .normal,
-                                                          ),
+                                                          style:
+                                                              const TextStyle(
+                                                                fontSize: 18,
+                                                                color: Colors
+                                                                    .black,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
                                                         ),
                                                       ],
                                                     ),
                                                   ),
-                                                  const SizedBox(
-                                                      height: 5),
+                                                  const SizedBox(height: 5),
                                                   RichText(
                                                     text: TextSpan(
                                                       children: [
                                                         const TextSpan(
-                                                          text:
-                                                              "Room Type: ",
+                                                          text: "Room Type: ",
                                                           style: TextStyle(
-                                                            fontSize: 16,
-                                                            color: Colors
-                                                                .black,
+                                                            fontSize: 18,
+                                                            color: Colors.black,
                                                             fontWeight:
-                                                                FontWeight
-                                                                    .w600,
+                                                                FontWeight.bold,
                                                           ),
                                                         ),
                                                         TextSpan(
                                                           text: hotel
                                                               .roomTypeName,
-                                                          style: const TextStyle(
-                                                            fontSize: 16,
-                                                            color: Colors
-                                                                .black,
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .normal,
-                                                          ),
+                                                          style:
+                                                              const TextStyle(
+                                                                fontSize: 18,
+                                                                color: Colors
+                                                                    .black,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
                                                         ),
                                                       ],
                                                     ),
-                                                  ),   const SizedBox(
-                                                      height: 5),
-                                                   RichText(
+                                                  ),
+                                                  const SizedBox(height: 5),
+                                                  RichText(
                                                     text: TextSpan(
                                                       children: [
                                                         const TextSpan(
                                                           text:
                                                               "Arrival Date: ",
                                                           style: TextStyle(
-                                                            fontSize: 16,
-                                                            color: Colors
-                                                                .black,
+                                                            fontSize: 18,
+                                                            color: Colors.black,
                                                             fontWeight:
-                                                                FontWeight
-                                                                    .w600,
+                                                                FontWeight.bold,
                                                           ),
                                                         ),
                                                         TextSpan(
-                                                          text: hotel
-                                                              .arrivalDate !=
-                                                              null
+                                                          text:
+                                                              hotel.arrivalDate !=
+                                                                  null
                                                               ? DateFormat(
-                                                                      'yyyy-MM-dd')
-                                                                  .format(hotel
-                                                                      .arrivalDate!)
+                                                                  'yyyy-MM-dd',
+                                                                ).format(
+                                                                  hotel
+                                                                      .arrivalDate!,
+                                                                )
                                                               : '',
-                                                          style: const TextStyle(
-                                                            fontSize: 16,
-                                                            color: Colors
-                                                                .black,
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .normal,
-                                                          ),
+                                                          style:
+                                                              const TextStyle(
+                                                                fontSize: 18,
+                                                                color: Colors
+                                                                    .black,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
                                                         ),
                                                       ],
                                                     ),
                                                   ),
-                                                   const SizedBox(
-                                                      height: 5),
-                                                   RichText(
+                                                  const SizedBox(height: 5),
+                                                  RichText(
                                                     text: TextSpan(
                                                       children: [
                                                         const TextSpan(
                                                           text:
                                                               "Departure Date: ",
                                                           style: TextStyle(
-                                                            fontSize: 16,
-                                                            color: Colors
-                                                                .black,
+                                                            fontSize: 18,
+                                                            color: Colors.black,
                                                             fontWeight:
-                                                                FontWeight
-                                                                    .w600,
+                                                                FontWeight.bold,
                                                           ),
                                                         ),
                                                         TextSpan(
-                                                          text: hotel
-                                                              .arrivalDate !=
-                                                              null
+                                                          text:
+                                                              hotel.arrivalDate !=
+                                                                  null
                                                               ? DateFormat(
-                                                                      'yyyy-MM-dd')
-                                                                  .format(hotel
-                                                                      .departureDate!)
+                                                                  'yyyy-MM-dd',
+                                                                ).format(
+                                                                  hotel
+                                                                      .departureDate!,
+                                                                )
                                                               : '',
-                                                          style: const TextStyle(
-                                                            fontSize: 16,
-                                                            color: Colors
-                                                                .black,
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .normal,
-                                                          ),
+                                                          style:
+                                                              const TextStyle(
+                                                                fontSize: 18,
+                                                                color: Colors
+                                                                    .black,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
                                                         ),
                                                       ],
                                                     ),
                                                   ),
-                                               
-                                                  const SizedBox(
-                                                      height: 8),
+                                                  const SizedBox(height: 8),
                                                   Row(
                                                     children: [
                                                       Text(
                                                         "Guest Count: ${hotel.guestCount}",
                                                         style: const TextStyle(
-                                                            fontSize:
-                                                                16),
+                                                          fontSize: 18,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
                                                       ),
-                                                      const SizedBox(
-                                                          width: 20),
+                                                      const SizedBox(width: 20),
                                                       Text(
                                                         "Nights: ${hotel.noOfNights}",
                                                         style: const TextStyle(
-                                                            fontSize:
-                                                                16),
+                                                          fontSize: 18,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
                                                       ),
                                                     ],
                                                   ),
-                                                  const SizedBox(
-                                                      height: 8),
-                                                  Text(
-                                                    "Estimated Cost: ${hotel.selectedCost}",
-                                                    style: const TextStyle(
-                                                        fontSize: 16,
-                                                        fontWeight:
-                                                            FontWeight
-                                                                .bold),
+                                                  const SizedBox(height: 8),
+
+                                                  // ── Cost display with soft warning ──
+                                                  Builder(
+                                                    builder: (context) {
+                                                      final hasNoCost =
+                                                          hotel.selectedCost ==
+                                                              null ||
+                                                          hotel.selectedCost ==
+                                                              "0";
+                                                      return Text(
+                                                        hasNoCost
+                                                            ? "Estimated Cost: No cost calculation done"
+                                                            : "Estimated Cost: LKR ${hotel.selectedCost}",
+                                                        style: TextStyle(
+                                                          fontSize: 16,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color: hasNoCost
+                                                              ? const Color.fromARGB(255, 255, 30, 0)
+                                                              : Colors.black,
+                                                        ),
+                                                      );
+                                                    },
                                                   ),
-                                                  const SizedBox(
-                                                      height: 24),
+
+                                                  const SizedBox(height: 24),
                                                   const Text(
                                                     "Double-tap to edit",
                                                     style: TextStyle(
@@ -1113,8 +1143,9 @@ class _HotelAndRoomSelectionBottomSheetState
                                               right: 0,
                                               child: IconButton(
                                                 icon: const Icon(
-                                                    Icons.delete,
-                                                    color: Colors.red),
+                                                  Icons.delete,
+                                                  color: Colors.red,
+                                                ),
                                                 onPressed: () =>
                                                     _removeHotel(index),
                                               ),
@@ -1133,16 +1164,20 @@ class _HotelAndRoomSelectionBottomSheetState
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed:hotelList.isNotEmpty ? _acceptChanges : null,
+                            onPressed: hotelList.isNotEmpty
+                                ? _acceptChanges
+                                : null,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Constants.kSecondaryColor,
                               foregroundColor: Colors.white,
-                               disabledBackgroundColor: Colors.grey.shade300,
+                              disabledBackgroundColor: Colors.grey.shade300,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               padding: const EdgeInsets.symmetric(
-                                  vertical: 16, horizontal: 20),
+                                vertical: 16,
+                                horizontal: 20,
+                              ),
                             ),
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,
@@ -1152,8 +1187,9 @@ class _HotelAndRoomSelectionBottomSheetState
                                 Text(
                                   "Accept Changes",
                                   style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ],
                             ),
@@ -1222,8 +1258,7 @@ class _CostCalculatorBottomSheetState extends State<CostCalculatorBottomSheet>
             children: [
               const Text(
                 "Cost Calculator",
-                style:
-                    TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               IconButton(
                 icon: const Icon(Icons.arrow_back),
@@ -1279,12 +1314,16 @@ class _CostCalculatorBottomSheetState extends State<CostCalculatorBottomSheet>
                                       Text(
                                         "Check-In: ${DateFormat('yyyy-MM-dd').format(DateTime.parse(cost.checkIn!))}",
                                         style: const TextStyle(
-                                            fontSize: 17,fontWeight: FontWeight.bold),
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                       Text(
                                         "Check-Out: ${DateFormat('yyyy-MM-dd').format(DateTime.parse(cost.checkOut!))}",
                                         style: const TextStyle(
-                                            fontSize: 17,fontWeight: FontWeight.bold),
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -1294,9 +1333,9 @@ class _CostCalculatorBottomSheetState extends State<CostCalculatorBottomSheet>
                                       Text(
                                         cost.netRate!.toStringAsFixed(2),
                                         style: const TextStyle(
-                                            fontSize: 17,
-                                            fontWeight:
-                                                FontWeight.bold),
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ],
                                   ),

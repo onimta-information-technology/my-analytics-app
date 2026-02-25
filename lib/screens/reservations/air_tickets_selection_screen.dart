@@ -141,10 +141,8 @@ class _AirTicketsSelectionScreenState
       setState(() {
         selectedDateRange = pickedDateRange;
         numberOfNights = pickedDateRange.duration.inDays;
-
         arrivalDate = pickedDateRange.start;
         departureDate = pickedDateRange.end;
-
         _dateRangeController.text =
             "${DateFormat('yyyy-MM-dd').format(pickedDateRange.start)} - ${DateFormat('yyyy-MM-dd').format(pickedDateRange.end)}";
       });
@@ -182,8 +180,8 @@ class _AirTicketsSelectionScreenState
   Future<void> getSelectedHotelRoomCategories(double hotelId,
       {bool clearSelection = true}) async {
     try {
-      final response = await widget.airportRepository
-          .getSelectedHotelRoomCategories(hotelId);
+      final response =
+          await widget.airportRepository.getSelectedHotelRoomCategories(hotelId);
       roomCategoriesNotifier.value =
           response.map((category) => category.toJson()).toList();
 
@@ -201,7 +199,8 @@ class _AirTicketsSelectionScreenState
     }
   }
 
-  Future<void> getSelectedHotelCategoryRoomTypes(double hotelId, int categoryId,
+  Future<void> getSelectedHotelCategoryRoomTypes(
+      double hotelId, int categoryId,
       {bool clearSelection = true}) async {
     try {
       final response = await widget.airportRepository
@@ -241,8 +240,6 @@ class _AirTicketsSelectionScreenState
       roomCategoriesNotifier.value = [];
       roomTypesNotifier.value = [];
       getSelectedHotelRoomCategories(selectedHotelId!);
-    } else {
-      // ref.read(roomCategoryProvider.notifier).state = []; // Reset categories
     }
   }
 
@@ -255,8 +252,6 @@ class _AirTicketsSelectionScreenState
       roomTypesNotifier.value = [];
       getSelectedHotelCategoryRoomTypes(
           selectedHotelId!, selectedRoomCategoryId!);
-    } else {
-      // ref.read(roomCategoryProvider.notifier).state = []; // Reset categories
     }
   }
 
@@ -273,7 +268,6 @@ class _AirTicketsSelectionScreenState
     setState(() {
       costIndex = index;
       double calculation = cost.cost! * numberOfGuests;
-
       costNotifier.value = NumberFormat().format(calculation.round());
     });
   }
@@ -311,7 +305,6 @@ class _AirTicketsSelectionScreenState
 
       costNotifier.value = flight.selectedCost;
     });
-
   }
 
   void _removeFlight(int index) {
@@ -330,12 +323,7 @@ class _AirTicketsSelectionScreenState
       return;
     }
 
-    if (costNotifier.value == "0") {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please calculate the cost to proceed.")),
-      );
-      return;
-    }
+    // Cost is optional — no blocking if not calculated
 
     final FlightAirport airport = FlightAirport(
         departure: Departure(
@@ -472,131 +460,101 @@ class _AirTicketsSelectionScreenState
       }
 
       ref.read(airportsProvider.notifier).filterAirports("");
-
-      // showModalBottomSheet(
-      //   context: context,
-      //   isScrollControlled: true,
-      //   shape: const RoundedRectangleBorder(
-      //     borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      //   ),
-      //   builder: (BuildContext context) {
-      //     return AirportSearchBottomSheet(onAirportSelected: onAirportSelected);
-      //   },
-      // );
-    } catch (e) {
-   
-    }
+    } catch (e) {}
   }
 
-  // Future<void> _selectDate(
-  //     BuildContext context, TextEditingController controller) async {
-  //   DateTime? pickedDate = await showDatePicker(
-  //     context: context,
-  //     initialDate: DateTime.now(),
-  //     firstDate: DateTime.now().subtract(const Duration(days: 0)),
-  //     lastDate: DateTime.now().add(const Duration(days: 365)),
-  //   );
+  Future<void> _selectDate(
+      BuildContext context, TextEditingController controller) async {
+    final now = DateTime(
+      DateTime.now().year,
+      DateTime.now().month,
+      DateTime.now().day,
+    );
 
-  //   if (pickedDate != null) {
-  //     setState(() {
-  //       controller.text = "${pickedDate.toLocal()}".split(' ')[0];
-  //     });
-  //   }
-  // }
-Future<void> _selectDate(
-    BuildContext context, TextEditingController controller) async {
-  // Truncate to date only to avoid millisecond timing issues
-  final now = DateTime(
-    DateTime.now().year,
-    DateTime.now().month,
-    DateTime.now().day,
-  );
+    DateTime selectedDate = now;
 
-  DateTime selectedDate = now;
-
-  await showModalBottomSheet(
-    context: context,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-    ),
-    builder: (BuildContext context) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Text(
-              controller == _arrivalDateController
-                  ? "Select Arrival Date"
-                  : "Select Departure Date",
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade600,
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                controller == _arrivalDateController
+                    ? "Select Arrival Date"
+                    : "Select Departure Date",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey.shade600,
+                ),
               ),
             ),
-          ),
-          SizedBox(
-            height: 200,
-            child: CupertinoDatePicker(
-              mode: CupertinoDatePickerMode.date,
-              initialDateTime: now,          // ← use truncated 'now'
-              minimumDate: now,              // ← same truncated 'now'
-              maximumDate: DateTime(
-                now.year + 1,
-                now.month,
-                now.day,
+            SizedBox(
+              height: 200,
+              child: CupertinoDatePicker(
+                mode: CupertinoDatePickerMode.date,
+                initialDateTime: now,
+                minimumDate: now,
+                maximumDate: DateTime(
+                  now.year + 1,
+                  now.month,
+                  now.day,
+                ),
+                onDateTimeChanged: (DateTime newDate) {
+                  selectedDate = newDate;
+                },
               ),
-              onDateTimeChanged: (DateTime newDate) {
-                selectedDate = newDate;
-              },
             ),
-          ),
-          const Divider(height: 1),
-          TextButton(
-            onPressed: () {
-              // Validate departure is after arrival
-              if (controller == _departureDateController &&
-                  _arrivalDateController.text.isNotEmpty) {
-                final arrivalParsed = DateFormat('yyyy-MM-dd')
-                    .parse(_arrivalDateController.text);
-                if (!selectedDate.isAfter(arrivalParsed)) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Departure date must be after arrival date',
+            const Divider(height: 1),
+            TextButton(
+              onPressed: () {
+                if (controller == _departureDateController &&
+                    _arrivalDateController.text.isNotEmpty) {
+                  final arrivalParsed = DateFormat('yyyy-MM-dd')
+                      .parse(_arrivalDateController.text);
+                  if (!selectedDate.isAfter(arrivalParsed)) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Departure date must be after arrival date',
+                        ),
+                        backgroundColor: Colors.red,
                       ),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                  return;
+                    );
+                    return;
+                  }
                 }
-              }
-              setState(() {
-                controller.text =
-                    DateFormat('yyyy-MM-dd').format(selectedDate);
-              });
-              Navigator.of(context).pop();
-            },
-            child: const Text(
-              "Confirm",
-              style: TextStyle(fontSize: 18, color: Colors.blue),
+                setState(() {
+                  controller.text = DateFormat('yyyy-MM-dd').format(selectedDate);
+                });
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                "Confirm",
+                style: TextStyle(fontSize: 18, color: Colors.blue),
+              ),
             ),
-          ),
-          const Divider(height: 1),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text(
-              "Cancel",
-              style: TextStyle(fontSize: 18, color: Colors.blue),
+            const Divider(height: 1),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                "Cancel",
+                style: TextStyle(fontSize: 18, color: Colors.blue),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-        ],
-      );
-    },
-  );
-}
+            const SizedBox(height: 8),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildCounter(
       String label, int count, int type, Function(int) onCountChange) {
     return Column(
@@ -652,7 +610,6 @@ Future<void> _selectDate(
 
   @override
   Widget build(BuildContext context) {
-    // final roomCategories = ref.watch(roomCategoryProvider);
     final hotelsDropDownKey = GlobalKey<DropdownSearchState>();
     final roomCategoriesDropDownKey = GlobalKey<DropdownSearchState>();
     final roomTypeDropDownKey = GlobalKey<DropdownSearchState>();
@@ -684,7 +641,8 @@ Future<void> _selectDate(
                         alignment: Alignment.topLeft,
                         child: Text(
                           "Departure",
-                          style: TextStyle(fontWeight: FontWeight.bold,fontSize: 17),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 17),
                         ),
                       ),
                       const SizedBox(height: 5),
@@ -753,7 +711,8 @@ Future<void> _selectDate(
                               alignment: Alignment.topLeft,
                               child: Text(
                                 "Return",
-                                style: TextStyle(fontWeight: FontWeight.bold,fontSize: 17),
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 17),
                               ),
                             ),
                             const SizedBox(height: 5),
@@ -810,7 +769,10 @@ Future<void> _selectDate(
                         readOnly: true,
                         decoration: InputDecoration(
                           labelText: "Arrival Date",
-                          labelStyle: TextStyle(fontSize: 20, color: const Color.fromARGB(255, 0, 0, 0),fontWeight: FontWeight.bold),
+                          labelStyle: const TextStyle(
+                              fontSize: 20,
+                              color: Color.fromARGB(255, 0, 0, 0),
+                              fontWeight: FontWeight.bold),
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8.0)),
                           prefixIcon: const Icon(Icons.calendar_today),
@@ -823,7 +785,6 @@ Future<void> _selectDate(
                           children: [
                             Checkbox(
                               value: _isSameAsHotelForArrival,
-                              
                               onChanged: (value) {
                                 setState(() {
                                   _isSameAsHotelForArrival = value!;
@@ -834,7 +795,8 @@ Future<void> _selectDate(
                                 });
                               },
                             ),
-                            const Text("Same as flight reservation",style: TextStyle(fontSize: 18)),
+                            const Text("Same as flight reservation",
+                                style: TextStyle(fontSize: 18)),
                           ],
                         ),
                       const SizedBox(height: 16),
@@ -843,7 +805,10 @@ Future<void> _selectDate(
                         readOnly: true,
                         decoration: InputDecoration(
                           labelText: "Departure Date",
-                          labelStyle: TextStyle(fontSize: 20, color: const Color.fromARGB(255, 0, 0, 0),fontWeight: FontWeight.bold),
+                          labelStyle: const TextStyle(
+                              fontSize: 20,
+                              color: Color.fromARGB(255, 0, 0, 0),
+                              fontWeight: FontWeight.bold),
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8.0)),
                           prefixIcon: const Icon(Icons.calendar_today),
@@ -867,7 +832,8 @@ Future<void> _selectDate(
                                 });
                               },
                             ),
-                        const Text("Same as flight reservation",style: TextStyle(fontSize: 18)),
+                            const Text("Same as flight reservation",
+                                style: TextStyle(fontSize: 18)),
                           ],
                         ),
                       const SizedBox(height: 16),
@@ -877,7 +843,7 @@ Future<void> _selectDate(
                           "Silk Route Facility",
                           style: TextStyle(
                             fontSize: 18,
-                               fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
@@ -892,10 +858,7 @@ Future<void> _selectDate(
                               });
                             },
                           ),
-                          const Text(
-                            "Yes",
-                            style: TextStyle(fontSize: 16),
-                          ),
+                          const Text("Yes", style: TextStyle(fontSize: 16)),
                           Radio<String>(
                             value: "No",
                             groupValue: _silkRouteFacility,
@@ -905,10 +868,7 @@ Future<void> _selectDate(
                               });
                             },
                           ),
-                          const Text(
-                            "No",
-                            style: TextStyle(fontSize: 16),
-                          ),
+                          const Text("No", style: TextStyle(fontSize: 16)),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -933,10 +893,7 @@ Future<void> _selectDate(
                               });
                             },
                           ),
-                          const Text(
-                            "Yes",
-                            style: TextStyle(fontSize: 16),
-                          ),
+                          const Text("Yes", style: TextStyle(fontSize: 16)),
                           Radio<String>(
                             value: "No",
                             groupValue: _airportTranspotation,
@@ -946,10 +903,7 @@ Future<void> _selectDate(
                               });
                             },
                           ),
-                          const Text(
-                            "No",
-                            style: TextStyle(fontSize: 16),
-                          ),
+                          const Text("No", style: TextStyle(fontSize: 16)),
                         ],
                       ),
                       const SizedBox(height: 35),
@@ -985,22 +939,31 @@ Future<void> _selectDate(
                         ),
                       ),
                       const SizedBox(height: 16),
+
+                      // ── Estimated Cost with soft warning ──────
                       Row(
                         children: [
                           ValueListenableBuilder<String>(
                             valueListenable: costNotifier,
                             builder: (context, cost, child) {
+                              final hasNoCost = cost == "0";
                               return Text(
-                                "Est. Cost LKR $cost",
-                                style: const TextStyle(
+                                hasNoCost
+                                    ? "Est. Cost: No cost calculation done"
+                                    : "Est. Cost LKR $cost",
+                                style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15,
+                                  color: hasNoCost
+                                      ? Colors.red
+                                      : Colors.black,
                                 ),
                               );
                             },
                           ),
                         ],
                       ),
+
                       const SizedBox(height: 16),
                       Align(
                         alignment: Alignment.bottomCenter,
@@ -1076,9 +1039,7 @@ Future<void> _selectDate(
                               : null,
                         ),
                       ),
-                      const SizedBox(
-                        height: 16,
-                      ),
+                      const SizedBox(height: 16),
                       flightList.isEmpty
                           ? const Center(
                               heightFactor: 6.0,
@@ -1115,21 +1076,19 @@ Future<void> _selectDate(
                                 ),
                               ),
                             ),
-                      const SizedBox(
-                        height: 16,
-                      ),
+                      const SizedBox(height: 16),
                       AnimatedOpacity(
-                        // opacity: flightList.isNotEmpty ? 1.0 : 0.0,
                         opacity: 1.0,
                         duration: const Duration(milliseconds: 300),
                         child: SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed:  flightList.isNotEmpty ? _acceptChanges : null,
+                            onPressed:
+                                flightList.isNotEmpty ? _acceptChanges : null,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Constants.kSecondaryColor,
                               foregroundColor: Colors.white,
-                               disabledBackgroundColor: Colors.grey.shade300,
+                              disabledBackgroundColor: Colors.grey.shade300,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -1165,6 +1124,10 @@ Future<void> _selectDate(
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Cost Calculator Bottom Sheet
+// ─────────────────────────────────────────────────────────────────────────────
 
 class CostCalculatorBottomSheet extends StatefulWidget {
   final Function onBackPressed;
@@ -1226,7 +1189,7 @@ class _CostCalculatorBottomSheetState extends State<CostCalculatorBottomSheet>
               Tab(text: "Guest's Prev Data"),
             ],
             labelColor: Colors.black,
-            indicatorColor: Theme.of(context).primaryColor,
+            indicatorColor: Colors.blue,
           ),
           const SizedBox(height: 16),
           Expanded(

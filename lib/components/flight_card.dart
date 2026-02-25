@@ -48,7 +48,7 @@ class FlightCard extends StatelessWidget {
                                 Text(
                                   "${flight.airports!.departure!.dFrom.airportCode} → ${flight.airports!.departure!.dTo.airportCode}",
                                   style: const TextStyle(
-                                    fontSize: 17,
+                                    fontSize: 19,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -66,7 +66,7 @@ class FlightCard extends StatelessWidget {
                                   Text(
                                     "${flight.airports!.returnFlight!.rFrom.airportCode} → ${flight.airports!.returnFlight!.rTo.airportCode}",
                                     style: const TextStyle(
-                                      fontSize: 17,
+                                      fontSize: 19,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -76,7 +76,7 @@ class FlightCard extends StatelessWidget {
                             Text(
                               "Class: ${flight.airTicketClassName}",
                               style: const TextStyle(
-                                fontSize: 17,
+                                fontSize: 19,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -90,7 +90,7 @@ class FlightCard extends StatelessWidget {
                             const Text(
                               "Guests",
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 19,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -98,7 +98,7 @@ class FlightCard extends StatelessWidget {
                             Text(
                               "${flight.guestCount}",
                               style: const TextStyle(
-                                fontSize: 16,
+                                fontSize: 19,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -110,7 +110,7 @@ class FlightCard extends StatelessWidget {
                     Text(
                       "Arrival Date: ${flight.arrivalDate != null ? DateFormat('yyyy-MM-dd').format(flight.departureDate!) : 'N/A'}",
                       style: const TextStyle(
-                        fontSize: 17,
+                        fontSize: 19,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -118,7 +118,7 @@ class FlightCard extends StatelessWidget {
                     Text(
                       "Departure Date: ${flight.departureDate != null ? DateFormat('yyyy-MM-dd').format(flight.departureDate!) : 'N/A'}",
                       style: const TextStyle(
-                        fontSize: 17,
+                        fontSize: 19,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -126,7 +126,7 @@ class FlightCard extends StatelessWidget {
                     Text(
                       "Estimated Cost: ${flight.selectedCost}",
                       style: const TextStyle(
-                        fontSize: 17,
+                        fontSize: 19,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

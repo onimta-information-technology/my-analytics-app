@@ -35,6 +35,7 @@ class ViewGuestBooking extends ConsumerStatefulWidget {
 
 class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
   final TextEditingController _memberIdController = TextEditingController();
+  final TextEditingController _memberNameController = TextEditingController();
   final TextEditingController _pkgStartController = TextEditingController();
   final TextEditingController _pkgEndController = TextEditingController();
   final TextEditingController _insertDateController = TextEditingController();
@@ -51,6 +52,7 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
     if (widget.booking != null) {
       final booking = widget.booking!;
       _memberIdController.text = booking.mid;
+      _memberNameController.text = booking.mname;
       _pkgStartController.text = _formatDate(booking.pkgStart);
       _pkgEndController.text = _formatDate(booking.pkgEnd);
       _insertDateController.text = _formatDateTime(booking.insertDate);
@@ -81,7 +83,7 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
             .setSelectedGuest(
               Guest(
                 mid: guestResponse.mid ?? _memberIdController.text,
-                memberName: guestResponse.mName ?? "",
+                memberName: _memberNameController.text ?? "",
                 country: "",
                 lastVisitDate: guestResponse.lvd?.toString() ?? "",
 
@@ -229,7 +231,27 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
                     showLastVisitDate: true,
                   ),
 
-                  const SizedBox(height: 16.0),
+                  // const SizedBox(height: 16.0),
+                  //  TextFormField(
+                  //   controller: _memberNameController,
+                  //   readOnly: true,
+                  //   style: _inputTextStyle(fontSettings),
+                  //   decoration: InputDecoration(
+                  //     labelText: "Member Name",
+                  //     labelStyle: TextStyle(
+                  //       color: const Color.fromARGB(255, 0, 0, 0),
+                  //       fontSize: fontSettings.fontSize,
+                  //       fontWeight: fontSettings.fontWeight,
+                  //     ),
+                  //    // prefixIcon: const Icon(Icons.person, color: Colors.red),
+                  //     border: const OutlineInputBorder(),
+                  //     contentPadding: const EdgeInsets.symmetric(
+                  //       horizontal: 12.0,
+                  //       vertical: -5.0,
+                  //     ),
+                  //   ),
+                  // ),
+                  const SizedBox(height: 16),
                   // Member ID
                   // TextFormField(
                   //   controller: _memberIdController,
@@ -265,7 +287,7 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
                           decoration: InputDecoration(
                             labelText: "Member ID",
                             labelStyle: TextStyle(
-                               color: const Color.fromARGB(255, 0, 0, 0),
+                              color: const Color.fromARGB(255, 0, 0, 0),
                               fontSize: fontSettings.fontSize,
                               fontWeight: fontSettings.fontWeight,
                             ),
@@ -334,7 +356,7 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
                     decoration: InputDecoration(
                       labelText: "Arrival Date",
                       labelStyle: TextStyle(
-                         color: const Color.fromARGB(255, 0, 0, 0),
+                        color: const Color.fromARGB(255, 0, 0, 0),
                         fontSize: fontSettings.fontSize,
                         fontWeight: fontSettings.fontWeight,
                       ),

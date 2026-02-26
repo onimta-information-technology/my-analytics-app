@@ -230,11 +230,11 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
                 horizontal: 16,
               ),
               title: Text(
-                booking.mid,
+                '${booking.mid} - ${booking.mname}',
                 style: TextStyle(
                   color: const Color.fromARGB(255, 0, 0, 0),
                   fontSize: fontSettings.fontSize + 2,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
               subtitle: Column(

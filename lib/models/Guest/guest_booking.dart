@@ -5,7 +5,7 @@ class GuestBooking {
   final String pkgEnd;
   final bool pkgStatus;
   final String insertDate;
-
+  final String mname;
   GuestBooking({
     required this.idNo,
     required this.mid,
@@ -13,6 +13,7 @@ class GuestBooking {
     required this.pkgEnd,
     required this.pkgStatus,
     required this.insertDate,
+    this.mname = '',
   });
 
   factory GuestBooking.fromJson(Map<String, dynamic> json) {
@@ -23,6 +24,7 @@ class GuestBooking {
       pkgEnd: json['Pkg_End'] ?? '',
       pkgStatus: json['Pkg_Status'] ?? false,
       insertDate: json['InsertDate'] ?? '',
+      mname: json['MName'] ?? '',
     );
   }
 
@@ -34,6 +36,7 @@ class GuestBooking {
       'Pkg_End': pkgEnd,
       'Pkg_Status': pkgStatus,
       'InsertDate': insertDate,
+      'MName': mname,
     };
   }
 }

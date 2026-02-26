@@ -74,19 +74,30 @@ class BirthdayGiftIncreasePdfService {
     }
   }
 
-  static Future<void> _shareOnAndroid(
-    File pdfFile,
-    String message,
-    String memberName,
-  ) async {
-    await Share.shareXFiles(
-      [XFile(pdfFile.path, mimeType: 'application/pdf')],
-      text: message,
-      subject: 'Birthday Gift Increase - $memberName PDF',
-      sharePositionOrigin: const Rect.fromLTWH(0, 0, 1, 1),
-    );
-  }
-
+  // static Future<void> _shareOnAndroid(
+  //   File pdfFile,
+  //   String message,
+  //   String memberName,
+  // ) async {
+  //   await Share.shareXFiles(
+  //     [XFile(pdfFile.path, mimeType: 'application/pdf')],
+  //     text: message,
+  //     subject: 'Birthday Gift Increase - $memberName PDF',
+  //     sharePositionOrigin: const Rect.fromLTWH(0, 0, 1, 1),
+  //   );
+  // }
+static Future<void> _shareOnAndroid(
+  File pdfFile,
+  String message,
+  String memberName,
+) async {
+  await Share.share(message, subject: 'Birthday Gift Increase - $memberName');
+  await Future.delayed(const Duration(milliseconds: 500));
+  await Share.shareXFiles(
+    [XFile(pdfFile.path, mimeType: 'application/pdf')],
+    subject: 'Birthday Gift Increase - $memberName PDF',
+  );
+}
   static Future<pw.Document> _generatePdf({
     required String memberName,
     required String memberId,

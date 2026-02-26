@@ -61,7 +61,7 @@ class _BirthdayGiftPriceIncreaseScreenState
     super.initState();
     _loadUserCredentials();
     _initializeMemberData();
-    
+
     Future.microtask(() {
       ref.read(selectedGuestProvider.notifier).clearGuest();
       ref.read(giftProvider.notifier).getGiftForList();
@@ -91,12 +91,12 @@ class _BirthdayGiftPriceIncreaseScreenState
           memImage2: null,
         ),
       );
-      
+
       await ref.read(selectedGuestProvider.notifier).getGuestImage(
-        9021,
-        widget.birthday.mid,
-      );
-      
+            9021,
+            widget.birthday.mid,
+          );
+
       setState(() {
         _isLoadingGuestCard = false;
       });
@@ -125,6 +125,7 @@ class _BirthdayGiftPriceIncreaseScreenState
     FocusScope.of(context).unfocus();
   }
 
+  // ── Date picker (date only) ────────────────────────────────────────────────
   Future<void> _pickDate(
     BuildContext context,
     TextEditingController controller,
@@ -185,8 +186,12 @@ class _BirthdayGiftPriceIncreaseScreenState
         );
       },
     );
+
+    // ✅ FIX: rebuild so _areRequiredFieldsFilled re-evaluates → button colors update
+    setState(() {});
   }
 
+  // ── Date + Time picker ────────────────────────────────────────────────────
   Future<void> _pickDateTime(
     BuildContext context,
     TextEditingController controller,
@@ -214,9 +219,18 @@ class _BirthdayGiftPriceIncreaseScreenState
             FixedExtentScrollController(initialItem: year - 2000);
 
         final List<String> monthNames = [
-          "January", "February", "March", "April",
-          "May", "June", "July", "August",
-          "September", "October", "November", "December"
+          "January",
+          "February",
+          "March",
+          "April",
+          "May",
+          "June",
+          "July",
+          "August",
+          "September",
+          "October",
+          "November",
+          "December",
         ];
 
         return StatefulBuilder(
@@ -228,7 +242,8 @@ class _BirthdayGiftPriceIncreaseScreenState
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   child: Text(
                     "Select Date",
-                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                    style:
+                        TextStyle(fontSize: 16, color: Colors.grey.shade600),
                   ),
                 ),
                 SizedBox(
@@ -361,7 +376,8 @@ class _BirthdayGiftPriceIncreaseScreenState
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (BuildContext context) {
-        int hour = selectedTime.hourOfPeriod == 0 ? 12 : selectedTime.hourOfPeriod;
+        int hour =
+            selectedTime.hourOfPeriod == 0 ? 12 : selectedTime.hourOfPeriod;
         int minute = selectedTime.minute;
         DayPeriod period = selectedTime.period;
 
@@ -382,7 +398,8 @@ class _BirthdayGiftPriceIncreaseScreenState
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   child: Text(
                     "Select Time",
-                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                    style:
+                        TextStyle(fontSize: 16, color: Colors.grey.shade600),
                   ),
                 ),
                 SizedBox(
@@ -463,7 +480,8 @@ class _BirthdayGiftPriceIncreaseScreenState
                               diameterRatio: 1.5,
                               physics: const FixedExtentScrollPhysics(),
                               onSelectedItemChanged: (index) {
-                                period = index == 0 ? DayPeriod.am : DayPeriod.pm;
+                                period =
+                                    index == 0 ? DayPeriod.am : DayPeriod.pm;
                               },
                               childDelegate: ListWheelChildBuilderDelegate(
                                 childCount: 2,
@@ -523,13 +541,18 @@ class _BirthdayGiftPriceIncreaseScreenState
     if (timePicked == null) return;
     selectedTime = timePicked;
 
-    final hour12 = selectedTime.hourOfPeriod == 0 ? 12 : selectedTime.hourOfPeriod;
+    final hour12 =
+        selectedTime.hourOfPeriod == 0 ? 12 : selectedTime.hourOfPeriod;
     final minuteStr = selectedTime.minute.toString().padLeft(2, '0');
-    final periodStr = selectedTime.period == DayPeriod.am ? "AM" : "PM";
+    final periodStr =
+        selectedTime.period == DayPeriod.am ? "AM" : "PM";
 
     controller.text =
         "${selectedDate.day}/${selectedDate.month}/${selectedDate.year} "
         "${hour12.toString().padLeft(2, '0')}:$minuteStr $periodStr";
+
+    // ✅ FIX: rebuild so _areRequiredFieldsFilled re-evaluates → button colors update
+    setState(() {});
   }
 
   TextStyle _inputTextStyle(FontSettings fontSettings) {
@@ -596,6 +619,7 @@ class _BirthdayGiftPriceIncreaseScreenState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // ── Guest Card ────────────────────────────────────
                         GuestDisplayCardSpecialGiftview(
                           memberIdText: _memberIdController.text,
                           memberNameText: _memberNameController.text,
@@ -606,6 +630,7 @@ class _BirthdayGiftPriceIncreaseScreenState
 
                         const SizedBox(height: 16.0),
 
+                        // ── Current Gift Value Card (top) ─────────────────
                         Card(
                           elevation: 2,
                           color: Colors.green.shade50,
@@ -623,7 +648,8 @@ class _BirthdayGiftPriceIncreaseScreenState
                                       'Current Gift Value:',
                                       style: TextStyle(
                                         fontSize: fontSettings.fontSize - 2,
-                                        color: const Color.fromARGB(255, 0, 0, 0),
+                                        color:
+                                            const Color.fromARGB(255, 0, 0, 0),
                                       ),
                                     ),
                                     Text(
@@ -643,6 +669,7 @@ class _BirthdayGiftPriceIncreaseScreenState
 
                         const SizedBox(height: 16.0),
 
+                        // ── From Date & Time ──────────────────────────────
                         TextFormField(
                           controller: _fromDateController,
                           readOnly: true,
@@ -667,6 +694,7 @@ class _BirthdayGiftPriceIncreaseScreenState
 
                         const SizedBox(height: 10.0),
 
+                        // ── To Date & Time ────────────────────────────────
                         TextFormField(
                           controller: _toDateController,
                           readOnly: true,
@@ -691,8 +719,10 @@ class _BirthdayGiftPriceIncreaseScreenState
 
                         const SizedBox(height: 10.0),
 
+                        // ── Action Buttons Row ────────────────────────────
                         Row(
                           children: [
+                            // Profile button
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.black,
@@ -714,7 +744,8 @@ class _BirthdayGiftPriceIncreaseScreenState
                                       try {
                                         setState(() => _isLoading = true);
                                         ref
-                                            .read(selectedGuestProvider.notifier)
+                                            .read(
+                                                selectedGuestProvider.notifier)
                                             .setSelectedGuest(Guest(
                                               mid: widget.birthday.mid,
                                               memberName: widget.birthday.mname,
@@ -739,10 +770,14 @@ class _BirthdayGiftPriceIncreaseScreenState
                                       width: 20,
                                       height: 20,
                                       child: CircularProgressIndicator(
-                                          strokeWidth: 2, color: Colors.white))
+                                          strokeWidth: 2,
+                                          color: Colors.white))
                                   : const Icon(Icons.person_search, size: 25),
                             ),
+
                             const SizedBox(width: 5),
+
+                            // Guest Data button
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: _areRequiredFieldsFilled
@@ -793,7 +828,10 @@ class _BirthdayGiftPriceIncreaseScreenState
                                 ),
                               ),
                             ),
+
                             const SizedBox(width: 7),
+
+                            // Prv Gift button
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: _areRequiredFieldsFilled
@@ -844,6 +882,7 @@ class _BirthdayGiftPriceIncreaseScreenState
 
                         const SizedBox(height: 10.0),
 
+                        // ── Guest Gift Data Table ─────────────────────────
                         if (_showGuestData) ...[
                           Align(
                             alignment: Alignment.center,
@@ -871,20 +910,47 @@ class _BirthdayGiftPriceIncreaseScreenState
                               final data = giftState.guestGiftData.first;
 
                               final rows = [
-                                {"Field": "Drop (Est)", "Value": data.guestDrop},
-                                {"Field": "Cash Out (Est)", "Value": data.tmpCashout},
+                                {
+                                  "Field": "Drop (Est)",
+                                  "Value": data.guestDrop
+                                },
+                                {
+                                  "Field": "Cash Out (Est)",
+                                  "Value": data.tmpCashout
+                                },
                                 {"Field": "Result (Est)", "Value": data.res},
-                                {"Field": "Actual Drop (Est)", "Value": data.actD},
-                                {"Field": "Coupons (Est)", "Value": data.guestCoupon},
-                                {"Field": "Commission Paid (Est)", "Value": data.tmpCommpaid},
-                                {"Field": "Points (Est)", "Value": data.tmpPoint},
-                                {"Field": "Flush Coupon (Est)", "Value": data.flushCoupon},
+                                {
+                                  "Field": "Actual Drop (Est)",
+                                  "Value": data.actD
+                                },
+                                {
+                                  "Field": "Coupons (Est)",
+                                  "Value": data.guestCoupon
+                                },
+                                {
+                                  "Field": "Commission Paid (Est)",
+                                  "Value": data.tmpCommpaid
+                                },
+                                {
+                                  "Field": "Points (Est)",
+                                  "Value": data.tmpPoint
+                                },
+                                {
+                                  "Field": "Flush Coupon (Est)",
+                                  "Value": data.flushCoupon
+                                },
                                 {
                                   "Field": "Total Coupon (Est)",
                                   "Value": data.guestCoupon + data.flushCoupon,
                                 },
-                                {"Field": "Flush Actual Drop (Est)", "Value": data.flushActDrop},
-                                {"Field": "Avg Bet (Est)", "Value": data.tmpAvgBet},
+                                {
+                                  "Field": "Flush Actual Drop (Est)",
+                                  "Value": data.flushActDrop
+                                },
+                                {
+                                  "Field": "Avg Bet (Est)",
+                                  "Value": data.tmpAvgBet
+                                },
                               ];
 
                               return Stack(
@@ -976,6 +1042,7 @@ class _BirthdayGiftPriceIncreaseScreenState
                           const SizedBox(height: 10.0),
                         ],
 
+                        // ── Arrival / Departure Row ───────────────────────
                         Row(
                           children: [
                             Expanded(
@@ -992,7 +1059,8 @@ class _BirthdayGiftPriceIncreaseScreenState
                                   border: const OutlineInputBorder(),
                                   contentPadding: const EdgeInsets.symmetric(
                                       horizontal: 12.0, vertical: -5.0),
-                                  suffixIcon: const Icon(Icons.calendar_today),
+                                  suffixIcon:
+                                      const Icon(Icons.calendar_today),
                                 ),
                                 validator: (v) => v == null || v.isEmpty
                                     ? "Arrival Date required"
@@ -1016,7 +1084,8 @@ class _BirthdayGiftPriceIncreaseScreenState
                                   border: const OutlineInputBorder(),
                                   contentPadding: const EdgeInsets.symmetric(
                                       horizontal: 12.0, vertical: -5.0),
-                                  suffixIcon: const Icon(Icons.calendar_today),
+                                  suffixIcon:
+                                      const Icon(Icons.calendar_today),
                                 ),
                                 validator: (v) => v == null || v.isEmpty
                                     ? "Departure Date required"
@@ -1030,6 +1099,7 @@ class _BirthdayGiftPriceIncreaseScreenState
 
                         const SizedBox(height: 10.0),
 
+                        // ── Gift Dropdown ────────────────────────────────
                         Consumer(
                           builder: (context, ref, child) {
                             final giftState = ref.watch(giftProvider);
@@ -1055,8 +1125,7 @@ class _BirthdayGiftPriceIncreaseScreenState
                             }.values.toList();
 
                             final currentValue = uniqueGiftList.any(
-                              (gift) => gift.code == _selectedGift,
-                            )
+                                    (gift) => gift.code == _selectedGift)
                                 ? _selectedGift
                                 : null;
 
@@ -1100,6 +1169,7 @@ class _BirthdayGiftPriceIncreaseScreenState
 
                         const SizedBox(height: 10.0),
 
+                        // ── Chip Type Dropdown ───────────────────────────
                         DropdownButtonFormField<String>(
                           style: _inputTextStyle(fontSettings),
                           decoration: InputDecoration(
@@ -1137,6 +1207,7 @@ class _BirthdayGiftPriceIncreaseScreenState
 
                         const SizedBox(height: 10.0),
 
+                        // ── Current Gift Value Card (bottom) ─────────────
                         Card(
                           elevation: 2,
                           color: Colors.green.shade50,
@@ -1175,6 +1246,7 @@ class _BirthdayGiftPriceIncreaseScreenState
 
                         const SizedBox(height: 10.0),
 
+                        // ── New Amount ───────────────────────────────────
                         TextFormField(
                           controller: _newAmountController,
                           style: _inputTextStyleForAmount(fontSettings),
@@ -1205,6 +1277,7 @@ class _BirthdayGiftPriceIncreaseScreenState
 
                         const SizedBox(height: 10.0),
 
+                        // ── Remarks ──────────────────────────────────────
                         TextFormField(
                           style: _inputTextStyle(fontSettings),
                           decoration: InputDecoration(
@@ -1231,7 +1304,7 @@ class _BirthdayGiftPriceIncreaseScreenState
 
                         const SizedBox(height: 16.0),
 
-                        // ── Submit Button ─────────────────────────────────────
+                        // ── Submit Button ────────────────────────────────
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
@@ -1255,8 +1328,8 @@ class _BirthdayGiftPriceIncreaseScreenState
                                             fromDateTime: _fromDateController
                                                 .text
                                                 .trim(),
-                                            toDateTime:
-                                                _toDateController.text.trim(),
+                                            toDateTime: _toDateController.text
+                                                .trim(),
                                             arrivalDate:
                                                 _arrivalDateController.text
                                                     .trim(),
@@ -1286,7 +1359,7 @@ class _BirthdayGiftPriceIncreaseScreenState
                                           backgroundColor: Colors.green,
                                         ));
 
-                                        // ── Build guestDataMap (same as NewGiftRequest) ──
+                                        // Build guestDataMap
                                         final giftState =
                                             ref.read(giftProvider);
                                         Map<String, dynamic> guestDataMap = {};
@@ -1309,7 +1382,7 @@ class _BirthdayGiftPriceIncreaseScreenState
                                           };
                                         }
 
-                                        // ── Share dialog ─────────────────────
+                                        // Share dialog
                                         final shareOption =
                                             await showDialog<String>(
                                           context: context,
@@ -1343,8 +1416,8 @@ class _BirthdayGiftPriceIncreaseScreenState
                                                           BorderRadius.circular(
                                                               8),
                                                       border: Border.all(
-                                                          color: Colors
-                                                              .green.shade200),
+                                                          color: Colors.green
+                                                              .shade200),
                                                     ),
                                                     child: Column(
                                                       crossAxisAlignment:
@@ -1353,11 +1426,11 @@ class _BirthdayGiftPriceIncreaseScreenState
                                                       children: [
                                                         Row(
                                                           children: [
-                                                            Icon(
+                                                            const Icon(
                                                                 Icons
                                                                     .check_circle,
-                                                                color: Colors
-                                                                    .green,
+                                                                color:
+                                                                    Colors.green,
                                                                 size: 16),
                                                             const SizedBox(
                                                                 width: 4),
@@ -1414,7 +1487,7 @@ class _BirthdayGiftPriceIncreaseScreenState
                                           },
                                         );
 
-                                        // ── Trigger PDF share ─────────────────
+                                        // Trigger PDF share
                                         if (shareOption == 'system') {
                                           try {
                                             final currentGiftState =
@@ -1454,7 +1527,8 @@ class _BirthdayGiftPriceIncreaseScreenState
                                               remarks: _remarks,
                                               userName: userName ?? "",
                                               guestData: guestDataMap,
-                                              returnSerial: returnSerial ?? "",
+                                              returnSerial:
+                                                  returnSerial ?? "",
                                             );
 
                                             if (mounted) {
@@ -1544,6 +1618,8 @@ class _BirthdayGiftPriceIncreaseScreenState
                   ),
                 ),
               ),
+
+              // ── Global Loading Overlay ──────────────────────────────────
               if (_isLoading)
                 Positioned.fill(
                   child: Container(

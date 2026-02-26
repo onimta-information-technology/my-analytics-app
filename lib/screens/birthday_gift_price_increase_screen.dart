@@ -833,7 +833,7 @@ Future<void> _pickDateTime(
                                           strokeWidth: 2, color: Colors.white))
                                   : const Icon(Icons.person_search, size: 25),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 5),
                             // Guest Data button
                             Expanded(
                               child: ElevatedButton.icon(
@@ -886,7 +886,7 @@ Future<void> _pickDateTime(
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 7),
                             // Prv Gift button
                             Expanded(
                               child: ElevatedButton.icon(

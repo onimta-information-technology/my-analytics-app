@@ -458,7 +458,20 @@ class _DailyWalkingGuestScreenState
                     ),
                   ],
                 ),
-          if (showSpinner) const Center(child: CircularProgressIndicator()),
+          // if (showSpinner) const Center(child: CircularProgressIndicator()),
+          if (showSpinner)
+  Container(
+    decoration: const BoxDecoration(
+      color: Color.fromARGB(135, 117, 115, 115),
+    ),
+    child: Center(
+      child: RefreshProgressIndicator(
+        valueColor: AlwaysStoppedAnimation<Color>(
+          Constants.kSecondaryColor,
+        ),
+      ),
+    ),
+  ),
           const Watermark(),
         ],
       ),

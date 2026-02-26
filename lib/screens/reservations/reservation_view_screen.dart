@@ -117,10 +117,10 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
   // ─────────────────────────────────────────────────────────────────────────
 
   /// Returns true if the current user may perform Check / Reject on a Pending reservation.
-  bool get _canCheckOrReject => _isAD001 || _hasResChk;
+  bool get _canCheckOrReject => _hasResChk;
 
   /// Returns true if the current user may Approve / Reject on a Checked reservation.
-  bool get _canApproveOrRejectChecked => _isAD001 || _hasResApp;
+  bool get _canApproveOrRejectChecked =>_hasResApp;
 
   // ─────────────────────────────────────────────────────────────────────────
   // Access Denied Dialog
@@ -1126,7 +1126,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                             onPressed: _checkReservation,
                             icon: const Icon(Icons.fact_check, size: 20),
                             label: const Text(
-                              "Check",
+                              "CHECK",
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -1136,7 +1136,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                               // Visually dim button if no permission
                               backgroundColor: _canCheckOrReject
                                   ? Colors.blue
-                                  : Colors.blue.withOpacity(0.4),
+                                  : Colors.blue,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -1152,7 +1152,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                             onPressed: _rejectReservation,
                             icon: const Icon(Icons.cancel, size: 20),
                             label: const Text(
-                              "Reject",
+                              "REJECT",
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -1161,7 +1161,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _canCheckOrReject
                                   ? Constants.kSecondaryColor
-                                  : Constants.kSecondaryColor.withOpacity(0.4),
+                                  : Constants.kSecondaryColor,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -1183,7 +1183,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                             onPressed: _approveReservation,
                             icon: const Icon(Icons.done, size: 20),
                             label: const Text(
-                              "Approve",
+                              "APPROVE",
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -1192,7 +1192,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _canApproveOrRejectChecked
                                   ? Colors.green
-                                  : Colors.green.withOpacity(0.4),
+                                  : Colors.green,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -1208,7 +1208,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                             onPressed: _rejectReservation,
                             icon: const Icon(Icons.cancel, size: 20),
                             label: const Text(
-                              "Reject",
+                              "REJECT",
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -1217,7 +1217,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _canApproveOrRejectChecked
                                   ? Constants.kSecondaryColor
-                                  : Constants.kSecondaryColor.withOpacity(0.4),
+                                  : Constants.kSecondaryColor,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),

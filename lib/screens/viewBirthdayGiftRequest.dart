@@ -142,16 +142,16 @@ class _ViewBirthdayGiftRequestState
 
     setState(() {
       // Reverse permissions
-      _canReverseApproved = isAdmin || currentUser == approvedBy;
-      _canReverseRejected = isAdmin || currentUser == rejectedBy;
+      _canReverseApproved = bgChk == true ||  bgApp == true;
+      _canReverseRejected = bgChk == true ||  bgApp == true;
 
       // Pending tab → Check & Reject buttons
       // AD001 has full access; otherwise bgChk must be true
-      _canCheckOrRejectPending = isAdmin || bgChk == true;
+      _canCheckOrRejectPending =bgChk == true;
 
       // Checked tab → Approve & Reject buttons
       // AD001 has full access; otherwise bgApp must be true
-      _canApproveOrRejectChecked = isAdmin || bgApp == true;
+      _canApproveOrRejectChecked = bgApp == true;
     });
   }
 
@@ -525,7 +525,7 @@ class _ViewBirthdayGiftRequestState
               label: const Text("CHECK"),
               style: ElevatedButton.styleFrom(
                 backgroundColor:
-                    _canCheckOrRejectPending ? Colors.blue : Colors.grey,
+                    _canCheckOrRejectPending ? Colors.blue : Colors.blue,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
@@ -547,7 +547,7 @@ class _ViewBirthdayGiftRequestState
               label: const Text("REJECT"),
               style: ElevatedButton.styleFrom(
                 backgroundColor:
-                    _canCheckOrRejectPending ? Colors.red : Colors.grey,
+                    _canCheckOrRejectPending ? Colors.red : Colors.red,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),

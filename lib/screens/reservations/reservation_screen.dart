@@ -52,7 +52,7 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
     }
      final resChk = await StorageUtil.getResChk();
   final resApp = await StorageUtil.getResApp();
-  print(  "Filtering reservations for user. resChk: $resChk, resApp: $resApp"
+  print("Filtering reservations for user. resChk: $resChk, resApp: $resApp"
   );
   if (resChk == true || resApp == true) {
     return reservations;
@@ -84,7 +84,7 @@ Future<bool> _canAccessReservationDetails(
 ) async {
   // AD001 can access everything
   final salesCode = await StorageUtil.getSalesCode();
-  if (salesCode != null && salesCode.trim().toUpperCase() == 'AD002') {
+  if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
     return true;
   }
 

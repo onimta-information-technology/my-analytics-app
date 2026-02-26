@@ -254,9 +254,9 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
   /// AD001 → always allowed | others → otgiChk == true
   Future<bool> _canActOnPending() async {
     final salesCode = await StorageUtil.getSalesCode();
-    if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
-      return true;
-    }
+    // if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
+    //   return true;
+    // }
     final otgiChk = await StorageUtil.getOtgiChk();
     return otgiChk == true;
   }
@@ -265,9 +265,9 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
   /// AD001 → always allowed | others → otgiApp == true
   Future<bool> _canActOnChecked() async {
     final salesCode = await StorageUtil.getSalesCode();
-    if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
-      return true;
-    }
+    // if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
+    //   return true;
+    // }
     final otgiApp = await StorageUtil.getOtgiApp();
     return otgiApp == true;
   }
@@ -276,26 +276,30 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
   /// AD002 → always allowed
   /// Approved tab: loginUser == firstAppBy
   /// Rejected tab: loginUser == deleteUser
-  Future<bool> _canReverseGift({required bool isRejected}) async {
-    final salesCode = await StorageUtil.getSalesCode();
-    if (salesCode != null && salesCode.trim().toUpperCase() == 'AD002') {
-      return true;
-    }
+  // Future<bool> _canReverseGift({required bool isRejected}) async {
+  //   final salesCode = await StorageUtil.getSalesCode();
+  //   // if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
+  //   //   return true;
+  //   // }
 
-    final currentUser =
-        (await StorageUtil.getUserName())?.trim().toLowerCase() ?? '';
+  //   final currentUser =
+  //       (await StorageUtil.getUserName())?.trim().toLowerCase() ?? '';
 
-    if (!isRejected) {
-      final approvedBy =
-          (widget.gift?.firstAppBy ?? '').trim().toLowerCase();
-      return currentUser == approvedBy;
-    } else {
-      final rejectedBy =
-          (widget.gift?.deleteUser ?? '').trim().toLowerCase();
-      return currentUser == rejectedBy;
-    }
-  }
-
+  //   if (!isRejected) {
+  //     final approvedBy =
+  //         (widget.gift?.firstAppBy ?? '').trim().toLowerCase();
+  //     return currentUser == approvedBy;
+  //   } else {
+  //     final rejectedBy =
+  //         (widget.gift?.deleteUser ?? '').trim().toLowerCase();
+  //     return currentUser == rejectedBy;
+  //   }
+  // }
+Future<bool> _canReverseGift({required bool isRejected}) async {
+  final otgiChk = await StorageUtil.getOtgiChk();
+  final otgiApp = await StorageUtil.getOtgiApp();
+  return otgiApp == true || otgiChk == true;
+}
   // ── Dialogs ─────────────────────────────────────────────────────────────────
 
   void _showAccessDeniedDialog() {
@@ -1326,7 +1330,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                   }
                                 },
                                 icon: const Icon(Icons.rule_rounded),
-                                label: const Text("CHECK BY"),
+                                label: const Text("CHECK"),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.blue,
                                   foregroundColor: Colors.white,

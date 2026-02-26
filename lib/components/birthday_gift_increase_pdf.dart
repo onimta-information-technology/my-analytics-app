@@ -1,13 +1,12 @@
 import 'dart:io';
+import 'dart:ui' show Rect;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter/material.dart';
 
-class DirectWhatsAppPdfService {
-  // Share directly to WhatsApp with PDF attachment
+class BirthdayGiftIncreasePdfService {
   static Future<void> shareDirectlyToWhatsApp({
     required String memberName,
     required String memberId,
@@ -17,15 +16,15 @@ class DirectWhatsAppPdfService {
     required String departureDate,
     required String giftFor,
     required String chipType,
-    required String amount,
+    required String previousGiftPrice,
+    required String newAmount,
     required String remarks,
     required String userName,
     required Map<String, dynamic> guestData,
     required String returnSerial,
-    Rect? sharePositionOrigin, // ← NEW: required for iOS share sheet anchor
   }) async {
     try {
-      final pdf = await _generateGiftRequestPdf(
+      final pdf = await _generatePdf(
         memberName: memberName,
         memberId: memberId,
         fromDateTime: fromDateTime,
@@ -34,7 +33,8 @@ class DirectWhatsAppPdfService {
         departureDate: departureDate,
         giftFor: giftFor,
         chipType: chipType,
-        amount: amount,
+        previousGiftPrice: previousGiftPrice,
+        newAmount: newAmount,
         remarks: remarks,
         userName: userName,
         guestData: guestData,
@@ -43,31 +43,28 @@ class DirectWhatsAppPdfService {
 
       final output = await getTemporaryDirectory();
       final fileName =
-          'GiftRequest_${memberName.replaceAll(' ', '_')}_${returnSerial.toString()}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+          'BirthdayGiftIncrease_${memberName.replaceAll(' ', '_')}_${returnSerial}_${DateTime.now().millisecondsSinceEpoch}.pdf';
       final file = File('${output.path}/$fileName');
       await file.writeAsBytes(await pdf.save());
 
       final message =
-          'Special Gift Request for $memberName\n\n'
+          'Birthday Gift Price Increase Request for $memberName\n\n'
           'Member ID: $memberId\n'
-          'Amount: $amount\n'
+          'Previous Gift Value: $previousGiftPrice\n'
+          'New Requested Amount: $newAmount\n'
           'Gift Type: $giftFor\n'
           'Chip Type: $chipType\n\n'
           'Request Date: ${DateFormat('yyyy-MM-dd').format(DateTime.now())}\n'
-          'Request By: $userName\n'
+          'Requested By: $userName\n'
           'Return Serial: $returnSerial\n\n'
-          'Please find the attached gift request document.';
+          'Please find the attached gift price increase request document.';
 
       if (Platform.isIOS) {
-        // ← FIX: provide a valid sharePositionOrigin for iOS popover anchor
-        final rect = sharePositionOrigin ??
-            const Rect.fromLTWH(0, 100, 300, 300);
-
         await Share.shareXFiles(
           [XFile(file.path, mimeType: 'application/pdf')],
           text: message,
-          subject: 'Gift Request - $memberName',
-          sharePositionOrigin: rect,
+          subject: 'Birthday Gift Increase - $memberName',
+          sharePositionOrigin: const Rect.fromLTWH(0, 0, 1, 1),
         );
       } else {
         await _shareOnAndroid(file, message, memberName);
@@ -82,14 +79,15 @@ class DirectWhatsAppPdfService {
     String message,
     String memberName,
   ) async {
-    await Share.share(message, subject: 'Gift Request - $memberName');
-    await Future.delayed(const Duration(milliseconds: 500));
-    await Share.shareXFiles([
-      XFile(pdfFile.path, mimeType: 'application/pdf'),
-    ], subject: 'Gift Request - $memberName PDF');
+    await Share.shareXFiles(
+      [XFile(pdfFile.path, mimeType: 'application/pdf')],
+      text: message,
+      subject: 'Birthday Gift Increase - $memberName PDF',
+      sharePositionOrigin: const Rect.fromLTWH(0, 0, 1, 1),
+    );
   }
 
-  static Future<String> savePdfAndProvideInstructions({
+  static Future<pw.Document> _generatePdf({
     required String memberName,
     required String memberId,
     required String fromDateTime,
@@ -98,61 +96,8 @@ class DirectWhatsAppPdfService {
     required String departureDate,
     required String giftFor,
     required String chipType,
-    required String amount,
-    required String remarks,
-    required String userName,
-    required Map<String, dynamic> guestData,
-    required String returnSerial,
-  }) async {
-    try {
-      final pdf = await _generateGiftRequestPdf(
-        memberName: memberName,
-        memberId: memberId,
-        fromDateTime: fromDateTime,
-        toDateTime: toDateTime,
-        arrivalDate: arrivalDate,
-        departureDate: departureDate,
-        giftFor: giftFor,
-        chipType: chipType,
-        amount: amount,
-        remarks: remarks,
-        userName: userName,
-        guestData: guestData,
-        returnSerial: returnSerial,
-      );
-
-      Directory saveDirectory;
-      if (Platform.isAndroid) {
-        saveDirectory = Directory('/storage/emulated/0/Download');
-        if (!await saveDirectory.exists()) {
-          saveDirectory =
-              await getExternalStorageDirectory() ??
-              await getTemporaryDirectory();
-        }
-      } else {
-        saveDirectory = await getApplicationDocumentsDirectory();
-      }
-
-      final fileName =
-          'GiftRequest_${memberName.replaceAll(' ', '_')}_${returnSerial.toString()}_${DateTime.now().millisecondsSinceEpoch}.pdf';
-      final file = File('${saveDirectory.path}/$fileName');
-      await file.writeAsBytes(await pdf.save());
-      return fileName;
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  static Future<pw.Document> _generateGiftRequestPdf({
-    required String memberName,
-    required String memberId,
-    required String fromDateTime,
-    required String toDateTime,
-    required String arrivalDate,
-    required String departureDate,
-    required String giftFor,
-    required String chipType,
-    required String amount,
+    required String previousGiftPrice,
+    required String newAmount,
     required String remarks,
     required String userName,
     required Map<String, dynamic> guestData,
@@ -171,40 +116,50 @@ class DirectWhatsAppPdfService {
               pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
+                  // ── Title ──────────────────────────────────────────────
                   pw.Container(
                     alignment: pw.Alignment.center,
                     child: pw.Column(
                       children: [
                         pw.Text(
-                          'SPECIAL GIFT REQUEST - Bally\'s Casino',
+                          "BIRTHDAY GIFT PRICE INCREASE REQUEST",
                           style: pw.TextStyle(
-                            fontSize: 18,
+                            fontSize: 17,
                             fontWeight: pw.FontWeight.bold,
                           ),
                         ),
-                        pw.SizedBox(height: 20),
+                        pw.SizedBox(height: 2),
+                        // pw.Text(
+                        //   "Bally's Casino",
+                        //   style: pw.TextStyle(
+                        //     fontSize: 13,
+                        //     color: PdfColors.grey700,
+                        //   ),
+                        // ),
+                        // pw.SizedBox(height: 20),
                       ],
                     ),
                   ),
+
+                  // ── Request Details ────────────────────────────────────
                   pw.Container(
                     decoration: pw.BoxDecoration(
                       border: pw.Border.all(color: PdfColors.grey400),
-                      borderRadius: const pw.BorderRadius.all(
-                        pw.Radius.circular(5),
-                      ),
+                      borderRadius:
+                          const pw.BorderRadius.all(pw.Radius.circular(5)),
                     ),
-                    padding: const pw.EdgeInsets.all(16),
+                    padding: const pw.EdgeInsets.all(8),
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
                         pw.Text(
                           'REQUEST DETAILS',
                           style: pw.TextStyle(
-                            fontSize: 16,
+                            fontSize: 14,
                             fontWeight: pw.FontWeight.bold,
                           ),
                         ),
-                        pw.SizedBox(height: 5),
+                        pw.SizedBox(height: 4),
                         _buildInfoRow('Member Name:', memberName),
                         _buildInfoRow('Member ID:', memberId),
                         _buildInfoRow('From Date & Time:', fromDateTime),
@@ -213,23 +168,95 @@ class DirectWhatsAppPdfService {
                         _buildInfoRow('Departure Date:', departureDate),
                         _buildInfoRow('Gift For:', giftFor, highlight: true),
                         _buildInfoRow('Chip Type:', chipType, highlight: true),
-                        _buildInfoRow('Amount:', amount, highlight: true),
+                         _buildInfoRow('Previous Gift Value:', previousGiftPrice, highlight: true),
+                          _buildInfoRow('New Gift Value:', newAmount, highlight: true),
+                      //  pw.SizedBox(height: 6),
+                        // ── Price increase block ──────────────────────────
+                        // pw.Container(
+                        //   padding: const pw.EdgeInsets.all(6),
+                        //   decoration: pw.BoxDecoration(
+                        //     color: PdfColors.orange50,
+                        //     border:
+                        //         pw.Border.all(color: PdfColors.orange200),
+                        //     borderRadius: const pw.BorderRadius.all(
+                        //         pw.Radius.circular(4)),
+                        //   ),
+                        //   child: pw.Column(
+                        //     crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        //     children: [
+                        //       pw.Row(
+                        //         children: [
+                        //           pw.SizedBox(
+                        //             width: 140,
+                        //             child: pw.Text(
+                        //               'Previous Gift Value:',
+                        //               style: pw.TextStyle(
+                        //                 fontSize: 11,
+                        //                 fontWeight: pw.FontWeight.bold,
+                        //                 color: PdfColors.grey800,
+                        //               ),
+                        //             ),
+                        //           ),
+                        //           pw.Text(
+                        //             previousGiftPrice,
+                        //             style: pw.TextStyle(
+                        //               fontSize: 13,
+                        //               fontWeight: pw.FontWeight.bold,
+                        //               color: PdfColors.grey800,
+                        //             ),
+                        //           ),
+                        //         ],
+                        //       ),
+                        //       pw.SizedBox(height: 3),
+                        //       pw.Row(
+                        //         children: [
+                        //           pw.SizedBox(
+                        //             width: 140,
+                        //             child: pw.Text(
+                        //               'New Requested Amount:',
+                        //               style: pw.TextStyle(
+                        //                 fontSize: 11,
+                        //                 fontWeight: pw.FontWeight.bold,
+                        //                 color: PdfColors.red800,
+                        //               ),
+                        //             ),
+                        //           ),
+                        //           pw.Text(
+                        //             newAmount,
+                        //             style: pw.TextStyle(
+                        //               fontSize: 15,
+                        //               fontWeight: pw.FontWeight.bold,
+                        //               color: PdfColors.red800,
+                        //             ),
+                        //           ),
+                        //         ],
+                        //       ),
+                        //     ],
+                        //   ),
+                        // ),
+                       
                         if (remarks.isNotEmpty)
                           _buildInfoRow('Remarks:', remarks),
-                        _buildInfoRow('Requested by:', userName),
+                        _buildInfoRow('Requested By:', userName),
                         _buildInfoRow(
                           'Request Date:',
                           DateTime.now().toString().split('.')[0],
                         ),
+                        if (returnSerial.isNotEmpty)
+                          _buildInfoRow('Return Serial:', returnSerial),
                       ],
                     ),
                   ),
+
                   pw.SizedBox(height: 20),
 
+                  // ── Guest Gift Data ────────────────────────────────────
                   _buildGuestDataSection(guestData),
-                  pw.SizedBox(height: 10),
 
+                  pw.SizedBox(height: 5),
                   pw.Spacer(),
+
+                  // ── Footer ─────────────────────────────────────────────
                   pw.Container(
                     alignment: pw.Alignment.center,
                     child: pw.Column(
@@ -241,7 +268,7 @@ class DirectWhatsAppPdfService {
                             fontStyle: pw.FontStyle.italic,
                           ),
                         ),
-                        pw.SizedBox(height: 5),
+                        pw.SizedBox(height: 2),
                         pw.Text(
                           'Generated on: ${DateTime.now().toString().split('.')[0]}',
                           style: pw.TextStyle(
@@ -263,6 +290,7 @@ class DirectWhatsAppPdfService {
     return pdf;
   }
 
+  // ── Watermark ──────────────────────────────────────────────────────────────
   static pw.Widget _buildWatermark(String userName) {
     final now = DateTime.now();
     final lastSeen = DateFormat('dd MMM yyyy, hh:mm a').format(now);
@@ -301,6 +329,7 @@ class DirectWhatsAppPdfService {
     );
   }
 
+  // ── Info row helper ────────────────────────────────────────────────────────
   static pw.Widget _buildInfoRow(
     String label,
     String value, {
@@ -322,6 +351,7 @@ class DirectWhatsAppPdfService {
     );
   }
 
+  // ── Numeric formatter ──────────────────────────────────────────────────────
   static String _formatNumericValue(dynamic value) {
     if (value == null) return 'N/A';
     double numValue;
@@ -333,10 +363,10 @@ class DirectWhatsAppPdfService {
       return 'N/A';
     }
     if (numValue.abs() < 0.01) return 'N/A';
-    final formatter = NumberFormat('#,###', 'en_US');
-    return formatter.format(numValue.round());
+    return NumberFormat('#,###', 'en_US').format(numValue.round());
   }
 
+  // ── Guest Gift Data table ──────────────────────────────────────────────────
   static pw.Widget _buildGuestDataSection(Map<String, dynamic> guestData) {
     final highlightedFields = {
       'Actual Drop (Est)',
@@ -365,94 +395,79 @@ class DirectWhatsAppPdfService {
         children: [
           pw.Padding(
             padding: const pw.EdgeInsets.all(8),
-            child: pw.Text(
-              'Field',
-              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12),
-            ),
+            child: pw.Text('Field',
+                style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold, fontSize: 12)),
           ),
           pw.Padding(
             padding: const pw.EdgeInsets.all(8),
-            child: pw.Text(
-              'Value',
-              textAlign: pw.TextAlign.right,
-              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12),
-            ),
+            child: pw.Text('Value',
+                textAlign: pw.TextAlign.right,
+                style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold, fontSize: 12)),
           ),
         ],
       ),
     ];
 
     if (guestData.isEmpty) {
-      rows.add(
-        pw.TableRow(
-          children: [
-            pw.Padding(
-              padding: const pw.EdgeInsets.all(8),
-              child: pw.Text(
-                'No guest data available',
-                style: pw.TextStyle(
-                  fontStyle: pw.FontStyle.italic,
-                  fontSize: 11,
-                ),
-              ),
-            ),
-            pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text('')),
-          ],
+      rows.add(pw.TableRow(children: [
+        pw.Padding(
+          padding: const pw.EdgeInsets.all(8),
+          child: pw.Text('No guest data available',
+              style:
+                  pw.TextStyle(fontStyle: pw.FontStyle.italic, fontSize: 11)),
         ),
-      );
+        pw.Padding(
+            padding: const pw.EdgeInsets.all(8), child: pw.Text('')),
+      ]));
     } else {
       fields.forEach((label, value) {
         final isHighlighted = highlightedFields.contains(label);
-        rows.add(
-          pw.TableRow(
-            decoration: isHighlighted
-                ? const pw.BoxDecoration(color: PdfColors.yellow100)
-                : null,
-            children: [
-              pw.Padding(
-                padding: const pw.EdgeInsets.all(8),
-                child: pw.Text(
-                  label,
+        rows.add(pw.TableRow(
+          decoration: isHighlighted
+              ? const pw.BoxDecoration(color: PdfColors.yellow100)
+              : null,
+          children: [
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(8),
+              child: pw.Text(label,
                   style: pw.TextStyle(
                     fontSize: 11,
                     fontWeight: isHighlighted
                         ? pw.FontWeight.bold
                         : pw.FontWeight.normal,
                     color: isHighlighted ? PdfColors.red800 : PdfColors.black,
-                  ),
-                ),
-              ),
-              pw.Padding(
-                padding: const pw.EdgeInsets.all(8),
-                child: pw.Text(
-                  value,
+                  )),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(8),
+              child: pw.Text(value,
                   textAlign: pw.TextAlign.right,
                   style: pw.TextStyle(
                     fontWeight: pw.FontWeight.bold,
                     fontSize: 11,
                     color: isHighlighted ? PdfColors.red800 : PdfColors.black,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
+                  )),
+            ),
+          ],
+        ));
       });
     }
 
     return pw.Container(
       decoration: pw.BoxDecoration(
         border: pw.Border.all(color: PdfColors.grey400),
-        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(5)),
+        borderRadius:
+            const pw.BorderRadius.all(pw.Radius.circular(5)),
       ),
       padding: const pw.EdgeInsets.all(16),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text(
-            'GUEST GIFT DATA',
-            style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
-          ),
+          pw.Text('GUEST GIFT DATA',
+              style: pw.TextStyle(
+                  fontSize: 14, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 10),
           pw.Table(
             border: pw.TableBorder.all(color: PdfColors.grey400),

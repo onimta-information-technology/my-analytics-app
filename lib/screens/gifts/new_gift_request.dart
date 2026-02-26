@@ -41,6 +41,9 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
   final TextEditingController _memberIdNumberController =
       TextEditingController();
 
+  // ← NEW: GlobalKey to capture the Send Request button's screen position for iOS share sheet
+  final GlobalKey _sendButtonKey = GlobalKey();
+
   String? _selectedGift;
   String? _chipType;
   String _remarks = "";
@@ -52,10 +55,10 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
   bool _isMemberSelected = false;
 
   String _selectedPrefix = "BM";
+
   @override
   void initState() {
     super.initState();
-    //_loadUserName();
     _loadUserCredentials();
     Future.microtask(() {
       ref.read(giftProvider.notifier).getGiftForList();
@@ -64,18 +67,11 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
 
   Future<void> _loadUserCredentials() async {
     final name = await StorageUtil.getUserName();
-
     setState(() {
       userName = name;
     });
   }
 
-  // _loadUserName() async {
-  //   final name = await StorageUtil.getUserName();
-  //   setState(() {
-  //     userName = name;
-  //   });
-  // }
   void _dismissKeyboard() {
     FocusScope.of(context).unfocus();
   }
@@ -94,7 +90,6 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
     }
 
     if (searchTerm.length < 3) {
-      // Show modal with empty results and let user search from within modal
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
@@ -103,7 +98,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
         ),
         builder: (BuildContext context) {
           return MemberNewSearchBottomSheet(
-            guests: [], // Empty list initially
+            guests: [],
             initialSearchTerm: searchTerm,
             searchIid: iid,
             onSearch: (String term, int searchIid) async {
@@ -166,10 +161,8 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
         searchTerm,
       );
 
-      // Close current modal
       Navigator.of(context).pop();
 
-      // Open new modal with updated results
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
@@ -199,7 +192,6 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
 
   void _updateMemberIdFields(String fullMemberId) {
     if (fullMemberId.isNotEmpty) {
-      // Extract prefix and number from full member ID
       String prefix = '';
       String numberPart = '';
 
@@ -213,7 +205,6 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
         prefix = 'BN';
         numberPart = fullMemberId.substring(2);
       } else {
-        // If no recognized prefix, treat as BM by default
         prefix = 'BM';
         numberPart = fullMemberId;
       }
@@ -227,75 +218,69 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
   }
 
   Future<void> _pickDate(
-  BuildContext context,
-  TextEditingController controller,
-) async {
-  DateTime selectedDate = DateTime.now();
+    BuildContext context,
+    TextEditingController controller,
+  ) async {
+    DateTime selectedDate = DateTime.now();
 
-  await showModalBottomSheet(
-    context: context,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-    ),
-    builder: (BuildContext context) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Text(
-              "Select date",
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade600,
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                "Select date",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey.shade600,
+                ),
               ),
             ),
-          ),
-          SizedBox(
-            height: 200,
-            child: CupertinoDatePicker(
-              mode: CupertinoDatePickerMode.date,
-              initialDateTime: selectedDate,
-              minimumDate: DateTime(2000),
-              maximumDate: DateTime(2101),
-              onDateTimeChanged: (DateTime newDate) {
-                selectedDate = newDate;
+            SizedBox(
+              height: 200,
+              child: CupertinoDatePicker(
+                mode: CupertinoDatePickerMode.date,
+                initialDateTime: selectedDate,
+                minimumDate: DateTime(2000),
+                maximumDate: DateTime(2101),
+                onDateTimeChanged: (DateTime newDate) {
+                  selectedDate = newDate;
+                },
+              ),
+            ),
+            const Divider(height: 1),
+            TextButton(
+              onPressed: () {
+                controller.text =
+                    "${selectedDate.day}/${selectedDate.month}/${selectedDate.year}";
+                Navigator.of(context).pop();
               },
-            ),
-          ),
-          const Divider(height: 1),
-          TextButton(
-            onPressed: () {
-              controller.text =
-                  "${selectedDate.day}/${selectedDate.month}/${selectedDate.year}";
-              Navigator.of(context).pop();
-            },
-            child: const Text(
-              "Confirm",
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.blue,
+              child: const Text(
+                "Confirm",
+                style: TextStyle(fontSize: 18, color: Colors.blue),
               ),
             ),
-          ),
-          const Divider(height: 1),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text(
-              "Cancel",
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.blue,
+            const Divider(height: 1),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                "Cancel",
+                style: TextStyle(fontSize: 18, color: Colors.blue),
               ),
             ),
-          ),
-          const SizedBox(height: 8),
-        ],
-      );
-    },
-  );
-}
+            const SizedBox(height: 8),
+          ],
+        );
+      },
+    );
+  }
 
   final Map<String, String> ratingImageMap = {
     "CLASSIC": "assets/images/ratings/CLASSIC.png",
@@ -305,376 +290,373 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
     "PLATINUM": "assets/images/ratings/PLATINUM.png",
     "SILVER": "assets/images/ratings/SILVER.png",
   };
+
   String formatNumber(dynamic value) {
     if (value == null) return "";
     final num? number = num.tryParse(value.toString());
-    if (number == null) return value.toString(); // return as-is if not numeric
+    if (number == null) return value.toString();
     return NumberFormat.decimalPattern().format(number);
   }
 
   Future<void> _pickDateTime(
-  BuildContext context,
-  TextEditingController controller,
-) async {
-  DateTime selectedDate = DateTime.now();
-  TimeOfDay selectedTime = TimeOfDay.now();
+    BuildContext context,
+    TextEditingController controller,
+  ) async {
+    DateTime selectedDate = DateTime.now();
+    TimeOfDay selectedTime = TimeOfDay.now();
 
-  // Step 1: Pick Date
-  final datePicked = await showModalBottomSheet<DateTime>(
-    context: context,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-    ),
-    builder: (BuildContext context) {
-      int day = selectedDate.day;
-      int month = selectedDate.month;
-      int year = selectedDate.year;
+    // Step 1: Pick Date
+    final datePicked = await showModalBottomSheet<DateTime>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext context) {
+        int day = selectedDate.day;
+        int month = selectedDate.month;
+        int year = selectedDate.year;
 
-      final FixedExtentScrollController dayController =
-          FixedExtentScrollController(initialItem: day - 1);
-      final FixedExtentScrollController monthController =
-          FixedExtentScrollController(initialItem: month - 1);
-      final FixedExtentScrollController yearController =
-          FixedExtentScrollController(initialItem: year - 2000);
+        final FixedExtentScrollController dayController =
+            FixedExtentScrollController(initialItem: day - 1);
+        final FixedExtentScrollController monthController =
+            FixedExtentScrollController(initialItem: month - 1);
+        final FixedExtentScrollController yearController =
+            FixedExtentScrollController(initialItem: year - 2000);
 
-      final List<String> monthNames = [
-        "January", "February", "March", "April",
-        "May", "June", "July", "August",
-        "September", "October", "November", "December"
-      ];
+        final List<String> monthNames = [
+          "January", "February", "March", "April",
+          "May", "June", "July", "August",
+          "September", "October", "November", "December"
+        ];
 
-      return StatefulBuilder(
-        builder: (context, setModalState) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Text(
-                  "Select Date",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey.shade600,
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Text(
+                    "Select Date",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey.shade600,
+                    ),
                   ),
                 ),
-              ),
-              SizedBox(
-                height: 200,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Center highlight bar
-                    Container(
-                      height: 40,
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
+                SizedBox(
+                  height: 200,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        height: 40,
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                    ),
-                    Row(
-                      children: [
-                        // Day Column
-                        Expanded(
-                          child: ListWheelScrollView.useDelegate(
-                            controller: dayController,
-                            itemExtent: 40,
-                            perspective: 0.005,
-                            diameterRatio: 1.5,
-                            physics: const FixedExtentScrollPhysics(),
-                            onSelectedItemChanged: (index) {
-                              day = index + 1;
-                            },
-                            childDelegate: ListWheelChildBuilderDelegate(
-                              childCount: 31,
-                              builder: (context, index) {
-                                return Center(
-                                  child: Text(
-                                    "${index + 1}",
-                                    style: const TextStyle(fontSize: 18),
-                                  ),
-                                );
+                      Row(
+                        children: [
+                          // Day Column
+                          Expanded(
+                            child: ListWheelScrollView.useDelegate(
+                              controller: dayController,
+                              itemExtent: 40,
+                              perspective: 0.005,
+                              diameterRatio: 1.5,
+                              physics: const FixedExtentScrollPhysics(),
+                              onSelectedItemChanged: (index) {
+                                day = index + 1;
                               },
-                            ),
-                          ),
-                        ),
-                        // Month Column
-                        Expanded(
-                          flex: 2,
-                          child: ListWheelScrollView.useDelegate(
-                            controller: monthController,
-                            itemExtent: 40,
-                            perspective: 0.005,
-                            diameterRatio: 1.5,
-                            physics: const FixedExtentScrollPhysics(),
-                            onSelectedItemChanged: (index) {
-                              month = index + 1;
-                            },
-                            childDelegate: ListWheelChildBuilderDelegate(
-                              childCount: 12,
-                              builder: (context, index) {
-                                return Center(
-                                  child: Text(
-                                    monthNames[index],
-                                    style: const TextStyle(fontSize: 18),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        // Year Column
-                        Expanded(
-                          flex: 2,
-                          child: ListWheelScrollView.useDelegate(
-                            controller: yearController,
-                            itemExtent: 40,
-                            perspective: 0.005,
-                            diameterRatio: 1.5,
-                            physics: const FixedExtentScrollPhysics(),
-                            onSelectedItemChanged: (index) {
-                              year = 2000 + index;
-                            },
-                            childDelegate: ListWheelChildBuilderDelegate(
-                              childCount: 102,
-                              builder: (context, index) {
-                                return Center(
-                                  child: Text(
-                                    "${2000 + index}",
-                                    style: const TextStyle(fontSize: 18),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              TextButton(
-                onPressed: () {
-                  final maxDay = DateTime(year, month + 1, 0).day;
-                  final validDay = day > maxDay ? maxDay : day;
-                  Navigator.of(context).pop(DateTime(year, month, validDay));
-                },
-                child: const Text(
-                  "Confirm",
-                  style: TextStyle(fontSize: 18, color: Colors.blue),
-                ),
-              ),
-              const Divider(height: 1),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text(
-                  "Cancel",
-                  style: TextStyle(fontSize: 18, color: Colors.blue),
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
-          );
-        },
-      );
-    },
-  );
-
-  if (datePicked == null) return;
-  selectedDate = datePicked;
-
-  // Step 2: Pick Time with AM/PM
-  final timePicked = await showModalBottomSheet<TimeOfDay>(
-    context: context,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-    ),
-    builder: (BuildContext context) {
-      // Convert to 12-hour format
-      int hour = selectedTime.hourOfPeriod == 0 ? 12 : selectedTime.hourOfPeriod;
-      int minute = selectedTime.minute;
-      DayPeriod period = selectedTime.period;
-
-      final FixedExtentScrollController hourController =
-          FixedExtentScrollController(initialItem: hour - 1);
-      final FixedExtentScrollController minuteController =
-          FixedExtentScrollController(initialItem: minute);
-      final FixedExtentScrollController periodController =
-          FixedExtentScrollController(
-              initialItem: period == DayPeriod.am ? 0 : 1);
-
-      return StatefulBuilder(
-        builder: (context, setModalState) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Text(
-                  "Select Time",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ),
-              SizedBox(
-                height: 200,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Center highlight bar
-                    Container(
-                      height: 40,
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        // Hour Column (1-12)
-                        Expanded(
-                          flex: 2,
-                          child: ListWheelScrollView.useDelegate(
-                            controller: hourController,
-                            itemExtent: 40,
-                            perspective: 0.005,
-                            diameterRatio: 1.5,
-                            physics: const FixedExtentScrollPhysics(),
-                            onSelectedItemChanged: (index) {
-                              hour = index + 1;
-                            },
-                            childDelegate: ListWheelChildBuilderDelegate(
-                              childCount: 12,
-                              builder: (context, index) {
-                                return Center(
-                                  child: Text(
-                                    (index + 1).toString().padLeft(2, '0'),
-                                    style: const TextStyle(fontSize: 18),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        // Colon separator
-                        const Text(
-                          ":",
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        // Minute Column (0-59)
-                        Expanded(
-                          flex: 2,
-                          child: ListWheelScrollView.useDelegate(
-                            controller: minuteController,
-                            itemExtent: 40,
-                            perspective: 0.005,
-                            diameterRatio: 1.5,
-                            physics: const FixedExtentScrollPhysics(),
-                            onSelectedItemChanged: (index) {
-                              minute = index;
-                            },
-                            childDelegate: ListWheelChildBuilderDelegate(
-                              childCount: 60,
-                              builder: (context, index) {
-                                return Center(
-                                  child: Text(
-                                    index.toString().padLeft(2, '0'),
-                                    style: const TextStyle(fontSize: 18),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        // AM/PM Column
-                        Expanded(
-                          child: ListWheelScrollView.useDelegate(
-                            controller: periodController,
-                            itemExtent: 40,
-                            perspective: 0.005,
-                            diameterRatio: 1.5,
-                            physics: const FixedExtentScrollPhysics(),
-                            onSelectedItemChanged: (index) {
-                              period =
-                                  index == 0 ? DayPeriod.am : DayPeriod.pm;
-                            },
-                            childDelegate: ListWheelChildBuilderDelegate(
-                              childCount: 2,
-                              builder: (context, index) {
-                                return Center(
-                                  child: Text(
-                                    index == 0 ? "AM" : "PM",
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
+                              childDelegate: ListWheelChildBuilderDelegate(
+                                childCount: 31,
+                                builder: (context, index) {
+                                  return Center(
+                                    child: Text(
+                                      "${index + 1}",
+                                      style: const TextStyle(fontSize: 18),
                                     ),
-                                  ),
-                                );
-                              },
+                                  );
+                                },
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                          // Month Column
+                          Expanded(
+                            flex: 2,
+                            child: ListWheelScrollView.useDelegate(
+                              controller: monthController,
+                              itemExtent: 40,
+                              perspective: 0.005,
+                              diameterRatio: 1.5,
+                              physics: const FixedExtentScrollPhysics(),
+                              onSelectedItemChanged: (index) {
+                                month = index + 1;
+                              },
+                              childDelegate: ListWheelChildBuilderDelegate(
+                                childCount: 12,
+                                builder: (context, index) {
+                                  return Center(
+                                    child: Text(
+                                      monthNames[index],
+                                      style: const TextStyle(fontSize: 18),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          // Year Column
+                          Expanded(
+                            flex: 2,
+                            child: ListWheelScrollView.useDelegate(
+                              controller: yearController,
+                              itemExtent: 40,
+                              perspective: 0.005,
+                              diameterRatio: 1.5,
+                              physics: const FixedExtentScrollPhysics(),
+                              onSelectedItemChanged: (index) {
+                                year = 2000 + index;
+                              },
+                              childDelegate: ListWheelChildBuilderDelegate(
+                                childCount: 102,
+                                builder: (context, index) {
+                                  return Center(
+                                    child: Text(
+                                      "${2000 + index}",
+                                      style: const TextStyle(fontSize: 18),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                TextButton(
+                  onPressed: () {
+                    final maxDay = DateTime(year, month + 1, 0).day;
+                    final validDay = day > maxDay ? maxDay : day;
+                    Navigator.of(context).pop(DateTime(year, month, validDay));
+                  },
+                  child: const Text(
+                    "Confirm",
+                    style: TextStyle(fontSize: 18, color: Colors.blue),
+                  ),
+                ),
+                const Divider(height: 1),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text(
+                    "Cancel",
+                    style: TextStyle(fontSize: 18, color: Colors.blue),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (datePicked == null) return;
+    selectedDate = datePicked;
+
+    // Step 2: Pick Time with AM/PM
+    final timePicked = await showModalBottomSheet<TimeOfDay>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext context) {
+        int hour =
+            selectedTime.hourOfPeriod == 0 ? 12 : selectedTime.hourOfPeriod;
+        int minute = selectedTime.minute;
+        DayPeriod period = selectedTime.period;
+
+        final FixedExtentScrollController hourController =
+            FixedExtentScrollController(initialItem: hour - 1);
+        final FixedExtentScrollController minuteController =
+            FixedExtentScrollController(initialItem: minute);
+        final FixedExtentScrollController periodController =
+            FixedExtentScrollController(
+                initialItem: period == DayPeriod.am ? 0 : 1);
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Text(
+                    "Select Time",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey.shade600,
                     ),
-                  ],
+                  ),
                 ),
-              ),
-              const Divider(height: 1),
-              TextButton(
-                onPressed: () {
-                  // Convert back to 24-hour format
-                  int hour24;
-                  if (period == DayPeriod.am) {
-                    hour24 = hour == 12 ? 0 : hour;
-                  } else {
-                    hour24 = hour == 12 ? 12 : hour + 12;
-                  }
-                  Navigator.of(context).pop(
-                    TimeOfDay(hour: hour24, minute: minute),
-                  );
-                },
-                child: const Text(
-                  "Confirm",
-                  style: TextStyle(fontSize: 18, color: Colors.blue),
+                SizedBox(
+                  height: 200,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        height: 40,
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          // Hour Column (1-12)
+                          Expanded(
+                            flex: 2,
+                            child: ListWheelScrollView.useDelegate(
+                              controller: hourController,
+                              itemExtent: 40,
+                              perspective: 0.005,
+                              diameterRatio: 1.5,
+                              physics: const FixedExtentScrollPhysics(),
+                              onSelectedItemChanged: (index) {
+                                hour = index + 1;
+                              },
+                              childDelegate: ListWheelChildBuilderDelegate(
+                                childCount: 12,
+                                builder: (context, index) {
+                                  return Center(
+                                    child: Text(
+                                      (index + 1).toString().padLeft(2, '0'),
+                                      style: const TextStyle(fontSize: 18),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          const Text(
+                            ":",
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          // Minute Column (0-59)
+                          Expanded(
+                            flex: 2,
+                            child: ListWheelScrollView.useDelegate(
+                              controller: minuteController,
+                              itemExtent: 40,
+                              perspective: 0.005,
+                              diameterRatio: 1.5,
+                              physics: const FixedExtentScrollPhysics(),
+                              onSelectedItemChanged: (index) {
+                                minute = index;
+                              },
+                              childDelegate: ListWheelChildBuilderDelegate(
+                                childCount: 60,
+                                builder: (context, index) {
+                                  return Center(
+                                    child: Text(
+                                      index.toString().padLeft(2, '0'),
+                                      style: const TextStyle(fontSize: 18),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          // AM/PM Column
+                          Expanded(
+                            child: ListWheelScrollView.useDelegate(
+                              controller: periodController,
+                              itemExtent: 40,
+                              perspective: 0.005,
+                              diameterRatio: 1.5,
+                              physics: const FixedExtentScrollPhysics(),
+                              onSelectedItemChanged: (index) {
+                                period =
+                                    index == 0 ? DayPeriod.am : DayPeriod.pm;
+                              },
+                              childDelegate: ListWheelChildBuilderDelegate(
+                                childCount: 2,
+                                builder: (context, index) {
+                                  return Center(
+                                    child: Text(
+                                      index == 0 ? "AM" : "PM",
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const Divider(height: 1),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text(
-                  "Cancel",
-                  style: TextStyle(fontSize: 18, color: Colors.blue),
+                const Divider(height: 1),
+                TextButton(
+                  onPressed: () {
+                    int hour24;
+                    if (period == DayPeriod.am) {
+                      hour24 = hour == 12 ? 0 : hour;
+                    } else {
+                      hour24 = hour == 12 ? 12 : hour + 12;
+                    }
+                    Navigator.of(context).pop(
+                      TimeOfDay(hour: hour24, minute: minute),
+                    );
+                  },
+                  child: const Text(
+                    "Confirm",
+                    style: TextStyle(fontSize: 18, color: Colors.blue),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-            ],
-          );
-        },
-      );
-    },
-  );
+                const Divider(height: 1),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text(
+                    "Cancel",
+                    style: TextStyle(fontSize: 18, color: Colors.blue),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+            );
+          },
+        );
+      },
+    );
 
-  if (timePicked == null) return;
-  selectedTime = timePicked;
+    if (timePicked == null) return;
+    selectedTime = timePicked;
 
-  // Step 3: Format with AM/PM and set to controller
-  final hour12 = selectedTime.hourOfPeriod == 0 ? 12 : selectedTime.hourOfPeriod;
-  final minuteStr = selectedTime.minute.toString().padLeft(2, '0');
-  final periodStr = selectedTime.period == DayPeriod.am ? "AM" : "PM";
+    final hour12 =
+        selectedTime.hourOfPeriod == 0 ? 12 : selectedTime.hourOfPeriod;
+    final minuteStr = selectedTime.minute.toString().padLeft(2, '0');
+    final periodStr = selectedTime.period == DayPeriod.am ? "AM" : "PM";
 
-  controller.text =
-      "${selectedDate.day}/${selectedDate.month}/${selectedDate.year} "
-      "${hour12.toString().padLeft(2, '0')}:$minuteStr $periodStr";
-}
+    controller.text =
+        "${selectedDate.day}/${selectedDate.month}/${selectedDate.year} "
+        "${hour12.toString().padLeft(2, '0')}:$minuteStr $periodStr";
+  }
 
   TextStyle _inputTextStyle(FontSettings fontSettings) {
     return TextStyle(
@@ -695,6 +677,15 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
         _toDateController.text.isNotEmpty &&
         _memberIdController.text.isNotEmpty &&
         _memberNameController.text.isNotEmpty;
+  }
+
+  // ← NEW: Helper to get the Send Request button's screen Rect for iOS share sheet
+  Rect? _getSendButtonRect() {
+    final renderBox =
+        _sendButtonKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return null;
+    final offset = renderBox.localToGlobal(Offset.zero);
+    return offset & renderBox.size;
   }
 
   @override
@@ -723,7 +714,6 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
 
     return GestureDetector(
       onTap: () {
-        // Dismiss keyboard when tapping outside of text fields
         FocusScope.of(context).unfocus();
       },
       child: Scaffold(
@@ -826,7 +816,8 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                           fontWeight: fontSettings.fontWeight,
                                           color: Colors.black,
                                         ),
-                                        items: ["BM", "BL", "BN"].map((prefix) {
+                                        items: ["BM", "BL", "BN"]
+                                            .map((prefix) {
                                           return DropdownMenuItem(
                                             value: prefix,
                                             child: Text(
@@ -858,10 +849,8 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                     },
                                   ),
                                 ),
-
                                 onChanged: (value) {
                                   _memberNameController.text = '';
-
                                   ref
                                       .read(memberSearchProvider.notifier)
                                       .resetState();
@@ -875,16 +864,13 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                             ElevatedButton(
                               onPressed: _isMemberSelected
                                   ? () {
-                                      // Only navigate when member is selected
                                       context.push('/home/profile');
                                     }
-                                  : null, // Disable button when no member selected
+                                  : null,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: _isMemberSelected
                                     ? const Color.fromARGB(255, 70, 70, 70)
-                                    : Colors
-                                          .grey
-                                          .shade300, // Different color when disabled
+                                    : Colors.grey.shade300,
                                 foregroundColor: _isMemberSelected
                                     ? Colors.white
                                     : Colors.grey.shade600,
@@ -926,9 +912,8 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                               icon: const Icon(Icons.search),
                               onPressed: () {
                                 _dismissKeyboard();
-                                FocusScope.of(
-                                  context,
-                                ).requestFocus(FocusNode());
+                                FocusScope.of(context)
+                                    .requestFocus(FocusNode());
                                 _openMemberSearchBottomSheet(8003);
                               },
                             ),
@@ -1004,26 +989,22 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                 onPressed: _areRequiredFieldsFilled
                                     ? () {
                                         _dismissKeyboard();
-                                        final memberId = _memberIdController
-                                            .text
-                                            .trim();
+                                        final memberId =
+                                            _memberIdController.text.trim();
 
                                         if (memberId.isEmpty) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
                                             const SnackBar(
                                               content: Text(
-                                                "Please enter a Member ID",
-                                              ),
+                                                  "Please enter a Member ID"),
                                             ),
                                           );
                                           return;
                                         }
-                                        // Navigate to PrvGift page with MID as parameter
                                         context.push(
                                           '/gifts/special-gift-requests/prv-gifts/$memberId',
-                                           extra: {'iid': 8888},
+                                          extra: {'iid': 8888},
                                         );
                                       }
                                     : null,
@@ -1056,7 +1037,6 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
 
                         const SizedBox(height: 10.0),
                         if (_showGuestData) ...[
-                          // const SizedBox(height: 20),
                           Align(
                             alignment: Alignment.center,
                             child: Text(
@@ -1083,47 +1063,20 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                               final data = giftState.guestGiftData.first;
 
                               final rows = [
-                                {
-                                  "Field": "Drop (Est)",
-                                  "Value": data.guestDrop,
-                                },
-                                {
-                                  "Field": "Cash Out (Est)",
-                                  "Value": data.tmpCashout,
-                                },
+                                {"Field": "Drop (Est)", "Value": data.guestDrop},
+                                {"Field": "Cash Out (Est)", "Value": data.tmpCashout},
                                 {"Field": "Result (Est)", "Value": data.res},
-                                {
-                                  "Field": "Actual Drop (Est)",
-                                  "Value": data.actD,
-                                },
-                                {
-                                  "Field": "Coupons (Est)",
-                                  "Value": data.guestCoupon,
-                                },
-                                {
-                                  "Field": "Commission Paid (Est)",
-                                  "Value": data.tmpCommpaid,
-                                },
-                                {
-                                  "Field": "Points (Est)",
-                                  "Value": data.tmpPoint,
-                                },
-                                {
-                                  "Field": "Flush Coupon (Est)",
-                                  "Value": data.flushCoupon,
-                                },
+                                {"Field": "Actual Drop (Est)", "Value": data.actD},
+                                {"Field": "Coupons (Est)", "Value": data.guestCoupon},
+                                {"Field": "Commission Paid (Est)", "Value": data.tmpCommpaid},
+                                {"Field": "Points (Est)", "Value": data.tmpPoint},
+                                {"Field": "Flush Coupon (Est)", "Value": data.flushCoupon},
                                 {
                                   "Field": "Total Coupon (Est)",
                                   "Value": data.guestCoupon + data.flushCoupon,
                                 },
-                                {
-                                  "Field": "Flush Actual Drop (Est)",
-                                  "Value": data.flushActDrop,
-                                },
-                                {
-                                  "Field": "Avg Bet (Est)",
-                                  "Value": data.tmpAvgBet,
-                                },
+                                {"Field": "Flush Actual Drop (Est)", "Value": data.flushActDrop},
+                                {"Field": "Avg Bet (Est)", "Value": data.tmpAvgBet},
                               ];
 
                               return Stack(
@@ -1132,17 +1085,15 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                     margin: const EdgeInsets.only(top: 10),
                                     decoration: BoxDecoration(
                                       border: Border.all(
-                                        color: Colors.grey.shade400,
-                                      ),
+                                          color: Colors.grey.shade400),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: DataTable(
-                                      headingRowColor: WidgetStateProperty.all(
-                                        Colors.amber.shade100,
-                                      ),
+                                      headingRowColor:
+                                          WidgetStateProperty.all(
+                                              Colors.amber.shade100),
                                       border: TableBorder.all(
-                                        color: Colors.grey.shade300,
-                                      ),
+                                          color: Colors.grey.shade300),
                                       columns: [
                                         DataColumn(
                                           label: Text(
@@ -1176,8 +1127,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                         return DataRow(
                                           color: shouldHighlight
                                               ? WidgetStateProperty.all(
-                                                  Color(0xFFCCFFCC),
-                                                )
+                                                  const Color(0xFFCCFFCC))
                                               : null,
                                           cells: [
                                             DataCell(
@@ -1191,7 +1141,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                                     fontWeight: shouldHighlight
                                                         ? FontWeight.bold
                                                         : fontSettings
-                                                              .fontWeight,
+                                                            .fontWeight,
                                                   ),
                                                 ),
                                               ),
@@ -1202,17 +1152,17 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                                     Alignment.centerRight,
                                                 child: Text(
                                                   formatNumber(row["Value"]),
-
                                                   style: TextStyle(
                                                     fontSize:
                                                         fontSettings.fontSize,
                                                     fontWeight: shouldHighlight
                                                         ? FontWeight.bold
                                                         : fontSettings
-                                                              .fontWeight,
+                                                            .fontWeight,
                                                     fontFamily: 'monospace',
                                                     fontFeatures: const [
-                                                      FontFeature.tabularFigures(),
+                                                      FontFeature
+                                                          .tabularFigures(),
                                                     ],
                                                   ),
                                                 ),
@@ -1223,7 +1173,6 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                       }).toList(),
                                     ),
                                   ),
-
                                   const Watermark(),
                                 ],
                               );
@@ -1250,13 +1199,14 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                     horizontal: 12.0,
                                     vertical: -5.0,
                                   ),
-                                  suffixIcon: const Icon(Icons.calendar_today),
+                                  suffixIcon:
+                                      const Icon(Icons.calendar_today),
                                 ),
                                 validator: (v) => v == null || v.isEmpty
                                     ? "Arrival Date required"
                                     : null,
-                                onTap: () =>
-                                    _pickDate(context, _arrivalDateController),
+                                onTap: () => _pickDate(
+                                    context, _arrivalDateController),
                               ),
                             ),
                             const SizedBox(width: 16),
@@ -1276,15 +1226,14 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                     horizontal: 12.0,
                                     vertical: -5.0,
                                   ),
-                                  suffixIcon: const Icon(Icons.calendar_today),
+                                  suffixIcon:
+                                      const Icon(Icons.calendar_today),
                                 ),
                                 validator: (v) => v == null || v.isEmpty
                                     ? "Departure Date required"
                                     : null,
                                 onTap: () => _pickDate(
-                                  context,
-                                  _departureDateController,
-                                ),
+                                    context, _departureDateController),
                               ),
                             ),
                           ],
@@ -1294,7 +1243,6 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const SizedBox(height: 10),
-
                             Consumer(
                               builder: (context, ref, child) {
                                 final giftState = ref.watch(giftProvider);
@@ -1304,10 +1252,8 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                     gift.code: gift,
                                 }.values.toList();
 
-                                final currentValue =
-                                    uniqueGiftList.any(
-                                      (gift) => gift.code == _selectedGift,
-                                    )
+                                final currentValue = uniqueGiftList.any(
+                                        (gift) => gift.code == _selectedGift)
                                     ? _selectedGift
                                     : null;
 
@@ -1336,7 +1282,6 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                       fontSize: fontSettings.fontSize,
                                       fontWeight: fontSettings.fontWeight,
                                     ),
-
                                     border: const OutlineInputBorder(),
                                     contentPadding: const EdgeInsets.symmetric(
                                       horizontal: 12.0,
@@ -1369,17 +1314,15 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                               items: const [
                                 DropdownMenuItem(
                                   value: "OTP Chips",
-                                  child: Text(
-                                    "OTP Chips",
-                                    style: TextStyle(color: Colors.black),
-                                  ),
+                                  child: Text("OTP Chips",
+                                      style:
+                                          TextStyle(color: Colors.black)),
                                 ),
                                 DropdownMenuItem(
                                   value: "NC Chips",
-                                  child: Text(
-                                    "NC Chips",
-                                    style: TextStyle(color: Colors.black),
-                                  ),
+                                  child: Text("NC Chips",
+                                      style:
+                                          TextStyle(color: Colors.black)),
                                 ),
                               ],
                               onChanged: (value) {
@@ -1393,7 +1336,6 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                             ),
 
                             const SizedBox(height: 10.0),
-
                             TextFormField(
                               controller: _amountController,
                               style: _inputTextStylefroammount(fontSettings),
@@ -1448,7 +1390,10 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                           onChanged: (value) => _remarks = value,
                         ),
                         const SizedBox(height: 16.0),
+
+                        // ← FIX: Wrap SizedBox with key so we can get its screen position
                         SizedBox(
+                          key: _sendButtonKey,
                           width: double.infinity,
                           child: ElevatedButton(
                             onPressed: _showGuestData
@@ -1492,23 +1437,19 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
 
                                       if (!mounted) return;
                                       if (ok) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
                                           const SnackBar(
                                             content: Text(
-                                              "Gift request sent successfully",
-                                            ),
+                                                "Gift request sent successfully"),
                                           ),
                                         );
-                                        final giftState = ref.read(
-                                          giftProvider,
-                                        );
+                                        final giftState =
+                                            ref.read(giftProvider);
                                         Map<String, dynamic> guestDataMap = {};
 
                                         if (giftState
-                                            .guestGiftData
-                                            .isNotEmpty) {
+                                            .guestGiftData.isNotEmpty) {
                                           final data =
                                               giftState.guestGiftData.first;
                                           guestDataMap = {
@@ -1525,16 +1466,15 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                           };
                                         }
 
-                                        final shareOption = await showDialog<String>(
+                                        final shareOption =
+                                            await showDialog<String>(
                                           context: context,
                                           builder: (BuildContext context) {
                                             return AlertDialog(
                                               title: Row(
                                                 children: [
-                                                  Icon(
-                                                    Icons.share,
-                                                    color: Colors.blue,
-                                                  ),
+                                                  Icon(Icons.share,
+                                                      color: Colors.blue),
                                                   SizedBox(width: 8),
                                                   Text('Share Gift Request'),
                                                 ],
@@ -1545,23 +1485,20 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                                     CrossAxisAlignment.start,
                                                 children: [
                                                   Text(
-                                                    'Choose how to share the PDF document:',
-                                                  ),
+                                                      'Choose how to share the PDF document:'),
                                                   SizedBox(height: 16),
                                                   Container(
-                                                    padding: EdgeInsets.all(12),
+                                                    padding:
+                                                        EdgeInsets.all(12),
                                                     decoration: BoxDecoration(
                                                       color:
                                                           Colors.green.shade50,
                                                       borderRadius:
                                                           BorderRadius.circular(
-                                                            8,
-                                                          ),
+                                                              8),
                                                       border: Border.all(
-                                                        color: Colors
-                                                            .green
-                                                            .shade200,
-                                                      ),
+                                                          color: Colors.green
+                                                              .shade200),
                                                     ),
                                                     child: Column(
                                                       crossAxisAlignment:
@@ -1571,12 +1508,11 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                                         Row(
                                                           children: [
                                                             Icon(
-                                                              Icons
-                                                                  .check_circle,
-                                                              color:
-                                                                  Colors.green,
-                                                              size: 16,
-                                                            ),
+                                                                Icons
+                                                                    .check_circle,
+                                                                color: Colors
+                                                                    .green,
+                                                                size: 16),
                                                             SizedBox(width: 4),
                                                             Text(
                                                               'RECOMMENDED',
@@ -1594,8 +1530,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                                         ),
                                                         SizedBox(height: 4),
                                                         Text(
-                                                          'Share with Apps - PDF automatically attached',
-                                                        ),
+                                                            'Share with Apps - PDF automatically attached'),
                                                       ],
                                                     ),
                                                   ),
@@ -1603,26 +1538,26 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                               ),
                                               actions: [
                                                 TextButton(
-                                                  onPressed: () => Navigator.of(
-                                                    context,
-                                                  ).pop('cancel'),
-                                                  child: const Text('Cancel'),
+                                                  onPressed: () =>
+                                                      Navigator.of(context)
+                                                          .pop('cancel'),
+                                                  child:
+                                                      const Text('Cancel'),
                                                 ),
                                                 ElevatedButton.icon(
-                                                  onPressed: () => Navigator.of(
-                                                    context,
-                                                  ).pop('system'),
+                                                  onPressed: () =>
+                                                      Navigator.of(context)
+                                                          .pop('system'),
                                                   style:
                                                       ElevatedButton.styleFrom(
-                                                        backgroundColor:
-                                                            Colors.blue,
-                                                        foregroundColor:
-                                                            Colors.white,
-                                                      ),
+                                                    backgroundColor:
+                                                        Colors.blue,
+                                                    foregroundColor:
+                                                        Colors.white,
+                                                  ),
                                                   icon: Icon(Icons.share),
                                                   label: const Text(
-                                                    'Share with Apps',
-                                                  ),
+                                                      'Share with Apps'),
                                                 ),
                                               ],
                                             );
@@ -1631,26 +1566,29 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
 
                                         if (shareOption == 'system') {
                                           try {
-                                            // Use the direct
-                                            final currentGiftState = ref.read(
-                                              giftProvider,
-                                            );
+                                            final currentGiftState =
+                                                ref.read(giftProvider);
                                             final returnSerial =
                                                 currentGiftState
                                                     .lastReturnSerial;
 
-                                            // Debug print to verify we have the return serial
+                                            // ← FIX: capture button rect BEFORE dialog closes context
+                                            final shareRect =
+                                                _getSendButtonRect();
 
-                                            await DirectWhatsAppPdfService.shareDirectlyToWhatsApp(
+                                            await DirectWhatsAppPdfService
+                                                .shareDirectlyToWhatsApp(
                                               memberName: _memberNameController
                                                   .text
                                                   .trim(),
-                                              memberId: _memberIdController.text
+                                              memberId: _memberIdController
+                                                  .text
                                                   .trim(),
                                               fromDateTime: _fromDateController
                                                   .text
                                                   .trim(),
-                                              toDateTime: _toDateController.text
+                                              toDateTime: _toDateController
+                                                  .text
                                                   .trim(),
                                               arrivalDate:
                                                   _arrivalDateController.text
@@ -1658,8 +1596,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                               departureDate:
                                                   _departureDateController.text
                                                       .trim(),
-                                              giftFor:
-                                                  _selectedGift ??
+                                              giftFor: _selectedGift ??
                                                   "SPECIAL GIFT",
                                               chipType:
                                                   _chipType ?? "OTP Chips",
@@ -1668,80 +1605,70 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                               userName: userName ?? "",
                                               guestData: guestDataMap,
                                               returnSerial: returnSerial ?? "",
+                                              sharePositionOrigin:
+                                                  shareRect, // ← PASS RECT HERE
                                             );
+
                                             if (mounted) {
-                                              final serialInfo =
-                                                  returnSerial != null &&
+                                              final serialInfo = returnSerial !=
+                                                          null &&
                                                       returnSerial.isNotEmpty
                                                   ? " (Serial: $returnSerial)"
                                                   : "";
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
                                                 SnackBar(
                                                   content: Text(
-                                                    "PDF ready$serialInfo! Select WhatsApp from the share options.",
-                                                  ),
-                                                  duration: Duration(
-                                                    seconds: 3,
-                                                  ),
+                                                      "PDF ready$serialInfo! Select WhatsApp from the share options."),
+                                                  duration:
+                                                      Duration(seconds: 3),
                                                 ),
                                               );
                                             }
 
-                                            // Clear the API response data after using it
                                             ref
                                                 .read(giftProvider.notifier)
                                                 .clearLastApiResponse();
                                           } catch (e) {
                                             if (mounted) {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
                                                 SnackBar(
                                                   content: Text(
-                                                    "Error sharing PDF: $e",
-                                                  ),
+                                                      "Error sharing PDF: $e"),
                                                   backgroundColor: Colors.red,
-                                                  duration: Duration(
-                                                    seconds: 4,
-                                                  ),
+                                                  duration:
+                                                      Duration(seconds: 4),
                                                 ),
                                               );
                                             }
                                           }
                                         }
-                                        // Reset providers
-                                        ref
-                                            .read(memberSearchProvider.notifier)
-                                            .resetState();
+
                                         ref
                                             .read(
-                                              newReservationProvider.notifier,
-                                            )
+                                                memberSearchProvider.notifier)
+                                            .resetState();
+                                        ref
+                                            .read(newReservationProvider
+                                                .notifier)
                                             .resetState();
 
-                                        // Navigate back and return success result
-                                        Navigator.of(context).pop(
-                                          true,
-                                        ); // Pass true to indicate success
+                                        Navigator.of(context).pop(true);
                                       } else {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
                                           const SnackBar(
                                             content: Text(
-                                              "Failed to send gift request",
-                                            ),
+                                                "Failed to send gift request"),
                                           ),
                                         );
                                       }
                                     } catch (e) {
                                       setState(() => _isLoading = false);
                                       if (mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
                                           SnackBar(
                                             content: Text("Error: $e"),
                                             backgroundColor: Colors.red,
@@ -1751,7 +1678,6 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                     }
                                   }
                                 : null,
-
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _showGuestData
                                   ? Constants.kSecondaryColor
@@ -1801,7 +1727,6 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                     ),
                   ),
                 ),
-              // const Watermark(),
             ],
           ),
         ),

@@ -499,7 +499,7 @@ Future<bool> _canAccessGiftDetails(
                               Text('Requested: ',
                                   style: TextStyle(
                                         color: Colors.black87,
-                                      fontSize: fontSettings.fontSize+2,
+                                      fontSize: fontSettings.fontSize+1,
                                       fontWeight: fontSettings.fontWeight)),
                               Expanded(
                                 child: Text(

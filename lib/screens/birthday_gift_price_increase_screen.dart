@@ -1,4 +1,5 @@
 import 'package:ballys_reservation_app/components/guest_deatils_view_spGift.dart';
+import 'package:ballys_reservation_app/components/birthday_gift_increase_pdf.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
@@ -61,12 +62,9 @@ class _BirthdayGiftPriceIncreaseScreenState
     _loadUserCredentials();
     _initializeMemberData();
     
-    // Immediately clear previous guest data and load fresh data
     Future.microtask(() {
-      // Clear any previous guest state first
       ref.read(selectedGuestProvider.notifier).clearGuest();
       ref.read(giftProvider.notifier).getGiftForList();
-      // Fetch complete guest data including image
       _fetchCompleteGuestData();
     });
   }
@@ -78,7 +76,6 @@ class _BirthdayGiftPriceIncreaseScreenState
     });
 
     try {
-      // First, set the basic guest data with all available information
       ref.read(selectedGuestProvider.notifier).setSelectedGuest(
         Guest(
           mid: widget.birthday.mid,
@@ -91,11 +88,10 @@ class _BirthdayGiftPriceIncreaseScreenState
           gName: widget.birthday.gName,
           gift: widget.birthday.gift,
           mobile: widget.birthday.mobile,
-          memImage2: null, // Will be updated by getGuestImage
+          memImage2: null,
         ),
       );
       
-      // Then fetch and update the image
       await ref.read(selectedGuestProvider.notifier).getGuestImage(
         9021,
         widget.birthday.mid,
@@ -105,7 +101,6 @@ class _BirthdayGiftPriceIncreaseScreenState
         _isLoadingGuestCard = false;
       });
     } catch (e) {
-      // If fetching image fails, guest data is already set above
       print("Error fetching guest image: $e");
       setState(() {
         _isLoadingGuestCard = false;
@@ -114,7 +109,6 @@ class _BirthdayGiftPriceIncreaseScreenState
   }
 
   void _initializeMemberData() {
-    // Auto-fill member ID and name from birthday object
     _memberIdController.text = widget.birthday.mid;
     _memberNameController.text = widget.birthday.mname;
     _currentGiftValueController.text = widget.birthday.gift;
@@ -131,485 +125,413 @@ class _BirthdayGiftPriceIncreaseScreenState
     FocusScope.of(context).unfocus();
   }
 
-  // Future<void> _pickDate(
-  //   BuildContext context,
-  //   TextEditingController controller,
-  // ) async {
-  //   final DateTime? date = await showDatePicker(
-  //     context: context,
-  //     initialDate: DateTime.now(),
-  //     firstDate: DateTime(2000),
-  //     lastDate: DateTime(2101),
-  //   );
+  Future<void> _pickDate(
+    BuildContext context,
+    TextEditingController controller,
+  ) async {
+    DateTime selectedDate = DateTime.now();
 
-  //   if (date != null) {
-  //     controller.text = "${date.day}/${date.month}/${date.year}";
-  //   }
-  // }
-Future<void> _pickDate(
-  BuildContext context,
-  TextEditingController controller,
-) async {
-  DateTime selectedDate = DateTime.now();
-
-  await showModalBottomSheet(
-    context: context,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-    ),
-    builder: (BuildContext context) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Text(
-              "Select date",
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade600,
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                "Select date",
+                style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
               ),
             ),
-          ),
-          SizedBox(
-            height: 200,
-            child: CupertinoDatePicker(
-              mode: CupertinoDatePickerMode.date,
-              initialDateTime: selectedDate,
-              minimumDate: DateTime(2000),
-              maximumDate: DateTime(2101),
-              onDateTimeChanged: (DateTime newDate) {
-                selectedDate = newDate;
+            SizedBox(
+              height: 200,
+              child: CupertinoDatePicker(
+                mode: CupertinoDatePickerMode.date,
+                initialDateTime: selectedDate,
+                minimumDate: DateTime(2000),
+                maximumDate: DateTime(2101),
+                onDateTimeChanged: (DateTime newDate) {
+                  selectedDate = newDate;
+                },
+              ),
+            ),
+            const Divider(height: 1),
+            TextButton(
+              onPressed: () {
+                controller.text =
+                    "${selectedDate.day}/${selectedDate.month}/${selectedDate.year}";
+                Navigator.of(context).pop();
               },
-            ),
-          ),
-          const Divider(height: 1),
-          TextButton(
-            onPressed: () {
-              controller.text =
-                  "${selectedDate.day}/${selectedDate.month}/${selectedDate.year}";
-              Navigator.of(context).pop();
-            },
-            child: const Text(
-              "Confirm",
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.blue,
+              child: const Text(
+                "Confirm",
+                style: TextStyle(fontSize: 18, color: Colors.blue),
               ),
             ),
-          ),
-          const Divider(height: 1),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text(
-              "Cancel",
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.blue,
+            const Divider(height: 1),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                "Cancel",
+                style: TextStyle(fontSize: 18, color: Colors.blue),
               ),
             ),
-          ),
-          const SizedBox(height: 8),
-        ],
-      );
-    },
-  );
-}
-  // Future<void> _pickDateTime(
-  //   BuildContext context,
-  //   TextEditingController controller,
-  // ) async {
-  //   final DateTime? date = await showDatePicker(
-  //     context: context,
-  //     initialDate: DateTime.now(),
-  //     firstDate: DateTime(2000),
-  //     lastDate: DateTime(2101),
-  //   );
+            const SizedBox(height: 8),
+          ],
+        );
+      },
+    );
+  }
 
-  //   if (date == null) return;
+  Future<void> _pickDateTime(
+    BuildContext context,
+    TextEditingController controller,
+  ) async {
+    DateTime selectedDate = DateTime.now();
+    TimeOfDay selectedTime = TimeOfDay.now();
 
-  //   final TimeOfDay? time = await showTimePicker(
-  //     context: context,
-  //     initialTime: TimeOfDay.now(),
-  //   );
+    // Step 1: Pick Date
+    final datePicked = await showModalBottomSheet<DateTime>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext context) {
+        int day = selectedDate.day;
+        int month = selectedDate.month;
+        int year = selectedDate.year;
 
-  //   if (time == null) return;
+        final FixedExtentScrollController dayController =
+            FixedExtentScrollController(initialItem: day - 1);
+        final FixedExtentScrollController monthController =
+            FixedExtentScrollController(initialItem: month - 1);
+        final FixedExtentScrollController yearController =
+            FixedExtentScrollController(initialItem: year - 2000);
 
-  //   final DateTime dateTime = DateTime(
-  //     date.year,
-  //     date.month,
-  //     date.day,
-  //     time.hour,
-  //     time.minute,
-  //   );
+        final List<String> monthNames = [
+          "January", "February", "March", "April",
+          "May", "June", "July", "August",
+          "September", "October", "November", "December"
+        ];
 
-  //   controller.text =
-  //       "${dateTime.day}/${dateTime.month}/${dateTime.year} ${time.format(context)}";
-  // }
-Future<void> _pickDateTime(
-  BuildContext context,
-  TextEditingController controller,
-) async {
-  DateTime selectedDate = DateTime.now();
-  TimeOfDay selectedTime = TimeOfDay.now();
-
-  // Step 1: Pick Date
-  final datePicked = await showModalBottomSheet<DateTime>(
-    context: context,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-    ),
-    builder: (BuildContext context) {
-      int day = selectedDate.day;
-      int month = selectedDate.month;
-      int year = selectedDate.year;
-
-      final FixedExtentScrollController dayController =
-          FixedExtentScrollController(initialItem: day - 1);
-      final FixedExtentScrollController monthController =
-          FixedExtentScrollController(initialItem: month - 1);
-      final FixedExtentScrollController yearController =
-          FixedExtentScrollController(initialItem: year - 2000);
-
-      final List<String> monthNames = [
-        "January", "February", "March", "April",
-        "May", "June", "July", "August",
-        "September", "October", "November", "December"
-      ];
-
-      return StatefulBuilder(
-        builder: (context, setModalState) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Text(
-                  "Select Date",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey.shade600,
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Text(
+                    "Select Date",
+                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
                   ),
                 ),
-              ),
-              SizedBox(
-                height: 200,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Center highlight bar
-                    Container(
-                      height: 40,
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
+                SizedBox(
+                  height: 200,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        height: 40,
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                    ),
-                    Row(
-                      children: [
-                        // Day Column
-                        Expanded(
-                          child: ListWheelScrollView.useDelegate(
-                            controller: dayController,
-                            itemExtent: 40,
-                            perspective: 0.005,
-                            diameterRatio: 1.5,
-                            physics: const FixedExtentScrollPhysics(),
-                            onSelectedItemChanged: (index) {
-                              day = index + 1;
-                            },
-                            childDelegate: ListWheelChildBuilderDelegate(
-                              childCount: 31,
-                              builder: (context, index) {
-                                return Center(
-                                  child: Text(
-                                    "${index + 1}",
-                                    style: const TextStyle(fontSize: 18),
-                                  ),
-                                );
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ListWheelScrollView.useDelegate(
+                              controller: dayController,
+                              itemExtent: 40,
+                              perspective: 0.005,
+                              diameterRatio: 1.5,
+                              physics: const FixedExtentScrollPhysics(),
+                              onSelectedItemChanged: (index) {
+                                day = index + 1;
                               },
-                            ),
-                          ),
-                        ),
-                        // Month Column
-                        Expanded(
-                          flex: 2,
-                          child: ListWheelScrollView.useDelegate(
-                            controller: monthController,
-                            itemExtent: 40,
-                            perspective: 0.005,
-                            diameterRatio: 1.5,
-                            physics: const FixedExtentScrollPhysics(),
-                            onSelectedItemChanged: (index) {
-                              month = index + 1;
-                            },
-                            childDelegate: ListWheelChildBuilderDelegate(
-                              childCount: 12,
-                              builder: (context, index) {
-                                return Center(
-                                  child: Text(
-                                    monthNames[index],
-                                    style: const TextStyle(fontSize: 18),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        // Year Column
-                        Expanded(
-                          flex: 2,
-                          child: ListWheelScrollView.useDelegate(
-                            controller: yearController,
-                            itemExtent: 40,
-                            perspective: 0.005,
-                            diameterRatio: 1.5,
-                            physics: const FixedExtentScrollPhysics(),
-                            onSelectedItemChanged: (index) {
-                              year = 2000 + index;
-                            },
-                            childDelegate: ListWheelChildBuilderDelegate(
-                              childCount: 102,
-                              builder: (context, index) {
-                                return Center(
-                                  child: Text(
-                                    "${2000 + index}",
-                                    style: const TextStyle(fontSize: 18),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              TextButton(
-                onPressed: () {
-                  final maxDay = DateTime(year, month + 1, 0).day;
-                  final validDay = day > maxDay ? maxDay : day;
-                  Navigator.of(context).pop(DateTime(year, month, validDay));
-                },
-                child: const Text(
-                  "Confirm",
-                  style: TextStyle(fontSize: 18, color: Colors.blue),
-                ),
-              ),
-              const Divider(height: 1),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text(
-                  "Cancel",
-                  style: TextStyle(fontSize: 18, color: Colors.blue),
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
-          );
-        },
-      );
-    },
-  );
-
-  if (datePicked == null) return;
-  selectedDate = datePicked;
-
-  // Step 2: Pick Time with AM/PM
-  final timePicked = await showModalBottomSheet<TimeOfDay>(
-    context: context,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-    ),
-    builder: (BuildContext context) {
-      // Convert to 12-hour format
-      int hour = selectedTime.hourOfPeriod == 0 ? 12 : selectedTime.hourOfPeriod;
-      int minute = selectedTime.minute;
-      DayPeriod period = selectedTime.period;
-
-      final FixedExtentScrollController hourController =
-          FixedExtentScrollController(initialItem: hour - 1);
-      final FixedExtentScrollController minuteController =
-          FixedExtentScrollController(initialItem: minute);
-      final FixedExtentScrollController periodController =
-          FixedExtentScrollController(
-              initialItem: period == DayPeriod.am ? 0 : 1);
-
-      return StatefulBuilder(
-        builder: (context, setModalState) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Text(
-                  "Select Time",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ),
-              SizedBox(
-                height: 200,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Center highlight bar
-                    Container(
-                      height: 40,
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        // Hour Column (1-12)
-                        Expanded(
-                          flex: 2,
-                          child: ListWheelScrollView.useDelegate(
-                            controller: hourController,
-                            itemExtent: 40,
-                            perspective: 0.005,
-                            diameterRatio: 1.5,
-                            physics: const FixedExtentScrollPhysics(),
-                            onSelectedItemChanged: (index) {
-                              hour = index + 1;
-                            },
-                            childDelegate: ListWheelChildBuilderDelegate(
-                              childCount: 12,
-                              builder: (context, index) {
-                                return Center(
-                                  child: Text(
-                                    (index + 1).toString().padLeft(2, '0'),
-                                    style: const TextStyle(fontSize: 18),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        // Colon separator
-                        const Text(
-                          ":",
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        // Minute Column (0-59)
-                        Expanded(
-                          flex: 2,
-                          child: ListWheelScrollView.useDelegate(
-                            controller: minuteController,
-                            itemExtent: 40,
-                            perspective: 0.005,
-                            diameterRatio: 1.5,
-                            physics: const FixedExtentScrollPhysics(),
-                            onSelectedItemChanged: (index) {
-                              minute = index;
-                            },
-                            childDelegate: ListWheelChildBuilderDelegate(
-                              childCount: 60,
-                              builder: (context, index) {
-                                return Center(
-                                  child: Text(
-                                    index.toString().padLeft(2, '0'),
-                                    style: const TextStyle(fontSize: 18),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        // AM/PM Column
-                        Expanded(
-                          child: ListWheelScrollView.useDelegate(
-                            controller: periodController,
-                            itemExtent: 40,
-                            perspective: 0.005,
-                            diameterRatio: 1.5,
-                            physics: const FixedExtentScrollPhysics(),
-                            onSelectedItemChanged: (index) {
-                              period =
-                                  index == 0 ? DayPeriod.am : DayPeriod.pm;
-                            },
-                            childDelegate: ListWheelChildBuilderDelegate(
-                              childCount: 2,
-                              builder: (context, index) {
-                                return Center(
-                                  child: Text(
-                                    index == 0 ? "AM" : "PM",
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
+                              childDelegate: ListWheelChildBuilderDelegate(
+                                childCount: 31,
+                                builder: (context, index) {
+                                  return Center(
+                                    child: Text(
+                                      "${index + 1}",
+                                      style: const TextStyle(fontSize: 18),
                                     ),
-                                  ),
-                                );
-                              },
+                                  );
+                                },
+                              ),
                             ),
                           ),
+                          Expanded(
+                            flex: 2,
+                            child: ListWheelScrollView.useDelegate(
+                              controller: monthController,
+                              itemExtent: 40,
+                              perspective: 0.005,
+                              diameterRatio: 1.5,
+                              physics: const FixedExtentScrollPhysics(),
+                              onSelectedItemChanged: (index) {
+                                month = index + 1;
+                              },
+                              childDelegate: ListWheelChildBuilderDelegate(
+                                childCount: 12,
+                                builder: (context, index) {
+                                  return Center(
+                                    child: Text(
+                                      monthNames[index],
+                                      style: const TextStyle(fontSize: 18),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: ListWheelScrollView.useDelegate(
+                              controller: yearController,
+                              itemExtent: 40,
+                              perspective: 0.005,
+                              diameterRatio: 1.5,
+                              physics: const FixedExtentScrollPhysics(),
+                              onSelectedItemChanged: (index) {
+                                year = 2000 + index;
+                              },
+                              childDelegate: ListWheelChildBuilderDelegate(
+                                childCount: 102,
+                                builder: (context, index) {
+                                  return Center(
+                                    child: Text(
+                                      "${2000 + index}",
+                                      style: const TextStyle(fontSize: 18),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                TextButton(
+                  onPressed: () {
+                    final maxDay = DateTime(year, month + 1, 0).day;
+                    final validDay = day > maxDay ? maxDay : day;
+                    Navigator.of(context).pop(DateTime(year, month, validDay));
+                  },
+                  child: const Text(
+                    "Confirm",
+                    style: TextStyle(fontSize: 18, color: Colors.blue),
+                  ),
+                ),
+                const Divider(height: 1),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text(
+                    "Cancel",
+                    style: TextStyle(fontSize: 18, color: Colors.blue),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (datePicked == null) return;
+    selectedDate = datePicked;
+
+    // Step 2: Pick Time with AM/PM
+    final timePicked = await showModalBottomSheet<TimeOfDay>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext context) {
+        int hour = selectedTime.hourOfPeriod == 0 ? 12 : selectedTime.hourOfPeriod;
+        int minute = selectedTime.minute;
+        DayPeriod period = selectedTime.period;
+
+        final FixedExtentScrollController hourController =
+            FixedExtentScrollController(initialItem: hour - 1);
+        final FixedExtentScrollController minuteController =
+            FixedExtentScrollController(initialItem: minute);
+        final FixedExtentScrollController periodController =
+            FixedExtentScrollController(
+                initialItem: period == DayPeriod.am ? 0 : 1);
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Text(
+                    "Select Time",
+                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                  ),
+                ),
+                SizedBox(
+                  height: 200,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        height: 40,
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: ListWheelScrollView.useDelegate(
+                              controller: hourController,
+                              itemExtent: 40,
+                              perspective: 0.005,
+                              diameterRatio: 1.5,
+                              physics: const FixedExtentScrollPhysics(),
+                              onSelectedItemChanged: (index) {
+                                hour = index + 1;
+                              },
+                              childDelegate: ListWheelChildBuilderDelegate(
+                                childCount: 12,
+                                builder: (context, index) {
+                                  return Center(
+                                    child: Text(
+                                      (index + 1).toString().padLeft(2, '0'),
+                                      style: const TextStyle(fontSize: 18),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          const Text(
+                            ":",
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: ListWheelScrollView.useDelegate(
+                              controller: minuteController,
+                              itemExtent: 40,
+                              perspective: 0.005,
+                              diameterRatio: 1.5,
+                              physics: const FixedExtentScrollPhysics(),
+                              onSelectedItemChanged: (index) {
+                                minute = index;
+                              },
+                              childDelegate: ListWheelChildBuilderDelegate(
+                                childCount: 60,
+                                builder: (context, index) {
+                                  return Center(
+                                    child: Text(
+                                      index.toString().padLeft(2, '0'),
+                                      style: const TextStyle(fontSize: 18),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: ListWheelScrollView.useDelegate(
+                              controller: periodController,
+                              itemExtent: 40,
+                              perspective: 0.005,
+                              diameterRatio: 1.5,
+                              physics: const FixedExtentScrollPhysics(),
+                              onSelectedItemChanged: (index) {
+                                period = index == 0 ? DayPeriod.am : DayPeriod.pm;
+                              },
+                              childDelegate: ListWheelChildBuilderDelegate(
+                                childCount: 2,
+                                builder: (context, index) {
+                                  return Center(
+                                    child: Text(
+                                      index == 0 ? "AM" : "PM",
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const Divider(height: 1),
-              TextButton(
-                onPressed: () {
-                  // Convert back to 24-hour format
-                  int hour24;
-                  if (period == DayPeriod.am) {
-                    hour24 = hour == 12 ? 0 : hour;
-                  } else {
-                    hour24 = hour == 12 ? 12 : hour + 12;
-                  }
-                  Navigator.of(context).pop(
-                    TimeOfDay(hour: hour24, minute: minute),
-                  );
-                },
-                child: const Text(
-                  "Confirm",
-                  style: TextStyle(fontSize: 18, color: Colors.blue),
+                const Divider(height: 1),
+                TextButton(
+                  onPressed: () {
+                    int hour24;
+                    if (period == DayPeriod.am) {
+                      hour24 = hour == 12 ? 0 : hour;
+                    } else {
+                      hour24 = hour == 12 ? 12 : hour + 12;
+                    }
+                    Navigator.of(context).pop(
+                      TimeOfDay(hour: hour24, minute: minute),
+                    );
+                  },
+                  child: const Text(
+                    "Confirm",
+                    style: TextStyle(fontSize: 18, color: Colors.blue),
+                  ),
                 ),
-              ),
-              const Divider(height: 1),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text(
-                  "Cancel",
-                  style: TextStyle(fontSize: 18, color: Colors.blue),
+                const Divider(height: 1),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text(
+                    "Cancel",
+                    style: TextStyle(fontSize: 18, color: Colors.blue),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-            ],
-          );
-        },
-      );
-    },
-  );
+                const SizedBox(height: 8),
+              ],
+            );
+          },
+        );
+      },
+    );
 
-  if (timePicked == null) return;
-  selectedTime = timePicked;
+    if (timePicked == null) return;
+    selectedTime = timePicked;
 
-  // Step 3: Format with AM/PM and set to controller
-  final hour12 = selectedTime.hourOfPeriod == 0 ? 12 : selectedTime.hourOfPeriod;
-  final minuteStr = selectedTime.minute.toString().padLeft(2, '0');
-  final periodStr = selectedTime.period == DayPeriod.am ? "AM" : "PM";
+    final hour12 = selectedTime.hourOfPeriod == 0 ? 12 : selectedTime.hourOfPeriod;
+    final minuteStr = selectedTime.minute.toString().padLeft(2, '0');
+    final periodStr = selectedTime.period == DayPeriod.am ? "AM" : "PM";
 
-  controller.text =
-      "${selectedDate.day}/${selectedDate.month}/${selectedDate.year} "
-      "${hour12.toString().padLeft(2, '0')}:$minuteStr $periodStr";
-}
+    controller.text =
+        "${selectedDate.day}/${selectedDate.month}/${selectedDate.year} "
+        "${hour12.toString().padLeft(2, '0')}:$minuteStr $periodStr";
+  }
+
   TextStyle _inputTextStyle(FontSettings fontSettings) {
     return TextStyle(
       fontSize: fontSettings.fontSize,
@@ -644,7 +566,6 @@ Future<void> _pickDateTime(
 
     return PopScope(
       onPopInvokedWithResult: (bool didPop, dynamic result) {
-        // Clear guest data when user navigates back
         ref.read(selectedGuestProvider.notifier).clearGuest();
       },
       child: GestureDetector(
@@ -675,7 +596,6 @@ Future<void> _pickDateTime(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Guest Display Card
                         GuestDisplayCardSpecialGiftview(
                           memberIdText: _memberIdController.text,
                           memberNameText: _memberNameController.text,
@@ -686,7 +606,6 @@ Future<void> _pickDateTime(
 
                         const SizedBox(height: 16.0),
 
-                        // Current Gift Value Card
                         Card(
                           elevation: 2,
                           color: Colors.green.shade50,
@@ -694,11 +613,8 @@ Future<void> _pickDateTime(
                             padding: const EdgeInsets.all(12.0),
                             child: Row(
                               children: [
-                                Icon(
-                                  Icons.card_giftcard,
-                                  color: Colors.green.shade700,
-                                  size: 24,
-                                ),
+                                Icon(Icons.card_giftcard,
+                                    color: Colors.green.shade700, size: 24),
                                 const SizedBox(width: 12),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -727,7 +643,6 @@ Future<void> _pickDateTime(
 
                         const SizedBox(height: 16.0),
 
-                        // From Date & Time
                         TextFormField(
                           controller: _fromDateController,
                           readOnly: true,
@@ -740,9 +655,7 @@ Future<void> _pickDateTime(
                             ),
                             border: const OutlineInputBorder(),
                             contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12.0,
-                              vertical: -5.0,
-                            ),
+                                horizontal: 12.0, vertical: -5.0),
                             suffixIcon: const Icon(Icons.calendar_today),
                           ),
                           validator: (v) => v == null || v.isEmpty
@@ -754,7 +667,6 @@ Future<void> _pickDateTime(
 
                         const SizedBox(height: 10.0),
 
-                        // To Date & Time
                         TextFormField(
                           controller: _toDateController,
                           readOnly: true,
@@ -767,23 +679,20 @@ Future<void> _pickDateTime(
                             ),
                             border: const OutlineInputBorder(),
                             contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12.0,
-                              vertical: -5.0,
-                            ),
+                                horizontal: 12.0, vertical: -5.0),
                             suffixIcon: const Icon(Icons.calendar_today),
                           ),
                           validator: (v) => v == null || v.isEmpty
                               ? "To Date & Time required"
                               : null,
-                          onTap: () => _pickDateTime(context, _toDateController),
+                          onTap: () =>
+                              _pickDateTime(context, _toDateController),
                         ),
 
                         const SizedBox(height: 10.0),
 
-                        // ── Profile + Guest Data + Prv Gift buttons ──────────
                         Row(
                           children: [
-                            // Profile navigation button (same as ViewSpecificGiftRequest)
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.black,
@@ -834,7 +743,6 @@ Future<void> _pickDateTime(
                                   : const Icon(Icons.person_search, size: 25),
                             ),
                             const SizedBox(width: 5),
-                            // Guest Data button
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: _areRequiredFieldsFilled
@@ -881,38 +789,30 @@ Future<void> _pickDateTime(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   padding: const EdgeInsets.symmetric(
-                                    vertical: 16,
-                                  ),
+                                      vertical: 16),
                                 ),
                               ),
                             ),
                             const SizedBox(width: 7),
-                            // Prv Gift button
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: _areRequiredFieldsFilled
                                     ? () {
                                         _dismissKeyboard();
-                                        final memberId = _memberIdController
-                                            .text
-                                            .trim();
+                                        final memberId =
+                                            _memberIdController.text.trim();
 
                                         if (memberId.isEmpty) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                "Please enter a Member ID",
-                                              ),
-                                            ),
-                                          );
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(const SnackBar(
+                                            content: Text(
+                                                "Please enter a Member ID"),
+                                          ));
                                           return;
                                         }
-                                        // Navigate to PrvGift page with MID as parameter
                                         context.push(
                                           '/gifts/special-gift-requests/prv-gifts/$memberId',
-                                           extra: {'iid': 8888},
+                                          extra: {'iid': 8888},
                                         );
                                       }
                                     : null,
@@ -935,8 +835,7 @@ Future<void> _pickDateTime(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   padding: const EdgeInsets.symmetric(
-                                    vertical: 16,
-                                  ),
+                                      vertical: 16),
                                 ),
                               ),
                             ),
@@ -945,7 +844,6 @@ Future<void> _pickDateTime(
 
                         const SizedBox(height: 10.0),
 
-                        // Guest Gift Data Display
                         if (_showGuestData) ...[
                           Align(
                             alignment: Alignment.center,
@@ -973,47 +871,20 @@ Future<void> _pickDateTime(
                               final data = giftState.guestGiftData.first;
 
                               final rows = [
-                                {
-                                  "Field": "Drop (Est)",
-                                  "Value": data.guestDrop,
-                                },
-                                {
-                                  "Field": "Cash Out (Est)",
-                                  "Value": data.tmpCashout,
-                                },
+                                {"Field": "Drop (Est)", "Value": data.guestDrop},
+                                {"Field": "Cash Out (Est)", "Value": data.tmpCashout},
                                 {"Field": "Result (Est)", "Value": data.res},
-                                {
-                                  "Field": "Actual Drop (Est)",
-                                  "Value": data.actD,
-                                },
-                                {
-                                  "Field": "Coupons (Est)",
-                                  "Value": data.guestCoupon,
-                                },
-                                {
-                                  "Field": "Commission Paid (Est)",
-                                  "Value": data.tmpCommpaid,
-                                },
-                                {
-                                  "Field": "Points (Est)",
-                                  "Value": data.tmpPoint,
-                                },
-                                {
-                                  "Field": "Flush Coupon (Est)",
-                                  "Value": data.flushCoupon,
-                                },
+                                {"Field": "Actual Drop (Est)", "Value": data.actD},
+                                {"Field": "Coupons (Est)", "Value": data.guestCoupon},
+                                {"Field": "Commission Paid (Est)", "Value": data.tmpCommpaid},
+                                {"Field": "Points (Est)", "Value": data.tmpPoint},
+                                {"Field": "Flush Coupon (Est)", "Value": data.flushCoupon},
                                 {
                                   "Field": "Total Coupon (Est)",
                                   "Value": data.guestCoupon + data.flushCoupon,
                                 },
-                                {
-                                  "Field": "Flush Actual Drop (Est)",
-                                  "Value": data.flushActDrop,
-                                },
-                                {
-                                  "Field": "Avg Bet (Est)",
-                                  "Value": data.tmpAvgBet,
-                                },
+                                {"Field": "Flush Actual Drop (Est)", "Value": data.flushActDrop},
+                                {"Field": "Avg Bet (Est)", "Value": data.tmpAvgBet},
                               ];
 
                               return Stack(
@@ -1022,37 +893,30 @@ Future<void> _pickDateTime(
                                     margin: const EdgeInsets.only(top: 10),
                                     decoration: BoxDecoration(
                                       border: Border.all(
-                                        color: Colors.grey.shade400,
-                                      ),
+                                          color: Colors.grey.shade400),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: DataTable(
                                       headingRowColor: WidgetStateProperty.all(
-                                        Colors.amber.shade100,
-                                      ),
+                                          Colors.amber.shade100),
                                       border: TableBorder.all(
-                                        color: Colors.grey.shade300,
-                                      ),
+                                          color: Colors.grey.shade300),
                                       columns: [
                                         DataColumn(
-                                          label: Text(
-                                            "Field",
-                                            style: TextStyle(
-                                              fontSize: fontSettings.fontSize,
-                                              fontWeight:
-                                                  fontSettings.fontWeight,
-                                            ),
-                                          ),
+                                          label: Text("Field",
+                                              style: TextStyle(
+                                                fontSize: fontSettings.fontSize,
+                                                fontWeight:
+                                                    fontSettings.fontWeight,
+                                              )),
                                         ),
                                         DataColumn(
-                                          label: Text(
-                                            "Value",
-                                            style: TextStyle(
-                                              fontSize: fontSettings.fontSize,
-                                              fontWeight:
-                                                  fontSettings.fontWeight,
-                                            ),
-                                          ),
+                                          label: Text("Value",
+                                              style: TextStyle(
+                                                fontSize: fontSettings.fontSize,
+                                                fontWeight:
+                                                    fontSettings.fontWeight,
+                                              )),
                                         ),
                                       ],
                                       rows: rows.map((row) {
@@ -1066,47 +930,39 @@ Future<void> _pickDateTime(
                                         return DataRow(
                                           color: shouldHighlight
                                               ? WidgetStateProperty.all(
-                                                  Color(0xFFCCFFCC),
-                                                )
+                                                  const Color(0xFFCCFFCC))
                                               : null,
                                           cells: [
-                                            DataCell(
-                                              Align(
-                                                alignment: Alignment.centerLeft,
-                                                child: Text(
-                                                  row["Field"].toString(),
-                                                  style: TextStyle(
-                                                    fontSize:
-                                                        fontSettings.fontSize,
-                                                    fontWeight: shouldHighlight
-                                                        ? FontWeight.bold
-                                                        : fontSettings
-                                                              .fontWeight,
-                                                  ),
+                                            DataCell(Align(
+                                              alignment: Alignment.centerLeft,
+                                              child: Text(
+                                                row["Field"].toString(),
+                                                style: TextStyle(
+                                                  fontSize:
+                                                      fontSettings.fontSize,
+                                                  fontWeight: shouldHighlight
+                                                      ? FontWeight.bold
+                                                      : fontSettings.fontWeight,
                                                 ),
                                               ),
-                                            ),
-                                            DataCell(
-                                              Align(
-                                                alignment:
-                                                    Alignment.centerRight,
-                                                child: Text(
-                                                  formatNumber(row["Value"]),
-                                                  style: TextStyle(
-                                                    fontSize:
-                                                        fontSettings.fontSize,
-                                                    fontWeight: shouldHighlight
-                                                        ? FontWeight.bold
-                                                        : fontSettings
-                                                              .fontWeight,
-                                                    fontFamily: 'monospace',
-                                                    fontFeatures: const [
-                                                      FontFeature.tabularFigures(),
-                                                    ],
-                                                  ),
+                                            )),
+                                            DataCell(Align(
+                                              alignment: Alignment.centerRight,
+                                              child: Text(
+                                                formatNumber(row["Value"]),
+                                                style: TextStyle(
+                                                  fontSize:
+                                                      fontSettings.fontSize,
+                                                  fontWeight: shouldHighlight
+                                                      ? FontWeight.bold
+                                                      : fontSettings.fontWeight,
+                                                  fontFamily: 'monospace',
+                                                  fontFeatures: const [
+                                                    FontFeature.tabularFigures(),
+                                                  ],
                                                 ),
                                               ),
-                                            ),
+                                            )),
                                           ],
                                         );
                                       }).toList(),
@@ -1135,9 +991,7 @@ Future<void> _pickDateTime(
                                   ),
                                   border: const OutlineInputBorder(),
                                   contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 12.0,
-                                    vertical: -5.0,
-                                  ),
+                                      horizontal: 12.0, vertical: -5.0),
                                   suffixIcon: const Icon(Icons.calendar_today),
                                 ),
                                 validator: (v) => v == null || v.isEmpty
@@ -1161,38 +1015,37 @@ Future<void> _pickDateTime(
                                   ),
                                   border: const OutlineInputBorder(),
                                   contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 12.0,
-                                    vertical: -5.0,
-                                  ),
+                                      horizontal: 12.0, vertical: -5.0),
                                   suffixIcon: const Icon(Icons.calendar_today),
                                 ),
                                 validator: (v) => v == null || v.isEmpty
                                     ? "Departure Date required"
                                     : null,
-                                onTap: () =>
-                                    _pickDate(context, _departureDateController),
+                                onTap: () => _pickDate(
+                                    context, _departureDateController),
                               ),
                             ),
                           ],
                         ),
 
                         const SizedBox(height: 10.0),
-                        // Gift For Dropdown - Filtered to show only Birthday Gift
+
                         Consumer(
                           builder: (context, ref, child) {
                             final giftState = ref.watch(giftProvider);
 
-                            // Filter to show only Birthday Gift
                             final birthdayGifts = giftState.giftForList
                                 .where((gift) =>
                                     gift.code
                                         .toUpperCase()
                                         .contains('BIRTHDAY') ||
-                                    gift.code.toUpperCase().contains('B_DAY') ||
-                                    gift.code.toUpperCase() == 'BIRTHDAY_GIFT')
+                                    gift.code
+                                        .toUpperCase()
+                                        .contains('B_DAY') ||
+                                    gift.code.toUpperCase() ==
+                                        'BIRTHDAY_GIFT')
                                 .toList();
 
-                            // If no birthday gifts found, show all as fallback
                             final giftsToShow = birthdayGifts.isNotEmpty
                                 ? birthdayGifts
                                 : giftState.giftForList;
@@ -1234,13 +1087,9 @@ Future<void> _pickDateTime(
                                 ),
                                 border: const OutlineInputBorder(),
                                 contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12.0,
-                                  vertical: -5.0,
-                                ),
-                                prefixIcon: const Icon(
-                                  Icons.cake,
-                                  color: Colors.pink,
-                                ),
+                                    horizontal: 12.0, vertical: -5.0),
+                                prefixIcon: const Icon(Icons.cake,
+                                    color: Colors.pink),
                               ),
                               validator: (v) => v == null || v.isEmpty
                                   ? "Gift required"
@@ -1251,7 +1100,6 @@ Future<void> _pickDateTime(
 
                         const SizedBox(height: 10.0),
 
-                        // Chip Type
                         DropdownButtonFormField<String>(
                           style: _inputTextStyle(fontSettings),
                           decoration: InputDecoration(
@@ -1262,25 +1110,19 @@ Future<void> _pickDateTime(
                             ),
                             border: const OutlineInputBorder(),
                             contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12.0,
-                              vertical: -5.0,
-                            ),
+                                horizontal: 12.0, vertical: -5.0),
                           ),
                           value: _chipType,
                           items: const [
                             DropdownMenuItem(
                               value: "OTP Chips",
-                              child: Text(
-                                "OTP Chips",
-                                style: TextStyle(color: Colors.black),
-                              ),
+                              child: Text("OTP Chips",
+                                  style: TextStyle(color: Colors.black)),
                             ),
                             DropdownMenuItem(
                               value: "NC Chips",
-                              child: Text(
-                                "NC Chips",
-                                style: TextStyle(color: Colors.black),
-                              ),
+                              child: Text("NC Chips",
+                                  style: TextStyle(color: Colors.black)),
                             ),
                           ],
                           onChanged: (value) {
@@ -1292,7 +1134,9 @@ Future<void> _pickDateTime(
                               ? "Chip Type required"
                               : null,
                         ),
+
                         const SizedBox(height: 10.0),
+
                         Card(
                           elevation: 2,
                           color: Colors.green.shade50,
@@ -1300,11 +1144,8 @@ Future<void> _pickDateTime(
                             padding: const EdgeInsets.all(12.0),
                             child: Row(
                               children: [
-                                Icon(
-                                  Icons.card_giftcard,
-                                  color: Colors.green.shade700,
-                                  size: 24,
-                                ),
+                                Icon(Icons.card_giftcard,
+                                    color: Colors.green.shade700, size: 24),
                                 const SizedBox(width: 12),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1313,7 +1154,8 @@ Future<void> _pickDateTime(
                                       'Current Gift Value:',
                                       style: TextStyle(
                                         fontSize: fontSettings.fontSize - 2,
-                                        color: const Color.fromARGB(255, 0, 0, 0),
+                                        color:
+                                            const Color.fromARGB(255, 0, 0, 0),
                                       ),
                                     ),
                                     Text(
@@ -1330,9 +1172,9 @@ Future<void> _pickDateTime(
                             ),
                           ),
                         ),
+
                         const SizedBox(height: 10.0),
 
-                        // New Amount (Requested Increase)
                         TextFormField(
                           controller: _newAmountController,
                           style: _inputTextStyleForAmount(fontSettings),
@@ -1344,13 +1186,9 @@ Future<void> _pickDateTime(
                             ),
                             border: const OutlineInputBorder(),
                             contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12.0,
-                              vertical: -5.0,
-                            ),
-                            prefixIcon: const Icon(
-                              Icons.trending_up,
-                              color: Colors.orange,
-                            ),
+                                horizontal: 12.0, vertical: -5.0),
+                            prefixIcon: const Icon(Icons.trending_up,
+                                color: Colors.orange),
                             helperText: 'Enter the increased gift amount',
                           ),
                           keyboardType: TextInputType.number,
@@ -1367,7 +1205,6 @@ Future<void> _pickDateTime(
 
                         const SizedBox(height: 10.0),
 
-                        // Remarks
                         TextFormField(
                           style: _inputTextStyle(fontSettings),
                           decoration: InputDecoration(
@@ -1394,7 +1231,7 @@ Future<void> _pickDateTime(
 
                         const SizedBox(height: 16.0),
 
-                        // Submit Button
+                        // ── Submit Button ─────────────────────────────────────
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
@@ -1410,16 +1247,29 @@ Future<void> _pickDateTime(
                                       final ok = await ref
                                           .read(giftProvider.notifier)
                                           .increaceBirtdayGiftFromUI(
-                                            mid: _memberIdController.text.trim(),
-                                            memberName: _memberNameController.text.trim(),
-                                            fromDateTime: _fromDateController.text.trim(),
-                                            toDateTime: _toDateController.text.trim(),
-                                            arrivalDate: _arrivalDateController.text.trim(),
-                                            departureDate: _departureDateController.text.trim(),
-                                            giftForCode: _selectedGift ?? "BIRTHDAY_GIFT",
-                                            chipTypeUI: _chipType ?? "OTP Chips",
+                                            mid: _memberIdController.text
+                                                .trim(),
+                                            memberName: _memberNameController
+                                                .text
+                                                .trim(),
+                                            fromDateTime: _fromDateController
+                                                .text
+                                                .trim(),
+                                            toDateTime:
+                                                _toDateController.text.trim(),
+                                            arrivalDate:
+                                                _arrivalDateController.text
+                                                    .trim(),
+                                            departureDate:
+                                                _departureDateController.text
+                                                    .trim(),
+                                            giftForCode: _selectedGift ??
+                                                "BIRTHDAY_GIFT",
+                                            chipTypeUI:
+                                                _chipType ?? "OTP Chips",
                                             amountUI: _newAmountController.text,
-                                            previousGiftPrice: widget.birthday.gift, 
+                                            previousGiftPrice:
+                                                widget.birthday.gift,
                                             remarks: _remarks.trim(),
                                             userName: userName ?? "",
                                           );
@@ -1428,34 +1278,236 @@ Future<void> _pickDateTime(
 
                                       if (!mounted) return;
                                       if (ok) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              "Birthday gift price increase request sent successfully",
-                                            ),
-                                            backgroundColor: Colors.green,
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(const SnackBar(
+                                          content: Text(
+                                            "Birthday gift price increase request sent successfully",
                                           ),
+                                          backgroundColor: Colors.green,
+                                        ));
+
+                                        // ── Build guestDataMap (same as NewGiftRequest) ──
+                                        final giftState =
+                                            ref.read(giftProvider);
+                                        Map<String, dynamic> guestDataMap = {};
+
+                                        if (giftState
+                                            .guestGiftData.isNotEmpty) {
+                                          final data =
+                                              giftState.guestGiftData.first;
+                                          guestDataMap = {
+                                            'guestDrop': data.guestDrop,
+                                            'tmpCashout': data.tmpCashout,
+                                            'res': data.res,
+                                            'actD': data.actD,
+                                            'guestCoupon': data.guestCoupon,
+                                            'tmpCommpaid': data.tmpCommpaid,
+                                            'tmpPoint': data.tmpPoint,
+                                            'flushCoupon': data.flushCoupon,
+                                            'flushActDrop': data.flushActDrop,
+                                            'tmpAvgBet': data.tmpAvgBet,
+                                          };
+                                        }
+
+                                        // ── Share dialog ─────────────────────
+                                        final shareOption =
+                                            await showDialog<String>(
+                                          context: context,
+                                          builder: (BuildContext context) {
+                                            return AlertDialog(
+                                              title: Row(
+                                                children: const [
+                                                  Icon(Icons.share,
+                                                      color: Colors.blue),
+                                                  SizedBox(width: 8),
+                                                  Text('Share Gift Request'),
+                                                ],
+                                              ),
+                                              content: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  const Text(
+                                                    'Choose how to share the PDF document:',
+                                                  ),
+                                                  const SizedBox(height: 16),
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            12),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.green
+                                                          .shade50,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              8),
+                                                      border: Border.all(
+                                                          color: Colors
+                                                              .green.shade200),
+                                                    ),
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Row(
+                                                          children: [
+                                                            Icon(
+                                                                Icons
+                                                                    .check_circle,
+                                                                color: Colors
+                                                                    .green,
+                                                                size: 16),
+                                                            const SizedBox(
+                                                                width: 4),
+                                                            Text(
+                                                              'RECOMMENDED',
+                                                              style: TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                color: Colors
+                                                                    .green
+                                                                    .shade700,
+                                                                fontSize: 12,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        const SizedBox(
+                                                            height: 4),
+                                                        const Text(
+                                                          'Share with Apps - PDF automatically attached',
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.of(context)
+                                                          .pop('cancel'),
+                                                  child:
+                                                      const Text('Cancel'),
+                                                ),
+                                                ElevatedButton.icon(
+                                                  onPressed: () =>
+                                                      Navigator.of(context)
+                                                          .pop('system'),
+                                                  style:
+                                                      ElevatedButton.styleFrom(
+                                                    backgroundColor:
+                                                        Colors.blue,
+                                                    foregroundColor:
+                                                        Colors.white,
+                                                  ),
+                                                  icon: const Icon(
+                                                      Icons.share),
+                                                  label: const Text(
+                                                      'Share with Apps'),
+                                                ),
+                                              ],
+                                            );
+                                          },
                                         );
+
+                                        // ── Trigger PDF share ─────────────────
+                                        if (shareOption == 'system') {
+                                          try {
+                                            final currentGiftState =
+                                                ref.read(giftProvider);
+                                            final returnSerial =
+                                                currentGiftState
+                                                    .lastReturnSerial;
+
+                                            await BirthdayGiftIncreasePdfService
+                                                .shareDirectlyToWhatsApp(
+                                              memberName:
+                                                  _memberNameController.text
+                                                      .trim(),
+                                              memberId: _memberIdController
+                                                  .text
+                                                  .trim(),
+                                              fromDateTime: _fromDateController
+                                                  .text
+                                                  .trim(),
+                                              toDateTime: _toDateController
+                                                  .text
+                                                  .trim(),
+                                              arrivalDate:
+                                                  _arrivalDateController.text
+                                                      .trim(),
+                                              departureDate:
+                                                  _departureDateController.text
+                                                      .trim(),
+                                              giftFor: _selectedGift ??
+                                                  "BIRTHDAY_GIFT",
+                                              chipType:
+                                                  _chipType ?? "OTP Chips",
+                                              previousGiftPrice:
+                                                  widget.birthday.gift,
+                                              newAmount:
+                                                  _newAmountController.text,
+                                              remarks: _remarks,
+                                              userName: userName ?? "",
+                                              guestData: guestDataMap,
+                                              returnSerial: returnSerial ?? "",
+                                            );
+
+                                            if (mounted) {
+                                              final serialInfo = returnSerial !=
+                                                          null &&
+                                                      returnSerial.isNotEmpty
+                                                  ? " (Serial: $returnSerial)"
+                                                  : "";
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(SnackBar(
+                                                content: Text(
+                                                  "PDF ready$serialInfo! Select WhatsApp from the share options.",
+                                                ),
+                                                duration: const Duration(
+                                                    seconds: 3),
+                                              ));
+                                            }
+
+                                            ref
+                                                .read(giftProvider.notifier)
+                                                .clearLastApiResponse();
+                                          } catch (e) {
+                                            if (mounted) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(SnackBar(
+                                                content: Text(
+                                                    "Error sharing PDF: $e"),
+                                                backgroundColor: Colors.red,
+                                                duration: const Duration(
+                                                    seconds: 4),
+                                              ));
+                                            }
+                                          }
+                                        }
+
                                         Navigator.of(context).pop(true);
                                       } else {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              "Failed to send gift price increase request",
-                                            ),
-                                            backgroundColor: Colors.red,
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(const SnackBar(
+                                          content: Text(
+                                            "Failed to send gift price increase request",
                                           ),
-                                        );
+                                          backgroundColor: Colors.red,
+                                        ));
                                       }
                                     } catch (e) {
                                       setState(() => _isLoading = false);
                                       if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text("Error: $e"),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(SnackBar(
+                                          content: Text("Error: $e"),
+                                          backgroundColor: Colors.red,
+                                        ));
                                       }
                                     }
                                   }
@@ -1469,9 +1521,7 @@ Future<void> _pickDateTime(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               padding: const EdgeInsets.symmetric(
-                                vertical: 16,
-                                horizontal: 20,
-                              ),
+                                  vertical: 16, horizontal: 20),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -1518,9 +1568,8 @@ Future<void> _pickDateTime(
 
   @override
   void dispose() {
-    // Clear guest data when disposing the screen
     ref.read(selectedGuestProvider.notifier).clearGuest();
-    
+
     _memberIdController.dispose();
     _memberNameController.dispose();
     _fromDateController.dispose();

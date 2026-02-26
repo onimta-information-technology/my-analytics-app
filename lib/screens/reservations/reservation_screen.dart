@@ -47,7 +47,7 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
     List<Reservation> reservations,
   ) async {
     final salesCode = await StorageUtil.getSalesCode();
-    if (salesCode != null && salesCode.trim().toUpperCase() == 'AD002') {
+    if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
       return reservations;
     }
      final resChk = await StorageUtil.getResChk();

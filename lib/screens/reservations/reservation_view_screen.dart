@@ -55,12 +55,16 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
   bool _isLoading = false;
   bool _isGuestLoading = false;
   bool _guestDataLoaded = false;
-  // bool _hasGiftAppPermission = false;
+
+  // ── Permission flags ──────────────────────────────────────────────────────
+  bool _isAD001 = false;   // salesCode == 'AD001'
+  bool _hasResChk = false; // resChk == true  (can Check / Reject on Pending)
+  bool _hasResApp = false; // resApp == true  (can Approve / Reject on Checked)
 
   @override
   void initState() {
     super.initState();
-    // _checkGiftAppPermission();
+    _loadPermissions();
     _getHotels();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       FocusScope.of(context).requestFocus(FocusNode());
@@ -84,6 +88,21 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
     });
   }
 
+  // ── Load permission flags once ────────────────────────────────────────────
+  Future<void> _loadPermissions() async {
+    final salesCode = await StorageUtil.getSalesCode();
+    final resChk    = await StorageUtil.getResChk();
+    final resApp    = await StorageUtil.getResApp();
+
+    if (mounted) {
+      setState(() {
+        _isAD001    = salesCode?.trim().toUpperCase() == 'AD001';
+        _hasResChk  = resChk == true;
+        _hasResApp  = resApp == true;
+      });
+    }
+  }
+
   @override
   void dispose() {
     _memberIdController.dispose();
@@ -93,12 +112,15 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
     super.dispose();
   }
 
-  // Future<void> _checkGiftAppPermission() async {
-  //   final giftApp = await StorageUtil.getGiftApp();
-  //   setState(() {
-  //     _hasGiftAppPermission = giftApp ?? false;
-  //   });
-  // }
+  // ─────────────────────────────────────────────────────────────────────────
+  // Permission helpers
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Returns true if the current user may perform Check / Reject on a Pending reservation.
+  bool get _canCheckOrReject => _isAD001 || _hasResChk;
+
+  /// Returns true if the current user may Approve / Reject on a Checked reservation.
+  bool get _canApproveOrRejectChecked => _isAD001 || _hasResApp;
 
   // ─────────────────────────────────────────────────────────────────────────
   // Access Denied Dialog
@@ -114,16 +136,15 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
           elevation: 0,
           backgroundColor: Colors.transparent,
           child: Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5)),
               ],
             ),
             child: Column(
@@ -133,32 +154,20 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.lock_outline,
-                    size: 50,
-                    color: Colors.red.shade400,
-                  ),
+                      color: Colors.red.shade50, shape: BoxShape.circle),
+                  child: Icon(Icons.lock_outline,
+                      size: 50, color: Colors.red.shade400),
                 ),
                 const SizedBox(height: 20),
                 const Text(
                   "Access Denied",
                   style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2C3E50),
-                  ),
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2C3E50)),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  'You do not have permission to perform this action.',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -168,17 +177,12 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                          borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
-                    child: const Text(
-                      "Got It",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: const Text("Got It",
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -190,7 +194,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Remarks Dialog — matches app pattern with accent color + icon per action
+  // Remarks Dialog
   // ─────────────────────────────────────────────────────────────────────────
   Future<String?> _showRemarksDialog(
     String title,
@@ -227,7 +231,6 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // ── Icon circle ──────────────────────────────────────────
                   Container(
                     width: 70,
                     height: 70,
@@ -238,8 +241,6 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                     child: Icon(icon, size: 38, color: accentColor),
                   ),
                   const SizedBox(height: 16),
-
-                  // ── Title ────────────────────────────────────────────────
                   Text(
                     title,
                     style: const TextStyle(
@@ -250,8 +251,6 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 6),
-
-                  // ── Subtitle ─────────────────────────────────────────────
                   Text(
                     'Please provide remarks to continue.',
                     style:
@@ -259,8 +258,6 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 20),
-
-                  // ── Remarks text field ───────────────────────────────────
                   TextField(
                     controller: remarksController,
                     maxLines: 3,
@@ -295,11 +292,8 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-
-                  // ── Buttons ──────────────────────────────────────────────
                   Row(
                     children: [
-                      // Cancel
                       Expanded(
                         child: OutlinedButton(
                           onPressed: () => Navigator.of(context).pop(),
@@ -322,8 +316,6 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
-
-                      // Confirm
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () => Navigator.of(context)
@@ -436,13 +428,15 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Actions
+  // Actions  (each now checks permission before proceeding)
   // ─────────────────────────────────────────────────────────────────────────
+
+  /// Pending → Check  (AD001 or resChk == true)
   Future<void> _checkReservation() async {
-    // if (!_hasGiftAppPermission) {
-    //   _showAccessDeniedDialog();
-    //   return;
-    // }
+    if (!_canCheckOrReject) {
+      _showAccessDeniedDialog();
+      return;
+    }
 
     final selectedReservation = ref.watch(selectedReservationProvider);
     if (selectedReservation == null) return;
@@ -490,11 +484,12 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
     }
   }
 
+  /// Checked → Approve  (AD001 or resApp == true)
   Future<void> _approveReservation() async {
-    // if (!_hasGiftAppPermission) {
-    //   _showAccessDeniedDialog();
-    //   return;
-    // }
+    if (!_canApproveOrRejectChecked) {
+      _showAccessDeniedDialog();
+      return;
+    }
 
     final selectedReservation = ref.watch(selectedReservationProvider);
     if (selectedReservation == null) return;
@@ -542,14 +537,22 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
     }
   }
 
+  /// Reject — permission depends on which tab opened this screen:
+  ///   Pending  → AD001 or resChk == true
+  ///   Checked  → AD001 or resApp == true
   Future<void> _rejectReservation() async {
-    // if (!_hasGiftAppPermission) {
-    //   _showAccessDeniedDialog();
-    //   return;
-    // }
-
     final selectedReservation = ref.watch(selectedReservationProvider);
     if (selectedReservation == null) return;
+
+    // Decide which permission applies based on current status
+    final isPending = selectedReservation.requestStatus == 'Pending';
+    final hasPermission =
+        isPending ? _canCheckOrReject : _canApproveOrRejectChecked;
+
+    if (!hasPermission) {
+      _showAccessDeniedDialog();
+      return;
+    }
 
     final remarks = await _showRemarksDialog(
       'Reject Reservation',
@@ -796,21 +799,14 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                   const SizedBox(height: 10.0),
 
                   // ── Guest card ─────────────────────────────────────────
-                  // GuestDisplayCard(
-                  //   memberIdText: _memberIdController.text,
-                  //   memberNameText: _memberNameController.text,
-                  //   showCard: _memberIdController.text.isNotEmpty &&
-                  //       _memberNameController.text.isNotEmpty,
-                  //   isLoading: _isGuestLoading,
-                  // ),
-                    GuestDisplayCardSpecialGiftview(
-                        memberIdText: _memberIdController.text,
-                        memberNameText: _memberNameController.text,
-                        showCard: _memberIdController.text.isNotEmpty &&
-                            _memberNameController.text.isNotEmpty,
-                        isLoading: _isGuestLoading,
-                        showLastVisitDate: true,
-                      ),
+                  GuestDisplayCardSpecialGiftview(
+                    memberIdText: _memberIdController.text,
+                    memberNameText: _memberNameController.text,
+                    showCard: _memberIdController.text.isNotEmpty &&
+                        _memberNameController.text.isNotEmpty,
+                    isLoading: _isGuestLoading,
+                    showLastVisitDate: true,
+                  ),
                   const SizedBox(height: 10.0),
 
                   // ── Hotel & Rooms summary ──────────────────────────────
@@ -1121,7 +1117,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                   ),
                   const SizedBox(height: 16.0),
 
-                  // ── Pending: Check + Reject ────────────────────────────
+                  // ── Pending: Check + Reject  (AD001 or resChk) ────────
                   if (selectedReservation?.requestStatus == 'Pending')
                     Row(
                       children: [
@@ -1137,7 +1133,10 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                               ),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
+                              // Visually dim button if no permission
+                              backgroundColor: _canCheckOrReject
+                                  ? Colors.blue
+                                  : Colors.blue.withOpacity(0.4),
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -1160,7 +1159,9 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                               ),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Constants.kSecondaryColor,
+                              backgroundColor: _canCheckOrReject
+                                  ? Constants.kSecondaryColor
+                                  : Constants.kSecondaryColor.withOpacity(0.4),
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -1173,7 +1174,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                       ],
                     ),
 
-                  // ── Checked: Approve + Reject ──────────────────────────
+                  // ── Checked: Approve + Reject  (AD001 or resApp) ──────
                   if (selectedReservation?.requestStatus == 'Checked')
                     Row(
                       children: [
@@ -1189,7 +1190,9 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                               ),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
+                              backgroundColor: _canApproveOrRejectChecked
+                                  ? Colors.green
+                                  : Colors.green.withOpacity(0.4),
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -1212,7 +1215,9 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                               ),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Constants.kSecondaryColor,
+                              backgroundColor: _canApproveOrRejectChecked
+                                  ? Constants.kSecondaryColor
+                                  : Constants.kSecondaryColor.withOpacity(0.4),
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),

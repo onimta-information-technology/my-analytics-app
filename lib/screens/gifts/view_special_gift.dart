@@ -250,13 +250,32 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
 
   // ── Access Control ──────────────────────────────────────────────────────────
 
-  /// Returns true if the current user is allowed to reverse the gift
-  /// in the given tab (Approved or Rejected).
-  ///
-  /// Rules:
-  ///   AD001  → always allowed in both tabs
-  ///   Others → Approved tab: loginUser == firstAppBy (approvedBy)
-  ///            Rejected tab: loginUser == deleteUser (rejectedBy)
+  /// Pending tab: CHECK BY / REJECT buttons
+  /// AD001 → always allowed | others → otgiChk == true
+  Future<bool> _canActOnPending() async {
+    final salesCode = await StorageUtil.getSalesCode();
+    if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
+      return true;
+    }
+    final otgiChk = await StorageUtil.getOtgiChk();
+    return otgiChk == true;
+  }
+
+  /// Checked tab: APPROVE / REJECT buttons
+  /// AD001 → always allowed | others → otgiApp == true
+  Future<bool> _canActOnChecked() async {
+    final salesCode = await StorageUtil.getSalesCode();
+    if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
+      return true;
+    }
+    final otgiApp = await StorageUtil.getOtgiApp();
+    return otgiApp == true;
+  }
+
+  /// Approved / Rejected tabs: Reverse button
+  /// AD002 → always allowed
+  /// Approved tab: loginUser == firstAppBy
+  /// Rejected tab: loginUser == deleteUser
   Future<bool> _canReverseGift({required bool isRejected}) async {
     final salesCode = await StorageUtil.getSalesCode();
     if (salesCode != null && salesCode.trim().toUpperCase() == 'AD002') {
@@ -267,12 +286,10 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
         (await StorageUtil.getUserName())?.trim().toLowerCase() ?? '';
 
     if (!isRejected) {
-      // Approved tab
       final approvedBy =
           (widget.gift?.firstAppBy ?? '').trim().toLowerCase();
       return currentUser == approvedBy;
     } else {
-      // Rejected tab
       final rejectedBy =
           (widget.gift?.deleteUser ?? '').trim().toLowerCase();
       return currentUser == rejectedBy;
@@ -287,8 +304,8 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
       barrierDismissible: true,
       builder: (BuildContext context) {
         return Dialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20)),
           elevation: 0,
           backgroundColor: Colors.transparent,
           child: Container(
@@ -314,16 +331,20 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                     color: Colors.red.shade50,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.lock_outline,
-                      size: 50, color: Colors.red.shade400),
+                  child: Icon(
+                    Icons.lock_outline,
+                    size: 50,
+                    color: Colors.red.shade400,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 const Text(
                   "Access Denied",
                   style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2C3E50)),
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C3E50),
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
@@ -339,9 +360,11 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                           borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
-                    child: const Text("Got It",
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      "Got It",
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ],
@@ -423,7 +446,6 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
   }
 
   /// Reverse button shell — uses FutureBuilder to check permission.
-  /// The button is completely hidden if the user is not allowed.
   Widget _buildReverseButton(FontSettings fontSettings, bool isRejected) {
     return FutureBuilder<bool>(
       future: _canReverseGift(isRejected: isRejected),
@@ -587,8 +609,6 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                       if (showRejectedReverse)
                         _buildReverseButton(fontSettings, true),
 
-                      // ── NO reverse button for Pending / Checked tabs ──
-
                       const SizedBox(height: 5.0),
 
                       // ── From Date ─────────────────────────────────────
@@ -742,7 +762,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                   extra: {'iid': 88940},
                                 );
                               },
-                              icon: const Icon(Icons.card_giftcard),
+                             // icon: const Icon(Icons.card_giftcard),
                               label: Text("Pending Gift",
                                   style: TextStyle(
                                       fontSize: fontSettings.fontSize,
@@ -778,7 +798,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                   extra: {'iid': 8888},
                                 );
                               },
-                              icon: const Icon(Icons.card_giftcard),
+                             // icon: const Icon(Icons.card_giftcard),
                               label: Text("Issued Gift",
                                   style: TextStyle(
                                       fontSize: fontSettings.fontSize,
@@ -1236,7 +1256,9 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                       const SizedBox(height: 16.0),
 
                       // ════════════════════════════════════════════════════
-                      // PENDING TAB: "Check By" + "Reject" buttons
+                      // PENDING TAB — CHECK BY + REJECT
+                      // Buttons are always visible; permission is checked
+                      // inside onPressed and shows Access Denied if blocked.
                       // ════════════════════════════════════════════════════
                       if (showPendingButtons)
                         Row(
@@ -1245,6 +1267,13 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () async {
+                                  // ── Permission guard ──────────────────
+                                  final allowed = await _canActOnPending();
+                                  if (!allowed) {
+                                    if (mounted) _showAccessDeniedDialog();
+                                    return;
+                                  }
+                                  // ── Business logic ────────────────────
                                   if (widget.gift == null) {
                                     ScaffoldMessenger.of(context)
                                         .showSnackBar(const SnackBar(
@@ -1314,6 +1343,13 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () async {
+                                  // ── Permission guard ──────────────────
+                                  final allowed = await _canActOnPending();
+                                  if (!allowed) {
+                                    if (mounted) _showAccessDeniedDialog();
+                                    return;
+                                  }
+                                  // ── Business logic ────────────────────
                                   if (widget.gift == null) {
                                     ScaffoldMessenger.of(context)
                                         .showSnackBar(const SnackBar(
@@ -1371,7 +1407,9 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                         ),
 
                       // ════════════════════════════════════════════════════
-                      // CHECKED TAB: "Approve" + "Reject" buttons
+                      // CHECKED TAB — APPROVE + REJECT
+                      // Buttons are always visible; permission is checked
+                      // inside onPressed and shows Access Denied if blocked.
                       // ════════════════════════════════════════════════════
                       if (showCheckedButtons)
                         Row(
@@ -1380,6 +1418,13 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () async {
+                                  // ── Permission guard ──────────────────
+                                  final allowed = await _canActOnChecked();
+                                  if (!allowed) {
+                                    if (mounted) _showAccessDeniedDialog();
+                                    return;
+                                  }
+                                  // ── Business logic ────────────────────
                                   if (widget.gift == null) {
                                     ScaffoldMessenger.of(context)
                                         .showSnackBar(const SnackBar(
@@ -1448,6 +1493,13 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () async {
+                                  // ── Permission guard ──────────────────
+                                  final allowed = await _canActOnChecked();
+                                  if (!allowed) {
+                                    if (mounted) _showAccessDeniedDialog();
+                                    return;
+                                  }
+                                  // ── Business logic ────────────────────
                                   if (widget.gift == null) {
                                     ScaffoldMessenger.of(context)
                                         .showSnackBar(const SnackBar(
@@ -1698,11 +1750,11 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                           } else {
                                             ScaffoldMessenger.of(context)
                                                 .showSnackBar(SnackBar(
-                                              content:
-                                                  Text('Failed to send: $result'),
+                                              content: Text(
+                                                  'Failed to send: $result'),
                                               backgroundColor: Colors.orange,
-                                              duration:
-                                                  const Duration(seconds: 3),
+                                              duration: const Duration(
+                                                  seconds: 3),
                                             ));
                                           }
                                         } catch (e) {
@@ -1761,6 +1813,20 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
               ),
             ),
             const Watermark(),
+
+            // ── Global loading overlay ────────────────────────────────
+            // if (_isLoading)
+            //   Positioned.fill(
+            //     child: Container(
+            //       color: const Color.fromARGB(135, 117, 115, 115),
+            //       child: const Center(
+            //         child: CircularProgressIndicator(
+            //           valueColor: AlwaysStoppedAnimation<Color>(
+            //               Constants.kSecondaryColor),
+            //         ),
+            //       ),
+            //     ),
+            //   ),
           ],
         ),
       ),

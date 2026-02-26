@@ -65,11 +65,13 @@ class _SpecialGiftRequestScreenState
     if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
       return gifts;
     }
+    
     final otgiChk = await StorageUtil.getOtgiChk();
   final otgiApp = await StorageUtil.getOtgiApp();
+  
   if (otgiChk == true || otgiApp == true) {
     return gifts;
-  }
+  } print(  "Filtering otp for user. resChk: $otgiChk, resApp: $otgiApp");
     final currentUserName = await StorageUtil.getUserName();
     if (currentUserName == null) return [];
     return gifts

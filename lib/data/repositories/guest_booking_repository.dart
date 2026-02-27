@@ -45,7 +45,7 @@ class GuestBookingRepository {
 Future<bool> acceptBooking({
   required String mid,
   required String bookingId,
-  String remark = "Done",
+  String remark = "",
 }) async {
   try {
     

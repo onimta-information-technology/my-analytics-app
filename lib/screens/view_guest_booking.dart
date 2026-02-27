@@ -315,7 +315,7 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
           .acceptBooking(
             mid: widget.booking!.mid,
             bookingId: widget.booking!.bookingId,
-            remark: remarks.trim().isEmpty ? "Done" : remarks.trim(),
+            remark: remarks,
           );
 
       if (!mounted) return;
@@ -695,12 +695,25 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
           ),
 
           // ── Loading overlay ────────────────────────────────────────────
-          if (_isLoading)
+          // if (_isLoading)
+          //   Positioned.fill(
+          //     child: Container(
+          //       color: const Color.fromARGB(135, 117, 115, 115),
+          //       child: const Center(
+          //         child: CircularProgressIndicator(
+          //           valueColor: AlwaysStoppedAnimation<Color>(
+          //             Constants.kSecondaryColor,
+          //           ),
+          //         ),
+          //       ),
+          //     ),
+          //   ),
+ if (_isLoading)
             Positioned.fill(
               child: Container(
                 color: const Color.fromARGB(135, 117, 115, 115),
                 child: const Center(
-                  child: CircularProgressIndicator(
+                  child: RefreshProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(
                       Constants.kSecondaryColor,
                     ),
@@ -708,7 +721,6 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
                 ),
               ),
             ),
-
           const Watermark(),
         ],
       ),

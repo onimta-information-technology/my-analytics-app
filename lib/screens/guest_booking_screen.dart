@@ -32,28 +32,39 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
   // ✅ Notification listener subscription
   StreamSubscription<RemoteMessage>? _messageSubscription;
 
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   _tabController = TabController(length: 2, vsync: this);
+  //  WidgetsBinding.instance.addObserver(this); 
+  //   // ✅ Start listening for guest booking notifications
+  //   _setupNotificationListener();
+
+  //   WidgetsBinding.instance.addPostFrameCallback((_) async {
+  //     final bookingState = ref.read(guestBookingProvider);
+
+  //     if (bookingState.pendingBookings.isNotEmpty ||
+  //         bookingState.acceptedBookings.isNotEmpty) {
+  //       return;
+  //     }
+
+  //        WidgetsBinding.instance.addPostFrameCallback((_) async {
+  //     _loadBookingData();  // ✅ ALWAYS load on init, remove the early return check
+  //   });
+
+  //   });
+  // }
   @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-   WidgetsBinding.instance.addObserver(this); 
-    // ✅ Start listening for guest booking notifications
-    _setupNotificationListener();
+void initState() {
+  super.initState();
+  _tabController = TabController(length: 2, vsync: this);
+  WidgetsBinding.instance.addObserver(this);
+  _setupNotificationListener();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final bookingState = ref.read(guestBookingProvider);
-
-      if (bookingState.pendingBookings.isNotEmpty ||
-          bookingState.acceptedBookings.isNotEmpty) {
-        return;
-      }
-
-         WidgetsBinding.instance.addPostFrameCallback((_) async {
-      _loadBookingData();  // ✅ ALWAYS load on init, remove the early return check
-    });
-
-    });
-  }
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    _loadBookingData(); // ✅ Always load, no early return guard
+  });
+}
  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {

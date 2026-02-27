@@ -658,7 +658,30 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
                     ),
                   ),
                   const SizedBox(height: 16),
-
+if (widget.booking?.peRemark != null &&
+    widget.booking!.peRemark!.trim().isNotEmpty) ...[
+  TextFormField(
+    initialValue: widget.booking!.peRemark,
+    readOnly: true,
+    style: _inputTextStyle(fontSettings),
+    maxLines: 3,
+    decoration: InputDecoration(
+      labelText: "Remark",
+      labelStyle: TextStyle(
+        color: const Color.fromARGB(255, 0, 0, 0),
+        fontSize: fontSettings.fontSize,
+        fontWeight: fontSettings.fontWeight,
+      ),
+    //  prefixIcon: const Icon(Icons.star_outline, color: Colors.amber),
+      border: const OutlineInputBorder(),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 12.0,
+        vertical: 8.0,
+      ),
+    ),
+  ),
+  const SizedBox(height: 16),
+],
                   // ── Accepted Info Card (only when accepted) ────────────
                   if (!widget.isPending && widget.booking != null) ...[
                     _buildAcceptedInfoCard(fontSettings),

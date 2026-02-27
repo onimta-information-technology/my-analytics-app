@@ -10,6 +10,7 @@ class GuestBooking {
   final String? acceptUser;
   final String? acceptTime;
   final String? remark;
+  final String? peRemark;
   GuestBooking({
     required this.idNo,
     required this.mid,
@@ -22,6 +23,7 @@ class GuestBooking {
     this.acceptUser,
     this.acceptTime,
     this.remark,
+    this.peRemark,
 
   });
 
@@ -38,6 +40,7 @@ class GuestBooking {
       acceptUser: json['Accept_User'],
       acceptTime: json['Accept_Time'],
       remark: json['Remark'],
+      peRemark: json['Remark_Premier_Rewards'],
     );
   }
 
@@ -54,6 +57,7 @@ class GuestBooking {
       'Accept_User': acceptUser,
       'Accept_Time': acceptTime,
       'Remark': remark,
+      'Remark_Premier_Rewards': peRemark,
     };
   }
 }

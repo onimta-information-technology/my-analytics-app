@@ -35,7 +35,17 @@ class GuestBookingNotifier extends StateNotifier<GuestBookingState> {
       );
     }
   }
-
+Future<bool> acceptBooking({
+  required String mid,
+  required String bookingId,
+  String remark = "Done",
+}) async {
+  return await bookingRepository.acceptBooking(
+    mid: mid,
+    bookingId: bookingId,
+    remark: remark,
+  );
+}
   // Future<bool> acceptBooking({
   //   required int idNo,
   //   required String userName,

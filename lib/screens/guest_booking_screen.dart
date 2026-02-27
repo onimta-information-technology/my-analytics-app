@@ -160,7 +160,7 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
                 ),
               ),
             ),
-        //  const Watermark(),
+          //  const Watermark(),
         ],
       ),
     );
@@ -327,6 +327,69 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
                       ),
                     ],
                   ),
+
+                  // ✅ Show Accept User and Accept Time only in Accepted tab
+                  if (!isPending) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.person_outline,
+                          color: Colors.green,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Accepted By: ',
+                          style: TextStyle(
+                            color: const Color.fromARGB(255, 0, 0, 0),
+                            fontSize: fontSettings.fontSize + 1,
+                            fontWeight: fontSettings.fontWeight,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            booking.acceptUser ?? 'N/A',
+                            style: TextStyle(
+                              color: const Color.fromARGB(255, 0, 0, 0),
+                              fontSize: fontSettings.fontSize + 1,
+                              fontWeight: fontSettings.fontWeight,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.check_circle_outline,
+                          color: Colors.green,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Accepted At: ',
+                          style: TextStyle(
+                            color: const Color.fromARGB(255, 0, 0, 0),
+                            fontSize: fontSettings.fontSize ,
+                            fontWeight: fontSettings.fontWeight,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            _formatDateTime(booking.acceptTime),
+                            style: TextStyle(
+                              color: const Color.fromARGB(255, 0, 0, 0),
+                              fontSize: fontSettings.fontSize + 1,
+                              fontWeight: fontSettings.fontWeight,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+
                   const SizedBox(height: 8),
                   // Status badge
                   Container(

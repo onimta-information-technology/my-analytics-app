@@ -2,6 +2,7 @@ import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/Guest/guest_booking.dart';
 
 import 'package:ballys_reservation_app/utils/device_id.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -41,7 +42,46 @@ class GuestBookingRepository {
       return [];
     }
   }
+Future<bool> acceptBooking({
+  required String mid,
+  required String bookingId,
+  String remark = "Done",
+}) async {
+  try {
+    
+    final name = await StorageUtil.getUserName();
+    final payload = {
+      "MID": mid,
+      "BookingId": bookingId,
+      "Remark": remark,
+      "AcceptUser": name,
+      "AcceptTime": DateTime.now().toIso8601String(),
+      
+    };
+print('Accept Booking Payload: $payload');
+    final response = await http.post(
+      Uri.parse('https://api.ballyscolombo.com/api/Ballys/AcceptMyBooking'),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(payload),
+    );
 
+    print('Accept Booking Response Status: ${response.statusCode}');
+    print('Accept Booking Response Body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final jsonData = jsonDecode(response.body);
+      return jsonData['success'] == true;
+    } else {
+      print('Failed to accept booking: ${response.statusCode}');
+      return false;
+    }
+  } catch (e) {
+    print('Error in acceptBooking: $e');
+    return false;
+  }
+}
   // Future<bool> acceptBooking({
   //   required int idNo,
   //   required String userName,

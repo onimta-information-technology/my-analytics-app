@@ -6,6 +6,10 @@ class GuestBooking {
   final bool pkgStatus;
   final String insertDate;
   final String mname;
+  final String bookingId;
+  final String? acceptUser;
+  final String? acceptTime;
+  final String? remark;
   GuestBooking({
     required this.idNo,
     required this.mid,
@@ -14,6 +18,11 @@ class GuestBooking {
     required this.pkgStatus,
     required this.insertDate,
     this.mname = '',
+    this.bookingId = '',
+    this.acceptUser,
+    this.acceptTime,
+    this.remark,
+
   });
 
   factory GuestBooking.fromJson(Map<String, dynamic> json) {
@@ -25,6 +34,10 @@ class GuestBooking {
       pkgStatus: json['Pkg_Status'] ?? false,
       insertDate: json['InsertDate'] ?? '',
       mname: json['MName'] ?? '',
+      bookingId: json['Booking_Id'] ?? '',
+      acceptUser: json['Accept_User'],
+      acceptTime: json['Accept_Time'],
+      remark: json['Remark'],
     );
   }
 
@@ -37,6 +50,10 @@ class GuestBooking {
       'Pkg_Status': pkgStatus,
       'InsertDate': insertDate,
       'MName': mname,
+      'Booking_Id': bookingId,
+      'Accept_User': acceptUser,
+      'Accept_Time': acceptTime,
+      'Remark': remark,
     };
   }
 }

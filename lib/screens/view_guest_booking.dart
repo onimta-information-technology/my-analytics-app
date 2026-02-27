@@ -1,5 +1,4 @@
 import 'package:ballys_reservation_app/components/guestDisplayCardById.dart';
-
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_booking_repository.dart';
@@ -9,6 +8,7 @@ import 'package:ballys_reservation_app/models/Guest/guest_booking.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
+import 'package:ballys_reservation_app/providers/guest_booking_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
@@ -44,6 +44,7 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
   bool _isLoading = false;
   bool _guestDataLoaded = false;
   bool _isGuestLoading = false;
+
   @override
   void initState() {
     super.initState();
@@ -59,63 +60,25 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
     }
   }
 
-  Future<void> _loadGuestDataForView() async {
-    if (_memberIdController.text.isEmpty || _guestDataLoaded) return;
+  @override
+  void dispose() {
+    _memberIdController.dispose();
+    _memberNameController.dispose();
+    _pkgStartController.dispose();
+    _pkgEndController.dispose();
+    _insertDateController.dispose();
+    super.dispose();
+  }
 
-    try {
-      setState(() {
-        _isGuestLoading = true;
-      });
-
-      GuestRepository guestRepository = GuestRepository(
-        ApiService(const FlutterSecureStorage()),
-      );
-
-      List<GuestSearchResponse> guests = await guestRepository.searchGuest(
-        9021, // Using 9021 as the search type for MID lookup
-        _memberIdController.text,
-      );
-
-      if (guests.isNotEmpty) {
-        final guestResponse = guests.first;
-        ref
-            .read(selectedGuestProvider.notifier)
-            .setSelectedGuest(
-              Guest(
-                mid: guestResponse.mid ?? _memberIdController.text,
-                memberName: _memberNameController.text ?? "",
-                country: "",
-                lastVisitDate: guestResponse.lvd?.toString() ?? "",
-
-                age: 0,
-                gRating: guestResponse.gRating ?? "",
-                mGroup: guestResponse.mGroup,
-                gName: guestResponse.gName ?? "",
-                memImage2: guestResponse.memImage2,
-              ),
-            );
-      }
-
-      // Mark guest data as loaded
-      _guestDataLoaded = true;
-
-      setState(() {
-        _isGuestLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isGuestLoading = false;
-      });
+  // ── Credential loader ──────────────────────────────────────────────────
+  Future<void> _loadUserCredentials() async {
+    final name = await StorageUtil.getUserName();
+    if (mounted) {
+      setState(() => userName = name);
     }
   }
 
-  Future<void> _loadUserCredentials() async {
-    final name = await StorageUtil.getUserName();
-    setState(() {
-      userName = name;
-    });
-  }
-
+  // ── Date formatters ────────────────────────────────────────────────────
   String _formatDate(String? dateString) {
     if (dateString == null || dateString.isEmpty) return "N/A";
     try {
@@ -136,6 +99,254 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
     }
   }
 
+  // ── Guest data loader ──────────────────────────────────────────────────
+  Future<void> _loadGuestDataForView() async {
+    if (_memberIdController.text.isEmpty || _guestDataLoaded) return;
+
+    try {
+      setState(() => _isGuestLoading = true);
+
+      final GuestRepository guestRepository = GuestRepository(
+        ApiService(const FlutterSecureStorage()),
+      );
+
+      final List<GuestSearchResponse> guests =
+          await guestRepository.searchGuest(
+        9021,
+        _memberIdController.text,
+      );
+
+      if (guests.isNotEmpty) {
+        final guestResponse = guests.first;
+        ref.read(selectedGuestProvider.notifier).setSelectedGuest(
+              Guest(
+                mid: guestResponse.mid ?? _memberIdController.text,
+                memberName: _memberNameController.text,
+                country: "",
+                lastVisitDate: guestResponse.lvd?.toString() ?? "",
+                age: 0,
+                gRating: guestResponse.gRating ?? "",
+                mGroup: guestResponse.mGroup,
+                gName: guestResponse.gName ?? "",
+                memImage2: guestResponse.memImage2,
+              ),
+            );
+      }
+
+      _guestDataLoaded = true;
+      if (mounted) setState(() => _isGuestLoading = false);
+    } catch (e) {
+      if (mounted) setState(() => _isGuestLoading = false);
+    }
+  }
+
+  // ── Remarks Dialog ─────────────────────────────────────────────────────
+  Future<String?> _showRemarksDialog() async {
+    final TextEditingController remarksController = TextEditingController();
+
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 70,
+                    height: 70,
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check_circle_outline,
+                      size: 38,
+                      color: Colors.green,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Accept Booking',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2C3E50),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Please provide remarks to continue.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: remarksController,
+                    maxLines: 3,
+                    textInputAction: TextInputAction.done,
+                    decoration: InputDecoration(
+                      hintText: 'Enter your remarks here...',
+                      hintStyle: TextStyle(
+                        color: Colors.grey.shade400,
+                        fontSize: 14,
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey.shade50,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade200),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade200),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                          color: Colors.green,
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            side: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          child: Text(
+                            'Cancel',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () =>
+                              Navigator.of(context).pop(remarksController.text),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            'Confirm',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ── Accept booking handler ─────────────────────────────────────────────
+  Future<void> _handleAcceptBooking() async {
+    if (widget.booking == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Booking not found")),
+      );
+      return;
+    }
+
+    final remarks = await _showRemarksDialog();
+    if (remarks == null) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final success = await ref
+          .read(guestBookingProvider.notifier)
+          .acceptBooking(
+            mid: widget.booking!.mid,
+            bookingId: widget.booking!.bookingId,
+            remark: remarks.trim().isEmpty ? "Done" : remarks.trim(),
+          );
+
+      if (!mounted) return;
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Booking Accepted Successfully"),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.of(context).pop(true);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Failed to accept booking"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // ── Input text style ───────────────────────────────────────────────────
   TextStyle _inputTextStyle(FontSettings fontSettings) {
     return TextStyle(
       fontSize: fontSettings.fontSize,
@@ -143,6 +354,137 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
     );
   }
 
+  // ── Accepted Info Card ─────────────────────────────────────────────────
+  Widget _buildAcceptedInfoCard(FontSettings fontSettings) {
+    final booking = widget.booking!;
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Card Header ──────────────────────────────────────────────
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.green.shade100,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.green, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  'Acceptance Details',
+                  style: TextStyle(
+                    fontSize: fontSettings.fontSize + 1,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.green.shade800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Card Body ────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                // Accepted By
+                _buildInfoRow(
+                  icon: Icons.person_outline,
+                  label: 'Accepted By',
+                  value: booking.acceptUser ?? 'N/A',
+                  fontSettings: fontSettings,
+                ),
+                _buildDivider(),
+
+                // Accepted At
+                _buildInfoRow(
+                  icon: Icons.schedule,
+                  label: 'Accepted At',
+                  value: _formatDateTime(booking.acceptTime),
+                  fontSettings: fontSettings,
+                ),
+
+                // Remark (only if present)
+                if (booking.remark != null &&
+                    booking.remark!.trim().isNotEmpty) ...[
+                  _buildDivider(),
+                  _buildInfoRow(
+                    icon: Icons.comment_outlined,
+                    label: 'Remark',
+                    value: booking.remark!,
+                    fontSettings: fontSettings,
+                    expanded: true,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    required FontSettings fontSettings,
+    bool expanded = false,
+  }) {
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: fontSettings.fontSize - 1,
+            color: const Color.fromARGB(255, 0, 0, 0),
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        // const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: fontSettings.fontSize + 1,
+            fontWeight: FontWeight.w700,
+            color: Colors.green.shade800,
+          ),
+        ),
+      ],
+    );
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: Colors.green, size: 20),
+        const SizedBox(width: 10),
+        expanded ? Expanded(child: content) : content,
+      ],
+    );
+  }
+
+  Widget _buildDivider() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Divider(color: Colors.green.shade200, height: 1),
+    );
+  }
+
+  // ── Build ──────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final fontSettings = ref.watch(fontSettingsProvider);
@@ -169,114 +511,27 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
       ),
       body: Stack(
         children: [
+          // ── Main content ───────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Booking ID Card
-                  // Card(
-                  //   elevation: 4,
-                  //   shape: RoundedRectangleBorder(
-                  //     borderRadius: BorderRadius.circular(12),
-                  //   ),
-                  //   child: Padding(
-                  //     padding: const EdgeInsets.all(16.0),
-                  //     child: Row(
-                  //       children: [
-                  //         Container(
-                  //           padding: const EdgeInsets.all(12),
-                  //           decoration: BoxDecoration(
-                  //             color: Constants.kPrimaryColor.withOpacity(0.1),
-                  //             borderRadius: BorderRadius.circular(8),
-                  //           ),
-                  //           child: const Icon(
-                  //             Icons.confirmation_number,
-                  //             size: 30,
-                  //             color: Constants.kPrimaryColor,
-                  //           ),
-                  //         ),
-                  //         const SizedBox(width: 16),
-                  //         Column(
-                  //           crossAxisAlignment: CrossAxisAlignment.start,
-                  //           children: [
-                  //             Text(
-                  //               'Booking ID',
-                  //               style: TextStyle(
-                  //                 fontSize: fontSettings.fontSize,
-                  //                 color: const Color.fromARGB(255, 0, 0, 0),
-                  //                 fontWeight: fontSettings.fontWeight,
-                  //               ),
-                  //             ),
-                  //             const SizedBox(height: 4),
-                  //             Text(
-                  //               '#${widget.booking?.idNo ?? 'N/A'}',
-                  //               style: TextStyle(
-                  //                 fontSize: fontSettings.fontSize + 4,
-                  //                 fontWeight: FontWeight.bold,
-                  //                 color: Constants.kPrimaryColor,
-                  //               ),
-                  //             ),
-                  //           ],
-                  //         ),
-                  //       ],
-                  //     ),
-                  //   ),
-                  // ),
-
-                  // const SizedBox(height: 24),
+                  // ── Guest Display Card ─────────────────────────────────
                   GuestDisplayCardById(
                     memberId: widget.booking?.mid ?? "",
                     showLastVisitDate: true,
                   ),
-
-                  // const SizedBox(height: 16.0),
-                  //  TextFormField(
-                  //   controller: _memberNameController,
-                  //   readOnly: true,
-                  //   style: _inputTextStyle(fontSettings),
-                  //   decoration: InputDecoration(
-                  //     labelText: "Member Name",
-                  //     labelStyle: TextStyle(
-                  //       color: const Color.fromARGB(255, 0, 0, 0),
-                  //       fontSize: fontSettings.fontSize,
-                  //       fontWeight: fontSettings.fontWeight,
-                  //     ),
-                  //    // prefixIcon: const Icon(Icons.person, color: Colors.red),
-                  //     border: const OutlineInputBorder(),
-                  //     contentPadding: const EdgeInsets.symmetric(
-                  //       horizontal: 12.0,
-                  //       vertical: -5.0,
-                  //     ),
-                  //   ),
-                  // ),
                   const SizedBox(height: 16),
-                  // Member ID
-                  // TextFormField(
-                  //   controller: _memberIdController,
-                  //   readOnly: true,
-                  //   style: _inputTextStyle(fontSettings),
-                  //   decoration: InputDecoration(
-                  //     labelText: "Member ID",
-                  //     labelStyle: TextStyle(
-                  //       fontSize: fontSettings.fontSize,
-                  //       fontWeight: fontSettings.fontWeight,
-                  //     ),
-                  //     prefixIcon: const Icon(Icons.person),
-                  //     border: const OutlineInputBorder(),
-                  //     contentPadding: const EdgeInsets.symmetric(
-                  //       horizontal: 12.0,
-                  //       vertical: 16.0,
-                  //     ),
-                  //   ),
-                  // ),
+
+                  // ── Member ID + Profile Search Button ──────────────────
                   Row(
                     children: [
-                      // Member ID field
                       Expanded(
                         child: TextFormField(
-                          keyboardType: const TextInputType.numberWithOptions(),
+                          keyboardType:
+                              const TextInputType.numberWithOptions(),
                           autofocus: false,
                           controller: _memberIdController,
                           style: TextStyle(
@@ -299,10 +554,7 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
                           ),
                         ),
                       ),
-                      const SizedBox(
-                        width: 8,
-                      ), // spacing between field and button
-                      // Search Button
+                      const SizedBox(width: 8),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.black,
@@ -314,41 +566,27 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
                         ),
                         onPressed: () async {
                           try {
-                            // Check if guest data is already loaded in the provider
-                            final existingGuest = ref.read(
-                              selectedGuestProvider,
-                            );
-
-                            // Only fetch if not already available
+                            final existingGuest =
+                                ref.read(selectedGuestProvider);
                             if (existingGuest == null ||
-                                existingGuest.mid != _memberIdController.text) {
-                              setState(() {
-                                _isLoading = true;
-                              });
-
+                                existingGuest.mid !=
+                                    _memberIdController.text) {
+                              setState(() => _isLoading = true);
                               await _loadGuestDataForView();
-
-                              setState(() {
-                                _isLoading = false;
-                              });
+                              setState(() => _isLoading = false);
                             }
-
-                            // Navigate to profile
                             context.push('/home/profile');
                           } catch (e) {
-                            setState(() {
-                              _isLoading = false;
-                            });
+                            setState(() => _isLoading = false);
                           }
                         },
                         child: const Icon(Icons.person_search, size: 25),
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 16),
 
-                  // Package Start Date
+                  // ── Arrival Date ───────────────────────────────────────
                   TextFormField(
                     controller: _pkgStartController,
                     readOnly: true,
@@ -371,10 +609,9 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 16),
 
-                  // Package End Date
+                  // ── Departure Date ─────────────────────────────────────
                   TextFormField(
                     controller: _pkgEndController,
                     readOnly: true,
@@ -386,7 +623,8 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
                         fontSize: fontSettings.fontSize,
                         fontWeight: fontSettings.fontWeight,
                       ),
-                      prefixIcon: const Icon(Icons.event, color: Colors.red),
+                      prefixIcon:
+                          const Icon(Icons.event, color: Colors.red),
                       border: const OutlineInputBorder(),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 12.0,
@@ -394,10 +632,9 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 16),
 
-                  // Insert Date
+                  // ── Requested Date & Time ──────────────────────────────
                   TextFormField(
                     controller: _insertDateController,
                     readOnly: true,
@@ -420,248 +657,44 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 16),
 
-                  // Status Indicator
-                  // Container(
-                  //   padding: const EdgeInsets.all(16),
-                  //   decoration: BoxDecoration(
-                  //     color: widget.isPending
-                  //         ? Colors.orange.withOpacity(0.1)
-                  //         : Colors.green.withOpacity(0.1),
-                  //     borderRadius: BorderRadius.circular(12),
-                  //     border: Border.all(
-                  //       color: widget.isPending ? Colors.orange : Colors.green,
-                  //       width: 2,
-                  //     ),
-                  //   ),
-                  // child: Row(
-                  //   children: [
-                  //     Icon(
-                  //       widget.isPending ? Icons.pending : Icons.check_circle,
-                  //       color: widget.isPending ? Colors.orange : Colors.green,
-                  //       size: 30,
-                  //     ),
-                  //     const SizedBox(width: 12),
-                  //     Text(
-                  //       'Status: ${widget.isPending ? 'Pending' : 'Accepted'}',
-                  //       style: TextStyle(
-                  //         fontSize: fontSettings.fontSize + 2,
-                  //         fontWeight: FontWeight.bold,
-                  //         color: widget.isPending ? Colors.orange : Colors.green,
-                  //       ),
-                  //     ),
-                  //   ],
-                  // ),
-                  // ),
+                  // ── Accepted Info Card (only when accepted) ────────────
+                  if (!widget.isPending && widget.booking != null) ...[
+                    _buildAcceptedInfoCard(fontSettings),
+                    const SizedBox(height: 16),
+                  ],
 
-                  // const SizedBox(height: 24),
-
-                  // Action Buttons (only show if pending)
-                  if (widget.isPending) ...[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () async {
-                              if (widget.booking == null) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("Booking not found"),
-                                  ),
-                                );
-                                return;
-                              }
-
-                              final confirmed = await showDialog<bool>(
-                                context: context,
-                                builder: (dialogContext) => AlertDialog(
-                                  title: const Text('Accept Booking'),
-                                  content: const Text(
-                                    'Are you sure you want to accept this booking?',
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(
-                                        dialogContext,
-                                      ).pop(false),
-                                      child: const Text('Cancel'),
-                                    ),
-                                    ElevatedButton(
-                                      onPressed: () =>
-                                          Navigator.of(dialogContext).pop(true),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.green,
-                                        foregroundColor: Colors.white,
-                                      ),
-                                      child: const Text('Accept'),
-                                    ),
-                                  ],
-                                ),
-                              );
-
-                              if (confirmed != true) return;
-
-                              setState(() {
-                                _isLoading = true;
-                              });
-
-                              try {
-                                // final success = await ref
-                                //     .read(guestBookingProvider.notifier)
-                                //     .acceptBooking(
-                                //       idNo: widget.booking!.idNo,
-                                //       userName: userName ?? "",
-                                //     );
-
-                                // if (success) {
-                                //   if (!mounted) return;
-                                //   ScaffoldMessenger.of(context).showSnackBar(
-                                //     const SnackBar(
-                                //       content: Text("Booking Accepted Successfully"),
-                                //       backgroundColor: Colors.green,
-                                //     ),
-                                //   );
-                                //   Navigator.of(context).pop(true);
-                                // } else {
-                                //   if (!mounted) return;
-                                //   ScaffoldMessenger.of(context).showSnackBar(
-                                //     const SnackBar(
-                                //       content: Text("Failed to accept booking"),
-                                //       backgroundColor: Colors.red,
-                                //     ),
-                                //   );
-                                // }
-                              } catch (e) {
-                                if (!mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text("Error: $e")),
-                                );
-                              } finally {
-                                setState(() {
-                                  _isLoading = false;
-                                });
-                              }
-                            },
-                            icon: const Icon(Icons.check),
-                            label: const Text(
-                              "ACCEPT",
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                            ),
+                  // ── Accept Button (only when pending) ──────────────────
+                  if (widget.isPending)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _handleAcceptBooking,
+                        icon: const Icon(Icons.check),
+                        label: const Text(
+                          "ACCEPT",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        //const SizedBox(width: 16),
-                        // Expanded(
-                        //   child: ElevatedButton.icon(
-                        //     onPressed: () async {
-                        //       if (widget.booking == null) {
-                        //         ScaffoldMessenger.of(context).showSnackBar(
-                        //           const SnackBar(
-                        //             content: Text("Booking not found"),
-                        //           ),
-                        //         );
-                        //         return;
-                        //       }
-
-                        //       final confirmed = await showDialog<bool>(
-                        //         context: context,
-                        //         builder: (dialogContext) => AlertDialog(
-                        //           title: const Text('Reject Booking'),
-                        //           content: const Text(
-                        //             'Are you sure you want to reject this booking?',
-                        //           ),
-                        //           actions: [
-                        //             TextButton(
-                        //               onPressed: () => Navigator.of(dialogContext).pop(false),
-                        //               child: const Text('Cancel'),
-                        //             ),
-                        //             ElevatedButton(
-                        //               onPressed: () => Navigator.of(dialogContext).pop(true),
-                        //               style: ElevatedButton.styleFrom(
-                        //                 backgroundColor: Colors.red,
-                        //                 foregroundColor: Colors.white,
-                        //               ),
-                        //               child: const Text('Reject'),
-                        //             ),
-                        //           ],
-                        //         ),
-                        //       );
-
-                        //       if (confirmed != true) return;
-
-                        //       setState(() {
-                        //         _isLoading = true;
-                        //       });
-
-                        //       try {
-                        //         final success = await ref
-                        //             .read(guestBookingProvider.notifier)
-                        //             .rejectBooking(
-                        //               idNo: widget.booking!.idNo,
-                        //               userName: userName ?? "",
-                        //             );
-
-                        //         if (success) {
-                        //           if (!mounted) return;
-                        //           ScaffoldMessenger.of(context).showSnackBar(
-                        //             const SnackBar(
-                        //               content: Text("Booking Rejected Successfully"),
-                        //               backgroundColor: Colors.orange,
-                        //             ),
-                        //           );
-                        //           Navigator.of(context).pop(true);
-                        //         } else {
-                        //           if (!mounted) return;
-                        //           ScaffoldMessenger.of(context).showSnackBar(
-                        //             const SnackBar(
-                        //               content: Text("Failed to reject booking"),
-                        //               backgroundColor: Colors.red,
-                        //             ),
-                        //           );
-                        //         }
-                        //       } catch (e) {
-                        //         if (!mounted) return;
-                        //         ScaffoldMessenger.of(context).showSnackBar(
-                        //           SnackBar(content: Text("Error: $e")),
-                        //         );
-                        //       } finally {
-                        //         setState(() {
-                        //           _isLoading = false;
-                        //         });
-                        //       }
-                        //     },
-                        //     icon: const Icon(Icons.close),
-                        //     label: const Text("REJECT"),
-                        //     style: ElevatedButton.styleFrom(
-                        //       backgroundColor: Colors.red,
-                        //       foregroundColor: Colors.white,
-                        //       shape: RoundedRectangleBorder(
-                        //         borderRadius: BorderRadius.circular(12),
-                        //       ),
-                        //       padding: const EdgeInsets.symmetric(vertical: 16),
-                        //     ),
-                        //   ),
-                        // ),
-                      ],
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                      ),
                     ),
-                  ],
                 ],
               ),
             ),
           ),
+
+          // ── Loading overlay ────────────────────────────────────────────
           if (_isLoading)
             Positioned.fill(
               child: Container(
@@ -675,6 +708,7 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
                 ),
               ),
             ),
+
           const Watermark(),
         ],
       ),

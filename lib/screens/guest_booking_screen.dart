@@ -25,7 +25,7 @@ class GuestBookingScreen extends ConsumerStatefulWidget {
 }
 
 class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
   bool _isLoading = false;
 
@@ -36,7 +36,7 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-
+   WidgetsBinding.instance.addObserver(this); 
     // ✅ Start listening for guest booking notifications
     _setupNotificationListener();
 
@@ -48,10 +48,18 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
         return;
       }
 
-      _loadBookingData();
+         WidgetsBinding.instance.addPostFrameCallback((_) async {
+      _loadBookingData();  // ✅ ALWAYS load on init, remove the early return check
+    });
+
     });
   }
-
+ @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadBookingData();
+    }
+  }
   // ✅ Listen for foreground msg_type 35 and auto-reload
   void _setupNotificationListener() {
     _messageSubscription = FirebaseMessaging.onMessage.listen((
@@ -66,6 +74,7 @@ class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    WidgetsBinding.instance.removeObserver(this); 
     // ✅ Cancel subscription to avoid memory leaks
     _messageSubscription?.cancel();
     super.dispose();

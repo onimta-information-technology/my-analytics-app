@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/main.dart' show navigatorKey;
+import 'package:ballys_reservation_app/models/Guest/guest_booking.dart';
 import 'package:ballys_reservation_app/utils/current_chat_state.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
@@ -24,23 +25,20 @@ class NotificationService {
 
     try {
       // Initialize the notification channels (does NOT request permission)
-      await AwesomeNotifications().initialize(
-        null,
-        [
-          NotificationChannel(
-            channelKey: 'high_importance_channel',
-            channelName: 'High Importance Notifications',
-            channelDescription:
-                'This channel is used for important notifications',
-            defaultColor: Color(0xFFDAB066),
-            ledColor: Colors.white,
-            importance: NotificationImportance.High,
-            channelShowBadge: true,
-            playSound: true,
-            enableVibration: true,
-          ),
-        ],
-      );
+      await AwesomeNotifications().initialize(null, [
+        NotificationChannel(
+          channelKey: 'high_importance_channel',
+          channelName: 'High Importance Notifications',
+          channelDescription:
+              'This channel is used for important notifications',
+          defaultColor: Color(0xFFDAB066),
+          ledColor: Colors.white,
+          importance: NotificationImportance.High,
+          channelShowBadge: true,
+          playSound: true,
+          enableVibration: true,
+        ),
+      ]);
 
       // DO NOT request permission here - it will be done after login
       // Just set up the listeners
@@ -62,14 +60,15 @@ class NotificationService {
   Future<bool> requestNotificationPermission() async {
     try {
       final isAllowed = await AwesomeNotifications().isNotificationAllowed();
-      
+
       if (!isAllowed) {
         // Request permission only if not already allowed
-        final granted = await AwesomeNotifications().requestPermissionToSendNotifications();
+        final granted = await AwesomeNotifications()
+            .requestPermissionToSendNotifications();
         print('🔔 Notification permission requested: $granted');
         return granted;
       }
-      
+
       print('🔔 Notification permission already granted');
       return true;
     } catch (e) {
@@ -80,10 +79,10 @@ class NotificationService {
 
   Future<void> showForegroundNotification(RemoteMessage message) async {
     print('Received foreground message: ${message.messageId}');
-        print('Received foreground message: ${message.data}');
+    print('Received foreground message: ${message.data}');
     try {
       String? notificationChatId;
-      
+
       // For iOS, skip custom notifications and let FCM handle natively
       if (Platform.isIOS) {
         await _updateBadgeCount(1);
@@ -94,7 +93,36 @@ class NotificationService {
       String title =
           message.data['title'] ?? message.notification?.title ?? 'New Message';
       String body = message.data['body'] ?? message.notification?.body ?? '';
+      if (message.data['msg_type'] == '35') {
+        int notificationId = DateTime.now().millisecondsSinceEpoch.remainder(
+          100000,
+        );
+        final badgeService = BadgeService();
+        final currentBadge = await badgeService.getSavedBadgeCount();
+        final newBadgeCount = currentBadge + 1;
+        await badgeService.updateBadge(newBadgeCount);
 
+        await AwesomeNotifications().createNotification(
+          content: NotificationContent(
+            id: notificationId,
+            channelKey: 'high_importance_channel',
+            title: title,
+            body: body,
+            notificationLayout: NotificationLayout.Default,
+            payload: {
+              'type': '35',
+              'MID': message.data['MID'] ?? '',
+              'Pkg_Start': message.data['Pkg_Start'] ?? '',
+              'Pkg_End': message.data['Pkg_End'] ?? '',
+              'InsertDate': message.data['InsertDate'] ?? '',
+            },
+            icon: 'resource://mipmap/launcher_icon',
+            wakeUpScreen: true,
+            badge: newBadgeCount,
+          ),
+        );
+        return; // ✅ Exit early, don't fall through to chat logic
+      }
       // Parse the Details field
       String? detailsJson = message.data['Details'];
       Map<String, dynamic>? chatDetails;
@@ -107,13 +135,13 @@ class NotificationService {
           print('Error parsing Details: $e');
         }
       }
-      
+
       if (notificationChatId == null || notificationChatId.isEmpty) {
         notificationChatId =
             message.data['chatId']?.toString() ??
             message.data['chat_id']?.toString();
       }
-      
+
       if (notificationChatId != null &&
           CurrentChatState().isCurrentChat(notificationChatId)) {
         await _updateBadgeCount(1);
@@ -130,14 +158,16 @@ class NotificationService {
       };
 
       String? imageUrl = message.data['image_url'];
-      int notificationId = DateTime.now().millisecondsSinceEpoch.remainder(100000);
-      
+      int notificationId = DateTime.now().millisecondsSinceEpoch.remainder(
+        100000,
+      );
+
       final badgeService = BadgeService();
       final currentBadge = await badgeService.getSavedBadgeCount();
       final newBadgeCount = currentBadge + 1;
 
       await badgeService.updateBadge(newBadgeCount);
-      
+
       bool created = await AwesomeNotifications().createNotification(
         content: NotificationContent(
           id: notificationId,
@@ -178,11 +208,29 @@ class NotificationService {
   ) async {
     try {
       await BadgeService().clearBadge();
-      
+
       if (receivedAction.payload != null &&
           receivedAction.payload!.isNotEmpty) {
         final payload = receivedAction.payload!;
-
+        if (payload['type'] == '35') {
+          final context = navigatorKey.currentContext;
+          if (context != null && context.mounted) {
+            await Future.delayed(Duration(milliseconds: 500));
+            final booking = GuestBooking(
+              idNo: 0,
+              mid: payload['MID'] ?? '',
+              pkgStart: payload['Pkg_Start'] ?? '',
+              pkgEnd: payload['Pkg_End'] ?? '',
+              insertDate: payload['InsertDate'] ?? '',
+              pkgStatus: false,
+            );
+            context.go(
+              '/guest-bookings/view-booking',
+              extra: {'booking': booking, 'isPending': true},
+            );
+          }
+          return;
+        }
         if (payload['type'] == '11' ||
             payload['screen'] == 'chat' ||
             payload.containsKey('chatId')) {

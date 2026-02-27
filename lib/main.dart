@@ -9,6 +9,7 @@ import 'package:ballys_reservation_app/data/services/versioncehck_service.dart';
 import 'package:ballys_reservation_app/models/Guest/guest_booking.dart';
 import 'package:ballys_reservation_app/navigation/app_navigation.dart';
 import 'package:ballys_reservation_app/providers/auth_provider.dart';
+import 'package:ballys_reservation_app/providers/guest_booking_provider.dart';
 import 'package:ballys_reservation_app/utils/badge_sync_helper.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:ballys_reservation_app/utils/token_refresh_service.dart';
@@ -55,7 +56,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     print('Background handler error: $e');
   }
 }
-
+late ProviderContainer globalContainer;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -72,8 +73,11 @@ void main() async {
 
   // Initialize badge service
   await BadgeService().initialize();
-
-  runApp(const ProviderScope(child: MyApp()));
+ globalContainer = ProviderContainer();
+ runApp(ProviderScope(
+    parent: globalContainer, // ✅ Link ProviderScope to global container
+    child: MyApp(),
+  ));
 }
 
 class MyApp extends StatefulWidget {
@@ -110,7 +114,16 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       _syncBadgeIfLoggedIn();
     }
   }
-
+Future<void> _reloadGuestBookingsGlobally() async {
+  try {
+    await globalContainer
+        .read(guestBookingProvider.notifier)
+        .getAllBookings();
+    print('✅ Guest bookings reloaded from global listener');
+  } catch (e) {
+    print('Error reloading guest bookings globally: $e');
+  }
+}
   Future<void> _syncBadgeIfLoggedIn() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -131,14 +144,24 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     });
 
     // Handle foreground messages
+    // FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    //   // Only show notification UI for non-guest-booking messages
+    //   // (guest booking reload is handled in chat_screen.dart)
+    //   if (message.data['msg_type'] != '35') {
+    //     _showForegroundNotification(message);
+    //     _badgeService.addBadge(1);
+    //   }
+    // });
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      // Only show notification UI for non-guest-booking messages
-      // (guest booking reload is handled in chat_screen.dart)
-      if (message.data['msg_type'] != '35') {
-        _showForegroundNotification(message);
-        _badgeService.addBadge(1);
-      }
-    });
+  if (message.data['msg_type'] == '35') {
+_showForegroundNotification(message); 
+ _badgeService.addBadge(1);    
+    _reloadGuestBookingsGlobally();
+  } else {
+    _showForegroundNotification(message);
+    _badgeService.addBadge(1);
+  }
+});
 
     // Handle notification tap when app is in background
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {

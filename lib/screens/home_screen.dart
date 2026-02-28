@@ -1,5 +1,6 @@
 import 'package:ballys_reservation_app/components/Event/events.dart';
 import 'package:ballys_reservation_app/components/marketing_performance.dart';
+import 'package:ballys_reservation_app/components/visit_summary_chart_card.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
@@ -394,11 +395,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         });
       }
     });
-
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-         
+        centerTitle: true, 
+        title: Text(         
           userName != null ? 'Welcome, $userName ' : 'Loading...',
           style: const TextStyle(fontSize: 16, fontFamily: 'ABCArizonaFlare'),
         ),
@@ -415,7 +415,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(8.0),
               child: Column(
                 children: [
                   // Date display section
@@ -425,7 +425,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     child: Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Icon(
                             Icons.calendar_today,
@@ -581,6 +581,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ),
                     ],
                   ),
+                  const SizedBox(height: 8),
+VisitSummaryChartCard(
+  todayCount: counts["today"],
+  yesterdayCount: counts["yesterday"],
+  monthlyCount: counts["monthly"],
+),
                   const SizedBox(height: 8),
                   const MarketingPerformanceWidget(),
                 ],

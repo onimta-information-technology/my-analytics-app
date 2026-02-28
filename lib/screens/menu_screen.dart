@@ -71,10 +71,14 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
     final hasPendingGuestBookings =
         guestBookingState.pendingBookings.isNotEmpty;
     return Scaffold(
+       appBar: AppBar(
+centerTitle: true, 
+        title: const Text('My Analytics'),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 35),
+            padding: const EdgeInsets.symmetric(horizontal: 16,),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.start,

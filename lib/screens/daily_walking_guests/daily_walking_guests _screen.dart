@@ -130,6 +130,16 @@ class _DailyWalkingGuestScreenState
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/menu');
+            }
+          },
+        ),
         title: const Text("Daily Walking Guests"),
         actions: [
           IconButton(

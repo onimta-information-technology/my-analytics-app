@@ -585,12 +585,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   const SizedBox(height: 8),
                   const MarketingBreakdownHalfPieCard(),
                     const SizedBox(height: 8),
-VisitSummaryChartCard(
-  todayCount: counts["today"],
-  yesterdayCount: counts["yesterday"],
-  monthlyCount: counts["monthly"],
-),
-                  const SizedBox(height: 8),
+// VisitSummaryChartCard(
+//   todayCount: counts["today"],
+//   yesterdayCount: counts["yesterday"],
+//   monthlyCount: counts["monthly"],
+// ),
+//                   const SizedBox(height: 8),
                   const MarketingPerformanceWidget(),
                 ],
               ),

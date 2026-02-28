@@ -26,26 +26,37 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
       String? mCode = await StorageUtil.getMarketingCode();
 
       if (mode == AppMode.myData && mCode != null) {
-        // 🔹 Filter guests
+        // 🔹 Filter guests to only this marketing person's guests
         guestList = guestList.where((g) => g.mGroup == mCode).toList();
+
+        // 🔹 Count how many are THIS person's (my personal count)
         final myCount = guestList.where((g) => g.mid.isNotEmpty).length;
 
-        // 🔹 Try to find matching row in Table2
-        final matched = marketingGroups.where((g) => g.gCode == mCode).toList();
+        // 🔹 Check if mCode exists in Table2
+        final matchIndex =
+            marketingGroups.indexWhere((g) => g.gCode == mCode);
 
-        if (matched.isNotEmpty) {
-          // Found matching group — update rc with real filtered count
-          marketingGroups = matched
-              .map((g) => MarketingGroup(
-                    gCode: g.gCode,
-                    gName: g.gName,
-                    rc: myCount,
-                  ))
-              .toList();
+        if (matchIndex != -1) {
+          // ✅ Keep ALL groups from Table2, but subtract myCount from the
+          //    matched group's rc so the chart shows the remaining value
+          //    (i.e. Table2 total minus this person's own contribution)
+          marketingGroups = marketingGroups.map((g) {
+            if (g.gCode == mCode) {
+              final reduced = (g.rc - myCount).clamp(0, g.rc);
+              return MarketingGroup(
+                gCode: g.gCode,
+                gName: g.gName,
+                rc: reduced,
+              );
+            }
+            // All other groups stay exactly as Table2 returned them
+            return g;
+          }).toList();
         } else {
-          // 🔹 Fallback: mCode not in Table2, build a synthetic entry
-          //    so the chart always has data to show (never stays on loading)
+          // 🔹 Fallback: mCode not in Table2 at all — show all groups as-is
+          //    plus a synthetic entry for this person so chart has data
           marketingGroups = [
+            ...marketingGroups,
             MarketingGroup(
               gCode: mCode,
               gName: 'My Data',
@@ -54,7 +65,7 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
           ];
         }
       }
-      // overallData → use Table2 as-is
+      // overallData → use Table2 as-is, no changes
 
       switch (iid) {
         case 9009:

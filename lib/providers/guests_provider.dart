@@ -1,6 +1,7 @@
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
+import 'package:ballys_reservation_app/models/marketing_group.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,80 +9,112 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class GuestsNotifier extends StateNotifier<GuestsState> {
   final GuestRepository guestRepository;
-
-  // 🔹 Track current app mode to prevent stale updates
   AppMode? _currentMode;
 
   GuestsNotifier(this.guestRepository) : super(GuestsState());
 
   Future<void> getGuestData(int iid, String text1, AppMode mode) async {
     try {
-      // 🔹 Store current mode for this operation
       _currentMode = mode;
 
-      var guestList = await guestRepository.getGuestData(iid, text1);
+      final result = await guestRepository.getGuestData2(iid, text1);
+      var guestList = result.guests;
+      var marketingGroups = result.marketingGroups;
 
-      // 🔹 Check if mode changed during API call
-      if (_currentMode != mode) {
-        return;
-      }
+      if (_currentMode != mode) return;
 
       String? mCode = await StorageUtil.getMarketingCode();
 
-      // 🔹 Apply filtering based on mode
       if (mode == AppMode.myData && mCode != null) {
-        guestList = guestList.where((guest) => guest.mGroup == mCode).toList();
-     
-      } else {
-       
-      }
+        // 🔹 Filter guests
+        guestList = guestList.where((g) => g.mGroup == mCode).toList();
+        final myCount = guestList.where((g) => g.mid.isNotEmpty).length;
 
-      // 🔹 Update state based on iid
-      switch (iid) {
-        case 9009: // Today
-          state = state.copyWith(todayGuests: guestList);
-        
-          break;
-        case 9010: // Yesterday
-          state = state.copyWith(yesterdayGuests: guestList);
-      
-          break;
-        case 9011: // Monthly
-          state = state.copyWith(monthlyGuests: guestList);
-         
-          break;
-        default:
-      
-      }
-    } catch (e) {
-   
+        // 🔹 Try to find matching row in Table2
+        final matched = marketingGroups.where((g) => g.gCode == mCode).toList();
 
-      // 🔹 Set empty list for specific period on error
+        if (matched.isNotEmpty) {
+          // Found matching group — update rc with real filtered count
+          marketingGroups = matched
+              .map((g) => MarketingGroup(
+                    gCode: g.gCode,
+                    gName: g.gName,
+                    rc: myCount,
+                  ))
+              .toList();
+        } else {
+          // 🔹 Fallback: mCode not in Table2, build a synthetic entry
+          //    so the chart always has data to show (never stays on loading)
+          marketingGroups = [
+            MarketingGroup(
+              gCode: mCode,
+              gName: 'My Data',
+              rc: myCount,
+            ),
+          ];
+        }
+      }
+      // overallData → use Table2 as-is
+
       switch (iid) {
         case 9009:
-          state = state.copyWith(todayGuests: []);
+          state = state.copyWith(
+            todayGuests: guestList,
+            todayMarketingGroups: marketingGroups,
+          );
           break;
         case 9010:
-          state = state.copyWith(yesterdayGuests: []);
+          state = state.copyWith(
+            yesterdayGuests: guestList,
+            yesterdayMarketingGroups: marketingGroups,
+          );
           break;
         case 9011:
-          state = state.copyWith(monthlyGuests: []);
+          state = state.copyWith(
+            monthlyGuests: guestList,
+            monthlyMarketingGroups: marketingGroups,
+          );
+          break;
+      }
+    } catch (e) {
+      // 🔹 On error set empty lists — chart will show "No data available"
+      switch (iid) {
+        case 9009:
+          state = state.copyWith(
+            todayGuests: [],
+            todayMarketingGroups: [_emptyGroup],
+          );
+          break;
+        case 9010:
+          state = state.copyWith(
+            yesterdayGuests: [],
+            yesterdayMarketingGroups: [_emptyGroup],
+          );
+          break;
+        case 9011:
+          state = state.copyWith(
+            monthlyGuests: [],
+            monthlyMarketingGroups: [_emptyGroup],
+          );
           break;
       }
     }
   }
 
   void resetData() {
-  
     state = GuestsState();
     _currentMode = null;
   }
 
-  // 🔹 Method to update current mode tracking
   void setCurrentMode(AppMode mode) {
     _currentMode = mode;
   }
 }
+
+// 🔹 Sentinel value used on error so chart exits loading state
+final _emptyGroup = MarketingGroup(gCode: '', gName: 'No Data', rc: 0);
+
+// ── Providers ──────────────────────────────────────────────────────────────
 
 final flutterSecureStorageProvider = Provider(
   (ref) => const FlutterSecureStorage(),
@@ -97,51 +130,59 @@ final guestRepositoryProvider = Provider((ref) {
   return GuestRepository(apiService);
 });
 
-final guestsProvider = StateNotifierProvider<GuestsNotifier, GuestsState>((
-  ref,
-) {
-  final guestRepository = ref.read(guestRepositoryProvider);
-  return GuestsNotifier(guestRepository);
+final guestsProvider =
+    StateNotifierProvider<GuestsNotifier, GuestsState>((ref) {
+  return GuestsNotifier(ref.read(guestRepositoryProvider));
 });
 
-final appmodebutton = AppMode.myData;
+// ── State ──────────────────────────────────────────────────────────────────
 
 class GuestsState {
   final List<Guest> todayGuests;
   final List<Guest> yesterdayGuests;
   final List<Guest> monthlyGuests;
 
+  final List<MarketingGroup> todayMarketingGroups;
+  final List<MarketingGroup> yesterdayMarketingGroups;
+  final List<MarketingGroup> monthlyMarketingGroups;
+
   GuestsState({
     this.todayGuests = const [],
     this.yesterdayGuests = const [],
     this.monthlyGuests = const [],
+    this.todayMarketingGroups = const [],
+    this.yesterdayMarketingGroups = const [],
+    this.monthlyMarketingGroups = const [],
   });
 
   GuestsState copyWith({
     List<Guest>? todayGuests,
     List<Guest>? yesterdayGuests,
     List<Guest>? monthlyGuests,
+    List<MarketingGroup>? todayMarketingGroups,
+    List<MarketingGroup>? yesterdayMarketingGroups,
+    List<MarketingGroup>? monthlyMarketingGroups,
   }) {
     return GuestsState(
       todayGuests: todayGuests ?? this.todayGuests,
       yesterdayGuests: yesterdayGuests ?? this.yesterdayGuests,
       monthlyGuests: monthlyGuests ?? this.monthlyGuests,
+      todayMarketingGroups: todayMarketingGroups ?? this.todayMarketingGroups,
+      yesterdayMarketingGroups:
+          yesterdayMarketingGroups ?? this.yesterdayMarketingGroups,
+      monthlyMarketingGroups:
+          monthlyMarketingGroups ?? this.monthlyMarketingGroups,
     );
   }
 
-  // 🔹 Helper method to check if all data is loaded
-  bool get isAllDataLoaded {
-    return todayGuests.isNotEmpty ||
-        yesterdayGuests.isNotEmpty ||
-        monthlyGuests.isNotEmpty;
-  }
+  bool get isAllDataLoaded =>
+      todayGuests.isNotEmpty ||
+      yesterdayGuests.isNotEmpty ||
+      monthlyGuests.isNotEmpty;
 
-  // 🔹 Helper method to get counts
-  Map<String, int> get counts {
-    return {
-      'today': todayGuests.where((g) => g.mid.isNotEmpty).length,
-      'yesterday': yesterdayGuests.where((g) => g.mid.isNotEmpty).length,
-      'monthly': monthlyGuests.where((g) => g.mid.isNotEmpty).length,
-    };
-  }
+  Map<String, int> get counts => {
+        'today': todayGuests.where((g) => g.mid.isNotEmpty).length,
+        'yesterday': yesterdayGuests.where((g) => g.mid.isNotEmpty).length,
+        'monthly': monthlyGuests.where((g) => g.mid.isNotEmpty).length,
+      };
 }

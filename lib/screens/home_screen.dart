@@ -1,4 +1,5 @@
 import 'package:ballys_reservation_app/components/Event/events.dart';
+import 'package:ballys_reservation_app/components/marketing_breakdown_chart_card.dart';
 import 'package:ballys_reservation_app/components/marketing_performance.dart';
 import 'package:ballys_reservation_app/components/visit_summary_chart_card.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
@@ -582,6 +583,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     ],
                   ),
                   const SizedBox(height: 8),
+                  const MarketingBreakdownHalfPieCard(),
+                    const SizedBox(height: 8),
 VisitSummaryChartCard(
   todayCount: counts["today"],
   yesterdayCount: counts["yesterday"],

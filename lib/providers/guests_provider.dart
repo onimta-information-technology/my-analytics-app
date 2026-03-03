@@ -11,6 +11,10 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
   final GuestRepository guestRepository;
   AppMode? _currentMode;
 
+  // ── Raw cache (unfiltered API results) ──────────────────────────────────
+  final Map<int, List<Guest>> _rawGuests = {};
+  final Map<int, List<MarketingGroup>> _rawGroups = {};
+
   GuestsNotifier(this.guestRepository) : super(GuestsState());
 
   Future<void> getGuestData(int iid, String text1, AppMode mode) async {
@@ -18,77 +22,16 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
       _currentMode = mode;
 
       final result = await guestRepository.getGuestData2(iid, text1);
-      var guestList = result.guests;
-      var marketingGroups = result.marketingGroups;
 
       if (_currentMode != mode) return;
 
-      String? mCode = await StorageUtil.getMarketingCode();
+      // Cache raw results before any filtering
+      _rawGuests[iid] = result.guests;
+      _rawGroups[iid] = result.marketingGroups;
 
-      if (mode == AppMode.myData && mCode != null) {
-        // 🔹 Filter guests to only this marketing person's guests
-        guestList = guestList.where((g) => g.mGroup == mCode).toList();
-
-        // 🔹 Count how many are THIS person's (my personal count)
-        final myCount = guestList.where((g) => g.mid.isNotEmpty).length;
-
-        // 🔹 Check if mCode exists in Table2
-        final matchIndex =
-            marketingGroups.indexWhere((g) => g.gCode == mCode);
-
-        if (matchIndex != -1) {
-          // ✅ Keep ALL groups from Table2, but subtract myCount from the
-          //    matched group's rc so the chart shows the remaining value
-          //    (i.e. Table2 total minus this person's own contribution)
-          marketingGroups = marketingGroups.map((g) {
-            if (g.gCode == mCode) {
-              final reduced = (g.rc - myCount).clamp(0, g.rc);
-              return MarketingGroup(
-                gCode: g.gCode,
-                gName: g.gName,
-                rc: reduced,
-              );
-            }
-            // All other groups stay exactly as Table2 returned them
-            return g;
-          }).toList();
-        } else {
-          // 🔹 Fallback: mCode not in Table2 at all — show all groups as-is
-          //    plus a synthetic entry for this person so chart has data
-          marketingGroups = [
-            ...marketingGroups,
-            MarketingGroup(
-              gCode: mCode,
-              gName: 'My Data',
-              rc: myCount,
-            ),
-          ];
-        }
-      }
-      // overallData → use Table2 as-is, no changes
-
-      switch (iid) {
-        case 9009:
-          state = state.copyWith(
-            todayGuests: guestList,
-            todayMarketingGroups: marketingGroups,
-          );
-          break;
-        case 9010:
-          state = state.copyWith(
-            yesterdayGuests: guestList,
-            yesterdayMarketingGroups: marketingGroups,
-          );
-          break;
-        case 9011:
-          state = state.copyWith(
-            monthlyGuests: guestList,
-            monthlyMarketingGroups: marketingGroups,
-          );
-          break;
-      }
+      await _applyFilterAndUpdateState(iid, mode);
     } catch (e) {
-      // 🔹 On error set empty lists — chart will show "No data available"
+      // On error set empty lists — chart will show "No data available"
       switch (iid) {
         case 9009:
           state = state.copyWith(
@@ -112,9 +55,109 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
     }
   }
 
+  /// Called when the user switches modes in Settings.
+  /// Re-filters all cached data without a new network call.
+  Future<void> updateMode(AppMode mode) async {
+    _currentMode = mode;
+    for (final iid in _rawGuests.keys) {
+      await _applyFilterAndUpdateState(iid, mode);
+    }
+  }
+
+  Future<void> _applyFilterAndUpdateState(int iid, AppMode mode) async {
+    var guestList = List<Guest>.from(_rawGuests[iid] ?? []);
+    var marketingGroups = List<MarketingGroup>.from(_rawGroups[iid] ?? []);
+
+    if (mode == AppMode.myData) {
+      final mCode = await StorageUtil.getMarketingCode();
+
+      if (mCode != null) {
+        // Filter guests to only this marketing person's guests
+        guestList = guestList.where((g) => g.mGroup == mCode).toList();
+
+        // Count how many are THIS person's confirmed visits
+        final myCount = guestList.where((g) => g.mid.isNotEmpty).length;
+
+        // Check if mCode exists directly in Table2
+        final matchIndex =
+            marketingGroups.indexWhere((g) => g.gCode == mCode);
+
+        if (matchIndex != -1) {
+          // mCode found in Table2 — subtract myCount from the matched group
+          // so the chart shows the remaining value (Table2 total minus this
+          // person's own contribution)
+          marketingGroups = marketingGroups.map((g) {
+            if (g.gCode == mCode) {
+              final reduced = (g.rc - myCount).clamp(0, g.rc);
+              return MarketingGroup(
+                gCode: g.gCode,
+                gName: g.gName,
+                rc: reduced,
+              );
+            }
+            // All other groups stay exactly as Table2 returned them
+            return g;
+          }).toList();
+        } else {
+          // mCode NOT in Table2 — this user's visits are already counted
+          // inside the largest Table2 group (e.g. MARKETING).
+          // Find that parent group and subtract myCount to avoid double-counting.
+          int parentIdx = 0;
+          for (int i = 1; i < marketingGroups.length; i++) {
+            if (marketingGroups[i].rc > marketingGroups[parentIdx].rc) {
+              parentIdx = i;
+            }
+          }
+
+          final updated = List<MarketingGroup>.from(marketingGroups);
+          final parent = updated[parentIdx];
+          updated[parentIdx] = MarketingGroup(
+            gCode: parent.gCode,
+            gName: parent.gName,
+            rc: (parent.rc - myCount).clamp(0, parent.rc),
+          );
+
+          // Add My Data as a separate slice
+          marketingGroups = [
+            ...updated,
+            MarketingGroup(
+              gCode: mCode,
+              gName: 'My Data',
+              rc: myCount,
+            ),
+          ];
+        }
+      }
+    }
+    // overallData → use raw Table2 as-is, no changes
+
+    switch (iid) {
+      case 9009:
+        state = state.copyWith(
+          todayGuests: guestList,
+          todayMarketingGroups: marketingGroups,
+        );
+        break;
+      case 9010:
+        state = state.copyWith(
+          yesterdayGuests: guestList,
+          yesterdayMarketingGroups: marketingGroups,
+        );
+        break;
+      case 9011:
+        state = state.copyWith(
+          monthlyGuests: guestList,
+          monthlyMarketingGroups: marketingGroups,
+        );
+        break;
+    }
+  }
+
   void resetData() {
     state = GuestsState();
     _currentMode = null;
+    _rawGuests.clear();
+    _rawGroups.clear();
   }
 
   void setCurrentMode(AppMode mode) {
@@ -122,7 +165,7 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
   }
 }
 
-// 🔹 Sentinel value used on error so chart exits loading state
+// Sentinel value used on error so chart exits loading state
 final _emptyGroup = MarketingGroup(gCode: '', gName: 'No Data', rc: 0);
 
 // ── Providers ──────────────────────────────────────────────────────────────

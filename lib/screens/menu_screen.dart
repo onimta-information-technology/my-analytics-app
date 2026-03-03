@@ -120,7 +120,7 @@ centerTitle: true,
                             child: Column(
                               children: [
                                 Lottie.asset(
-                                  'assets/icon/menu_screen/home.json',
+                                  'assets/icon/menu_screen//Home icon Animation.json',
                                   width: 80,
                                   height: 80,
                                   fit: BoxFit.contain,

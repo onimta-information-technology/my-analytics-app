@@ -221,12 +221,12 @@ class _HalfPieSectionState extends State<_HalfPieSection>
                             widget.total.toString(),
                             style: const TextStyle(
                                 fontSize: 28,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w900,
                                 color: Colors.black87),
                           ),
                           const Text('Total Visits',
                               style: TextStyle(
-                                  fontSize: 11, color: Colors.grey)),
+                                  fontSize: 11, color: Color.fromARGB(255, 0, 0, 0))),
                         ],
                       ),
                     ),
@@ -275,19 +275,20 @@ class _HalfPieSectionState extends State<_HalfPieSection>
                         child: Text(
                           g.gName,
                           style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
                               color: Colors.black87),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-
+                     
                       // Count
                       Text(
+                   
                         g.rc.toString(),
                         style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
                           color: color,
                         ),
                       ),
@@ -302,10 +303,10 @@ class _HalfPieSectionState extends State<_HalfPieSection>
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          '$pct%',
+                          '$pct %',
                           style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
                             color: color,
                           ),
                         ),

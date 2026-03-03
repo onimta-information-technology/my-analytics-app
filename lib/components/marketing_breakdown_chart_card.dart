@@ -426,7 +426,7 @@ class _HalfPiePainter extends CustomPainter {
             text: '${(fraction * 100).toStringAsFixed(1)}%',
             style: TextStyle(
               color: Colors.white.withOpacity(progress),
-              fontSize: 10,
+              fontSize: 15,
               fontWeight: FontWeight.bold,
             ),
           ),

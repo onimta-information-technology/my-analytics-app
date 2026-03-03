@@ -6,9 +6,10 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class FirebaseApiService {
-  static const String domain = 'https://ballysnotifications.onimtaitsl.com';
-  static const String fmcDomain = 'https://ballysnotifications.onimtaitsl.com';
-
+   static const String domain = 'https://ballysnotifications.onimtaitsl.com';
+   static const String fmcDomain = 'https://ballysnotifications.onimtaitsl.com';
+  // static const String domain = 'https://chat.bcqr.lk';
+  // static const String fmcDomain = 'https://chat.bcqr.lk';
   static const Map<String, String> endpoints = {
     'InsertFcmToken': '/api/users/update-fcm-token',
     'InsertChatFMCToken': '/api/users/sync',
@@ -191,7 +192,7 @@ class FirebaseApiService {
     if (user != null && user['name'] != null) {
       await prefs.setString('name', user['name']);
     }
-
+print('syncFmcToken response: $response');
     return response;
   }
 
@@ -249,6 +250,7 @@ class FirebaseApiService {
       final response = await getRequest(url);
 
       if (response['success'] == true) {
+        print('Fetch chats response: ${response['data']}');
         return response['data'] ?? {};
       } else {
         throw Exception(response['error'] ?? 'Failed to fetch chats');

@@ -2,10 +2,13 @@ import 'dart:math';
 
 import 'package:ballys_reservation_app/models/marketing_group.dart';
 import 'package:ballys_reservation_app/providers/guests_provider.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 const List<Color> _sliceColors = [
+  Color(0xFFE91E63),
+  Color(0xFF00BCD4),
   Color(0xFFE4750E),
   Color(0xFF2A7DC0),
   Color(0xFF4CAF50),
@@ -16,9 +19,6 @@ const List<Color> _sliceColors = [
   Color(0xFF795548),
 ];
 
-// 🔹 Track which periods have finished loading (set by GuestsNotifier)
-//    We use a simple provider that mirrors whether each period's list
-//    has been written at least once.
 class MarketingBreakdownHalfPieCard extends ConsumerStatefulWidget {
   const MarketingBreakdownHalfPieCard({super.key});
 
@@ -30,16 +30,27 @@ class MarketingBreakdownHalfPieCard extends ConsumerStatefulWidget {
 class _MarketingBreakdownHalfPieCardState
     extends ConsumerState<MarketingBreakdownHalfPieCard> {
   int _selectedPeriod = 0;
+  String? _myDataCode; // mCode loaded from storage
 
-  // 🔹 Track which periods have been loaded at least once
   final Set<int> _loadedPeriods = {};
 
   static const List<String> _periodLabels = ['Today', 'Yesterday', 'Monthly'];
   static const List<Color> _tabColors = [
-    Color(0xFFE4750E),
-    Color(0xFF4CAF50),
-    Color(0xFF2A7DC0),
+    Color(0xFFE4750E), // Today     → orange
+    Color(0xFF4CAF50), // Yesterday → green
+    Color(0xFF2A7DC0), // Monthly   → blue
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMyDataCode();
+  }
+
+  Future<void> _loadMyDataCode() async {
+    final code = await StorageUtil.getMarketingCode();
+    if (mounted) setState(() => _myDataCode = code);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +62,6 @@ class _MarketingBreakdownHalfPieCardState
       guestsState.monthlyMarketingGroups,
     ];
 
-    // 🔹 Mark a period as loaded the moment its list is non-empty
     for (int i = 0; i < allGroups.length; i++) {
       if (allGroups[i].isNotEmpty) _loadedPeriods.add(i);
     }
@@ -60,9 +70,10 @@ class _MarketingBreakdownHalfPieCardState
     final isLoaded = _loadedPeriods.contains(_selectedPeriod);
     final total = selectedGroups.fold<int>(0, (s, g) => s + g.rc);
 
-    // 🔹 Filter out the sentinel "No Data" / empty entries for display
-    final displayGroups =
-        selectedGroups.where((g) => g.gCode.isNotEmpty && g.rc > 0).toList();
+    final displayGroups = selectedGroups
+        .where((g) => g.gCode.isNotEmpty && g.rc > 0)
+        .toList()
+      ..sort((a, b) => b.rc.compareTo(a.rc));
 
     return Card(
       elevation: 3,
@@ -79,7 +90,7 @@ class _MarketingBreakdownHalfPieCardState
                     color: Color(0xFF2A7DC0), size: 22),
                 SizedBox(width: 8),
                 Text(
-                  'Visit Breakdown',
+                  'Visit Summary',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -96,6 +107,7 @@ class _MarketingBreakdownHalfPieCardState
               labels: _periodLabels,
               colors: _tabColors,
               onTap: (i) => setState(() => _selectedPeriod = i),
+              fontSize: 15,
             ),
             const SizedBox(height: 16),
 
@@ -107,9 +119,13 @@ class _MarketingBreakdownHalfPieCardState
                   : displayGroups.isEmpty
                       ? const _EmptyPlaceholder()
                       : _HalfPieSection(
-                          key: ValueKey('$_selectedPeriod-${displayGroups.length}'),
+                          key: ValueKey(
+                              '$_selectedPeriod-${displayGroups.length}'),
                           groups: displayGroups,
                           total: total,
+                          myDataCode: _myDataCode,
+                          selectedPeriod: _selectedPeriod,
+                          tabColors: _tabColors,
                         ),
             ),
           ],
@@ -125,8 +141,18 @@ class _MarketingBreakdownHalfPieCardState
 class _HalfPieSection extends StatefulWidget {
   final List<MarketingGroup> groups;
   final int total;
+  final String? myDataCode;
+  final int selectedPeriod;
+  final List<Color> tabColors;
 
-  const _HalfPieSection({super.key, required this.groups, required this.total});
+  const _HalfPieSection({
+    super.key,
+    required this.groups,
+    required this.total,
+    required this.myDataCode,
+    required this.selectedPeriod,
+    required this.tabColors,
+  });
 
   @override
   State<_HalfPieSection> createState() => _HalfPieSectionState();
@@ -154,10 +180,22 @@ class _HalfPieSectionState extends State<_HalfPieSection>
     super.dispose();
   }
 
+  /// Returns the color for a slice at [index].
+  /// The "My Data" group always uses the active tab color so it's visually
+  /// tied to the selected period (orange / green / blue).
+  Color _colorFor(int index) {
+    final g = widget.groups[index];
+    final isMyData = widget.myDataCode != null &&
+        (g.gCode == widget.myDataCode || g.gName == 'My Data');
+    if (isMyData) return widget.tabColors[widget.selectedPeriod];
+    return _sliceColors[index % _sliceColors.length];
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
+        // ── Half-pie chart ──
         AnimatedBuilder(
           animation: _animation,
           builder: (context, _) {
@@ -171,6 +209,7 @@ class _HalfPieSectionState extends State<_HalfPieSection>
                     total: widget.total,
                     progress: _animation.value,
                     hoveredIndex: _hoveredIndex,
+                    colorForIndex: _colorFor,
                   ),
                   child: Center(
                     child: Padding(
@@ -186,8 +225,8 @@ class _HalfPieSectionState extends State<_HalfPieSection>
                                 color: Colors.black87),
                           ),
                           const Text('Total Visits',
-                              style:
-                                  TextStyle(fontSize: 11, color: Colors.grey)),
+                              style: TextStyle(
+                                  fontSize: 11, color: Colors.grey)),
                         ],
                       ),
                     ),
@@ -197,19 +236,16 @@ class _HalfPieSectionState extends State<_HalfPieSection>
             );
           },
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
 
-        // Legend
-        Wrap(
-          spacing: 12,
-          runSpacing: 6,
-          alignment: WrapAlignment.center,
+        // ── Legend — one full-width row per item ──
+        Column(
           children: List.generate(widget.groups.length, (i) {
             final g = widget.groups[i];
             final pct = widget.total > 0
                 ? (g.rc / widget.total * 100).toStringAsFixed(1)
                 : '0.0';
-            final color = _sliceColors[i % _sliceColors.length];
+            final color = _colorFor(i);
             final isActive = _hoveredIndex == null || _hoveredIndex == i;
 
             return GestureDetector(
@@ -218,19 +254,64 @@ class _HalfPieSectionState extends State<_HalfPieSection>
               child: AnimatedOpacity(
                 duration: const Duration(milliseconds: 200),
                 opacity: isActive ? 1.0 : 0.35,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                        width: 10,
-                        height: 10,
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 6),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 8),
+                  decoration: const BoxDecoration(),
+                  child: Row(
+                    children: [
+                      // Color dot
+                      Container(
+                        width: 11,
+                        height: 11,
                         decoration: BoxDecoration(
-                            color: color, shape: BoxShape.circle)),
-                    const SizedBox(width: 4),
-                    Text('${g.gName} ($pct%)',
-                        style: const TextStyle(
-                            fontSize: 11, color: Colors.black87)),
-                  ],
+                            color: color, shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 10),
+
+                      // Group name
+                      Expanded(
+                        child: Text(
+                          g.gName,
+                          style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black87),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+
+                      // Count
+                      Text(
+                        g.rc.toString(),
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+
+                      // Percentage badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '$pct%',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: color,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -288,12 +369,14 @@ class _HalfPiePainter extends CustomPainter {
   final int total;
   final double progress;
   final int? hoveredIndex;
+  final Color Function(int index) colorForIndex;
 
   _HalfPiePainter({
     required this.groups,
     required this.total,
     required this.progress,
     required this.hoveredIndex,
+    required this.colorForIndex,
   });
 
   @override
@@ -311,7 +394,7 @@ class _HalfPiePainter extends CustomPainter {
     for (int i = 0; i < groups.length; i++) {
       final fraction = groups[i].rc / total;
       final sweep = fraction * totalSweep;
-      final color = _sliceColors[i % _sliceColors.length];
+      final color = colorForIndex(i);
       final isHovered = hoveredIndex == i;
       final isOtherHovered = hoveredIndex != null && !isHovered;
 
@@ -339,7 +422,7 @@ class _HalfPiePainter extends CustomPainter {
 
         final tp = TextPainter(
           text: TextSpan(
-            text: '${(fraction * 100).toStringAsFixed(0)}%',
+            text: '${(fraction * 100).toStringAsFixed(1)}%',
             style: TextStyle(
               color: Colors.white.withOpacity(progress),
               fontSize: 10,
@@ -369,12 +452,14 @@ class _PeriodTabBar extends StatelessWidget {
   final List<String> labels;
   final List<Color> colors;
   final ValueChanged<int> onTap;
+  final double fontSize;
 
   const _PeriodTabBar({
     required this.selectedIndex,
     required this.labels,
     required this.colors,
     required this.onTap,
+    this.fontSize = 12,
   });
 
   @override
@@ -397,7 +482,7 @@ class _PeriodTabBar extends StatelessWidget {
                 labels[i],
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: fontSize,
                   fontWeight:
                       isSelected ? FontWeight.bold : FontWeight.normal,
                   color: isSelected ? Colors.white : colors[i],

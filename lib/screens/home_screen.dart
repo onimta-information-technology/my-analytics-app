@@ -1,12 +1,19 @@
 import 'package:ballys_reservation_app/components/Event/events.dart';
+import 'package:ballys_reservation_app/components/location_selector_widget.dart';
 import 'package:ballys_reservation_app/components/marketing_breakdown_chart_card.dart';
 import 'package:ballys_reservation_app/components/marketing_performance.dart';
 import 'package:ballys_reservation_app/components/visit_summary_chart_card.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
+import 'package:ballys_reservation_app/providers/BirthdayGiftIncreesNotifier.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
+import 'package:ballys_reservation_app/providers/birthdays_provider.dart';
+import 'package:ballys_reservation_app/providers/daily_walking_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/guests_provider.dart';
+import 'package:ballys_reservation_app/providers/marketing_provider.dart';
+import 'package:ballys_reservation_app/providers/reservation_provider.dart';
+import 'package:ballys_reservation_app/providers/special_gift_provider.dart';
 import 'package:ballys_reservation_app/screens/member_visits.dart';
 import 'package:ballys_reservation_app/screens/member_visits/sales_persons.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -35,7 +42,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     with AutomaticKeepAliveClientMixin {
   String? userName;
   bool _isLoadingData = false;
-
+String? locationLogo;
   // 🔹 Keep the widget alive when navigating away
   @override
   bool get wantKeepAlive => true;
@@ -44,7 +51,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   void initState() {
     super.initState();
     _loadUserName();
-
+ _loadLocationLogo();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // 🔹 Check if user is actually logged in
       final userName = await StorageUtil.getUserName();
@@ -320,7 +327,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     // Reload data
     await Future.wait<void>([_loadUserName(), _loadGuestData()]);
   }
-
+  Future<void> _loadLocationLogo() async {
+    final location = await StorageUtil.getCurrentLocation();
+    if (mounted) {
+      setState(() {
+        locationLogo = location?.imageUrl;
+      });
+    }
+  }
   // 🔹 Reusable fixed size box widget
   Widget buildCountBox({
     required int? count,
@@ -419,6 +433,100 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               padding: const EdgeInsets.all(8.0),
               child: Column(
                 children: [
+                  FutureBuilder<bool>(
+                    future: StorageUtil.isAdmin(),
+                    builder: (context, snapshot) {
+                   
+                      if (snapshot.hasData && snapshot.data == true) {
+                        return Container(
+                          width: double.infinity, 
+                          margin: const EdgeInsets.only(bottom: 8.0),
+                          child: Card(
+                            elevation: 2,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12.0,
+                                vertical: 2.0,
+                              ),
+                              child: Row(
+                                children: [
+                                  // Bally's Logo
+                                  Container(
+                                    width: 60,
+                                    height: 60,
+                                    // decoration: BoxDecoration(
+                                    //   shape: BoxShape.circle,
+                                    //   color: Colors.grey.shade200,
+                                    // ),
+                                    // clipBehavior: Clip.antiAlias,
+                                    child:
+                                        locationLogo != null &&
+                                            locationLogo!.isNotEmpty
+                                        ? Image.network(
+                                            locationLogo!,
+                                            fit: BoxFit.contain,
+                                            errorBuilder: (_, __, ___) =>
+                                                const Icon(
+                                                  Icons.business,
+                                                  size: 28,
+                                                ),
+                                          )
+                                        : const Icon(Icons.business, size: 28),
+                                  ),
+
+                                  const SizedBox(width: 8),
+
+                                  // Location Dropdown - Takes remaining space
+                                  Expanded(
+                                    child: LocationSelectorWidget(
+                                      onLocationChanged: () {
+                                        // Refresh data when location changes
+                                        _manualRefresh();
+                                        _loadLocationLogo();
+
+                                        ref
+                                            .read(reservationProvider.notifier)
+                                            .clearReservations();
+                                        ref
+                                            .read(giftProvider.notifier)
+                                            .clearGifts();
+                                        ref
+                                            .read(birthdayProvider.notifier)
+                                            .clearBirthdays();
+                                        ref
+                                            .read(dailyWalkingProvider.notifier)
+                                            .clearDailyWalkingGuests();
+                                        ref
+                                            .read(birthdayGiftIncreesProvider.notifier)
+                                            .clearbirthdayGifts();
+                                        ref
+                                            .read(marketingProvider.notifier)
+                                            .clearMarketing();
+                                      },
+                                    ),
+                                  ),
+
+                                  // Settings Icon
+                                  // IconButton(
+                                  //   icon: const Icon(
+                                  //     Icons.tune,
+                                  //     color: Colors.black54,
+                                  //     size: 26,
+                                  //   ),
+                                  //   onPressed: () {
+                                  //     // Handle settings action
+                                  //   },
+                                  // ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                      // Return empty container for non-admin users
+                      return const SizedBox.shrink();
+                    },
+                  ),
                   // Date display section
                   Card(
                     elevation: 2,

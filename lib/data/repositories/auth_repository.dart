@@ -43,6 +43,7 @@ class AuthRepository {
       final currentVersion = packageInfo.version;
     final deviceId = await DeviceId.get();
   print(deviceId);
+  print("url: ${apiService}");
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [

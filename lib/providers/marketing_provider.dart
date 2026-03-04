@@ -13,6 +13,21 @@ class MarketingNotifier extends StateNotifier<MarketingState> {
   MarketingNotifier(this.marketingRepository, this.ref)
       : super(MarketingState());
 
+void clearMarketing() {
+    state = MarketingState(
+      todayPerformance: [],
+      yesterdayPerformance: [],
+      monthlyPerformance: [],
+      lastmonthPerformance: [],
+      todayDetailedData: [],
+      yesterdayDetailedData: [],
+      monthlyDetailedData: [],
+      lastmonthDetailedData: [],
+      detailedData: [],
+      selectedTab: -1,
+      isLoading: false,
+    );
+  }
   // Updated to fetch performance, detailed, and result data in one call
   Future<void> getMarketingData(int iid, {AppMode? overrideAppMode}) async {
     state = state.copyWith(isLoading: true);

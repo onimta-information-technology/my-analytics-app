@@ -4,14 +4,16 @@ import 'package:ballys_reservation_app/models/guest_search_response.dart';
 import 'package:ballys_reservation_app/models/marketing_group.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 
-/// 🔹 Return type wrapping guests + Table2 marketing groups
+/// 🔹 Return type wrapping guests + Table2 marketing groups + Table3 non-marketing guests
 class GuestDataResult {
   final List<Guest> guests;
   final List<MarketingGroup> marketingGroups;
+  final List<Guest> nonMarketingGuests; // 🆕 Table3
 
   const GuestDataResult({
     required this.guests,
     required this.marketingGroups,
+    required this.nonMarketingGuests, // 🆕
   });
 }
 
@@ -61,14 +63,15 @@ class GuestRepository {
         response['CommonResult']['Table'].isNotEmpty) {
       final tableData = response['CommonResult']['Table'];
       final table2Data = response['CommonResult']['Table2'];
+      final table3Data = response['CommonResult']['Table3']; // 🆕 non-marketing
 
-      // 🔹 Parse guests from Table
+      // 🔹 Parse marketing guests from Table
       List<Guest> guestList = [];
       for (var table in tableData) {
         guestList.add(Guest.fromJson(table));
       }
 
-      // 🔹 Parse marketing groups from Table2
+      // 🔹 Parse marketing group summary from Table2
       List<MarketingGroup> marketingGroups = [];
       if (table2Data is List && table2Data.isNotEmpty) {
         for (var row in table2Data) {
@@ -76,10 +79,19 @@ class GuestRepository {
         }
       }
 
+      // 🆕 Parse non-marketing guests from Table3
+      List<Guest> nonMarketingGuests = [];
+      if (table3Data is List && table3Data.isNotEmpty) {
+        for (var row in table3Data) {
+          nonMarketingGuests.add(Guest.fromJson(row));
+        }
+      }
+
       if (guestList.isNotEmpty) {
         return GuestDataResult(
           guests: guestList,
           marketingGroups: marketingGroups,
+          nonMarketingGuests: nonMarketingGuests, // 🆕
         );
       } else {
         throw Exception(
@@ -90,10 +102,11 @@ class GuestRepository {
       throw Exception('Login failed: unexpected response structure');
     }
   }
-Future<List<Guest>> getGuestData(int iid, String text1) async {
+
+  Future<List<Guest>> getGuestData(int iid, String text1) async {
     final deviceId = await DeviceId.get();
     print("iid is $iid and text1 is $text1");
-    
+
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -122,41 +135,19 @@ Future<List<Guest>> getGuestData(int iid, String text1) async {
       "SpName": "sp_CRM_Common_API",
       "con": "1",
     });
-    
+
     print("hiii2");
     print(response);
-    
+
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List &&
         response['CommonResult']['Table'].isNotEmpty) {
       final tableData = response['CommonResult']['Table'];
-      final table1Data = response['CommonResult']['Table1'];
 
       List<Guest> guestList = [];
-
-      if (tableData.length > 0) {
-        for (var table in tableData) {
-          // ✅ FIX: Use fromJson to properly parse all fields including memImage2
-          guestList.add(Guest.fromJson(table));
-        }
+      for (var table in tableData) {
+        guestList.add(Guest.fromJson(table));
       }
-
-      // if (table1Data is List && table1Data.isNotEmpty) {
-      //   for (var table2 in table1Data) {
-      //     guestList.add(
-      //       Guest(
-      //         mid: '',
-      //         memberName: '',
-      //         country: '',
-      //         lastVisitDate: '',
-      //         age: 0,
-      //         gRating: '',
-      //         mGroup: table2['GCode'] + '0' ?? '',
-      //         gName: table2['GName'] ?? '',
-      //       ),
-      //     );
-      //   }
-      // }
 
       if (guestList.isNotEmpty) {
         return guestList;
@@ -169,7 +160,6 @@ Future<List<Guest>> getGuestData(int iid, String text1) async {
       throw Exception('Login failed: unexpected response structure');
     }
   }
-
 
   Future<String?> fetchGuestImage(int iid, String text1) async {
     final deviceId = await DeviceId.get();

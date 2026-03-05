@@ -14,6 +14,7 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
   // ── Raw cache (unfiltered API results) ──────────────────────────────────
   final Map<int, List<Guest>> _rawGuests = {};
   final Map<int, List<MarketingGroup>> _rawGroups = {};
+  final Map<int, List<Guest>> _rawNonMarketingGuests = {}; // 🆕 Table3
 
   GuestsNotifier(this.guestRepository) : super(GuestsState());
 
@@ -28,27 +29,33 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
       // Cache raw results before any filtering
       _rawGuests[iid] = result.guests;
       _rawGroups[iid] = result.marketingGroups;
+      _rawNonMarketingGuests[iid] = result.nonMarketingGuests; // 🆕
 
       await _applyFilterAndUpdateState(iid, mode);
     } catch (e) {
-      // On error set empty lists — chart will show "No data available"
       switch (iid) {
         case 9009:
           state = state.copyWith(
             todayGuests: [],
             todayMarketingGroups: [_emptyGroup],
+            todayAllMarketingGuests: [],      // 🆕
+            todayNonMarketingGuests: [],      // 🆕
           );
           break;
         case 9010:
           state = state.copyWith(
             yesterdayGuests: [],
             yesterdayMarketingGroups: [_emptyGroup],
+            yesterdayAllMarketingGuests: [],  // 🆕
+            yesterdayNonMarketingGuests: [],  // 🆕
           );
           break;
         case 9011:
           state = state.copyWith(
             monthlyGuests: [],
             monthlyMarketingGroups: [_emptyGroup],
+            monthlyAllMarketingGuests: [],    // 🆕
+            monthlyNonMarketingGuests: [],    // 🆕
           );
           break;
       }
@@ -67,25 +74,20 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
   Future<void> _applyFilterAndUpdateState(int iid, AppMode mode) async {
     var guestList = List<Guest>.from(_rawGuests[iid] ?? []);
     var marketingGroups = List<MarketingGroup>.from(_rawGroups[iid] ?? []);
+    final allMarketingGuests = List<Guest>.from(_rawGuests[iid] ?? []); // 🆕 always raw
+    final nonMarketingGuests = List<Guest>.from(_rawNonMarketingGuests[iid] ?? []); // 🆕
 
     if (mode == AppMode.myData) {
       final mCode = await StorageUtil.getMarketingCode();
 
       if (mCode != null) {
-        // Filter guests to only this marketing person's guests
         guestList = guestList.where((g) => g.mGroup == mCode).toList();
-
-        // Count how many are THIS person's confirmed visits
         final myCount = guestList.where((g) => g.mid.isNotEmpty).length;
 
-        // Check if mCode exists directly in Table2
         final matchIndex =
             marketingGroups.indexWhere((g) => g.gCode == mCode);
 
         if (matchIndex != -1) {
-          // mCode found in Table2 — subtract myCount from the matched group
-          // so the chart shows the remaining value (Table2 total minus this
-          // person's own contribution)
           marketingGroups = marketingGroups.map((g) {
             if (g.gCode == mCode) {
               final reduced = (g.rc - myCount).clamp(0, g.rc);
@@ -95,13 +97,9 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
                 rc: reduced,
               );
             }
-            // All other groups stay exactly as Table2 returned them
             return g;
           }).toList();
         } else {
-          // mCode NOT in Table2 — this user's visits are already counted
-          // inside the largest Table2 group (e.g. MARKETING).
-          // Find that parent group and subtract myCount to avoid double-counting.
           int parentIdx = 0;
           for (int i = 1; i < marketingGroups.length; i++) {
             if (marketingGroups[i].rc > marketingGroups[parentIdx].rc) {
@@ -117,7 +115,6 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
             rc: (parent.rc - myCount).clamp(0, parent.rc),
           );
 
-          // Add My Data as a separate slice
           marketingGroups = [
             ...updated,
             MarketingGroup(
@@ -129,25 +126,30 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
         }
       }
     }
-    // overallData → use raw Table2 as-is, no changes
 
     switch (iid) {
       case 9009:
         state = state.copyWith(
           todayGuests: guestList,
           todayMarketingGroups: marketingGroups,
+          todayAllMarketingGuests: allMarketingGuests,       // 🆕
+          todayNonMarketingGuests: nonMarketingGuests,       // 🆕
         );
         break;
       case 9010:
         state = state.copyWith(
           yesterdayGuests: guestList,
           yesterdayMarketingGroups: marketingGroups,
+          yesterdayAllMarketingGuests: allMarketingGuests,   // 🆕
+          yesterdayNonMarketingGuests: nonMarketingGuests,   // 🆕
         );
         break;
       case 9011:
         state = state.copyWith(
           monthlyGuests: guestList,
           monthlyMarketingGroups: marketingGroups,
+          monthlyAllMarketingGuests: allMarketingGuests,     // 🆕
+          monthlyNonMarketingGuests: nonMarketingGuests,     // 🆕
         );
         break;
     }
@@ -158,6 +160,7 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
     _currentMode = null;
     _rawGuests.clear();
     _rawGroups.clear();
+    _rawNonMarketingGuests.clear(); // 🆕
   }
 
   void setCurrentMode(AppMode mode) {
@@ -200,6 +203,16 @@ class GuestsState {
   final List<MarketingGroup> yesterdayMarketingGroups;
   final List<MarketingGroup> monthlyMarketingGroups;
 
+  // 🆕 Raw (unfiltered) marketing guests from Table
+  final List<Guest> todayAllMarketingGuests;
+  final List<Guest> yesterdayAllMarketingGuests;
+  final List<Guest> monthlyAllMarketingGuests;
+
+  // 🆕 Non-marketing guests from Table3
+  final List<Guest> todayNonMarketingGuests;
+  final List<Guest> yesterdayNonMarketingGuests;
+  final List<Guest> monthlyNonMarketingGuests;
+
   GuestsState({
     this.todayGuests = const [],
     this.yesterdayGuests = const [],
@@ -207,6 +220,12 @@ class GuestsState {
     this.todayMarketingGroups = const [],
     this.yesterdayMarketingGroups = const [],
     this.monthlyMarketingGroups = const [],
+    this.todayAllMarketingGuests = const [],       // 🆕
+    this.yesterdayAllMarketingGuests = const [],   // 🆕
+    this.monthlyAllMarketingGuests = const [],     // 🆕
+    this.todayNonMarketingGuests = const [],       // 🆕
+    this.yesterdayNonMarketingGuests = const [],   // 🆕
+    this.monthlyNonMarketingGuests = const [],     // 🆕
   });
 
   GuestsState copyWith({
@@ -216,6 +235,12 @@ class GuestsState {
     List<MarketingGroup>? todayMarketingGroups,
     List<MarketingGroup>? yesterdayMarketingGroups,
     List<MarketingGroup>? monthlyMarketingGroups,
+    List<Guest>? todayAllMarketingGuests,       // 🆕
+    List<Guest>? yesterdayAllMarketingGuests,   // 🆕
+    List<Guest>? monthlyAllMarketingGuests,     // 🆕
+    List<Guest>? todayNonMarketingGuests,       // 🆕
+    List<Guest>? yesterdayNonMarketingGuests,   // 🆕
+    List<Guest>? monthlyNonMarketingGuests,     // 🆕
   }) {
     return GuestsState(
       todayGuests: todayGuests ?? this.todayGuests,
@@ -226,6 +251,18 @@ class GuestsState {
           yesterdayMarketingGroups ?? this.yesterdayMarketingGroups,
       monthlyMarketingGroups:
           monthlyMarketingGroups ?? this.monthlyMarketingGroups,
+      todayAllMarketingGuests:
+          todayAllMarketingGuests ?? this.todayAllMarketingGuests,
+      yesterdayAllMarketingGuests:
+          yesterdayAllMarketingGuests ?? this.yesterdayAllMarketingGuests,
+      monthlyAllMarketingGuests:
+          monthlyAllMarketingGuests ?? this.monthlyAllMarketingGuests,
+      todayNonMarketingGuests:
+          todayNonMarketingGuests ?? this.todayNonMarketingGuests,
+      yesterdayNonMarketingGuests:
+          yesterdayNonMarketingGuests ?? this.yesterdayNonMarketingGuests,
+      monthlyNonMarketingGuests:
+          monthlyNonMarketingGuests ?? this.monthlyNonMarketingGuests,
     );
   }
 

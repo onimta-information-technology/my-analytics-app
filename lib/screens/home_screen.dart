@@ -1,12 +1,11 @@
 import 'package:ballys_reservation_app/components/Event/events.dart';
 import 'package:ballys_reservation_app/components/marketing_breakdown_chart_card.dart';
 import 'package:ballys_reservation_app/components/marketing_performance.dart';
-import 'package:ballys_reservation_app/components/visit_summary_chart_card.dart';
-import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/guests_provider.dart';
+import 'package:ballys_reservation_app/providers/run_date_provider.dart';
 import 'package:ballys_reservation_app/screens/member_visits.dart';
 import 'package:ballys_reservation_app/screens/member_visits/sales_persons.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -32,26 +31,27 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin , WidgetsBindingObserver{
   String? userName;
   bool _isLoadingData = false;
 
-  // 🔹 Keep the widget alive when navigating away
   @override
   bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
+      WidgetsBinding.instance.addObserver(this); 
     _loadUserName();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // 🔹 Check if user is actually logged in
+      // 🔹 Fetch server run date via provider
+      ref.read(runDateProvider.notifier).getRunDate();
+
       final userName = await StorageUtil.getUserName();
       final salesCode = await StorageUtil.getSalesCode();
 
       if (userName == null || salesCode == null) {
-        // User not logged in, reset everything
         ref.read(homeScreenInitializedProvider.notifier).state = false;
         ref.read(guestsProvider.notifier).resetData();
         ref.read(guestCountsProvider.notifier).state = {
@@ -69,7 +69,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         _loadGuestData();
         _checkAndShowEvent();
       } else {
-        // 🔹 Even if initialized, verify data exists
         final guestsState = ref.read(guestsProvider);
         if (guestsState.todayGuests.isEmpty &&
             guestsState.yesterdayGuests.isEmpty &&
@@ -79,16 +78,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       }
     });
   }
-
+@override
+void dispose() {
+  WidgetsBinding.instance.removeObserver(this);  // 👈 Add this
+  super.dispose();
+}
   /// 🎉 Unified event checking method
   void _checkAndShowEvent() {
     final now = DateTime.now();
     final currentEvent = ref.read(activeEventProvider);
 
-    // Only show if no event is currently active
     if (currentEvent != null) return;
+
     EventType? eventToShow;
     int displayDuration = 5;
+
     if (now.month == 12) {
       eventToShow = EventType.christmas;
       displayDuration = 4;
@@ -98,96 +102,89 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     } else if (now.month == 1 && now.day == 14) {
       eventToShow = EventType.thaiPongal;
       displayDuration = 4;
-    }else if (now.month == 1 && now.day == 26) {
+    } else if (now.month == 1 && now.day == 26) {
       eventToShow = EventType.republicDay;
       displayDuration = 4;
-    }else if (now.month == 2 && now.day == 4) {
+    } else if (now.month == 2 && now.day == 4) {
       eventToShow = EventType.independence;
       displayDuration = 4;
-    }else if (now.month == 2 && now.day == 14) {
+    } else if (now.month == 2 && now.day == 14) {
       eventToShow = EventType.valentineDay;
       displayDuration = 5;
-    }else if (now.month == 2 && now.day == 17) {
+    } else if (now.month == 2 && now.day == 17) {
       eventToShow = EventType.chineseNewYear;
       displayDuration = 5;
-    }else if (now.month == 3 && now.day == 4) {
+    } else if (now.month == 3 && now.day == 4) {
       eventToShow = EventType.holi;
       displayDuration = 5;
-    }else if (now.month == 3 && now.day == 8) {
+    } else if (now.month == 3 && now.day == 8) {
       eventToShow = EventType.happyWomen;
       displayDuration = 5;
-    }else if (now.month == 3 && now.day == 21) {
+    } else if (now.month == 3 && now.day == 21) {
       eventToShow = EventType.ramadan;
       displayDuration = 5;
-    }else if (now.month == 4 && now.day == 5) {
+    } else if (now.month == 4 && now.day == 5) {
       eventToShow = EventType.easter;
       displayDuration = 5;
-    }else if (now.month == 4 && (now.day == 13 || now.day == 14 || now.day == 15)) {
+    } else if (now.month == 4 &&
+        (now.day == 13 || now.day == 14 || now.day == 15)) {
       eventToShow = EventType.sinhalatamilNewYear;
       displayDuration = 5;
-    }else if (now.month == 4 && now.day == 22) {
+    } else if (now.month == 4 && now.day == 22) {
       eventToShow = EventType.earthDay;
       displayDuration = 5;
-    }else if (now.month == 5 && now.day == 1) {
+    } else if (now.month == 5 && now.day == 1) {
       eventToShow = EventType.labourDay;
       displayDuration = 5;
-    }else if (now.month == 5 && now.day == 11) {
+    } else if (now.month == 5 && now.day == 11) {
       eventToShow = EventType.mothersDay;
       displayDuration = 5;
-    }else if (now.month == 5 && now.day == 26) {
+    } else if (now.month == 5 && now.day == 26) {
       eventToShow = EventType.eidAlAdha;
       displayDuration = 5;
-    }else if (now.month == 6 && now.day == 5) {
+    } else if (now.month == 6 && now.day == 5) {
       eventToShow = EventType.environmentDay;
       displayDuration = 5;
-    }else if (now.month == 6 && now.day == 15) {
+    } else if (now.month == 6 && now.day == 15) {
       eventToShow = EventType.fathersDay;
       displayDuration = 5;
-    }else if (now.month == 7 && now.day == 30) {
+    } else if (now.month == 7 && now.day == 30) {
       eventToShow = EventType.friendshipDay;
       displayDuration = 5;
-    }else if (now.month == 8 && now.day == 12) {
+    } else if (now.month == 8 && now.day == 12) {
       eventToShow = EventType.youthDay;
       displayDuration = 5;
-    }else if (now.month == 8 && now.day == 14) {
+    } else if (now.month == 8 && now.day == 14) {
       eventToShow = EventType.pakistanIndependenceDay;
       displayDuration = 5;
-    }else if (now.month == 8 && now.day == 15) {
+    } else if (now.month == 8 && now.day == 15) {
       eventToShow = EventType.indianIndependenceDay;
       displayDuration = 5;
-    }else if (now.month == 8 && now.day == 28) {
+    } else if (now.month == 8 && now.day == 28) {
       eventToShow = EventType.rakshaBandhan;
       displayDuration = 5;
-    }else if (now.month == 9 && now.day == 4) {
+    } else if (now.month == 9 && now.day == 4) {
       eventToShow = EventType.janmashtamiEvent;
       displayDuration = 5;
-    }
-    // else if (now.month == 9 && now.day == 14) {
-    //   eventToShow = EventType.ganeshchaturthi;
-    //   displayDuration = 200;
-    // }
-    else if (now.month == 9 && now.day == 21) {
+    } else if (now.month == 9 && now.day == 21) {
       eventToShow = EventType.peaceDay;
       displayDuration = 5;
-    }else if (now.month == 9 && now.day == 25) {
+    } else if (now.month == 9 && now.day == 25) {
       eventToShow = EventType.autumnFestival;
       displayDuration = 5;
-    }else if (now.month == 9 && now.day == 27) {
+    } else if (now.month == 9 && now.day == 27) {
       eventToShow = EventType.travellingBags;
       displayDuration = 5;
-    }else if (now.month == 10 && now.day == 31) {
+    } else if (now.month == 10 && now.day == 31) {
       eventToShow = EventType.halloween;
       displayDuration = 5;
-    }else if (now.month == 11 && now.day == 8) {
+    } else if (now.month == 11 && now.day == 8) {
       eventToShow = EventType.diwali;
       displayDuration = 5;
     }
 
     if (eventToShow != null) {
-      // Show the event
       ref.read(activeEventProvider.notifier).state = eventToShow;
-
-      // Hide after duration
       Future.delayed(Duration(seconds: displayDuration), () {
         if (mounted) {
           ref.read(activeEventProvider.notifier).state = null;
@@ -196,18 +193,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }
   }
 
-  // 🔹 Override didChangeDependencies to prevent auto-refresh on return
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Don't reload data when returning from navigation
-    // Only reload if explicitly needed (like app mode change)
   }
-
-  final String currentDate = DateFormat(
-    'EEEE, MMM d, yyyy',
-  ).format(DateTime.now());
-
+@override
+void didChangeAppLifecycleState(AppLifecycleState state) {
+  super.didChangeAppLifecycleState(state);
+   print('🔄 App lifecycle state: $state');
+  if (state == AppLifecycleState.resumed) {
+    // App came to foreground — refresh run date
+     print('✅ App foregrounded — fetching run date...');
+    ref.read(runDateProvider.notifier).reset();       // Show spinner
+    ref.read(runDateProvider.notifier).getRunDate();  // Fetch fresh date
+  }
+}
   Future<void> _initializeAppMode() async {
     try {
       final salesCode = await StorageUtil.getSalesCode();
@@ -228,35 +228,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }
   }
 
-  // 🔹 Enhanced _loadGuestData with proper state management
   Future<void> _loadGuestData() async {
-    // Prevent multiple concurrent loads
     if (_isLoadingData) return;
-
     _isLoadingData = true;
 
     String? salesCode = await StorageUtil.getSalesCode();
-
     if (salesCode == null || salesCode.isEmpty) {
       _isLoadingData = false;
       return;
     }
 
     try {
-      // 🔹 Reset counts to null to show loading state
       ref.read(guestCountsProvider.notifier).state = {
         "today": null,
         "yesterday": null,
         "monthly": null,
       };
 
-      // 🔹 Get current mode at the time of loading
       final currentMode = ref.read(appmodeSettingsProvider).appMode;
-
-      // 🔹 Clear existing guest data first
       ref.read(guestsProvider.notifier).resetData();
 
-      // 🔹 Load data for all three periods
       await Future.wait<void>([
         ref
             .read(guestsProvider.notifier)
@@ -269,18 +260,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             .getGuestData(9011, salesCode, currentMode),
       ]);
 
-      // 🔹 Get the latest guest data after all loads complete
       final guestsState = ref.read(guestsProvider);
-
-      // 🔹 Verify mode hasn't changed during loading
       final finalMode = ref.read(appmodeSettingsProvider).appMode;
+
       if (currentMode != finalMode) {
         _isLoadingData = false;
-        _loadGuestData(); // Reload with new mode
+        _loadGuestData();
         return;
       }
 
-      // 🔹 Update counts with current data - THIS will hide the spinner
       ref.read(guestCountsProvider.notifier).state = {
         "today": guestsState.todayGuests.where((g) => g.mid.isNotEmpty).length,
         "yesterday": guestsState.yesterdayGuests
@@ -291,7 +279,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             .length,
       };
     } catch (e) {
-      // Set counts to 0 on error instead of leaving as null
       ref.read(guestCountsProvider.notifier).state = {
         "today": 0,
         "yesterday": 0,
@@ -302,7 +289,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }
   }
 
-  // 🔹 Manual refresh method for explicit user action
   Future<void> _manualRefresh() async {
     if (_isLoadingData) return;
 
@@ -310,18 +296,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       userName = null;
     });
 
-    // Reset counts immediately
+    // 🔹 Reset run date so spinner shows while re-fetching
+    ref.read(runDateProvider.notifier).reset();
+
     ref.read(guestCountsProvider.notifier).state = {
       "today": null,
       "yesterday": null,
       "monthly": null,
     };
 
-    // Reload data
-    await Future.wait<void>([_loadUserName(), _loadGuestData()]);
+    await Future.wait<void>([
+      _loadUserName(),
+      _loadGuestData(),
+      ref.read(runDateProvider.notifier).getRunDate(),
+    ]);
   }
 
-  // 🔹 Reusable fixed size box widget
   Widget buildCountBox({
     required int? count,
     required String label,
@@ -329,7 +319,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }) {
     final formatter = NumberFormat.decimalPattern();
     return SizedBox(
-      height: 150, // fixed height
+      height: 150,
       child: Card(
         color: color,
         child: Center(
@@ -348,7 +338,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         ),
                       )
                     : Text(
-                    
                         formatter.format(count),
                         style: const TextStyle(
                           fontSize: 40.0,
@@ -375,31 +364,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // 🔹 Required for AutomaticKeepAliveClientMixin
+    super.build(context);
 
     final guests = ref.watch(guestsProvider);
     final counts = ref.watch(guestCountsProvider);
     final activeEvent = ref.watch(activeEventProvider);
 
-    // 🔹 Only listen for app mode changes, not navigation returns
+    // 🔹 Watch runDateProvider — null while loading, populated after API responds
+    final runDate = ref.watch(runDateProvider);
+    final formattedDate = runDate != null
+        ? DateFormat('EEEE, MMM d, yyyy').format(runDate.date)
+        : null;
+
     ref.listen<AppModeSettings>(appmodeSettingsProvider, (prev, next) {
       if (prev?.appMode != next.appMode) {
-        // Reset counts and reload data only for mode changes
         ref.read(guestCountsProvider.notifier).state = {
           "today": null,
           "yesterday": null,
           "monthly": null,
         };
-
         Future.delayed(const Duration(milliseconds: 100), () {
           _loadGuestData();
         });
       }
     });
+
     return Scaffold(
       appBar: AppBar(
-        centerTitle: true, 
-        title: Text(         
+        centerTitle: true,
+        title: Text(
           userName != null ? 'Welcome, $userName ' : 'Loading...',
           style: const TextStyle(fontSize: 16, fontFamily: 'ABCArizonaFlare'),
         ),
@@ -419,7 +412,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               padding: const EdgeInsets.all(8.0),
               child: Column(
                 children: [
-                  // Date display section
+                  // 🔹 Date card — spinner while runDate is null (loading)
                   Card(
                     elevation: 2,
                     margin: const EdgeInsets.symmetric(vertical: 1.0),
@@ -434,14 +427,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             color: Colors.blue,
                           ),
                           const SizedBox(width: 4),
-                          Text(
-                            currentDate,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                          ),
+                          formattedDate == null
+                              ? const SizedBox(
+                                  height: 16,
+                                  width: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.blue,
+                                  ),
+                                )
+                              : Text(
+                                  formattedDate,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
+                                ),
                         ],
                       ),
                     ),
@@ -450,13 +452,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   // Performance heading
                   Consumer(
                     builder: (context, ref, _) {
-                      final appMode = ref
-                          .watch(appmodeSettingsProvider)
-                          .appMode;
-                      String heading = appMode == AppMode.myData
+                      final appMode =
+                          ref.watch(appmodeSettingsProvider).appMode;
+                      final heading = appMode == AppMode.myData
                           ? "MY PERFORMANCE"
                           : "OVERALL PERFORMANCE";
-
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8.0),
                         child: Row(
@@ -582,15 +582,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 8),
                   const MarketingBreakdownHalfPieCard(),
-                    const SizedBox(height: 8),
-// VisitSummaryChartCard(
-//   todayCount: counts["today"],
-//   yesterdayCount: counts["yesterday"],
-//   monthlyCount: counts["monthly"],
-// ),
-//                   const SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   const MarketingPerformanceWidget(),
                 ],
               ),

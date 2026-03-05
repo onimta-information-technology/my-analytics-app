@@ -14,7 +14,10 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
   // ── Raw cache (unfiltered API results) ──────────────────────────────────
   final Map<int, List<Guest>> _rawGuests = {};
   final Map<int, List<MarketingGroup>> _rawGroups = {};
-  final Map<int, List<Guest>> _rawNonMarketingGuests = {}; // 🆕 Table3
+  final Map<int, List<Guest>> _rawNonMarketingGuests = {};
+  final Map<int, List<Guest>> _rawOtherMarketingGuests = {};
+  final Map<int, List<MarketingGroup>> _rawSalesPersonGroups = {};
+  final Map<int, ResponseLayout> _rawLayouts = {};
 
   GuestsNotifier(this.guestRepository) : super(GuestsState());
 
@@ -29,33 +32,43 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
       // Cache raw results before any filtering
       _rawGuests[iid] = result.guests;
       _rawGroups[iid] = result.marketingGroups;
-      _rawNonMarketingGuests[iid] = result.nonMarketingGuests; // 🆕
+      _rawNonMarketingGuests[iid] = result.nonMarketingGuests;
+      _rawOtherMarketingGuests[iid] = result.otherMarketingGuests;
+      _rawSalesPersonGroups[iid] = result.salesPersonGroups;
+      _rawLayouts[iid] = result.layout;
 
       await _applyFilterAndUpdateState(iid, mode);
     } catch (e) {
+      print('getGuestData error iid=$iid: $e');
       switch (iid) {
         case 9009:
           state = state.copyWith(
             todayGuests: [],
             todayMarketingGroups: [_emptyGroup],
-            todayAllMarketingGuests: [],      // 🆕
-            todayNonMarketingGuests: [],      // 🆕
+            todayAllMarketingGuests: [],
+            todayNonMarketingGuests: [],
+            todayOtherMarketingGuests: [],
+            todaySalesPersonGroups: [],
           );
           break;
         case 9010:
           state = state.copyWith(
             yesterdayGuests: [],
             yesterdayMarketingGroups: [_emptyGroup],
-            yesterdayAllMarketingGuests: [],  // 🆕
-            yesterdayNonMarketingGuests: [],  // 🆕
+            yesterdayAllMarketingGuests: [],
+            yesterdayNonMarketingGuests: [],
+            yesterdayOtherMarketingGuests: [],
+            yesterdaySalesPersonGroups: [],
           );
           break;
         case 9011:
           state = state.copyWith(
             monthlyGuests: [],
             monthlyMarketingGroups: [_emptyGroup],
-            monthlyAllMarketingGuests: [],    // 🆕
-            monthlyNonMarketingGuests: [],    // 🆕
+            monthlyAllMarketingGuests: [],
+            monthlyNonMarketingGuests: [],
+            monthlyOtherMarketingGuests: [],
+            monthlySalesPersonGroups: [],
           );
           break;
       }
@@ -74,57 +87,52 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
   Future<void> _applyFilterAndUpdateState(int iid, AppMode mode) async {
     var guestList = List<Guest>.from(_rawGuests[iid] ?? []);
     var marketingGroups = List<MarketingGroup>.from(_rawGroups[iid] ?? []);
-    final allMarketingGuests = List<Guest>.from(_rawGuests[iid] ?? []); // 🆕 always raw
-    final nonMarketingGuests = List<Guest>.from(_rawNonMarketingGuests[iid] ?? []); // 🆕
+    final allMarketingGuests = List<Guest>.from(_rawGuests[iid] ?? []);
+    final nonMarketingGuests = List<Guest>.from(_rawNonMarketingGuests[iid] ?? []);
+    final otherMarketingGuests = List<Guest>.from(_rawOtherMarketingGuests[iid] ?? []);
+    final salesPersonGroups = List<MarketingGroup>.from(_rawSalesPersonGroups[iid] ?? []);
+    final layout = _rawLayouts[iid] ?? ResponseLayout.regularMyDataOnly;
 
-    if (mode == AppMode.myData) {
+    // ── myData mode filtering ─────────────────────────────────────────────
+    //
+    // Regular users (regularWithOther / regularMyDataOnly):
+    //   Server already sends only their data in Table — no filtering needed.
+    //
+    // AD001 (admin layout), myData mode:
+    //   Server sends ALL marketing guests in Table.
+    //   Filter by mGroup == mCode to get only AD001's own guests,
+    //   then replace the pie with a single "My Data" slice.
+    //
+    // AD001, overallData mode:
+    //   No filtering — show everything as-is.
+
+    if (mode == AppMode.myData && layout == ResponseLayout.admin) {
       final mCode = await StorageUtil.getMarketingCode();
 
-      if (mCode != null) {
+      if (mCode != null && mCode.isNotEmpty) {
+        // Filter guestList to AD001's own guests only.
+        // This is what todayGuests/yesterdayGuests/monthlyGuests stores —
+        // used by count boxes and home screen tap navigation.
+        // allMarketingGuests stays unfiltered so the pie MKT tap can filter per person.
         guestList = guestList.where((g) => g.mGroup == mCode).toList();
-        final myCount = guestList.where((g) => g.mid.isNotEmpty).length;
+        final myCount = guestList.length;
 
-        final matchIndex =
-            marketingGroups.indexWhere((g) => g.gCode == mCode);
+        // Split MKT into: "My Data" (myCount) + "MARKETING" (remainder).
+        // NON MARKETING passes through unchanged.
+        final mktGroup = marketingGroups.firstWhere(
+          (g) => g.gCode == 'MKT',
+          orElse: () => MarketingGroup(gCode: 'MKT', gName: 'MARKETING', rc: 0),
+        );
+        final remainingMkt = (mktGroup.rc - myCount).clamp(0, mktGroup.rc);
 
-        if (matchIndex != -1) {
-          marketingGroups = marketingGroups.map((g) {
-            if (g.gCode == mCode) {
-              final reduced = (g.rc - myCount).clamp(0, g.rc);
-              return MarketingGroup(
-                gCode: g.gCode,
-                gName: g.gName,
-                rc: reduced,
-              );
-            }
-            return g;
-          }).toList();
-        } else {
-          int parentIdx = 0;
-          for (int i = 1; i < marketingGroups.length; i++) {
-            if (marketingGroups[i].rc > marketingGroups[parentIdx].rc) {
-              parentIdx = i;
-            }
-          }
-
-          final updated = List<MarketingGroup>.from(marketingGroups);
-          final parent = updated[parentIdx];
-          updated[parentIdx] = MarketingGroup(
-            gCode: parent.gCode,
-            gName: parent.gName,
-            rc: (parent.rc - myCount).clamp(0, parent.rc),
-          );
-
-          marketingGroups = [
-            ...updated,
-            MarketingGroup(
-              gCode: mCode,
-              gName: 'My Data',
-              rc: myCount,
-            ),
-          ];
-        }
+        marketingGroups = [
+          MarketingGroup(gCode: mCode, gName: 'My Data', rc: myCount),
+          if (remainingMkt > 0)
+            MarketingGroup(gCode: 'MKT', gName: 'MARKETING', rc: remainingMkt),
+          ...marketingGroups.where((g) => g.gCode == 'NON'),
+        ];
       }
+      // If no mCode stored, fall back to overallData behaviour (show as-is)
     }
 
     switch (iid) {
@@ -132,24 +140,33 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
         state = state.copyWith(
           todayGuests: guestList,
           todayMarketingGroups: marketingGroups,
-          todayAllMarketingGuests: allMarketingGuests,       // 🆕
-          todayNonMarketingGuests: nonMarketingGuests,       // 🆕
+          todayAllMarketingGuests: allMarketingGuests,
+          todayNonMarketingGuests: nonMarketingGuests,
+          todayOtherMarketingGuests: otherMarketingGuests,
+          todaySalesPersonGroups: salesPersonGroups,
+          todayLayout: layout,
         );
         break;
       case 9010:
         state = state.copyWith(
           yesterdayGuests: guestList,
           yesterdayMarketingGroups: marketingGroups,
-          yesterdayAllMarketingGuests: allMarketingGuests,   // 🆕
-          yesterdayNonMarketingGuests: nonMarketingGuests,   // 🆕
+          yesterdayAllMarketingGuests: allMarketingGuests,
+          yesterdayNonMarketingGuests: nonMarketingGuests,
+          yesterdayOtherMarketingGuests: otherMarketingGuests,
+          yesterdaySalesPersonGroups: salesPersonGroups,
+          yesterdayLayout: layout,
         );
         break;
       case 9011:
         state = state.copyWith(
           monthlyGuests: guestList,
           monthlyMarketingGroups: marketingGroups,
-          monthlyAllMarketingGuests: allMarketingGuests,     // 🆕
-          monthlyNonMarketingGuests: nonMarketingGuests,     // 🆕
+          monthlyAllMarketingGuests: allMarketingGuests,
+          monthlyNonMarketingGuests: nonMarketingGuests,
+          monthlyOtherMarketingGuests: otherMarketingGuests,
+          monthlySalesPersonGroups: salesPersonGroups,
+          monthlyLayout: layout,
         );
         break;
     }
@@ -160,7 +177,10 @@ class GuestsNotifier extends StateNotifier<GuestsState> {
     _currentMode = null;
     _rawGuests.clear();
     _rawGroups.clear();
-    _rawNonMarketingGuests.clear(); // 🆕
+    _rawNonMarketingGuests.clear();
+    _rawOtherMarketingGuests.clear();
+    _rawSalesPersonGroups.clear();
+    _rawLayouts.clear();
   }
 
   void setCurrentMode(AppMode mode) {
@@ -203,15 +223,30 @@ class GuestsState {
   final List<MarketingGroup> yesterdayMarketingGroups;
   final List<MarketingGroup> monthlyMarketingGroups;
 
-  // 🆕 Raw (unfiltered) marketing guests from Table
+  // Raw (unfiltered) marketing guests from Table
   final List<Guest> todayAllMarketingGuests;
   final List<Guest> yesterdayAllMarketingGuests;
   final List<Guest> monthlyAllMarketingGuests;
 
-  // 🆕 Non-marketing guests from Table3
+  // Non-marketing guests from Table3
   final List<Guest> todayNonMarketingGuests;
   final List<Guest> yesterdayNonMarketingGuests;
   final List<Guest> monthlyNonMarketingGuests;
+
+  // Other marketing guests from Table4 (regular user layout only)
+  final List<Guest> todayOtherMarketingGuests;
+  final List<Guest> yesterdayOtherMarketingGuests;
+  final List<Guest> monthlyOtherMarketingGuests;
+
+  // Sales person summaries from Table1 (admin layout only)
+  final List<MarketingGroup> todaySalesPersonGroups;
+  final List<MarketingGroup> yesterdaySalesPersonGroups;
+  final List<MarketingGroup> monthlySalesPersonGroups;
+
+  // Which response layout was returned by the server
+  final ResponseLayout todayLayout;
+  final ResponseLayout yesterdayLayout;
+  final ResponseLayout monthlyLayout;
 
   GuestsState({
     this.todayGuests = const [],
@@ -220,12 +255,21 @@ class GuestsState {
     this.todayMarketingGroups = const [],
     this.yesterdayMarketingGroups = const [],
     this.monthlyMarketingGroups = const [],
-    this.todayAllMarketingGuests = const [],       // 🆕
-    this.yesterdayAllMarketingGuests = const [],   // 🆕
-    this.monthlyAllMarketingGuests = const [],     // 🆕
-    this.todayNonMarketingGuests = const [],       // 🆕
-    this.yesterdayNonMarketingGuests = const [],   // 🆕
-    this.monthlyNonMarketingGuests = const [],     // 🆕
+    this.todayAllMarketingGuests = const [],
+    this.yesterdayAllMarketingGuests = const [],
+    this.monthlyAllMarketingGuests = const [],
+    this.todayNonMarketingGuests = const [],
+    this.yesterdayNonMarketingGuests = const [],
+    this.monthlyNonMarketingGuests = const [],
+    this.todayOtherMarketingGuests = const [],
+    this.yesterdayOtherMarketingGuests = const [],
+    this.monthlyOtherMarketingGuests = const [],
+    this.todaySalesPersonGroups = const [],
+    this.yesterdaySalesPersonGroups = const [],
+    this.monthlySalesPersonGroups = const [],
+    this.todayLayout = ResponseLayout.regularMyDataOnly,
+    this.yesterdayLayout = ResponseLayout.regularMyDataOnly,
+    this.monthlyLayout = ResponseLayout.regularMyDataOnly,
   });
 
   GuestsState copyWith({
@@ -235,12 +279,21 @@ class GuestsState {
     List<MarketingGroup>? todayMarketingGroups,
     List<MarketingGroup>? yesterdayMarketingGroups,
     List<MarketingGroup>? monthlyMarketingGroups,
-    List<Guest>? todayAllMarketingGuests,       // 🆕
-    List<Guest>? yesterdayAllMarketingGuests,   // 🆕
-    List<Guest>? monthlyAllMarketingGuests,     // 🆕
-    List<Guest>? todayNonMarketingGuests,       // 🆕
-    List<Guest>? yesterdayNonMarketingGuests,   // 🆕
-    List<Guest>? monthlyNonMarketingGuests,     // 🆕
+    List<Guest>? todayAllMarketingGuests,
+    List<Guest>? yesterdayAllMarketingGuests,
+    List<Guest>? monthlyAllMarketingGuests,
+    List<Guest>? todayNonMarketingGuests,
+    List<Guest>? yesterdayNonMarketingGuests,
+    List<Guest>? monthlyNonMarketingGuests,
+    List<Guest>? todayOtherMarketingGuests,
+    List<Guest>? yesterdayOtherMarketingGuests,
+    List<Guest>? monthlyOtherMarketingGuests,
+    List<MarketingGroup>? todaySalesPersonGroups,
+    List<MarketingGroup>? yesterdaySalesPersonGroups,
+    List<MarketingGroup>? monthlySalesPersonGroups,
+    ResponseLayout? todayLayout,
+    ResponseLayout? yesterdayLayout,
+    ResponseLayout? monthlyLayout,
   }) {
     return GuestsState(
       todayGuests: todayGuests ?? this.todayGuests,
@@ -263,6 +316,21 @@ class GuestsState {
           yesterdayNonMarketingGuests ?? this.yesterdayNonMarketingGuests,
       monthlyNonMarketingGuests:
           monthlyNonMarketingGuests ?? this.monthlyNonMarketingGuests,
+      todayOtherMarketingGuests:
+          todayOtherMarketingGuests ?? this.todayOtherMarketingGuests,
+      yesterdayOtherMarketingGuests:
+          yesterdayOtherMarketingGuests ?? this.yesterdayOtherMarketingGuests,
+      monthlyOtherMarketingGuests:
+          monthlyOtherMarketingGuests ?? this.monthlyOtherMarketingGuests,
+      todaySalesPersonGroups:
+          todaySalesPersonGroups ?? this.todaySalesPersonGroups,
+      yesterdaySalesPersonGroups:
+          yesterdaySalesPersonGroups ?? this.yesterdaySalesPersonGroups,
+      monthlySalesPersonGroups:
+          monthlySalesPersonGroups ?? this.monthlySalesPersonGroups,
+      todayLayout: todayLayout ?? this.todayLayout,
+      yesterdayLayout: yesterdayLayout ?? this.yesterdayLayout,
+      monthlyLayout: monthlyLayout ?? this.monthlyLayout,
     );
   }
 

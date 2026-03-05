@@ -4,16 +4,36 @@ import 'package:ballys_reservation_app/models/guest_search_response.dart';
 import 'package:ballys_reservation_app/models/marketing_group.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 
-/// 🔹 Return type wrapping guests + Table2 marketing groups + Table3 non-marketing guests
+/// Which response layout the server returned
+enum ResponseLayout {
+  /// AD001 / manager: Table2={NON,MKT}, Table=all-mkt, Table1=sales-persons, Table3=NON
+  admin,
+
+  /// Regular user with OTHER slice:
+  /// Table2={myCode,OTHER,NON}, Table=myData, Table3=NON, Table4=otherMkt
+  regularWithOther,
+
+  /// Regular user with only their own slice:
+  /// Table2={myCode only}, Table=myData only
+  regularMyDataOnly,
+}
+
+/// Return type wrapping everything from the API
 class GuestDataResult {
-  final List<Guest> guests;
-  final List<MarketingGroup> marketingGroups;
-  final List<Guest> nonMarketingGuests; // 🆕 Table3
+  final List<Guest> guests;                    // Table  — meaning depends on layout
+  final List<MarketingGroup> marketingGroups;  // Table2 — pie slices
+  final List<MarketingGroup> salesPersonGroups;// Table1 — admin only (sales persons)
+  final List<Guest> nonMarketingGuests;        // Table3 — NON MARKETING guests
+  final List<Guest> otherMarketingGuests;      // Table4 — OTHER MARKETING guests (regular only)
+  final ResponseLayout layout;
 
   const GuestDataResult({
     required this.guests,
     required this.marketingGroups,
-    required this.nonMarketingGuests, // 🆕
+    required this.salesPersonGroups,
+    required this.nonMarketingGuests,
+    required this.otherMarketingGuests,
+    required this.layout,
   });
 }
 
@@ -55,48 +75,84 @@ class GuestRepository {
       "con": "1",
     });
 
-    print("hiii2");
-    print(response);
+    print("getGuestData2 response: $response");
 
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List &&
         response['CommonResult']['Table'].isNotEmpty) {
-      final tableData = response['CommonResult']['Table'];
-      final table2Data = response['CommonResult']['Table2'];
-      final table3Data = response['CommonResult']['Table3']; // 🆕 non-marketing
+      final commonResult = response['CommonResult'];
 
-      // 🔹 Parse marketing guests from Table
-      List<Guest> guestList = [];
-      for (var table in tableData) {
-        guestList.add(Guest.fromJson(table));
+      // ── Table (always present) ────────────────────────────────────────────
+      final tableData = commonResult['Table'] as List? ?? [];
+      List<Guest> guestList = tableData.map((e) => Guest.fromJson(e)).toList();
+
+      // ── Table1 (admin only — sales person summary) ───────────────────────
+      final table1Data = commonResult['Table1'];
+      List<MarketingGroup> salesPersonGroups = [];
+      if (table1Data is List && table1Data.isNotEmpty) {
+        salesPersonGroups = table1Data
+            .map((e) => MarketingGroup.fromJson(e))
+            .where((g) => g.gCode.isNotEmpty && g.rc > 0)
+            .toList()
+          ..sort((a, b) => b.rc.compareTo(a.rc));
       }
 
-      // 🔹 Parse marketing group summary from Table2
+      // ── Table2 (pie slices — always present) ─────────────────────────────
+      final table2Data = commonResult['Table2'];
       List<MarketingGroup> marketingGroups = [];
       if (table2Data is List && table2Data.isNotEmpty) {
-        for (var row in table2Data) {
-          marketingGroups.add(MarketingGroup.fromJson(row));
-        }
+        marketingGroups = table2Data
+            .map((e) => MarketingGroup.fromJson(e))
+            .where((g) => g.gCode.isNotEmpty && g.rc > 0)
+            .toList();
       }
 
-      // 🆕 Parse non-marketing guests from Table3
+      // ── Table3 (non-marketing guests) ────────────────────────────────────
+      final table3Data = commonResult['Table3'];
       List<Guest> nonMarketingGuests = [];
       if (table3Data is List && table3Data.isNotEmpty) {
-        for (var row in table3Data) {
-          nonMarketingGuests.add(Guest.fromJson(row));
-        }
+        nonMarketingGuests = table3Data.map((e) => Guest.fromJson(e)).toList();
       }
 
-      if (guestList.isNotEmpty) {
+      // ── Table4 (other marketing guests — regular user only) ───────────────
+      final table4Data = commonResult['Table4'];
+      List<Guest> otherMarketingGuests = [];
+      if (table4Data is List && table4Data.isNotEmpty) {
+        otherMarketingGuests = table4Data.map((e) => Guest.fromJson(e)).toList();
+      }
+
+      // ── Detect layout ────────────────────────────────────────────────────
+      //
+      // Admin:               Table2 contains GCode == 'MKT'
+      // Regular + OTHER:     Table2 contains GCode == 'OTHER'
+      // Regular myData only: Table2 has neither MKT nor OTHER
+      //                      (only the user's own gCode like '1038')
+      final hasMkt   = marketingGroups.any((g) => g.gCode == 'MKT');
+      final hasOther = marketingGroups.any((g) => g.gCode == 'OTHER');
+
+      final ResponseLayout layout;
+      if (hasMkt) {
+        layout = ResponseLayout.admin;
+      } else if (hasOther) {
+        layout = ResponseLayout.regularWithOther;
+      } else {
+        layout = ResponseLayout.regularMyDataOnly;
+      }
+
+      print("Detected layout: $layout");
+      print("marketingGroups: ${marketingGroups.map((g) => '${g.gCode}=${g.rc}').join(', ')}");
+
+      if (guestList.isNotEmpty || marketingGroups.isNotEmpty) {
         return GuestDataResult(
           guests: guestList,
           marketingGroups: marketingGroups,
-          nonMarketingGuests: nonMarketingGuests, // 🆕
+          salesPersonGroups: salesPersonGroups,
+          nonMarketingGuests: nonMarketingGuests,
+          otherMarketingGuests: otherMarketingGuests,
+          layout: layout,
         );
       } else {
-        throw Exception(
-          'Login failed: Invalid credentials or LoginStatus is not True',
-        );
+        throw Exception('No data returned from server');
       }
     } else {
       throw Exception('Login failed: unexpected response structure');
@@ -105,7 +161,6 @@ class GuestRepository {
 
   Future<List<Guest>> getGuestData(int iid, String text1) async {
     final deviceId = await DeviceId.get();
-    print("iid is $iid and text1 is $text1");
 
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
@@ -136,26 +191,15 @@ class GuestRepository {
       "con": "1",
     });
 
-    print("hiii2");
-    print(response);
-
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List &&
         response['CommonResult']['Table'].isNotEmpty) {
       final tableData = response['CommonResult']['Table'];
+      List<Guest> guestList =
+          (tableData as List).map((e) => Guest.fromJson(e)).toList();
 
-      List<Guest> guestList = [];
-      for (var table in tableData) {
-        guestList.add(Guest.fromJson(table));
-      }
-
-      if (guestList.isNotEmpty) {
-        return guestList;
-      } else {
-        throw Exception(
-          'Login failed: Invalid credentials or LoginStatus is not True',
-        );
-      }
+      if (guestList.isNotEmpty) return guestList;
+      throw Exception('Login failed: Invalid credentials or LoginStatus is not True');
     } else {
       throw Exception('Login failed: unexpected response structure');
     }
@@ -197,13 +241,8 @@ class GuestRepository {
         response['CommonResult']['Table'] is List &&
         response['CommonResult']['Table'].isNotEmpty) {
       final tableData = response['CommonResult']['Table'][0];
-
       if (tableData.containsKey('MemImage2') && tableData['MemImage2'] != null) {
-        print('Guest image URL fetched: ${tableData['MemImage2']}');
         return tableData['MemImage2'];
-      } else {
-        print('No MemImage2 found in response');
-        return null;
       }
     }
     return null;
@@ -245,22 +284,10 @@ class GuestRepository {
         response['CommonResult']['Table'] is List &&
         response['CommonResult']['Table'].isNotEmpty) {
       final tableData = response['CommonResult']['Table'];
-
-      List<GuestSearchResponse> guestSearchResults = [];
-      for (var json in tableData) {
-        guestSearchResults.add(GuestSearchResponse.fromJson(json));
-      }
-
-      if (guestSearchResults.isNotEmpty) {
-        return guestSearchResults;
-      } else {
-        throw Exception(
-          'Failed guests searching: Invalid credentials or LoginStatus is not True',
-        );
-      }
+      List<GuestSearchResponse> results =
+          (tableData as List).map((e) => GuestSearchResponse.fromJson(e)).toList();
+      if (results.isNotEmpty) return results;
     }
-    throw Exception(
-      'Failed guests searching: Invalid credentials or LoginStatus is not True',
-    );
+    throw Exception('Failed guests searching');
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:ui' as ui;
 
+import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/models/marketing_group.dart';
 import 'package:ballys_reservation_app/providers/guests_provider.dart';
@@ -80,6 +81,17 @@ class _MarketingBreakdownHalfPieCardState
       guestsState.monthlyMarketingGroups,
     ];
 
+    // Table — meaning depends on layout:
+    //   admin overallData: all marketing guests
+    //   admin myData:      AD001's own guests (already filtered by provider)
+    //   regular:           my data guests
+    final allGuests = [
+      guestsState.todayGuests,
+      guestsState.yesterdayGuests,
+      guestsState.monthlyGuests,
+    ];
+
+    // Raw unfiltered Table guests — used for admin MKT tap to filter per person
     final allMarketingGuests = [
       guestsState.todayAllMarketingGuests,
       guestsState.yesterdayAllMarketingGuests,
@@ -92,10 +104,22 @@ class _MarketingBreakdownHalfPieCardState
       guestsState.monthlyNonMarketingGuests,
     ];
 
-    final myDataGuests = [
-      guestsState.todayGuests,
-      guestsState.yesterdayGuests,
-      guestsState.monthlyGuests,
+    final allOtherMarketingGuests = [
+      guestsState.todayOtherMarketingGuests,
+      guestsState.yesterdayOtherMarketingGuests,
+      guestsState.monthlyOtherMarketingGuests,
+    ];
+
+    final allSalesPersonGroups = [
+      guestsState.todaySalesPersonGroups,
+      guestsState.yesterdaySalesPersonGroups,
+      guestsState.monthlySalesPersonGroups,
+    ];
+
+    final allLayouts = [
+      guestsState.todayLayout,
+      guestsState.yesterdayLayout,
+      guestsState.monthlyLayout,
     ];
 
     for (int i = 0; i < allGroups.length; i++) {
@@ -159,10 +183,16 @@ class _MarketingBreakdownHalfPieCardState
                           myDataCode: _myDataCode,
                           selectedPeriod: _selectedPeriod,
                           tabColors: _tabColors,
+                          // used for: admin MKT filter per person + regular individual slice
                           marketingGuests: allMarketingGuests[_selectedPeriod],
-                          nonMarketingGuests:
-                              allNonMarketingGuests[_selectedPeriod],
-                          myDataGuests: myDataGuests[_selectedPeriod],
+                          nonMarketingGuests: allNonMarketingGuests[_selectedPeriod],
+                          // used for: myData slice tap (both admin myData + regular)
+                          myDataGuests: allGuests[_selectedPeriod],
+                          // used for: regular OTHER slice
+                          otherMarketingGuests: allOtherMarketingGuests[_selectedPeriod],
+                          // used for: admin MKT slice row order + counts
+                          salesPersonGroups: allSalesPersonGroups[_selectedPeriod],
+                          layout: allLayouts[_selectedPeriod],
                           periodLabel: _periodLabels[_selectedPeriod],
                         ),
             ),
@@ -185,6 +215,9 @@ class _HalfPieSection extends StatefulWidget {
   final List<Guest> marketingGuests;
   final List<Guest> nonMarketingGuests;
   final List<Guest> myDataGuests;
+  final List<Guest> otherMarketingGuests;
+  final List<MarketingGroup> salesPersonGroups;
+  final ResponseLayout layout;
   final String periodLabel;
 
   const _HalfPieSection({
@@ -197,6 +230,9 @@ class _HalfPieSection extends StatefulWidget {
     required this.marketingGuests,
     required this.nonMarketingGuests,
     required this.myDataGuests,
+    required this.otherMarketingGuests,
+    required this.salesPersonGroups,
+    required this.layout,
     required this.periodLabel,
   });
 
@@ -238,22 +274,76 @@ class _HalfPieSectionState extends State<_HalfPieSection>
     final gCode = group.gCode;
     final label = widget.periodLabel;
 
-    // MARKETING (all) → sales-persons style sheet (grouped)
-    if (gCode == 'MKT') {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (_) => _SalesPersonsSheet(
-          title: 'Marketing — $label',
-          salesPersons: groupByMGroup(widget.marketingGuests),
-          accentColor: color,
-        ),
-      );
-      return;
+    // ── ADMIN layout ──────────────────────────────────────────────────────
+
+    if (widget.layout == ResponseLayout.admin) {
+      // MKT slice → sales persons list (Table1 order) → tap person → their guests from Table
+      if (gCode == 'MKT') {
+        // Build map: salesPerson.gCode → filtered guests from raw Table
+        // Excludes AD001's own mCode guests so count matches the slice rc
+        final Map<String, List<Guest>> personMap = {};
+        for (final sp in widget.salesPersonGroups) {
+          // Skip AD001's own sales code — that belongs to the "My Data" slice
+          if (sp.gCode == widget.myDataCode) continue;
+          personMap[sp.gCode] =
+              widget.marketingGuests.where((g) => g.mGroup == sp.gCode).toList();
+        }
+        // Build order excluding myDataCode
+        final filteredOrder = widget.salesPersonGroups
+            .where((sp) => sp.gCode != widget.myDataCode)
+            .toList();
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => _SalesPersonsSheet(
+            title: 'Marketing — $label',
+            salesPersons: personMap,
+            salesPersonOrder: filteredOrder,
+            accentColor: color,
+          ),
+        );
+        return;
+      }
+
+      // NON slice → Table3 grouped by country
+      if (gCode == 'NON') {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => _SalesPersonsSheet(
+            title: 'Non Marketing — $label',
+            salesPersons: groupByCountry(widget.nonMarketingGuests),
+            accentColor: color,
+            useKeyAsName: true,
+          ),
+        );
+        return;
+      }
+
+      // My Data slice (admin myData mode) → AD001's own guests
+      // myDataGuests is already filtered to AD001's own guests by the provider
+      if (gCode == widget.myDataCode || group.gName == 'My Data') {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => _MemberVisitsSheet(
+            title: 'My Visits — $label',
+            guests: widget.myDataGuests,
+            accentColor: color,
+          ),
+        );
+        return;
+      }
+
+      return; // unknown admin slice
     }
 
-    // NON MARKETING → grouped by country (same style as MARKETING)
+    // ── REGULAR layouts ───────────────────────────────────────────────────
+
+    // NON MARKETING → grouped by country
     if (gCode == 'NON') {
       showModalBottomSheet(
         context: context,
@@ -269,7 +359,22 @@ class _HalfPieSectionState extends State<_HalfPieSection>
       return;
     }
 
-    // My Data → member-visits style sheet
+    // OTHER MARKETING → Table4 grouped by sales person name
+    if (gCode == 'OTHER') {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => _SalesPersonsSheet(
+          title: 'Other Marketing — $label',
+          salesPersons: groupByMGroup(widget.otherMarketingGuests),
+          accentColor: color,
+        ),
+      );
+      return;
+    }
+
+    // My Data slice (gCode == myDataCode or gName == 'My Data')
     if (gCode == widget.myDataCode || group.gName == 'My Data') {
       showModalBottomSheet(
         context: context,
@@ -284,7 +389,7 @@ class _HalfPieSectionState extends State<_HalfPieSection>
       return;
     }
 
-    // Individual marketing person → member-visits style sheet
+    // Individual marketing person → filter allMarketingGuests by mGroup
     final personGuests =
         widget.marketingGuests.where((g) => g.mGroup == gCode).toList();
     showModalBottomSheet(
@@ -473,22 +578,22 @@ class _HalfPieSectionState extends State<_HalfPieSection>
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Sales-persons style sheet  (MARKETING slice)
-// Shows grouped sales persons; tap a person → _MemberVisitsSheet for that person
+// Sales-persons style sheet
 // ────────────────────────────────────────────────────────────────────────────
 class _SalesPersonsSheet extends StatefulWidget {
   final String title;
   final Map<String, List<Guest>> salesPersons;
   final Color accentColor;
-  /// When true the map key (e.g. country name) is used as the row label
-  /// instead of guests.first.gName (used for the MARKETING grouping).
   final bool useKeyAsName;
+  // When provided (admin MKT), drives row order and counts from Table1
+  final List<MarketingGroup>? salesPersonOrder;
 
   const _SalesPersonsSheet({
     required this.title,
     required this.salesPersons,
     required this.accentColor,
     this.useKeyAsName = false,
+    this.salesPersonOrder,
   });
 
   @override
@@ -496,14 +601,45 @@ class _SalesPersonsSheet extends StatefulWidget {
 }
 
 class _SalesPersonsSheetState extends State<_SalesPersonsSheet> {
-  late List<MapEntry<String, List<Guest>>> _filtered;
+  late List<_PersonRow> _all;
+  late List<_PersonRow> _filtered;
   final _searchCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _filtered = widget.salesPersons.entries.toList();
+    _all = _buildRows();
+    _filtered = _all;
     _searchCtrl.addListener(_onSearch);
+  }
+
+  List<_PersonRow> _buildRows() {
+    if (widget.salesPersonOrder != null) {
+      // Admin layout: order and counts come from Table1 (salesPersonOrder)
+      return widget.salesPersonOrder!.map((sp) {
+        final guests = widget.salesPersons[sp.gCode] ?? [];
+        return _PersonRow(
+          key: sp.gCode,
+          displayName: sp.gName,
+          count: sp.rc,
+          guests: guests,
+        );
+      }).toList();
+    }
+
+    // Regular / country layout: derive from map entries (already sorted by count)
+    return widget.salesPersons.entries.map((e) {
+      final guests = e.value;
+      final displayName = widget.useKeyAsName
+          ? e.key
+          : (guests.isNotEmpty ? (guests.first.gName ?? e.key) : e.key);
+      return _PersonRow(
+        key: e.key,
+        displayName: displayName,
+        count: guests.length,
+        guests: guests,
+      );
+    }).toList();
   }
 
   @override
@@ -516,10 +652,9 @@ class _SalesPersonsSheetState extends State<_SalesPersonsSheet> {
     final q = _searchCtrl.text.toLowerCase();
     setState(() {
       _filtered = q.isEmpty
-          ? widget.salesPersons.entries.toList()
-          : widget.salesPersons.entries
-              .where((e) =>
-                  (widget.useKeyAsName ? e.key : (e.value.first.gName ?? '')).toLowerCase().contains(q))
+          ? _all
+          : _all
+              .where((r) => r.displayName.toLowerCase().contains(q))
               .toList();
     });
   }
@@ -538,43 +673,40 @@ class _SalesPersonsSheetState extends State<_SalesPersonsSheet> {
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
               itemCount: _filtered.length,
               itemBuilder: (context, index) {
-                final entry = _filtered[index];
-                final guests = entry.value;
-                final name = widget.useKeyAsName ? entry.key : (guests.first.gName ?? '');
-                final count = guests.first.mid == '' ? 0 : guests.length;
-
+                final row = _filtered[index];
                 return Card(
                   margin: const EdgeInsets.symmetric(vertical: 4),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
                   elevation: 1.5,
                   child: ListTile(
-                    onTap: () {
-                      if (guests.first.mid == '') return;
-                      // Push a member-visits sheet on top
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: Colors.transparent,
-                        builder: (_) => _MemberVisitsSheet(
-                          title: widget.useKeyAsName ? '$name' : '$name — visits',
-                          guests: guests,
-                          accentColor: widget.accentColor,
-                          showBackButton: true,
-                        ),
-                      );
-                    },
+                    onTap: row.guests.isEmpty
+                        ? null
+                        : () {
+                            showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (_) => _MemberVisitsSheet(
+                                title: widget.useKeyAsName
+                                    ? row.displayName
+                                    : '${row.displayName} — visits',
+                                guests: row.guests,
+                                accentColor: widget.accentColor,
+                                showBackButton: true,
+                              ),
+                            );
+                          },
                     title: Text(
-                      name,
+                      row.displayName,
                       style: const TextStyle(
                           fontSize: 15, fontWeight: FontWeight.w600),
                     ),
                     trailing: CircleAvatar(
                       radius: 18,
-                      backgroundColor:
-                          widget.accentColor.withOpacity(0.15),
+                      backgroundColor: widget.accentColor.withOpacity(0.15),
                       child: Text(
-                        '$count',
+                        '${row.count}',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
@@ -590,9 +722,21 @@ class _SalesPersonsSheetState extends State<_SalesPersonsSheet> {
   }
 }
 
+class _PersonRow {
+  final String key;
+  final String displayName;
+  final int count;
+  final List<Guest> guests;
+  _PersonRow({
+    required this.key,
+    required this.displayName,
+    required this.count,
+    required this.guests,
+  });
+}
+
 // ────────────────────────────────────────────────────────────────────────────
-// Member-visits style sheet  (NON MARKETING / individual / My Data)
-// Shows flat member list; tap a member → navigate to profile screen
+// Member-visits style sheet
 // ────────────────────────────────────────────────────────────────────────────
 class _MemberVisitsSheet extends ConsumerStatefulWidget {
   final String title;
@@ -678,17 +822,14 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> {
                       child: InkWell(
                         borderRadius: BorderRadius.circular(10),
                         onTap: () {
-                          // Set selected guest and navigate to profile —
-                          // same pattern as MemberVisits screen
                           ref
                               .read(selectedGuestProvider.notifier)
                               .setSelectedGuest(guest);
-                          Navigator.of(context).pop(); // close sheet
+                          Navigator.of(context).pop();
                           context.push('/home/profile');
                         },
                         child: Padding(
-                          padding:
-                              const EdgeInsets.fromLTRB(14, 28, 14, 12),
+                          padding: const EdgeInsets.fromLTRB(14, 28, 14, 12),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -709,8 +850,7 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> {
                                   Text(
                                     guest.country,
                                     style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.black54),
+                                        fontSize: 12, color: Colors.black54),
                                   ),
                                 ],
                               ),
@@ -723,8 +863,7 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> {
                                   Text(
                                     'Last visit on ${DateFormat('dd MMM yyyy').format(DateTime.tryParse(guest.lastVisitDate) ?? DateTime(2000))}',
                                     style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.black54),
+                                        fontSize: 12, color: Colors.black54),
                                   ),
                                 ],
                               ),
@@ -733,7 +872,6 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> {
                         ),
                       ),
                     ),
-                    // Rating badge — top-right, same position as MemberVisits
                     if (ratingImg != null)
                       Positioned(
                         top: 6,
@@ -753,7 +891,7 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Shared sheet scaffold (handle + title + search + body slot)
+// Shared sheet scaffold
 // ────────────────────────────────────────────────────────────────────────────
 class _SheetScaffold extends StatelessWidget {
   final String title;
@@ -762,7 +900,6 @@ class _SheetScaffold extends StatelessWidget {
   final TextEditingController searchCtrl;
   final String searchHint;
   final Widget child;
-  /// Show a back arrow on the left (for nested sheets pushed on top of another)
   final bool showBackButton;
 
   const _SheetScaffold({
@@ -787,7 +924,6 @@ class _SheetScaffold extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Handle bar
           Container(
             margin: const EdgeInsets.only(top: 10),
             width: 40,
@@ -798,13 +934,10 @@ class _SheetScaffold extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-
-          // App-bar row: [back?] [title] [count] [close]
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Row(
               children: [
-                // Back button (shown only in nested sheets)
                 if (showBackButton)
                   IconButton(
                     icon: const Icon(Icons.arrow_back_ios_new, size: 18),
@@ -813,8 +946,6 @@ class _SheetScaffold extends StatelessWidget {
                   )
                 else
                   const SizedBox(width: 12),
-
-                // Accent bar + title
                 Container(
                   width: 4,
                   height: 20,
@@ -835,11 +966,9 @@ class _SheetScaffold extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-
-                // Count badge
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: accentColor.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
@@ -853,8 +982,6 @@ class _SheetScaffold extends StatelessWidget {
                     ),
                   ),
                 ),
-
-                // Close button — always visible, closes the whole sheet
                 IconButton(
                   icon: const Icon(Icons.close, size: 20),
                   color: Colors.black54,
@@ -864,8 +991,6 @@ class _SheetScaffold extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-
-          // Search field
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TextField(
@@ -886,8 +1011,6 @@ class _SheetScaffold extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-
-          // Body
           Expanded(child: child),
         ],
       ),

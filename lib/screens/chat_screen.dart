@@ -96,34 +96,52 @@ Future<void> _reloadGuestBookings() async {
     print('Error reloading guest bookings: $e');
   }
 }
+//   void _setupNotificationListener() {
+//   _messageSubscription = FirebaseMessaging.onMessage.listen((
+//     RemoteMessage message,
+//   ) {
+//     if (message.data['msg_type'] == '35') {
+//       _reloadGuestBookings();
+//       return;
+//     }
+
+//     // Extract chatId from Details field as well
+//     String? chatId = message.data['chatId'] ?? message.data['chat_id'];
+//     final detailsJson = message.data['Details'];
+//     if ((chatId == null || chatId.isEmpty) && detailsJson != null) {
+//       try {
+//         final details = jsonDecode(detailsJson);
+//         chatId = details['chatId']?.toString();
+//       } catch (_) {}
+//     }
+
+//     if (message.data['msg_type'] == '11' ||
+//         message.data['type'] == 'chat' ||
+//         message.data.containsKey('Details') ||
+//         chatId != null) {
+//       _fetchChatsFromApiSilently();
+//     }
+//   });
+// }
   void _setupNotificationListener() {
-  _messageSubscription = FirebaseMessaging.onMessage.listen((
-    RemoteMessage message,
-  ) {
-    if (message.data['msg_type'] == '35') {
+    // Listen for foreground messages
+    _messageSubscription = FirebaseMessaging.onMessage.listen((
+      RemoteMessage message,
+    ) {
+      
+if (message.data['msg_type'] == '35') {
       _reloadGuestBookings();
       return;
     }
-
-    // Extract chatId from Details field as well
-    String? chatId = message.data['chatId'] ?? message.data['chat_id'];
-    final detailsJson = message.data['Details'];
-    if ((chatId == null || chatId.isEmpty) && detailsJson != null) {
-      try {
-        final details = jsonDecode(detailsJson);
-        chatId = details['chatId']?.toString();
-      } catch (_) {}
-    }
-
-    if (message.data['msg_type'] == '11' ||
-        message.data['type'] == 'chat' ||
-        message.data.containsKey('Details') ||
-        chatId != null) {
-      _fetchChatsFromApiSilently();
-    }
-  });
-}
-
+      // Check if it's a chat notification
+      if (message.data['msg_type'] == '11' ||
+          message.data['type'] == 'chat' ||
+          message.data.containsKey('Details')) {
+        // Refresh silently without showing loading indicator
+        _fetchChatsFromApiSilently();
+      }
+    });
+  }
   // Silent refresh - no loading indicator
   Future<void> _fetchChatsFromApiSilently() async {
     try {

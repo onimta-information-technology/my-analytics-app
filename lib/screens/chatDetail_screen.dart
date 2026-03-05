@@ -102,66 +102,86 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     }
   }
 
-  void _setupForegroundMessageListener() {
-  _foregroundMessageSubscription =
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+//   void _setupForegroundMessageListener() {
+//   _foregroundMessageSubscription =
+//       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
     
-    // DEBUG - remove after fixing
-    print('📩 ChatDetail received message: ${message.data}');
-    print('📩 msg_type: ${message.data['msg_type']}');
-    print('📩 current chatUuid: ${widget.contact.chatUuid}');
+//     // DEBUG - remove after fixing
+//     print('📩 ChatDetail received message: ${message.data}');
+//     print('📩 msg_type: ${message.data['msg_type']}');
+//     print('📩 current chatUuid: ${widget.contact.chatUuid}');
 
-    final msgType = message.data['msg_type']?.toString().trim() ?? 
-                    message.data['type']?.toString().trim();
+//     final msgType = message.data['msg_type']?.toString().trim() ?? 
+//                     message.data['type']?.toString().trim();
 
-    // Skip guest booking notifications
-    if (msgType == '35') return;
+//     // Skip guest booking notifications
+//     if (msgType == '35') return;
 
-    // Extract chatId from top-level fields
-    String? chatId = message.data['chatId']?.toString() ??
-        message.data['chat_id']?.toString() ??
-        message.data['ChatId']?.toString() ??
-        message.data['Chat_Id']?.toString();
+//     // Extract chatId from top-level fields
+//     String? chatId = message.data['chatId']?.toString() ??
+//         message.data['chat_id']?.toString() ??
+//         message.data['ChatId']?.toString() ??
+//         message.data['Chat_Id']?.toString();
 
-    // Extract chatId from Details JSON field
-    final detailsJson = message.data['Details'];
-    if ((chatId == null || chatId.isEmpty) && 
-         detailsJson != null && detailsJson.isNotEmpty) {
-      try {
-        final details = jsonDecode(detailsJson);
-        chatId = details['chatId']?.toString() ??
-                 details['chat_id']?.toString();
-        print('📩 chatId from Details: $chatId');
-      } catch (e) {
-        print('📩 Error parsing Details: $e');
+//     // Extract chatId from Details JSON field
+//     final detailsJson = message.data['Details'];
+//     if ((chatId == null || chatId.isEmpty) && 
+//          detailsJson != null && detailsJson.isNotEmpty) {
+//       try {
+//         final details = jsonDecode(detailsJson);
+//         chatId = details['chatId']?.toString() ??
+//                  details['chat_id']?.toString();
+//         print('📩 chatId from Details: $chatId');
+//       } catch (e) {
+//         print('📩 Error parsing Details: $e');
+//       }
+//     }
+
+//     print('📩 resolved chatId: $chatId');
+//     print('📩 match: ${chatId == widget.contact.chatUuid}');
+
+//     // Refresh if it's any chat message type
+//     final bool isChatMessage = msgType == '11' ||
+//         msgType == 'chat' ||
+//         message.data.containsKey('Details') ||
+//         message.data.containsKey('message') ||
+//         chatId != null;
+
+//     if (isChatMessage) {
+//       if (chatId == null ||
+//           chatId.isEmpty ||
+//           chatId == widget.contact.chatUuid) {
+//         print('✅ Refreshing messages for chat: ${widget.contact.chatUuid}');
+//         _fetchMessagesFromApi(silent: true);
+//       } else {
+//         print('⛔ chatId mismatch — skipping refresh');
+//         print('   incoming: $chatId');
+//         print('   current:  ${widget.contact.chatUuid}');
+//       }
+//     }
+//   });
+// }
+void _setupForegroundMessageListener() {
+    _foregroundMessageSubscription =
+        FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      final chatId = message.data['chatId'] ??
+          message.data['chat_id'] ??
+          message.data['ChatId'] ??
+          message.data['Chat_Id'];
+      final msgType = message.data['msg_type'] ?? message.data['type'];
+      final bool isChatMessage = msgType == '11' ||
+          msgType == 'chat' ||
+          message.data.containsKey('message') ||
+          message.data.containsKey('Details');
+      if (isChatMessage) {
+        if (chatId == null ||
+            chatId.isEmpty ||
+            chatId == widget.contact.chatUuid) {
+          _fetchMessagesFromApi(silent: true);
+        }
       }
-    }
-
-    print('📩 resolved chatId: $chatId');
-    print('📩 match: ${chatId == widget.contact.chatUuid}');
-
-    // Refresh if it's any chat message type
-    final bool isChatMessage = msgType == '11' ||
-        msgType == 'chat' ||
-        message.data.containsKey('Details') ||
-        message.data.containsKey('message') ||
-        chatId != null;
-
-    if (isChatMessage) {
-      if (chatId == null ||
-          chatId.isEmpty ||
-          chatId == widget.contact.chatUuid) {
-        print('✅ Refreshing messages for chat: ${widget.contact.chatUuid}');
-        _fetchMessagesFromApi(silent: true);
-      } else {
-        print('⛔ chatId mismatch — skipping refresh');
-        print('   incoming: $chatId');
-        print('   current:  ${widget.contact.chatUuid}');
-      }
-    }
-  });
-}
-
+    });
+  }
   Future<void> _getCurrentUserName() async {
     try {
       final userName = await StorageUtil.getUserName();

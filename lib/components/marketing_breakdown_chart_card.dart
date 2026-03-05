@@ -486,12 +486,12 @@ class _HalfPieSectionState extends State<_HalfPieSection>
                           decoration: BoxDecoration(
                               color: color, shape: BoxShape.circle),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 5),
                         Expanded(
                           child: Text(
                             g.gName,
                             style: const TextStyle(
-                                fontSize: 18,
+                                fontSize: 16,
                                 fontWeight: FontWeight.w900,
                                 color: Colors.black87),
                             overflow: TextOverflow.ellipsis,
@@ -505,7 +505,7 @@ class _HalfPieSectionState extends State<_HalfPieSection>
                             color: color,
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 5),
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 3),
@@ -522,7 +522,7 @@ class _HalfPieSectionState extends State<_HalfPieSection>
                             ),
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 5),
                         Icon(Icons.chevron_right,
                             color: color.withOpacity(0.6), size: 20),
                       ],
@@ -700,7 +700,7 @@ class _SalesPersonsSheetState extends State<_SalesPersonsSheet> {
                     title: Text(
                       row.displayName,
                       style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w600),
+                          fontSize: 18, fontWeight: FontWeight.w900),
                     ),
                     trailing: CircleAvatar(
                       radius: 18,
@@ -708,9 +708,9 @@ class _SalesPersonsSheetState extends State<_SalesPersonsSheet> {
                       child: Text(
                         '${row.count}',
                         style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: widget.accentColor,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          //color: widget.accentColor,
                         ),
                       ),
                     ),
@@ -836,21 +836,21 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> {
                               Text(
                                 '${guest.mid} — ${guest.memberName}',
                                 style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w900,
+                                  color: ui.Color.fromARGB(255, 0, 0, 0),
                                 ),
                               ),
                               const SizedBox(height: 6),
                               Row(
                                 children: [
                                   const Icon(Icons.flag_outlined,
-                                      size: 13, color: Colors.black54),
+                                      size: 18, color: ui.Color.fromARGB(255, 0, 0, 0)),
                                   const SizedBox(width: 6),
                                   Text(
                                     guest.country,
                                     style: const TextStyle(
-                                        fontSize: 12, color: Colors.black54),
+                                        fontSize: 18, fontWeight: FontWeight.w900, color: ui.Color.fromARGB(255, 0, 0, 0)),
                                   ),
                                 ],
                               ),
@@ -858,12 +858,12 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> {
                               Row(
                                 children: [
                                   const Icon(Icons.calendar_today,
-                                      size: 13, color: Colors.black54),
+                                      size: 18, color: ui.Color.fromARGB(255, 0, 0, 0)),
                                   const SizedBox(width: 6),
                                   Text(
                                     'Last visit on ${DateFormat('dd MMM yyyy').format(DateTime.tryParse(guest.lastVisitDate) ?? DateTime(2000))}',
                                     style: const TextStyle(
-                                        fontSize: 12, color: Colors.black54),
+                                        fontSize: 18, fontWeight: FontWeight.w900, color: ui.Color.fromARGB(255, 0, 0, 0)),
                                   ),
                                 ],
                               ),
@@ -917,7 +917,7 @@ class _SheetScaffold extends StatelessWidget {
     final screenH = MediaQuery.of(context).size.height;
 
     return Container(
-      height: screenH * 0.85,
+      height: screenH * 0.75,
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -959,8 +959,8 @@ class _SheetScaffold extends StatelessWidget {
                   child: Text(
                     title,
                     style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
                       color: Colors.black87,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -976,9 +976,9 @@ class _SheetScaffold extends StatelessWidget {
                   child: Text(
                     '$count',
                     style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: accentColor,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                   //   color: accentColor,
                     ),
                   ),
                 ),

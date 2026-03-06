@@ -7,6 +7,7 @@ import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/models/chat_message.dart';
 import 'package:ballys_reservation_app/utils/current_chat_state.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
+import 'package:ballys_reservation_app/utils/download_helper.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -86,8 +87,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
   // ─── Setup ─────────────────────────────────────────────────────────────────
 
   void _startReadStatusPolling() {
-    _readStatusPollTimer =
-        Timer.periodic(const Duration(seconds: 3), (timer) {
+    _readStatusPollTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (mounted) {
         _fetchMessagesFromApi(silent: true, updateReadStatusOnly: true);
       }
@@ -102,74 +102,77 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     }
   }
 
-//   void _setupForegroundMessageListener() {
-//   _foregroundMessageSubscription =
-//       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    
-//     // DEBUG - remove after fixing
-//     print('📩 ChatDetail received message: ${message.data}');
-//     print('📩 msg_type: ${message.data['msg_type']}');
-//     print('📩 current chatUuid: ${widget.contact.chatUuid}');
+  //   void _setupForegroundMessageListener() {
+  //   _foregroundMessageSubscription =
+  //       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
 
-//     final msgType = message.data['msg_type']?.toString().trim() ?? 
-//                     message.data['type']?.toString().trim();
+  //     // DEBUG - remove after fixing
+  //     print('📩 ChatDetail received message: ${message.data}');
+  //     print('📩 msg_type: ${message.data['msg_type']}');
+  //     print('📩 current chatUuid: ${widget.contact.chatUuid}');
 
-//     // Skip guest booking notifications
-//     if (msgType == '35') return;
+  //     final msgType = message.data['msg_type']?.toString().trim() ??
+  //                     message.data['type']?.toString().trim();
 
-//     // Extract chatId from top-level fields
-//     String? chatId = message.data['chatId']?.toString() ??
-//         message.data['chat_id']?.toString() ??
-//         message.data['ChatId']?.toString() ??
-//         message.data['Chat_Id']?.toString();
+  //     // Skip guest booking notifications
+  //     if (msgType == '35') return;
 
-//     // Extract chatId from Details JSON field
-//     final detailsJson = message.data['Details'];
-//     if ((chatId == null || chatId.isEmpty) && 
-//          detailsJson != null && detailsJson.isNotEmpty) {
-//       try {
-//         final details = jsonDecode(detailsJson);
-//         chatId = details['chatId']?.toString() ??
-//                  details['chat_id']?.toString();
-//         print('📩 chatId from Details: $chatId');
-//       } catch (e) {
-//         print('📩 Error parsing Details: $e');
-//       }
-//     }
+  //     // Extract chatId from top-level fields
+  //     String? chatId = message.data['chatId']?.toString() ??
+  //         message.data['chat_id']?.toString() ??
+  //         message.data['ChatId']?.toString() ??
+  //         message.data['Chat_Id']?.toString();
 
-//     print('📩 resolved chatId: $chatId');
-//     print('📩 match: ${chatId == widget.contact.chatUuid}');
+  //     // Extract chatId from Details JSON field
+  //     final detailsJson = message.data['Details'];
+  //     if ((chatId == null || chatId.isEmpty) &&
+  //          detailsJson != null && detailsJson.isNotEmpty) {
+  //       try {
+  //         final details = jsonDecode(detailsJson);
+  //         chatId = details['chatId']?.toString() ??
+  //                  details['chat_id']?.toString();
+  //         print('📩 chatId from Details: $chatId');
+  //       } catch (e) {
+  //         print('📩 Error parsing Details: $e');
+  //       }
+  //     }
 
-//     // Refresh if it's any chat message type
-//     final bool isChatMessage = msgType == '11' ||
-//         msgType == 'chat' ||
-//         message.data.containsKey('Details') ||
-//         message.data.containsKey('message') ||
-//         chatId != null;
+  //     print('📩 resolved chatId: $chatId');
+  //     print('📩 match: ${chatId == widget.contact.chatUuid}');
 
-//     if (isChatMessage) {
-//       if (chatId == null ||
-//           chatId.isEmpty ||
-//           chatId == widget.contact.chatUuid) {
-//         print('✅ Refreshing messages for chat: ${widget.contact.chatUuid}');
-//         _fetchMessagesFromApi(silent: true);
-//       } else {
-//         print('⛔ chatId mismatch — skipping refresh');
-//         print('   incoming: $chatId');
-//         print('   current:  ${widget.contact.chatUuid}');
-//       }
-//     }
-//   });
-// }
-void _setupForegroundMessageListener() {
-    _foregroundMessageSubscription =
-        FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      final chatId = message.data['chatId'] ??
+  //     // Refresh if it's any chat message type
+  //     final bool isChatMessage = msgType == '11' ||
+  //         msgType == 'chat' ||
+  //         message.data.containsKey('Details') ||
+  //         message.data.containsKey('message') ||
+  //         chatId != null;
+
+  //     if (isChatMessage) {
+  //       if (chatId == null ||
+  //           chatId.isEmpty ||
+  //           chatId == widget.contact.chatUuid) {
+  //         print('✅ Refreshing messages for chat: ${widget.contact.chatUuid}');
+  //         _fetchMessagesFromApi(silent: true);
+  //       } else {
+  //         print('⛔ chatId mismatch — skipping refresh');
+  //         print('   incoming: $chatId');
+  //         print('   current:  ${widget.contact.chatUuid}');
+  //       }
+  //     }
+  //   });
+  // }
+  void _setupForegroundMessageListener() {
+    _foregroundMessageSubscription = FirebaseMessaging.onMessage.listen((
+      RemoteMessage message,
+    ) {
+      final chatId =
+          message.data['chatId'] ??
           message.data['chat_id'] ??
           message.data['ChatId'] ??
           message.data['Chat_Id'];
       final msgType = message.data['msg_type'] ?? message.data['type'];
-      final bool isChatMessage = msgType == '11' ||
+      final bool isChatMessage =
+          msgType == '11' ||
           msgType == 'chat' ||
           message.data.containsKey('message') ||
           message.data.containsKey('Details');
@@ -182,6 +185,7 @@ void _setupForegroundMessageListener() {
       }
     });
   }
+
   Future<void> _getCurrentUserName() async {
     try {
       final userName = await StorageUtil.getUserName();
@@ -201,8 +205,9 @@ void _setupForegroundMessageListener() {
     }
 
     try {
-      final response =
-          await FirebaseApiService.fetchMessages(widget.contact.chatUuid);
+      final response = await FirebaseApiService.fetchMessages(
+        widget.contact.chatUuid,
+      );
       final deviceId = await DeviceId.get();
 
       if (response['success'] == true && response['data'] != null) {
@@ -212,8 +217,7 @@ void _setupForegroundMessageListener() {
 
           // Build flat list then group consecutive images into grid bubbles
           final flat = raw
-              .map((j) =>
-                  ChatMessage.fromApiResponse(j, deviceId ?? ''))
+              .map((j) => ChatMessage.fromApiResponse(j, deviceId ?? ''))
               .toList();
           final grouped = ChatMessage.groupImageMessages(flat);
 
@@ -264,8 +268,7 @@ void _setupForegroundMessageListener() {
           .map((m) => m.apiMessageId!)
           .toList();
       if (ids.isEmpty) return;
-      await FirebaseApiService.markMessagesAsRead(
-          widget.contact.chatUuid, ids);
+      await FirebaseApiService.markMessagesAsRead(widget.contact.chatUuid, ids);
     } catch (_) {}
   }
 
@@ -279,13 +282,15 @@ void _setupForegroundMessageListener() {
     final now = DateTime.now();
 
     setState(() {
-      _messages.add(ChatMessage(
-        id: localId,
-        text: text,
-        isMe: true,
-        timestamp: now,
-        isRead: false,
-      ));
+      _messages.add(
+        ChatMessage(
+          id: localId,
+          text: text,
+          isMe: true,
+          timestamp: now,
+          isRead: false,
+        ),
+      );
     });
     _messageController.clear();
     if (widget.onMessageSent != null) widget.onMessageSent!(text);
@@ -345,31 +350,34 @@ void _setupForegroundMessageListener() {
       _isUploading = true;
       if (allImages && localItems.length > 1) {
         // Single grouped bubble for multiple images
-        _messages.add(ChatMessage(
-          id: localId,
-          text: '',
-          isMe: true,
-          timestamp: now,
-          isRead: false,
-          groupedAttachments: localItems,
-        ));
+        _messages.add(
+          ChatMessage(
+            id: localId,
+            text: '',
+            isMe: true,
+            timestamp: now,
+            isRead: false,
+            groupedAttachments: localItems,
+          ),
+        );
       } else {
         // One bubble per file (or single image)
         for (int i = 0; i < localItems.length; i++) {
           final item = localItems[i];
-          final ext =
-              (item.localPath ?? '').split('.').last.toLowerCase();
-          _messages.add(ChatMessage(
-            id: '${localId}_$i',
-            text: item.fileName ?? '',
-            isMe: true,
-            timestamp: now,
-            isRead: false,
-            filePath: item.localPath,
-            fileType: item.isImage ? 'image' : 'document',
-            fileName: item.fileName,
-            groupedAttachments: item.isImage ? [item] : [],
-          ));
+          final ext = (item.localPath ?? '').split('.').last.toLowerCase();
+          _messages.add(
+            ChatMessage(
+              id: '${localId}_$i',
+              text: item.fileName ?? '',
+              isMe: true,
+              timestamp: now,
+              isRead: false,
+              filePath: item.localPath,
+              fileType: item.isImage ? 'image' : 'document',
+              fileName: item.fileName,
+              groupedAttachments: item.isImage ? [item] : [],
+            ),
+          );
         }
       }
     });
@@ -382,26 +390,26 @@ void _setupForegroundMessageListener() {
       );
 
       if (result['success'] == true) {
-        final files =
-            (result['data']['files'] as List<dynamic>?) ?? [];
+        final files = (result['data']['files'] as List<dynamic>?) ?? [];
 
         setState(() {
           if (allImages && localItems.length > 1) {
             // Update the single grouped bubble
-            final idx =
-                _messages.indexWhere((m) => m.id == localId);
+            final idx = _messages.indexWhere((m) => m.id == localId);
             if (idx != -1) {
               final updatedItems = <AttachmentItem>[];
               for (int i = 0; i < localItems.length; i++) {
                 final f = i < files.length
                     ? files[i] as Map<String, dynamic>
                     : <String, dynamic>{};
-                updatedItems.add(localItems[i].copyWith(
-                  url: f['url'] as String?,
-                  messageId: f['messageId'] as String?,
-                  mimeType: f['type'] as String?,
-                  fileName: f['filename'] as String?,
-                ));
+                updatedItems.add(
+                  localItems[i].copyWith(
+                    url: f['url'] as String?,
+                    messageId: f['messageId'] as String?,
+                    mimeType: f['type'] as String?,
+                    fileName: f['filename'] as String?,
+                  ),
+                );
               }
               _messages[idx] = _messages[idx].copyWith(
                 apiMessageId: files.isNotEmpty
@@ -416,8 +424,7 @@ void _setupForegroundMessageListener() {
             // Update individual bubbles
             for (int i = 0; i < filePaths.length; i++) {
               final bubbleId = '${localId}_$i';
-              final idx =
-                  _messages.indexWhere((m) => m.id == bubbleId);
+              final idx = _messages.indexWhere((m) => m.id == bubbleId);
               if (idx != -1 && i < files.length) {
                 final f = files[i] as Map<String, dynamic>;
                 final mime = f['type'] as String? ?? '';
@@ -436,7 +443,7 @@ void _setupForegroundMessageListener() {
                             mimeType: mime,
                             fileName: f['filename'] as String?,
                             messageId: f['messageId'] as String?,
-                          )
+                          ),
                         ]
                       : [],
                   isRead: false,
@@ -448,13 +455,11 @@ void _setupForegroundMessageListener() {
         });
 
         if (widget.onMessageSent != null) {
-          widget.onMessageSent!(
-              '📎 ${filePaths.length} file(s) sent');
+          widget.onMessageSent!('📎 ${filePaths.length} file(s) sent');
         }
       } else {
         setState(() => _isUploading = false);
-        _showErrorSnack(
-            'Upload failed: ${result['error'] ?? 'Unknown error'}');
+        _showErrorSnack('Upload failed: ${result['error'] ?? 'Unknown error'}');
       }
     } catch (e) {
       setState(() => _isUploading = false);
@@ -467,7 +472,9 @@ void _setupForegroundMessageListener() {
   void _onCameraPressed() async {
     try {
       final XFile? photo = await _imagePicker.pickImage(
-          source: ImageSource.camera, imageQuality: 80);
+        source: ImageSource.camera,
+        imageQuality: 80,
+      );
       if (photo != null) await _uploadAndSendFiles([photo.path]);
     } catch (e) {
       _showErrorSnack('Error taking photo: $e');
@@ -481,38 +488,43 @@ void _setupForegroundMessageListener() {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => SafeArea(
-        child: Wrap(children: [
-          ListTile(
-            leading: const Icon(Icons.photo_library, color: Colors.blue),
-            title: const Text('Gallery'),
-            onTap: () {
-              Navigator.pop(ctx);
-              _pickImagesFromGallery();
-            },
-          ),
-          ListTile(
-            leading:
-                const Icon(Icons.insert_drive_file, color: Colors.orange),
-            title: const Text('Document'),
-            onTap: () {
-              Navigator.pop(ctx);
-              _pickDocuments();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.cancel, color: Colors.red),
-            title: const Text('Cancel'),
-            onTap: () => Navigator.pop(ctx),
-          ),
-        ]),
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: Colors.blue),
+              title: const Text('Gallery'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickImagesFromGallery();
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.insert_drive_file,
+                color: Colors.orange,
+              ),
+              title: const Text('Document'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickDocuments();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.cancel, color: Colors.red),
+              title: const Text('Cancel'),
+              onTap: () => Navigator.pop(ctx),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Future<void> _pickImagesFromGallery() async {
     try {
-      final List<XFile> images =
-          await _imagePicker.pickMultiImage(imageQuality: 80);
+      final List<XFile> images = await _imagePicker.pickMultiImage(
+        imageQuality: 80,
+      );
       if (images.isNotEmpty) {
         await _uploadAndSendFiles(images.map((x) => x.path).toList());
       }
@@ -525,9 +537,7 @@ void _setupForegroundMessageListener() {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: [
-          'pdf', 'doc', 'docx', 'txt', 'xls', 'xlsx'
-        ],
+        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'xls', 'xlsx'],
         allowMultiple: true,
       );
       if (result != null && result.files.isNotEmpty) {
@@ -544,10 +554,11 @@ void _setupForegroundMessageListener() {
 
   // ─── Delete ─────────────────────────────────────────────────────────────────
 
-  Future<void> _deleteMessageFromApi(
-      String chatId, String messageId) async {
-    final response =
-        await FirebaseApiService.softDeleteMessage(chatId, messageId);
+  Future<void> _deleteMessageFromApi(String chatId, String messageId) async {
+    final response = await FirebaseApiService.softDeleteMessage(
+      chatId,
+      messageId,
+    );
     if (response['success'] != true) {
       _showErrorSnack('Could not delete message.');
     }
@@ -558,32 +569,31 @@ void _setupForegroundMessageListener() {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Message'),
-        content:
-            const Text('Are you sure you want to delete this message?'),
+        content: const Text('Are you sure you want to delete this message?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () async {
               Navigator.of(ctx).pop();
-              final msg =
-                  _messages.firstWhere((m) => m.id == messageId);
+              final msg = _messages.firstWhere((m) => m.id == messageId);
               if (msg.apiChatId != null && msg.apiMessageId != null) {
-                await _deleteMessageFromApi(
-                    msg.apiChatId!, msg.apiMessageId!);
+                await _deleteMessageFromApi(msg.apiChatId!, msg.apiMessageId!);
               }
               setState(() {
                 _messages.removeWhere((m) => m.id == messageId);
                 _selectedMessageId = null;
               });
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text('Message deleted'),
-                duration: Duration(seconds: 2),
-              ));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Message deleted'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
             },
-            child: const Text('Delete',
-                style: TextStyle(color: Colors.red)),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -594,18 +604,20 @@ void _setupForegroundMessageListener() {
 
   void _showErrorSnack(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
   }
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients &&
           _scrollController.position.maxScrollExtent > 0) {
-        _scrollController.animateTo(0,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut);
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
       }
     });
   }
@@ -626,17 +638,22 @@ void _setupForegroundMessageListener() {
     if (index == 0) return true;
     final cur = _messages[index];
     final prev = _messages[index - 1];
-    return DateTime(cur.timestamp.year, cur.timestamp.month,
-            cur.timestamp.day) !=
-        DateTime(prev.timestamp.year, prev.timestamp.month,
-            prev.timestamp.day);
+    return DateTime(
+          cur.timestamp.year,
+          cur.timestamp.month,
+          cur.timestamp.day,
+        ) !=
+        DateTime(prev.timestamp.year, prev.timestamp.month, prev.timestamp.day);
   }
 
   // ─── Image grid widget (WhatsApp-style) ─────────────────────────────────────
 
   /// Renders up to 4 cells in a 2×2 grid with "+N" overlay on the last cell.
   Widget _buildImageGrid(
-      List<AttachmentItem> items, bool isMe, String messageId) {
+    List<AttachmentItem> items,
+    bool isMe,
+    String messageId,
+  ) {
     const double gridSize = 220.0; // total grid width
     const double gap = 3.0;
     const double cellSize = (gridSize - gap) / 2;
@@ -663,7 +680,9 @@ void _setupForegroundMessageListener() {
               color: Colors.grey[300],
               child: const Center(
                 child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.green),
+                  strokeWidth: 2,
+                  color: Colors.green,
+                ),
               ),
             );
           },
@@ -671,12 +690,10 @@ void _setupForegroundMessageListener() {
             width: cellSize,
             height: cellSize,
             color: Colors.grey[300],
-            child: const Icon(Icons.broken_image,
-                color: Colors.grey, size: 32),
+            child: const Icon(Icons.broken_image, color: Colors.grey, size: 32),
           ),
         );
-      } else if (item.localPath != null &&
-          File(item.localPath!).existsSync()) {
+      } else if (item.localPath != null && File(item.localPath!).existsSync()) {
         img = Image.file(
           File(item.localPath!),
           width: cellSize,
@@ -689,8 +706,7 @@ void _setupForegroundMessageListener() {
           width: cellSize,
           height: cellSize,
           color: Colors.grey[300],
-          child:
-              const Icon(Icons.image, color: Colors.grey, size: 32),
+          child: const Icon(Icons.image, color: Colors.grey, size: 32),
         );
       }
 
@@ -700,27 +716,29 @@ void _setupForegroundMessageListener() {
       );
 
       if (showOverlay && extraCount > 0) {
-        cell = Stack(children: [
-          cell,
-          Container(
-            width: cellSize,
-            height: cellSize,
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.55),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Center(
-              child: Text(
-                '+$extraCount',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
+        cell = Stack(
+          children: [
+            cell,
+            Container(
+              width: cellSize,
+              height: cellSize,
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.55),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Center(
+                child: Text(
+                  '+$extraCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
-          ),
-        ]);
+          ],
+        );
       }
 
       return GestureDetector(
@@ -736,39 +754,47 @@ void _setupForegroundMessageListener() {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: items[0].url != null
-              ? Image.network(items[0].url!,
+              ? Image.network(
+                  items[0].url!,
                   width: gridSize,
                   height: gridSize,
                   fit: BoxFit.cover,
-                  loadingBuilder: (ctx, child, progress) =>
-                      progress == null
-                          ? child
-                          : Container(
-                              width: gridSize,
-                              height: gridSize,
-                              color: Colors.grey[300],
-                              child: const Center(
-                                  child: CircularProgressIndicator(
-                                      color: Colors.green)),
+                  loadingBuilder: (ctx, child, progress) => progress == null
+                      ? child
+                      : Container(
+                          width: gridSize,
+                          height: gridSize,
+                          color: Colors.grey[300],
+                          child: const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.green,
                             ),
+                          ),
+                        ),
                   errorBuilder: (_, __, ___) => Container(
-                      width: gridSize,
-                      height: gridSize,
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.broken_image,
-                          color: Colors.grey, size: 48)),
+                    width: gridSize,
+                    height: gridSize,
+                    color: Colors.grey[300],
+                    child: const Icon(
+                      Icons.broken_image,
+                      color: Colors.grey,
+                      size: 48,
+                    ),
+                  ),
                 )
               : items[0].localPath != null
-                  ? Image.file(File(items[0].localPath!),
-                      width: gridSize,
-                      height: gridSize,
-                      fit: BoxFit.cover)
-                  : Container(
-                      width: gridSize,
-                      height: gridSize,
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.image,
-                          color: Colors.grey, size: 48)),
+              ? Image.file(
+                  File(items[0].localPath!),
+                  width: gridSize,
+                  height: gridSize,
+                  fit: BoxFit.cover,
+                )
+              : Container(
+                  width: gridSize,
+                  height: gridSize,
+                  color: Colors.grey[300],
+                  child: const Icon(Icons.image, color: Colors.grey, size: 48),
+                ),
         ),
       );
     }
@@ -790,76 +816,148 @@ void _setupForegroundMessageListener() {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(mainAxisSize: MainAxisSize.min, children: [
-            buildCell(0),
-            const SizedBox(width: gap),
-            buildCell(1),
-          ]),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              buildCell(0),
+              const SizedBox(width: gap),
+              buildCell(1),
+            ],
+          ),
           const SizedBox(height: gap),
-          Row(mainAxisSize: MainAxisSize.min, children: [
-            buildCell(2),
-            const SizedBox(width: gap),
-            buildCell(
-              displayCount == 4 ? 3 : 2,
-              showOverlay: extraCount > 0 || displayCount == 3,
-            ),
-          ]),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              buildCell(2),
+              const SizedBox(width: gap),
+              buildCell(
+                displayCount == 4 ? 3 : 2,
+                showOverlay: extraCount > 0 || displayCount == 3,
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
   void _openGallery(List<AttachmentItem> items, int initialIndex) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => _GalleryView(items: items, initialIndex: initialIndex),
-    ));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _GalleryView(items: items, initialIndex: initialIndex),
+      ),
+    );
   }
 
   // ─── Single attachment (document or legacy single image) ────────────────────
 
-  Widget _buildSingleAttachment(ChatMessage message) {
-    if (message.fileType == 'image') {
-      // Wrap in a 1-item list and reuse grid (handles local vs remote)
-      final item = AttachmentItem(
-        url: message.attachmentUrl,
-        localPath: message.filePath,
-        fileName: message.fileName,
-        mimeType: message.attachmentType,
-      );
-      return _buildImageGrid([item], message.isMe, message.id);
-    }
+  // Widget _buildSingleAttachment(ChatMessage message) {
+  //   if (message.fileType == 'image') {
+  //     // Wrap in a 1-item list and reuse grid (handles local vs remote)
+  //     final item = AttachmentItem(
+  //       url: message.attachmentUrl,
+  //       localPath: message.filePath,
+  //       fileName: message.fileName,
+  //       mimeType: message.attachmentType,
+  //     );
+  //     return _buildImageGrid([item], message.isMe, message.id);
+  //   }
 
-    // Document
-    final name = message.fileName ?? message.text;
-    return Container(
+  //   // Document
+  //   final name = message.fileName ?? message.text;
+  //   return Container(
+  //     padding: const EdgeInsets.all(8),
+  //     decoration: BoxDecoration(
+  //       color: message.isMe ? Colors.green[700] : Colors.grey[400],
+  //       borderRadius: BorderRadius.circular(8),
+  //     ),
+  //     child: Row(
+  //       mainAxisSize: MainAxisSize.min,
+  //       children: [
+  //         Icon(
+  //           Icons.insert_drive_file,
+  //           color: message.isMe ? Colors.white : Colors.black87,
+  //           size: 24,
+  //         ),
+  //         const SizedBox(width: 8),
+  //         Flexible(
+  //           child: Text(
+  //             name,
+  //             style: TextStyle(
+  //               color: message.isMe ? Colors.white : Colors.black87,
+  //               fontSize: 14,
+  //             ),
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
+Widget _buildSingleAttachment(ChatMessage message) {
+  if (message.fileType == 'image') {
+    final item = AttachmentItem(
+      url: message.attachmentUrl,
+      localPath: message.filePath,
+      fileName: message.fileName,
+      mimeType: message.attachmentType,
+    );
+    return _buildImageGrid([item], message.isMe, message.id);
+  }
+
+  // Document with download button
+  final name = message.fileName ?? message.text;
+  return GestureDetector(
+    onTap: () {
+      if (message.attachmentUrl != null) {
+        DownloadHelper.downloadAndOpen(
+          context,
+          message.attachmentUrl!,
+          name,
+        );
+      }
+    },
+    child: Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: message.isMe ? Colors.green[700] : Colors.grey[400],
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.insert_drive_file,
-            color: message.isMe ? Colors.white : Colors.black87, size: 24),
-        const SizedBox(width: 8),
-        Flexible(
-          child: Text(
-            name,
-            style: TextStyle(
-              color: message.isMe ? Colors.white : Colors.black87,
-              fontSize: 14,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.insert_drive_file,
+            color: message.isMe ? Colors.white : Colors.black87,
+            size: 24,
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              name,
+              style: TextStyle(
+                color: message.isMe ? Colors.white : Colors.black87,
+                fontSize: 14,
+              ),
             ),
           ),
-        ),
-      ]),
-    );
-  }
-
+          const SizedBox(width: 8),
+          Icon(
+            Icons.download,
+            color: message.isMe ? Colors.white70 : Colors.black54,
+            size: 20,
+          ),
+        ],
+      ),
+    ),
+  );
+}
   // ─── Message bubble ─────────────────────────────────────────────────────────
 
   Widget _buildMessage(ChatMessage message) {
     final isSelected = _selectedMessageId == message.id;
     final hasGrouped = message.hasGroupedAttachments;
-    final showText = message.text.isNotEmpty &&
+    final showText =
+        message.text.isNotEmpty &&
         message.fileType != 'image' &&
         message.fileType != 'document' &&
         !hasGrouped;
@@ -873,12 +971,9 @@ void _setupForegroundMessageListener() {
       onLongPress: () => setState(() => _selectedMessageId = message.id),
       onTap: () => setState(() => _selectedMessageId = null),
       child: Container(
-        color: isSelected
-            ? Colors.grey.withOpacity(0.1)
-            : Colors.transparent,
+        color: isSelected ? Colors.grey.withOpacity(0.1) : Colors.transparent,
         child: Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Row(
             mainAxisAlignment: message.isMe
                 ? MainAxisAlignment.end
@@ -889,9 +984,10 @@ void _setupForegroundMessageListener() {
                 CircleAvatar(
                   backgroundColor: widget.contact.avatarColor,
                   radius: 15,
-                  child: Text(widget.contact.initials,
-                      style: const TextStyle(
-                          color: Colors.white, fontSize: 12)),
+                  child: Text(
+                    widget.contact.initials,
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                  ),
                 ),
                 const SizedBox(width: 8),
               ],
@@ -901,7 +997,9 @@ void _setupForegroundMessageListener() {
                   padding: isImageBubble
                       ? const EdgeInsets.all(4)
                       : const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
                   decoration: BoxDecoration(
                     color: message.isMe
                         ? Colors.green
@@ -914,8 +1012,11 @@ void _setupForegroundMessageListener() {
                     children: [
                       // ── Attachment area ──
                       if (hasGrouped) ...[
-                        _buildImageGrid(message.groupedAttachments,
-                            message.isMe, message.id),
+                        _buildImageGrid(
+                          message.groupedAttachments,
+                          message.isMe,
+                          message.id,
+                        ),
                       ] else if (message.fileType != null) ...[
                         _buildSingleAttachment(message),
                       ],
@@ -944,7 +1045,10 @@ void _setupForegroundMessageListener() {
                       Padding(
                         padding: isImageBubble
                             ? const EdgeInsets.only(
-                                right: 8, left: 8, bottom: 4)
+                                right: 8,
+                                left: 8,
+                                bottom: 4,
+                              )
                             : EdgeInsets.zero,
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -988,8 +1092,11 @@ void _setupForegroundMessageListener() {
                       color: Colors.red.withOpacity(0.8),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.delete,
-                        color: Colors.white, size: 18),
+                    child: const Icon(
+                      Icons.delete,
+                      color: Colors.white,
+                      size: 18,
+                    ),
                   ),
                 ),
               ],
@@ -1006,8 +1113,7 @@ void _setupForegroundMessageListener() {
     return Center(
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 12),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         decoration: BoxDecoration(
           color: const Color.fromARGB(255, 236, 236, 226),
           borderRadius: BorderRadius.circular(8),
@@ -1029,185 +1135,212 @@ void _setupForegroundMessageListener() {
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return SafeArea(
-      child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: Colors.green,
-          foregroundColor: Colors.white,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              _readStatusPollTimer?.cancel();
-              _foregroundMessageSubscription?.cancel();
-              CurrentChatState().clearCurrentChat();
-              Navigator.pop(context);
-            },
-          ),
-          title: Row(children: [
-            Stack(children: [
-              CircleAvatar(
-                backgroundColor: widget.contact.avatarColor,
-                radius: 18,
-                child: Text(widget.contact.initials,
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.green,
+        foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            _readStatusPollTimer?.cancel();
+            _foregroundMessageSubscription?.cancel();
+            CurrentChatState().clearCurrentChat();
+            Navigator.pop(context);
+          },
+        ),
+        title: Row(
+          children: [
+            Stack(
+              children: [
+                CircleAvatar(
+                  backgroundColor: widget.contact.avatarColor,
+                  radius: 18,
+                  child: Text(
+                    widget.contact.initials,
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold)),
-              ),
-              if (widget.contact.isOnline)
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: Colors.greenAccent,
-                      shape: BoxShape.circle,
-                      border:
-                          Border.all(color: Colors.white, width: 2),
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-            ]),
+                if (widget.contact.isOnline)
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: Colors.greenAccent,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(widget.contact.name,
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold)),
                   Text(
-                    widget.contact.isOnline
-                        ? 'Online'
-                        : 'Last seen recently',
+                    widget.contact.name,
                     style: const TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.normal),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    widget.contact.isOnline ? 'Online' : 'Last seen recently',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.normal,
+                    ),
                   ),
                 ],
               ),
             ),
-          ]),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: () => _fetchMessagesFromApi(silent: false),
-            ),
-            IconButton(
-                icon: const Icon(Icons.more_vert), onPressed: () {}),
           ],
         ),
-        body: Column(children: [
-          if (_isLoadingMessages)
-            const LinearProgressIndicator(
-              backgroundColor: Colors.grey,
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
-            ),
-          if (_isUploading)
-            Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 6),
-              color: Colors.green.shade50,
-              child: const Row(children: [
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.green),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => _fetchMessagesFromApi(silent: false),
+          ),
+          IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
+        ],
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            if (_isLoadingMessages)
+              const LinearProgressIndicator(
+                backgroundColor: Colors.grey,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+              ),
+            if (_isUploading)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
                 ),
-                SizedBox(width: 10),
-                Text('Uploading file(s)...',
-                    style:
-                        TextStyle(fontSize: 13, color: Colors.green)),
-              ]),
+                color: Colors.green.shade50,
+                child: const Row(
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.green,
+                      ),
+                    ),
+                    SizedBox(width: 10),
+                    Text(
+                      'Uploading file(s)...',
+                      style: TextStyle(fontSize: 13, color: Colors.green),
+                    ),
+                  ],
+                ),
+              ),
+            Expanded(
+              child: Container(
+                color: const Color.fromARGB(255, 245, 245, 230),
+                child: _messages.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'No messages yet',
+                          style: TextStyle(color: Colors.grey, fontSize: 16),
+                        ),
+                      )
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        reverse: true,
+                        itemCount: _messages.length,
+                        itemBuilder: (ctx, index) {
+                          final ri = _messages.length - 1 - index;
+                          final msg = _messages[ri];
+                          return Column(
+                            children: [
+                              if (_shouldShowDateSeparator(ri))
+                                _buildDateSeparator(msg.timestamp),
+                              _buildMessage(msg),
+                            ],
+                          );
+                        },
+                      ),
+              ),
             ),
-          Expanded(
-            child: Container(
-              color: const Color.fromARGB(255, 245, 245, 230),
-              child: _messages.isEmpty
-                  ? const Center(
-                      child: Text('No messages yet',
-                          style: TextStyle(
-                              color: Colors.grey, fontSize: 16)))
-                  : ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      reverse: true,
-                      itemCount: _messages.length,
-                      itemBuilder: (ctx, index) {
-                        final ri = _messages.length - 1 - index;
-                        final msg = _messages[ri];
-                        return Column(children: [
-                          if (_shouldShowDateSeparator(ri))
-                            _buildDateSeparator(msg.timestamp),
-                          _buildMessage(msg),
-                        ]);
+            // ── Input bar ──
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.3),
+                    spreadRadius: 1,
+                    blurRadius: 5,
+                    offset: const Offset(0, -3),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.camera_alt, color: Colors.grey),
+                    onPressed: _onCameraPressed,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: TextField(
+                      controller: _messageController,
+                      focusNode: _messageFocusNode,
+                      decoration: InputDecoration(
+                        hintText: 'Type a message',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(25),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[200],
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
+                        suffixIcon: IconButton(
+                          icon: const Icon(
+                            Icons.attach_file,
+                            color: Colors.grey,
+                          ),
+                          onPressed: _onAttachFilePressed,
+                        ),
+                      ),
+                      maxLines: null,
+                      textInputAction: TextInputAction.newline,
+                      onSubmitted: (_) => _sendMessage(),
+                      onTap: () {
+                        Future.delayed(const Duration(milliseconds: 300), () {
+                          if (mounted) _scrollToBottom();
+                        });
                       },
                     ),
-            ),
-          ),
-          // ── Input bar ──
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.3),
-                  spreadRadius: 1,
-                  blurRadius: 5,
-                  offset: const Offset(0, -3),
-                ),
-              ],
-            ),
-            child: Row(children: [
-              IconButton(
-                icon: const Icon(Icons.camera_alt, color: Colors.grey),
-                onPressed: _onCameraPressed,
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: TextField(
-                  controller: _messageController,
-                  focusNode: _messageFocusNode,
-                  decoration: InputDecoration(
-                    hintText: 'Type a message',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(25),
-                      borderSide: BorderSide.none,
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[200],
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 10),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.attach_file,
-                          color: Colors.grey),
-                      onPressed: _onAttachFilePressed,
-                    ),
                   ),
-                  maxLines: null,
-                  textInputAction: TextInputAction.newline,
-                  onSubmitted: (_) => _sendMessage(),
-                  onTap: () {
-                    Future.delayed(const Duration(milliseconds: 300),
-                        () {
-                      if (mounted) _scrollToBottom();
-                    });
-                  },
-                ),
+                  const SizedBox(width: 8),
+                  FloatingActionButton(
+                    backgroundColor: Colors.green,
+                    mini: true,
+                    onPressed: _sendMessage,
+                    child: const Icon(Icons.send, color: Colors.white),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              FloatingActionButton(
-                backgroundColor: Colors.green,
-                mini: true,
-                onPressed: _sendMessage,
-                child: const Icon(Icons.send, color: Colors.white),
-              ),
-            ]),
-          ),
-        ]),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1250,10 +1383,24 @@ class _GalleryViewState extends State<_GalleryView> {
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         title: Text(
-          '${_currentIndex + 1} / ${widget.items.length}',
-          style: const TextStyle(color: Colors.white),
+          '${_currentIndex + 1} / ${widget.items.length}'),
+          actions: [
+    IconButton(
+      icon: const Icon(Icons.download),
+      tooltip: 'Download',
+      onPressed: () {
+        final item = widget.items[_currentIndex];
+        final url = item.url;
+        final name = item.fileName ??
+            'image_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        if (url != null) {
+          DownloadHelper.downloadAndOpen(context, url, name);
+        }
+      },
+    ),
+  ],
         ),
-      ),
+   
       body: PageView.builder(
         controller: _pageController,
         itemCount: widget.items.length,
@@ -1262,15 +1409,15 @@ class _GalleryViewState extends State<_GalleryView> {
           final item = widget.items[i];
           Widget img;
           if (item.url != null && item.url!.isNotEmpty) {
-            img = Image.network(item.url!, fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const Icon(
-                    Icons.broken_image,
-                    color: Colors.white,
-                    size: 80));
+            img = Image.network(
+              item.url!,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) =>
+                  const Icon(Icons.broken_image, color: Colors.white, size: 80),
+            );
           } else if (item.localPath != null &&
               File(item.localPath!).existsSync()) {
-            img = Image.file(File(item.localPath!),
-                fit: BoxFit.contain);
+            img = Image.file(File(item.localPath!), fit: BoxFit.contain);
           } else {
             img = const Icon(Icons.image, color: Colors.white, size: 80);
           }

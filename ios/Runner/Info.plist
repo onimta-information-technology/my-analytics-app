@@ -55,6 +55,8 @@
 	<string>This app uses Face ID to authenticate you for secure login</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>We need gallery access to select photos</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>We need access to save images to your gallery</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>

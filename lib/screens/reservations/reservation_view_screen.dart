@@ -872,10 +872,58 @@ class _NewReservationScreenState
             }
           },
         ),
-        title: Text(
-          "Reservation - ${selectedReservation?.reservNo ?? ''}",
-          style: const TextStyle(fontSize: 18),
-        ),
+        // title: Text(
+        //   "Reservation - ${selectedReservation?.reservNo ?? ''}",
+        //   style: const TextStyle(fontSize: 18),
+        // ),
+        // REPLACE WITH:
+title: Row(
+  children: [
+    Text(
+      "Reservation - ${selectedReservation?.reservNo ?? ''}",
+      style: const TextStyle(fontSize: 18),
+    ),
+    const SizedBox(width: 12),
+    Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: currentStatus == 'Approved'
+            ? Colors.green
+            : currentStatus == 'Checked'
+            ? const Color.fromARGB(255, 92, 17, 255)
+            : currentStatus == 'Pending'
+            ? Colors.orange
+            : Colors.red,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            currentStatus == 'Approved'
+                ? Icons.check_circle
+                : currentStatus == 'Checked'
+                ? Icons.rule_rounded
+                : currentStatus == 'Pending'
+                ? Icons.hourglass_bottom
+                : Icons.cancel,
+            size: 12,
+            color: Colors.white,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            currentStatus.isEmpty ? 'Pending' : currentStatus,
+            style: const TextStyle(
+              fontSize: 18,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    ),
+  ],
+),
         actions: [
           PopScope(
             onPopInvokedWithResult: (bool didPop, dynamic result) {

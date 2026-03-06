@@ -173,14 +173,14 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
   }
 
   TextStyle _inputTextStyle(FontSettings fontSettings) => TextStyle(
-        fontSize: fontSettings.fontSize + 2,
-        fontWeight: fontSettings.fontWeight,
-      );
+    fontSize: fontSettings.fontSize + 2,
+    fontWeight: fontSettings.fontWeight,
+  );
 
   TextStyle _inputTextStyleForAmount(FontSettings fontSettings) => TextStyle(
-        fontSize: fontSettings.fontSize + 5,
-        fontWeight: fontSettings.fontWeight,
-      );
+    fontSize: fontSettings.fontSize + 5,
+    fontWeight: fontSettings.fontWeight,
+  );
 
   final Map<String, String> ratingImageMap = {
     "CLASSIC": "assets/images/ratings/CLASSIC.png",
@@ -205,8 +205,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
           .read(birthdayGiftProvider.notifier)
           .fetchGiftData(_memberIdController.text);
       final giftState = ref.read(birthdayGiftProvider);
-      if (giftState.giftData != null &&
-          giftState.giftData!.mobile.isNotEmpty) {
+      if (giftState.giftData != null && giftState.giftData!.mobile.isNotEmpty) {
         setState(() {
           _whatsappNumberController.text = giftState.giftData!.mobile;
         });
@@ -220,17 +219,21 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
     if (_memberIdController.text.isEmpty) return;
     try {
       setState(() => _isLoading = true);
-      GuestRepository guestRepository =
-          GuestRepository(ApiService(const FlutterSecureStorage()));
-      List<GuestSearchResponse> guests =
-          await guestRepository.searchGuest(9021, _memberIdController.text);
+      GuestRepository guestRepository = GuestRepository(
+        ApiService(const FlutterSecureStorage()),
+      );
+      List<GuestSearchResponse> guests = await guestRepository.searchGuest(
+        9021,
+        _memberIdController.text,
+      );
       if (guests.isNotEmpty) {
         final guestResponse = guests.first;
-        ref.read(selectedGuestProvider.notifier).setSelectedGuest(
+        ref
+            .read(selectedGuestProvider.notifier)
+            .setSelectedGuest(
               Guest(
                 mid: guestResponse.mid ?? _memberIdController.text,
-                memberName:
-                    guestResponse.mName ?? _memberNameController.text,
+                memberName: guestResponse.mName ?? _memberNameController.text,
                 country: "",
                 lastVisitDate: guestResponse.lvd?.toString() ?? "",
                 age: 0,
@@ -250,56 +253,22 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
 
   // ── Access Control ──────────────────────────────────────────────────────────
 
-  /// Pending tab: CHECK BY / REJECT buttons
-  /// AD001 → always allowed | others → otgiChk == true
   Future<bool> _canActOnPending() async {
-    final salesCode = await StorageUtil.getSalesCode();
-    // if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
-    //   return true;
-    // }
     final otgiChk = await StorageUtil.getOtgiChk();
     return otgiChk == true;
   }
 
-  /// Checked tab: APPROVE / REJECT buttons
-  /// AD001 → always allowed | others → otgiApp == true
   Future<bool> _canActOnChecked() async {
-    final salesCode = await StorageUtil.getSalesCode();
-    // if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
-    //   return true;
-    // }
     final otgiApp = await StorageUtil.getOtgiApp();
     return otgiApp == true;
   }
 
-  /// Approved / Rejected tabs: Reverse button
-  /// AD002 → always allowed
-  /// Approved tab: loginUser == firstAppBy
-  /// Rejected tab: loginUser == deleteUser
-  // Future<bool> _canReverseGift({required bool isRejected}) async {
-  //   final salesCode = await StorageUtil.getSalesCode();
-  //   // if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
-  //   //   return true;
-  //   // }
+  Future<bool> _canReverseGift({required bool isRejected}) async {
+    final otgiChk = await StorageUtil.getOtgiChk();
+    final otgiApp = await StorageUtil.getOtgiApp();
+    return otgiApp == true || otgiChk == true;
+  }
 
-  //   final currentUser =
-  //       (await StorageUtil.getUserName())?.trim().toLowerCase() ?? '';
-
-  //   if (!isRejected) {
-  //     final approvedBy =
-  //         (widget.gift?.firstAppBy ?? '').trim().toLowerCase();
-  //     return currentUser == approvedBy;
-  //   } else {
-  //     final rejectedBy =
-  //         (widget.gift?.deleteUser ?? '').trim().toLowerCase();
-  //     return currentUser == rejectedBy;
-  //   }
-  // }
-Future<bool> _canReverseGift({required bool isRejected}) async {
-  final otgiChk = await StorageUtil.getOtgiChk();
-  final otgiApp = await StorageUtil.getOtgiApp();
-  return otgiApp == true || otgiChk == true;
-}
   // ── Dialogs ─────────────────────────────────────────────────────────────────
 
   void _showAccessDeniedDialog() {
@@ -309,7 +278,8 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
       builder: (BuildContext context) {
         return Dialog(
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20)),
+            borderRadius: BorderRadius.circular(20),
+          ),
           elevation: 0,
           backgroundColor: Colors.transparent,
           child: Container(
@@ -361,13 +331,16 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       elevation: 0,
                     ),
                     child: const Text(
                       "Got It",
                       style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -393,30 +366,31 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
       decoration: InputDecoration(
         labelText: "Valid Days",
         labelStyle: TextStyle(
-            fontSize: fontSettings.fontSize,
-            fontWeight: fontSettings.fontWeight),
-        border:
-            OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          fontSize: fontSettings.fontSize,
+          fontWeight: fontSettings.fontWeight,
+        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 12,
+        ),
       ),
       items: const [
         DropdownMenuItem(
-            value: 30,
-            child: Text("30 Days",
-                style: TextStyle(fontWeight: FontWeight.bold))),
+          value: 30,
+          child: Text("30 Days", style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
         DropdownMenuItem(
-            value: 60,
-            child: Text("60 Days",
-                style: TextStyle(fontWeight: FontWeight.bold))),
+          value: 60,
+          child: Text("60 Days", style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
         DropdownMenuItem(
-            value: 90,
-            child: Text("90 Days",
-                style: TextStyle(fontWeight: FontWeight.bold))),
+          value: 90,
+          child: Text("90 Days", style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
       ],
       onChanged: (value) => setState(() => _selectedValidDays = value),
-      validator: (value) =>
-          value == null ? "Please select valid days" : null,
+      validator: (value) => value == null ? "Please select valid days" : null,
     );
   }
 
@@ -432,14 +406,15 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
       decoration: InputDecoration(
         labelText: "Valid Days",
         labelStyle: TextStyle(
-            fontSize: fontSettings.fontSize,
-            fontWeight: fontSettings.fontWeight),
-        border:
-            OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        prefixIcon:
-            const Icon(Icons.calendar_today, color: Colors.deepPurple),
+          fontSize: fontSettings.fontSize,
+          fontWeight: fontSettings.fontWeight,
+        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 12,
+        ),
+        prefixIcon: const Icon(Icons.calendar_today, color: Colors.deepPurple),
       ),
       style: TextStyle(
         fontSize: fontSettings.fontSize + 2,
@@ -475,16 +450,15 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
             builder: (dialogContext) => AlertDialog(
               title: const Text('Reverse Gift'),
               content: const Text(
-                  'Are you sure you want to reverse this gift?'),
+                'Are you sure you want to reverse this gift?',
+              ),
               actions: [
                 TextButton(
-                  onPressed: () =>
-                      Navigator.of(dialogContext).pop(false),
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
-                  onPressed: () =>
-                      Navigator.of(dialogContext).pop(true),
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     foregroundColor: Colors.white,
@@ -500,24 +474,26 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
           try {
             final success = isRejected
                 ? await ref
-                    .read(giftProvider.notifier)
-                    .reverseSpecialGiftFromUIrejcted(
-                      reqid: widget.gift!.idNo,
-                      userName: userName ?? "",
-                    )
+                      .read(giftProvider.notifier)
+                      .reverseSpecialGiftFromUIrejcted(
+                        reqid: widget.gift!.idNo,
+                        userName: userName ?? "",
+                      )
                 : await ref
-                    .read(giftProvider.notifier)
-                    .reverseSpecialGiftFromUI(
-                      reqid: widget.gift!.idNo,
-                      userName: userName ?? "",
-                    );
+                      .read(giftProvider.notifier)
+                      .reverseSpecialGiftFromUI(
+                        reqid: widget.gift!.idNo,
+                        userName: userName ?? "",
+                      );
             setState(() => _isLoading = false);
             if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(success
-                    ? 'Gift reversed successfully'
-                    : 'Failed to reverse gift'),
+                content: Text(
+                  success
+                      ? 'Gift reversed successfully'
+                      : 'Failed to reverse gift',
+                ),
                 backgroundColor: success ? Colors.green : Colors.red,
               ),
             );
@@ -526,9 +502,7 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
             setState(() => _isLoading = false);
             if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                  content: Text('Error: $e'),
-                  backgroundColor: Colors.red),
+              SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
             );
           }
         },
@@ -536,17 +510,102 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
         label: Text(
           'Reverse Gift',
           style: TextStyle(
-              fontSize: fontSettings.fontSize,
-              fontWeight: FontWeight.w600),
+            fontSize: fontSettings.fontSize,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.orange,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12)),
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
+    );
+  }
+
+  // ── Pending Gift & Issued Gift buttons (reusable) ────────────────────────
+
+  /// Shared Pending Gift + Issued Gift button row used at multiple places.
+  Widget _buildPendingIssuedButtons(FontSettings fontSettings) {
+    return Row(
+      children: [
+        // Pending Gift button
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: () {
+              final memberId = _memberIdController.text.trim();
+              if (memberId.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Please enter a Member ID"),
+                  ),
+                );
+                return;
+              }
+              context.push(
+                '/gifts/special-gift-requests/prv-gifts/$memberId',
+                extra: {'iid': 88940},
+              );
+            },
+            icon: const Icon(Icons.pending_actions),
+            label: Text(
+              "Pending Gift",
+              style: TextStyle(
+                fontSize: fontSettings.fontSize,
+                fontWeight: fontSettings.fontWeight,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        // Issued Gift button
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: () {
+              final memberId = _memberIdController.text.trim();
+              if (memberId.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Please enter a Member ID"),
+                  ),
+                );
+                return;
+              }
+              context.push(
+                '/gifts/special-gift-requests/prv-gifts/$memberId',
+                extra: {'iid': 8888},
+              );
+            },
+            icon: const Icon(Icons.card_giftcard),
+            label: Text(
+              "Issued Gift",
+              style: TextStyle(
+                fontSize: fontSettings.fontSize,
+                fontWeight: fontSettings.fontWeight,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -584,11 +643,61 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
             }
           },
         ),
-        title: Text(
-          'Special Gift Request',
-          style: TextStyle(
-              fontSize: fontSettings.fontSize,
-              fontWeight: fontSettings.fontWeight),
+        title: Row(
+          children: [
+            Text(
+              'Special Gift Request',
+              style: TextStyle(
+                fontSize: fontSettings.fontSize,
+                fontWeight: fontSettings.fontWeight,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: widget.isApproved
+                    ? Colors.green
+                    : widget.isChecked
+                    ? const Color.fromARGB(255, 92, 17, 255)
+                    : widget.isPending
+                    ? Colors.orange
+                    : Colors.red,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    widget.isApproved
+                        ? Icons.check_circle
+                        : widget.isChecked
+                        ? Icons.rule_rounded
+                        : widget.isPending
+                        ? Icons.hourglass_bottom
+                        : Icons.cancel,
+                    size: 12,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    widget.isApproved
+                        ? 'Approved'
+                        : widget.isChecked
+                        ? 'Checked'
+                        : widget.isPending
+                        ? 'Pending'
+                        : 'Rejected',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
       body: PopScope(
@@ -605,11 +714,15 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                   key: _formKey,
                   child: Column(
                     children: [
-                      // ── Reverse button: Approved tab ──────────────────
+                      // ══════════════════════════════════════════════════════
+                      // TOP: Reverse button (Approved tab)
+                      // ══════════════════════════════════════════════════════
                       if (showApprovedSection)
                         _buildReverseButton(fontSettings, false),
 
-                      // ── Reverse button: Rejected tab ──────────────────
+                      // ══════════════════════════════════════════════════════
+                      // TOP: Reverse button (Rejected tab)
+                      // ══════════════════════════════════════════════════════
                       if (showRejectedReverse)
                         _buildReverseButton(fontSettings, true),
 
@@ -623,11 +736,14 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                         decoration: InputDecoration(
                           labelText: "From Date & Time",
                           labelStyle: TextStyle(
-                              fontSize: fontSettings.fontSize,
-                              fontWeight: fontSettings.fontWeight),
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: fontSettings.fontWeight,
+                          ),
                           border: const OutlineInputBorder(),
                           contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12.0, vertical: -5.0),
+                            horizontal: 12.0,
+                            vertical: -5.0,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 16.0),
@@ -640,11 +756,14 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                         decoration: InputDecoration(
                           labelText: "To Date & Time",
                           labelStyle: TextStyle(
-                              fontSize: fontSettings.fontSize,
-                              fontWeight: fontSettings.fontWeight),
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: fontSettings.fontWeight,
+                          ),
                           border: const OutlineInputBorder(),
                           contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12.0, vertical: -5.0),
+                            horizontal: 12.0,
+                            vertical: -5.0,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 5.0),
@@ -653,7 +772,8 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                       GuestDisplayCardSpecialGiftview(
                         memberIdText: _memberIdController.text,
                         memberNameText: _memberNameController.text,
-                        showCard: _memberIdController.text.isNotEmpty &&
+                        showCard:
+                            _memberIdController.text.isNotEmpty &&
                             _memberNameController.text.isNotEmpty,
                         isLoading: _isLoading,
                         showLastVisitDate: true,
@@ -669,13 +789,16 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                               backgroundColor: Colors.black,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 14),
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
                             ),
                             onPressed: _isLoading
                                 ? null
                                 : () async {
-                                    final selectedGuest =
-                                        ref.read(selectedGuestProvider);
+                                    final selectedGuest = ref.read(
+                                      selectedGuestProvider,
+                                    );
                                     if (selectedGuest != null &&
                                         selectedGuest.mid ==
                                             _memberIdController.text) {
@@ -685,50 +808,65 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                                     try {
                                       setState(() => _isLoading = true);
                                       GuestRepository guestRepository =
-                                          GuestRepository(ApiService(
-                                              const FlutterSecureStorage()));
+                                          GuestRepository(
+                                            ApiService(
+                                              const FlutterSecureStorage(),
+                                            ),
+                                          );
                                       List<GuestSearchResponse> guests =
                                           await guestRepository.searchGuest(
-                                              9021,
-                                              _memberIdController.text);
+                                            9021,
+                                            _memberIdController.text,
+                                          );
                                       setState(() => _isLoading = false);
                                       if (guests.isNotEmpty) {
                                         final guestResponse = guests.first;
                                         ref
-                                            .read(selectedGuestProvider
-                                                .notifier)
-                                            .setSelectedGuest(Guest(
-                                          mid: guestResponse.mid ??
-                                              _memberIdController.text,
-                                          memberName: guestResponse.mName ??
-                                              _memberNameController.text,
-                                          country: "",
-                                          lastVisitDate:
-                                              guestResponse.lvd?.toString() ??
-                                                  "",
-                                          age: 0,
-                                          gRating:
-                                              guestResponse.gRating ?? "",
-                                          mGroup: guestResponse.mGroup,
-                                          gName: guestResponse.gName ?? "",
-                                          memImage2: guestResponse.memImage2,
-                                        ));
+                                            .read(
+                                              selectedGuestProvider.notifier,
+                                            )
+                                            .setSelectedGuest(
+                                              Guest(
+                                                mid:
+                                                    guestResponse.mid ??
+                                                    _memberIdController.text,
+                                                memberName:
+                                                    guestResponse.mName ??
+                                                    _memberNameController.text,
+                                                country: "",
+                                                lastVisitDate:
+                                                    guestResponse.lvd
+                                                        ?.toString() ??
+                                                    "",
+                                                age: 0,
+                                                gRating:
+                                                    guestResponse.gRating ?? "",
+                                                mGroup: guestResponse.mGroup,
+                                                gName:
+                                                    guestResponse.gName ?? "",
+                                                memImage2:
+                                                    guestResponse.memImage2,
+                                              ),
+                                            );
                                         context.push('/home/profile');
                                       } else {
                                         ref
-                                            .read(selectedGuestProvider
-                                                .notifier)
-                                            .setSelectedGuest(Guest(
-                                          mid: _memberIdController.text,
-                                          memberName:
-                                              _memberNameController.text,
-                                          country: "",
-                                          lastVisitDate: "1990-01-01",
-                                          age: 0,
-                                          gRating: "",
-                                          mGroup: "",
-                                          gName: "",
-                                        ));
+                                            .read(
+                                              selectedGuestProvider.notifier,
+                                            )
+                                            .setSelectedGuest(
+                                              Guest(
+                                                mid: _memberIdController.text,
+                                                memberName:
+                                                    _memberNameController.text,
+                                                country: "",
+                                                lastVisitDate: "1990-01-01",
+                                                age: 0,
+                                                gRating: "",
+                                                mGroup: "",
+                                                gName: "",
+                                              ),
+                                            );
                                         context.push('/home/profile');
                                       }
                                     } catch (e) {
@@ -740,24 +878,25 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                                     width: 20,
                                     height: 20,
                                     child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white),
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
                                   )
                                 : const Icon(Icons.person_search, size: 25),
                           ),
                           const SizedBox(width: 5),
 
-                          // Pending Gift button
+                          // Pending Gift button (middle action row)
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () {
-                                final memberId =
-                                    _memberIdController.text.trim();
+                                final memberId = _memberIdController.text
+                                    .trim();
                                 if (memberId.isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                        content:
-                                            Text("Please enter a Member ID")),
+                                      content: Text("Please enter a Member ID"),
+                                    ),
                                   );
                                   return;
                                 }
@@ -766,34 +905,38 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                                   extra: {'iid': 88940},
                                 );
                               },
-                             // icon: const Icon(Icons.card_giftcard),
-                              label: Text("Pending Gift",
-                                  style: TextStyle(
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight)),
+                              label: Text(
+                                "Pending Gift",
+                                style: TextStyle(
+                                  fontSize: fontSettings.fontSize,
+                                  fontWeight: fontSettings.fontWeight,
+                                ),
+                              ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.red,
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 12),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
                               ),
                             ),
                           ),
                           const SizedBox(width: 5),
 
-                          // Issued Gift button
+                          // Issued Gift button (middle action row)
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () {
-                                final memberId =
-                                    _memberIdController.text.trim();
+                                final memberId = _memberIdController.text
+                                    .trim();
                                 if (memberId.isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                        content:
-                                            Text("Please enter a Member ID")),
+                                      content: Text("Please enter a Member ID"),
+                                    ),
                                   );
                                   return;
                                 }
@@ -802,18 +945,22 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                                   extra: {'iid': 8888},
                                 );
                               },
-                             // icon: const Icon(Icons.card_giftcard),
-                              label: Text("Issued Gift",
-                                  style: TextStyle(
-                                      fontSize: fontSettings.fontSize,
-                                      fontWeight: fontSettings.fontWeight)),
+                              label: Text(
+                                "Issued Gift",
+                                style: TextStyle(
+                                  fontSize: fontSettings.fontSize,
+                                  fontWeight: fontSettings.fontWeight,
+                                ),
+                              ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.green,
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 12),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
                               ),
                             ),
                           ),
@@ -826,112 +973,127 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                         child: Text(
                           "Guest Gift Data",
                           style: TextStyle(
-                              fontSize: fontSettings.fontSize,
-                              fontWeight: fontSettings.fontWeight),
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: fontSettings.fontWeight,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 10),
 
                       // ── Guest Data Table ──────────────────────────────
-                      Builder(builder: (context) {
-                        final rows = [
-                          {"Field": "Drop (Est)", "Value": drop},
-                          {"Field": "Cash Out (Est)", "Value": cashout},
-                          {"Field": "Result (Est)", "Value": res},
-                          {"Field": "Actual Drop (Est)", "Value": actdrop},
-                          {"Field": "Coupons (Est)", "Value": mcoupen},
-                          {
-                            "Field": "Commission Paid (Est)",
-                            "Value": paidcom
-                          },
-                          {"Field": "Points (Est)", "Value": gpoints},
-                          {
-                            "Field": "Flush Coupon (Est)",
-                            "Value": gflushcoupen
-                          },
-                          {"Field": "Total Coupon (Est)", "Value": tcoupon},
-                          {
-                            "Field": "Flush Actual Drop (Est)",
-                            "Value": flushactdrop
-                          },
-                          {"Field": "Avg Bet (Est)", "Value": avgbet},
-                        ];
-                        const highlightedFields = [
-                          "Actual Drop (Est)",
-                          "Result (Est)",
-                          "Coupons (Est)",
-                          "Points (Est)",
-                          "Avg Bet (Est)",
-                        ];
-                        return Container(
-                          margin: const EdgeInsets.only(top: 5),
-                          decoration: BoxDecoration(
-                            border:
-                                Border.all(color: Colors.grey.shade400),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: DataTable(
-                            dataRowMinHeight: 48,
-                            dataRowMaxHeight: 56,
-                            headingRowColor: WidgetStateProperty.all(
-                                Colors.amber.shade100),
-                            border:
-                                TableBorder.all(color: Colors.grey.shade300),
-                            columns: [
-                              DataColumn(
-                                  label: Text("Field",
-                                      style: TextStyle(
-                                          fontSize: fontSettings.fontSize,
-                                          fontWeight:
-                                              fontSettings.fontWeight))),
-                              DataColumn(
-                                  label: Text("Value",
-                                      style: TextStyle(
-                                          fontSize: fontSettings.fontSize,
-                                          fontWeight:
-                                              fontSettings.fontWeight))),
-                            ],
-                            rows: rows.map((row) {
-                              final shouldHighlight = highlightedFields
-                                  .contains(row["Field"]);
-                              return DataRow(
-                                color: shouldHighlight
-                                    ? WidgetStateProperty.all(
-                                        const Color(0xFFCCFFCC))
-                                    : null,
-                                cells: [
-                                  DataCell(Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      row["Field"].toString(),
-                                      style: TextStyle(
-                                        fontSize: fontSettings.fontSize + 2,
-                                        fontWeight: shouldHighlight
-                                            ? FontWeight.bold
-                                            : fontSettings.fontWeight,
+                      Builder(
+                        builder: (context) {
+                          final rows = [
+                            {"Field": "Drop (Est)", "Value": drop},
+                            {"Field": "Cash Out (Est)", "Value": cashout},
+                            {"Field": "Result (Est)", "Value": res},
+                            {"Field": "Actual Drop (Est)", "Value": actdrop},
+                            {"Field": "Coupons (Est)", "Value": mcoupen},
+                            {
+                              "Field": "Commission Paid (Est)",
+                              "Value": paidcom,
+                            },
+                            {"Field": "Points (Est)", "Value": gpoints},
+                            {
+                              "Field": "Flush Coupon (Est)",
+                              "Value": gflushcoupen,
+                            },
+                            {"Field": "Total Coupon (Est)", "Value": tcoupon},
+                            {
+                              "Field": "Flush Actual Drop (Est)",
+                              "Value": flushactdrop,
+                            },
+                            {"Field": "Avg Bet (Est)", "Value": avgbet},
+                          ];
+                          const highlightedFields = [
+                            "Actual Drop (Est)",
+                            "Result (Est)",
+                            "Coupons (Est)",
+                            "Points (Est)",
+                            "Avg Bet (Est)",
+                          ];
+                          return Container(
+                            margin: const EdgeInsets.only(top: 5),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.shade400),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: DataTable(
+                              dataRowMinHeight: 48,
+                              dataRowMaxHeight: 56,
+                              headingRowColor: WidgetStateProperty.all(
+                                Colors.amber.shade100,
+                              ),
+                              border: TableBorder.all(
+                                color: Colors.grey.shade300,
+                              ),
+                              columns: [
+                                DataColumn(
+                                  label: Text(
+                                    "Field",
+                                    style: TextStyle(
+                                      fontSize: fontSettings.fontSize,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    "Value",
+                                    style: TextStyle(
+                                      fontSize: fontSettings.fontSize,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              rows: rows.map((row) {
+                                final shouldHighlight = highlightedFields
+                                    .contains(row["Field"]);
+                                return DataRow(
+                                  color: shouldHighlight
+                                      ? WidgetStateProperty.all(
+                                          const Color(0xFFCCFFCC),
+                                        )
+                                      : null,
+                                  cells: [
+                                    DataCell(
+                                      Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: Text(
+                                          row["Field"].toString(),
+                                          style: TextStyle(
+                                            fontSize: fontSettings.fontSize + 2,
+                                            fontWeight: shouldHighlight
+                                                ? FontWeight.bold
+                                                : fontSettings.fontWeight,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  )),
-                                  DataCell(Align(
-                                    alignment: Alignment.centerRight,
-                                    child: Text(
-                                      formatNumber(row["Value"]),
-                                      style: TextStyle(
-                                        fontSize: fontSettings.fontSize + 2,
-                                        fontWeight: fontSettings.fontWeight,
-                                        fontFamily: 'monospace',
-                                        fontFeatures: const [
-                                          FontFeature.tabularFigures()
-                                        ],
+                                    DataCell(
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: Text(
+                                          formatNumber(row["Value"]),
+                                          style: TextStyle(
+                                            fontSize: fontSettings.fontSize + 2,
+                                            fontWeight: fontSettings.fontWeight,
+                                            fontFamily: 'monospace',
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  )),
-                                ],
-                              );
-                            }).toList(),
-                          ),
-                        );
-                      }),
+                                  ],
+                                );
+                              }).toList(),
+                            ),
+                          );
+                        },
+                      ),
 
                       const SizedBox(height: 16.0),
 
@@ -946,11 +1108,14 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                               decoration: InputDecoration(
                                 labelText: "Arrival Date",
                                 labelStyle: TextStyle(
-                                    fontSize: fontSettings.fontSize + 1,
-                                    fontWeight: fontSettings.fontWeight),
+                                  fontSize: fontSettings.fontSize + 1,
+                                  fontWeight: fontSettings.fontWeight,
+                                ),
                                 border: const OutlineInputBorder(),
                                 contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 12.0, vertical: -5.0),
+                                  horizontal: 12.0,
+                                  vertical: -5.0,
+                                ),
                               ),
                             ),
                           ),
@@ -963,11 +1128,14 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                               decoration: InputDecoration(
                                 labelText: "Departure Date",
                                 labelStyle: TextStyle(
-                                    fontSize: fontSettings.fontSize,
-                                    fontWeight: fontSettings.fontWeight),
+                                  fontSize: fontSettings.fontSize,
+                                  fontWeight: fontSettings.fontWeight,
+                                ),
                                 border: const OutlineInputBorder(),
                                 contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 12.0, vertical: -5.0),
+                                  horizontal: 12.0,
+                                  vertical: -5.0,
+                                ),
                               ),
                             ),
                           ),
@@ -982,16 +1150,21 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                           TextFormField(
                             readOnly: true,
                             controller: TextEditingController(
-                                text: _selectedGift?.replaceAll("_", "")),
+                              text: _selectedGift?.replaceAll("_", ""),
+                            ),
                             decoration: InputDecoration(
                               labelText: "Gift For",
                               labelStyle: TextStyle(
-                                  fontSize: fontSettings.fontSize,
-                                  fontWeight: fontSettings.fontWeight),
+                                fontSize: fontSettings.fontSize,
+                                fontWeight: fontSettings.fontWeight,
+                              ),
                               border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8.0)),
+                                borderRadius: BorderRadius.circular(8.0),
+                              ),
                               contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12.0, vertical: -5.0),
+                                horizontal: 12.0,
+                                vertical: -5.0,
+                              ),
                             ),
                             style: _inputTextStyle(fontSettings),
                           ),
@@ -1002,11 +1175,14 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                             decoration: InputDecoration(
                               labelText: "Chip Type",
                               labelStyle: TextStyle(
-                                  fontSize: fontSettings.fontSize,
-                                  fontWeight: fontSettings.fontWeight),
+                                fontSize: fontSettings.fontSize,
+                                fontWeight: fontSettings.fontWeight,
+                              ),
                               border: const OutlineInputBorder(),
                               contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12.0, vertical: -5.0),
+                                horizontal: 12.0,
+                                vertical: -5.0,
+                              ),
                             ),
                             style: _inputTextStyle(fontSettings),
                           ),
@@ -1021,25 +1197,40 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [
-                                    const Color.fromARGB(255, 92, 17, 255)
-                                        .withOpacity(0.08),
-                                    const Color.fromARGB(255, 92, 17, 255)
-                                        .withOpacity(0.03),
+                                    const Color.fromARGB(
+                                      255,
+                                      92,
+                                      17,
+                                      255,
+                                    ).withOpacity(0.08),
+                                    const Color.fromARGB(
+                                      255,
+                                      92,
+                                      17,
+                                      255,
+                                    ).withOpacity(0.03),
                                   ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: const Color.fromARGB(255, 92, 17, 255)
-                                      .withOpacity(0.4),
+                                  color: const Color.fromARGB(
+                                    255,
+                                    92,
+                                    17,
+                                    255,
+                                  ).withOpacity(0.4),
                                   width: 1.5,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color:
-                                        const Color.fromARGB(255, 92, 17, 255)
-                                            .withOpacity(0.08),
+                                    color: const Color.fromARGB(
+                                      255,
+                                      92,
+                                      17,
+                                      255,
+                                    ).withOpacity(0.08),
                                     blurRadius: 8,
                                     offset: const Offset(0, 3),
                                   ),
@@ -1048,8 +1239,7 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                               child: Padding(
                                 padding: const EdgeInsets.all(14.0),
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(
                                       children: [
@@ -1057,48 +1247,64 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                                           padding: const EdgeInsets.all(6),
                                           decoration: BoxDecoration(
                                             color: const Color.fromARGB(
-                                                255, 92, 17, 255),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
+                                              255,
+                                              92,
+                                              17,
+                                              255,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
                                           ),
                                           child: const Icon(
-                                              Icons.rule_rounded,
-                                              color: Colors.white,
-                                              size: 18),
+                                            Icons.rule_rounded,
+                                            color: Colors.white,
+                                            size: 18,
+                                          ),
                                         ),
                                         const SizedBox(width: 10),
                                         Text(
                                           "Checked Information",
                                           style: TextStyle(
-                                            fontSize:
-                                                fontSettings.fontSize + 2,
+                                            fontSize: fontSettings.fontSize + 2,
                                             fontWeight: FontWeight.bold,
                                             color: const Color.fromARGB(
-                                                255, 92, 17, 255),
+                                              255,
+                                              92,
+                                              17,
+                                              255,
+                                            ),
                                           ),
                                         ),
                                       ],
                                     ),
                                     const SizedBox(height: 12),
                                     const Divider(
-                                        color:
-                                            Color.fromARGB(80, 92, 17, 255),
-                                        height: 1),
+                                      color: Color.fromARGB(80, 92, 17, 255),
+                                      height: 1,
+                                    ),
                                     const SizedBox(height: 12),
-                                    // Checked By
                                     Row(
                                       children: [
-                                        const Icon(Icons.person_outline,
-                                            color: Color.fromARGB(
-                                                255, 92, 17, 255),
-                                            size: 18),
+                                        const Icon(
+                                          Icons.person_outline,
+                                          color: Color.fromARGB(
+                                            255,
+                                            92,
+                                            17,
+                                            255,
+                                          ),
+                                          size: 18,
+                                        ),
                                         const SizedBox(width: 8),
-                                        Text("Checked By:",
-                                            style: TextStyle(
-                                                fontSize: fontSettings.fontSize,
-                                                fontWeight:
-                                                    fontSettings.fontWeight,
-                                                color: Colors.black)),
+                                        Text(
+                                          "Checked By:",
+                                          style: TextStyle(
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                            color: Colors.black,
+                                          ),
+                                        ),
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
@@ -1108,7 +1314,11 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                                                   fontSettings.fontSize + 1,
                                               fontWeight: FontWeight.bold,
                                               color: const Color.fromARGB(
-                                                  255, 92, 17, 255),
+                                                255,
+                                                92,
+                                                17,
+                                                255,
+                                              ),
                                             ),
                                             overflow: TextOverflow.ellipsis,
                                           ),
@@ -1116,35 +1326,49 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                                       ],
                                     ),
                                     const SizedBox(height: 10),
-                                    // Check Date
                                     Row(
                                       children: [
-                                        const Icon(Icons.schedule,
-                                            color: Color.fromARGB(
-                                                255, 92, 17, 255),
-                                            size: 18),
+                                        const Icon(
+                                          Icons.schedule,
+                                          color: Color.fromARGB(
+                                            255,
+                                            92,
+                                            17,
+                                            255,
+                                          ),
+                                          size: 18,
+                                        ),
                                         const SizedBox(width: 8),
-                                        Text("Check Date:",
-                                            style: TextStyle(
-                                                fontSize: fontSettings.fontSize,
-                                                fontWeight:
-                                                    fontSettings.fontWeight,
-                                                color: Colors.black)),
+                                        Text(
+                                          "Check Date:",
+                                          style: TextStyle(
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                            color: Colors.black,
+                                          ),
+                                        ),
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
                                             widget.gift!.checkAppByTime !=
                                                         null &&
-                                                    widget.gift!.checkAppByTime!
+                                                    widget
+                                                        .gift!
+                                                        .checkAppByTime!
                                                         .isNotEmpty
-                                                ? _formatDateandTime(widget
-                                                    .gift!.checkAppByTime)
+                                                ? _formatDateandTime(
+                                                    widget.gift!.checkAppByTime,
+                                                  )
                                                 : 'N/A',
                                             style: TextStyle(
                                               fontSize: fontSettings.fontSize,
                                               fontWeight: FontWeight.bold,
                                               color: const Color.fromARGB(
-                                                  255, 92, 17, 255),
+                                                255,
+                                                92,
+                                                17,
+                                                255,
+                                              ),
                                             ),
                                             overflow: TextOverflow.ellipsis,
                                           ),
@@ -1156,22 +1380,156 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                               ),
                             ),
                           ],
+// ── Approved Information Card ───────────────────────────────────────────
+if (widget.isApproved &&
+    widget.gift != null &&
+    widget.gift!.firstAppBy != null &&
+    widget.gift!.firstAppBy!.isNotEmpty) ...[
+  const SizedBox(height: 16),
+  Container(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        colors: [
+          Colors.green.withOpacity(0.10),
+          Colors.green.withOpacity(0.03),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(
+        color: Colors.green.withOpacity(0.5),
+        width: 1.5,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.green.withOpacity(0.08),
+          blurRadius: 8,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(14.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header ────────────────────────────────────────────────
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.check_circle_outline,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                "Approved Information",
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize + 2,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green.shade700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Divider(color: Colors.green.withOpacity(0.35), height: 1),
+          const SizedBox(height: 12),
 
+          // ── Approved By ───────────────────────────────────────────
+          Row(
+            children: [
+              Icon(Icons.person_outline,
+                  color: Colors.green.shade700, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                "Approved By:",
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize,
+                  fontWeight: fontSettings.fontWeight,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  widget.gift!.firstAppBy!,
+                  style: TextStyle(
+                    fontSize: fontSettings.fontSize + 1,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade700,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+
+          // ── Approved At ───────────────────────────────────────────
+          if (widget.gift!.firstAppTime != null &&
+              widget.gift!.firstAppTime!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(Icons.schedule,
+                    color: Colors.green.shade700, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  "Approved At:",
+                  style: TextStyle(
+                    fontSize: fontSettings.fontSize,
+                    fontWeight: fontSettings.fontWeight,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _formatDateandTime(widget.gift!.firstAppTime),
+                    style: TextStyle(
+                      fontSize: fontSettings.fontSize,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green.shade700,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    ),
+  ),
+],
                           // ── Edit Toggle (Pending tab) ─────────────────
                           if (widget.isPending)
                             Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text("Amount & Remarks",
-                                    style: TextStyle(
-                                        fontSize: fontSettings.fontSize + 2,
-                                        fontWeight: FontWeight.bold)),
+                                Text(
+                                  "Amount & Remarks",
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize + 2,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                                 IconButton(
-                                  icon: const Icon(Icons.edit,
-                                      color: Colors.blue),
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: Colors.blue,
+                                  ),
                                   onPressed: () => setState(
-                                      () => _isEditable = !_isEditable),
+                                    () => _isEditable = !_isEditable,
+                                  ),
                                 ),
                               ],
                             ),
@@ -1179,18 +1537,23 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                           // ── Edit Toggle (Checked tab) ─────────────────
                           if (widget.isChecked)
                             Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text("Amount & Remarks",
-                                    style: TextStyle(
-                                        fontSize: fontSettings.fontSize + 2,
-                                        fontWeight: FontWeight.bold)),
+                                Text(
+                                  "Amount & Remarks",
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize + 2,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                                 IconButton(
-                                  icon: const Icon(Icons.edit,
-                                      color: Colors.blue),
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: Colors.blue,
+                                  ),
                                   onPressed: () => setState(
-                                      () => _isEditable = !_isEditable),
+                                    () => _isEditable = !_isEditable,
+                                  ),
                                 ),
                               ],
                             ),
@@ -1205,20 +1568,23 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                             decoration: InputDecoration(
                               labelText: "Amount",
                               labelStyle: TextStyle(
-                                  fontSize: fontSettings.fontSize + 2,
-                                  fontWeight: fontSettings.fontWeight),
+                                fontSize: fontSettings.fontSize + 2,
+                                fontWeight: fontSettings.fontWeight,
+                              ),
                               border: const OutlineInputBorder(),
                               contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12.0, vertical: -5.0),
+                                horizontal: 12.0,
+                                vertical: -5.0,
+                              ),
                             ),
                             keyboardType: TextInputType.number,
                             inputFormatters: [
-                              ThousandsSeparatorInputFormatter()
+                              ThousandsSeparatorInputFormatter(),
                             ],
                             validator: (value) =>
                                 (value == null || value.isEmpty)
-                                    ? "Please enter amount"
-                                    : null,
+                                ? "Please enter amount"
+                                : null,
                           ),
                         ],
                       ),
@@ -1244,14 +1610,17 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                           alignLabelWithHint: true,
                           labelText: "Remarks",
                           labelStyle: TextStyle(
-                              fontSize: fontSettings.fontSize,
-                              fontWeight: fontSettings.fontWeight),
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: fontSettings.fontWeight,
+                          ),
                           hintText: "Enter additional details...",
                           hintStyle: TextStyle(
-                              fontSize: fontSettings.fontSize,
-                              fontWeight: fontSettings.fontWeight),
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: fontSettings.fontWeight,
+                          ),
                           border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8.0)),
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
                         ),
                         maxLines: 5,
                         keyboardType: TextInputType.multiline,
@@ -1261,8 +1630,6 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
 
                       // ════════════════════════════════════════════════════
                       // PENDING TAB — CHECK BY + REJECT
-                      // Buttons are always visible; permission is checked
-                      // inside onPressed and shows Access Denied if blocked.
                       // ════════════════════════════════════════════════════
                       if (showPendingButtons)
                         Row(
@@ -1271,27 +1638,28 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () async {
-                                  // ── Permission guard ──────────────────
                                   final allowed = await _canActOnPending();
                                   if (!allowed) {
                                     if (mounted) _showAccessDeniedDialog();
                                     return;
                                   }
-                                  // ── Business logic ────────────────────
                                   if (widget.gift == null) {
-                                    ScaffoldMessenger.of(context)
-                                        .showSnackBar(const SnackBar(
-                                            content: Text(
-                                                "Gift request not found")));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text("Gift request not found"),
+                                      ),
+                                    );
                                     return;
                                   }
                                   if (_selectedValidDays == null) {
-                                    ScaffoldMessenger.of(context)
-                                        .showSnackBar(const SnackBar(
-                                      content:
-                                          Text("Please select valid days"),
-                                      backgroundColor: Colors.red,
-                                    ));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          "Please select valid days",
+                                        ),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
                                     return;
                                   }
                                   setState(() => _isLoading = true);
@@ -1303,28 +1671,35 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                                           remarks: _remarksController.text,
                                           amount: _amountController.text,
                                           userName: userName ?? "",
-                                          validDates:
-                                              _selectedValidDays.toString(),
+                                          validDates: _selectedValidDays
+                                              .toString(),
                                         );
                                     if (success) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(const SnackBar(
-                                        content: Text(
-                                            "Request Checked Successfully"),
-                                        backgroundColor: Colors.blue,
-                                      ));
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            "Request Checked Successfully",
+                                          ),
+                                          backgroundColor: Colors.blue,
+                                        ),
+                                      );
                                       Navigator.of(context).pop(true);
                                     } else {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(const SnackBar(
-                                        content: Text("Check By Failed"),
-                                        backgroundColor: Colors.red,
-                                      ));
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text("Check By Failed"),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
                                     }
                                   } catch (e) {
-                                    ScaffoldMessenger.of(context)
-                                        .showSnackBar(SnackBar(
-                                            content: Text("Error: $e")));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text("Error: $e")),
+                                    );
                                   } finally {
                                     setState(() => _isLoading = false);
                                   }
@@ -1335,10 +1710,11 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                                   backgroundColor: Colors.blue,
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(12)),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                   padding: const EdgeInsets.symmetric(
-                                      vertical: 16),
+                                    vertical: 16,
+                                  ),
                                 ),
                               ),
                             ),
@@ -1347,18 +1723,17 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () async {
-                                  // ── Permission guard ──────────────────
                                   final allowed = await _canActOnPending();
                                   if (!allowed) {
                                     if (mounted) _showAccessDeniedDialog();
                                     return;
                                   }
-                                  // ── Business logic ────────────────────
                                   if (widget.gift == null) {
-                                    ScaffoldMessenger.of(context)
-                                        .showSnackBar(const SnackBar(
-                                            content: Text(
-                                                "Gift request not found")));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text("Gift request not found"),
+                                      ),
+                                    );
                                     return;
                                   }
                                   setState(() => _isLoading = true);
@@ -1370,26 +1745,33 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                                           userName: userName ?? "",
                                         );
                                     if (success) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(const SnackBar(
-                                        content: Text(
-                                            "Request Rejected Successfully"),
-                                        backgroundColor: Colors.red,
-                                      ));
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            "Request Rejected Successfully",
+                                          ),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
                                       await ref
                                           .read(giftProvider.notifier)
                                           .getGiftForList();
                                       Navigator.of(context).pop(true);
                                     } else {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(const SnackBar(
-                                              content:
-                                                  Text("Reject Failed")));
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text("Reject Failed"),
+                                        ),
+                                      );
                                     }
                                   } catch (e) {
-                                    ScaffoldMessenger.of(context)
-                                        .showSnackBar(SnackBar(
-                                            content: Text("Error: $e")));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text("Error: $e")),
+                                    );
                                   } finally {
                                     setState(() => _isLoading = false);
                                   }
@@ -1400,10 +1782,11 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                                   backgroundColor: Colors.red,
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(12)),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                   padding: const EdgeInsets.symmetric(
-                                      vertical: 16),
+                                    vertical: 16,
+                                  ),
                                 ),
                               ),
                             ),
@@ -1412,8 +1795,6 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
 
                       // ════════════════════════════════════════════════════
                       // CHECKED TAB — APPROVE + REJECT
-                      // Buttons are always visible; permission is checked
-                      // inside onPressed and shows Access Denied if blocked.
                       // ════════════════════════════════════════════════════
                       if (showCheckedButtons)
                         Row(
@@ -1422,27 +1803,28 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () async {
-                                  // ── Permission guard ──────────────────
                                   final allowed = await _canActOnChecked();
                                   if (!allowed) {
                                     if (mounted) _showAccessDeniedDialog();
                                     return;
                                   }
-                                  // ── Business logic ────────────────────
                                   if (widget.gift == null) {
-                                    ScaffoldMessenger.of(context)
-                                        .showSnackBar(const SnackBar(
-                                            content: Text(
-                                                "Gift request not found")));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text("Gift request not found"),
+                                      ),
+                                    );
                                     return;
                                   }
                                   if (_selectedValidDays == null) {
-                                    ScaffoldMessenger.of(context)
-                                        .showSnackBar(const SnackBar(
-                                      content:
-                                          Text("Please select valid days"),
-                                      backgroundColor: Colors.red,
-                                    ));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          "Please select valid days",
+                                        ),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
                                     return;
                                   }
                                   setState(() => _isLoading = true);
@@ -1454,27 +1836,34 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                                           remarks: _remarksController.text,
                                           amount: _amountController.text,
                                           userName: userName ?? "",
-                                          validDates:
-                                              _selectedValidDays.toString(),
+                                          validDates: _selectedValidDays
+                                              .toString(),
                                         );
                                     if (success) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(const SnackBar(
-                                        content: Text(
-                                            "Request Approved Successfully"),
-                                        backgroundColor: Colors.green,
-                                      ));
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            "Request Approved Successfully",
+                                          ),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
                                       Navigator.of(context).pop(true);
                                     } else {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(const SnackBar(
-                                              content:
-                                                  Text("Approval Failed")));
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text("Approval Failed"),
+                                        ),
+                                      );
                                     }
                                   } catch (e) {
-                                    ScaffoldMessenger.of(context)
-                                        .showSnackBar(SnackBar(
-                                            content: Text("Error: $e")));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text("Error: $e")),
+                                    );
                                   } finally {
                                     setState(() => _isLoading = false);
                                   }
@@ -1485,10 +1874,11 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                                   backgroundColor: Colors.green,
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(12)),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                   padding: const EdgeInsets.symmetric(
-                                      vertical: 16),
+                                    vertical: 16,
+                                  ),
                                 ),
                               ),
                             ),
@@ -1497,18 +1887,17 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () async {
-                                  // ── Permission guard ──────────────────
                                   final allowed = await _canActOnChecked();
                                   if (!allowed) {
                                     if (mounted) _showAccessDeniedDialog();
                                     return;
                                   }
-                                  // ── Business logic ────────────────────
                                   if (widget.gift == null) {
-                                    ScaffoldMessenger.of(context)
-                                        .showSnackBar(const SnackBar(
-                                            content: Text(
-                                                "Gift request not found")));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text("Gift request not found"),
+                                      ),
+                                    );
                                     return;
                                   }
                                   setState(() => _isLoading = true);
@@ -1520,26 +1909,33 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                                           userName: userName ?? "",
                                         );
                                     if (success) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(const SnackBar(
-                                        content: Text(
-                                            "Request Rejected Successfully"),
-                                        backgroundColor: Colors.red,
-                                      ));
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            "Request Rejected Successfully",
+                                          ),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
                                       await ref
                                           .read(giftProvider.notifier)
                                           .getGiftForList();
                                       Navigator.of(context).pop(true);
                                     } else {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(const SnackBar(
-                                              content:
-                                                  Text("Reject Failed")));
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text("Reject Failed"),
+                                        ),
+                                      );
                                     }
                                   } catch (e) {
-                                    ScaffoldMessenger.of(context)
-                                        .showSnackBar(SnackBar(
-                                            content: Text("Error: $e")));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text("Error: $e")),
+                                    );
                                   } finally {
                                     setState(() => _isLoading = false);
                                   }
@@ -1550,10 +1946,11 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                                   backgroundColor: Colors.red,
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(12)),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                   padding: const EdgeInsets.symmetric(
-                                      vertical: 16),
+                                    vertical: 16,
+                                  ),
                                 ),
                               ),
                             ),
@@ -1569,7 +1966,8 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                           child: Card(
                             elevation: 5,
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             child: Container(
                               color: Colors.green[10],
                               padding: const EdgeInsets.all(16.0),
@@ -1583,20 +1981,27 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                                       const Text(
                                         "Send Gift Details via WhatsApp",
                                         style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold),
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                       IconButton(
-                                        icon: const Icon(Icons.refresh,
-                                            color: Colors.green),
+                                        icon: const Icon(
+                                          Icons.refresh,
+                                          color: Colors.green,
+                                        ),
                                         onPressed: () async {
                                           await _loadWhatsAppNumber();
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(const SnackBar(
-                                            content: Text(
-                                                'WhatsApp number refreshed'),
-                                            duration: Duration(seconds: 1),
-                                          ));
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'WhatsApp number refreshed',
+                                              ),
+                                              duration: Duration(seconds: 1),
+                                            ),
+                                          );
                                         },
                                         tooltip: 'Refresh WhatsApp Number',
                                       ),
@@ -1609,19 +2014,24 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                                       color: Colors.green.shade50,
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
-                                          color: Colors.green.shade300),
+                                        color: Colors.green.shade300,
+                                      ),
                                     ),
                                     child: Row(
                                       children: [
-                                        const Icon(Icons.card_giftcard,
-                                            color: Colors.green, size: 20),
+                                        const Icon(
+                                          Icons.card_giftcard,
+                                          color: Colors.green,
+                                          size: 20,
+                                        ),
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
                                             "Amount: ${_amountController.text}",
                                             style: const TextStyle(
-                                                fontSize: 20,
-                                                fontWeight: FontWeight.bold),
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -1631,30 +2041,36 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                                   TextField(
                                     controller: _whatsappNumberController,
                                     style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
                                     keyboardType: TextInputType.phone,
                                     decoration: InputDecoration(
                                       contentPadding:
                                           const EdgeInsets.symmetric(
-                                              horizontal: 12, vertical: 12),
+                                            horizontal: 12,
+                                            vertical: 12,
+                                          ),
                                       border: OutlineInputBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(12),
                                         borderSide: const BorderSide(
-                                            color: Colors.green, width: 2.0),
+                                          color: Colors.green,
+                                          width: 2.0,
+                                        ),
                                       ),
                                       enabledBorder: OutlineInputBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(12),
                                         borderSide: const BorderSide(
-                                            color: Colors.green, width: 2.0),
+                                          color: Colors.green,
+                                          width: 2.0,
+                                        ),
                                       ),
                                       focusedBorder: OutlineInputBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(12),
                                         borderSide: const BorderSide(
-                                            color: Colors.green, width: 2.5),
+                                          color: Colors.green,
+                                          width: 2.5,
+                                        ),
                                       ),
                                       labelText: "WhatsApp Number",
                                       hintText:
@@ -1674,9 +2090,10 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                                   const Text(
                                     "Note: Please enter the WhatsApp number with the country code",
                                     style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.black,
-                                        fontStyle: FontStyle.italic),
+                                      fontSize: 12,
+                                      color: Colors.black,
+                                      fontStyle: FontStyle.italic,
+                                    ),
                                   ),
                                   const SizedBox(height: 16),
                                   SizedBox(
@@ -1687,39 +2104,48 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                                             _whatsappNumberController.text
                                                 .trim();
                                         if (whatsappNumber.isEmpty) {
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(const SnackBar(
-                                            content: Text(
-                                                'Please enter a WhatsApp number'),
-                                            backgroundColor: Colors.red,
-                                          ));
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Please enter a WhatsApp number',
+                                              ),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
                                           return;
                                         }
                                         if (widget.gift == null) {
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(const SnackBar(
-                                            content: Text(
-                                                'Gift details not available'),
-                                            backgroundColor: Colors.red,
-                                          ));
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Gift details not available',
+                                              ),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
                                           return;
                                         }
                                         try {
                                           EasyLoading.show(
-                                              status:
-                                                  'Sending gift details...');
-                                          final cleanAmount =
-                                              _amountController.text
-                                                  .replaceAll(',', '')
-                                                  .trim();
-                                          final chipType = _chipController
+                                            status: 'Sending gift details...',
+                                          );
+                                          final cleanAmount = _amountController
                                               .text
+                                              .replaceAll(',', '')
+                                              .trim();
+                                          final chipType = _chipController.text
                                               .replaceAll(' ', '')
                                               .toUpperCase();
                                           final giftFor =
                                               _selectedGift?.replaceAll(
-                                                      '_', ' ') ??
-                                                  'SPECIAL GIFT';
+                                                '_',
+                                                ' ',
+                                              ) ??
+                                              'SPECIAL GIFT';
                                           final result = await ref
                                               .read(giftProvider.notifier)
                                               .sendSpecialGiftWhatsapp(
@@ -1735,52 +2161,74 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                                               );
                                           EasyLoading.dismiss();
                                           if (result == "Success") {
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(const SnackBar(
-                                              content: Text(
-                                                  'Gift details sent successfully via WhatsApp!'),
-                                              backgroundColor: Colors.green,
-                                              duration: Duration(seconds: 3),
-                                            ));
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Gift details sent successfully via WhatsApp!',
+                                                ),
+                                                backgroundColor: Colors.green,
+                                                duration: Duration(seconds: 3),
+                                              ),
+                                            );
                                           } else if (result ==
                                               "WhatsApp not available") {
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(const SnackBar(
-                                              content: Text(
-                                                  'WhatsApp is not installed or available on this device'),
-                                              backgroundColor: Colors.orange,
-                                              duration: Duration(seconds: 3),
-                                            ));
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'WhatsApp is not installed or available on this device',
+                                                ),
+                                                backgroundColor: Colors.orange,
+                                                duration: Duration(seconds: 3),
+                                              ),
+                                            );
                                           } else {
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(SnackBar(
-                                              content: Text(
-                                                  'Failed to send: $result'),
-                                              backgroundColor: Colors.orange,
-                                              duration: const Duration(
-                                                  seconds: 3),
-                                            ));
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'Failed to send: $result',
+                                                ),
+                                                backgroundColor: Colors.orange,
+                                                duration: const Duration(
+                                                  seconds: 3,
+                                                ),
+                                              ),
+                                            );
                                           }
                                         } catch (e) {
                                           EasyLoading.dismiss();
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(SnackBar(
-                                            content: Text('Error: $e'),
-                                            backgroundColor: Colors.red,
-                                            duration:
-                                                const Duration(seconds: 3),
-                                          ));
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Error: $e'),
+                                              backgroundColor: Colors.red,
+                                              duration: const Duration(
+                                                seconds: 3,
+                                              ),
+                                            ),
+                                          );
                                         }
                                       },
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            const Color(0xFF25D366),
+                                        backgroundColor: const Color(
+                                          0xFF25D366,
+                                        ),
                                         foregroundColor: Colors.white,
                                         shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(12)),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
                                         padding: const EdgeInsets.symmetric(
-                                            vertical: 16, horizontal: 16),
+                                          vertical: 16,
+                                          horizontal: 16,
+                                        ),
                                       ),
                                       child: Row(
                                         mainAxisAlignment:
@@ -1798,8 +2246,9 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                                               "Send Gift Details via WhatsApp",
                                               textAlign: TextAlign.center,
                                               style: TextStyle(
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.bold),
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold,
+                                              ),
                                             ),
                                           ),
                                         ],
@@ -1811,26 +2260,34 @@ Future<bool> _canReverseGift({required bool isRejected}) async {
                             ),
                           ),
                         ),
+
+                      // ══════════════════════════════════════════════════════
+                      // BOTTOM SECTION — Divider + Pending/Issued + Reverse
+                      // ══════════════════════════════════════════════════════
+                      const SizedBox(height: 24),
+                      const Divider(thickness: 1.2),
+                      const SizedBox(height: 12),
+
+                      // BOTTOM: Pending Gift + Issued Gift (all tabs)
+                      _buildPendingIssuedButtons(fontSettings),
+
+                      const SizedBox(height: 12),
+
+                      // BOTTOM: Reverse button (Approved tab)
+                      if (showApprovedSection)
+                        _buildReverseButton(fontSettings, false),
+
+                      // BOTTOM: Reverse button (Rejected tab)
+                      if (showRejectedReverse)
+                        _buildReverseButton(fontSettings, true),
+
+                      const SizedBox(height: 16),
                     ],
                   ),
                 ),
               ),
             ),
             const Watermark(),
-
-            // ── Global loading overlay ────────────────────────────────
-            // if (_isLoading)
-            //   Positioned.fill(
-            //     child: Container(
-            //       color: const Color.fromARGB(135, 117, 115, 115),
-            //       child: const Center(
-            //         child: CircularProgressIndicator(
-            //           valueColor: AlwaysStoppedAnimation<Color>(
-            //               Constants.kSecondaryColor),
-            //         ),
-            //       ),
-            //     ),
-            //   ),
           ],
         ),
       ),

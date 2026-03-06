@@ -62,16 +62,17 @@ class _BirthdayGiftRequestScreenState
 
   // Filter birthday gifts based on user permissions
   Future<List<BirthdayIncressGiftRequest>> _filterGifts(
-      List<BirthdayIncressGiftRequest> gifts) async {
+    List<BirthdayIncressGiftRequest> gifts,
+  ) async {
     final salesCode = await StorageUtil.getSalesCode();
     if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
       return gifts;
     }
- final bgChk = await StorageUtil.getBgChk();
-  final bgApp = await StorageUtil.getBgApp();
-  if (bgChk == true || bgApp == true) {
-    return gifts;
-  }
+    final bgChk = await StorageUtil.getBgChk();
+    final bgApp = await StorageUtil.getBgApp();
+    if (bgChk == true || bgApp == true) {
+      return gifts;
+    }
     final currentUserName = await StorageUtil.getUserName();
     if (currentUserName == null) return [];
 
@@ -98,50 +99,52 @@ class _BirthdayGiftRequestScreenState
   // }
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
-Future<bool> _canAccessGiftDetails(
-  BirthdayIncressGiftRequest gift, {
-  required bool isPending,
-  required bool isApproved,
-  required bool isChecked,
-}) async {
-  final salesCode = await StorageUtil.getSalesCode();
+  Future<bool> _canAccessGiftDetails(
+    BirthdayIncressGiftRequest gift, {
+    required bool isPending,
+    required bool isApproved,
+    required bool isChecked,
+  }) async {
+    final salesCode = await StorageUtil.getSalesCode();
 
-  // AD001 can access everything
-  if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
-    return true;
+    // AD001 can access everything
+    if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
+      return true;
+    }
+
+    final currentUserName =
+        (await StorageUtil.getUserName())?.trim().toLowerCase() ?? '';
+    final reqBy = gift.reqBy.trim().toLowerCase();
+    final checkedBy = (gift.checkApp ?? '').trim().toLowerCase();
+    final approvedBy = (gift.firstAppBy ?? '').trim().toLowerCase();
+    final rejectedBy = (gift.deleteUser ?? '').trim().toLowerCase();
+
+    if (isPending) {
+      // Pending: otgiChk == true OR loginUser == reqBy
+      final bgChk = await StorageUtil.getBgChk();
+      return bgChk == true || currentUserName == reqBy;
+    }
+
+    if (isChecked) {
+      // Checked: otgiApp == true OR loginUser == reqBy OR loginUser == checkedBy
+      final bgApp = await StorageUtil.getBgApp();
+      return bgApp == true ||
+          currentUserName == reqBy ||
+          currentUserName == checkedBy;
+    }
+
+    if (isApproved) {
+      // Approved: otgiApp == true OR loginUser == reqBy OR loginUser == approvedBy
+      final bgApp = await StorageUtil.getBgApp();
+      return bgApp == true ||
+          currentUserName == reqBy ||
+          currentUserName == approvedBy;
+    }
+
+    // Rejected: loginUser == reqBy OR loginUser == rejectedBy
+    return currentUserName == reqBy || currentUserName == rejectedBy;
   }
 
-  final currentUserName = (await StorageUtil.getUserName())?.trim().toLowerCase() ?? '';
-  final reqBy = gift.reqBy.trim().toLowerCase();
-  final checkedBy = (gift.checkApp ?? '').trim().toLowerCase();
-  final approvedBy = (gift.firstAppBy ?? '').trim().toLowerCase();
-  final rejectedBy = (gift.deleteUser ?? '').trim().toLowerCase();
-
-  if (isPending) {
-    // Pending: otgiChk == true OR loginUser == reqBy
-    final bgChk = await StorageUtil.getBgChk();
-    return bgChk == true || currentUserName == reqBy;
-  }
-
-  if (isChecked) {
-    // Checked: otgiApp == true OR loginUser == reqBy OR loginUser == checkedBy
-    final bgApp = await StorageUtil.getBgApp();
-    return bgApp == true ||
-        currentUserName == reqBy ||
-        currentUserName == checkedBy;
-  }
-
-  if (isApproved) {
-    // Approved: otgiApp == true OR loginUser == reqBy OR loginUser == approvedBy
-    final bgApp = await StorageUtil.getBgApp();
-    return bgApp == true ||
-        currentUserName == reqBy ||
-        currentUserName == approvedBy;
-  }
-
-  // Rejected: loginUser == reqBy OR loginUser == rejectedBy
-  return currentUserName == reqBy || currentUserName == rejectedBy;
-}
   @override
   void initState() {
     super.initState();
@@ -253,13 +256,25 @@ Future<bool> _canAccessGiftDetails(
           tabAlignment: TabAlignment.start,
           tabs: [
             _buildTab(
-                'Pending', birthdayGiftsp.pendingBirthdayGift.length, Colors.orange),
+              'Pending',
+              birthdayGiftsp.pendingBirthdayGift.length,
+              Colors.orange,
+            ),
             _buildTab(
-                'Checked', birthdayGiftsp.checkedBirthdayGift.length, Colors.blue),
+              'Checked',
+              birthdayGiftsp.checkedBirthdayGift.length,
+              Colors.blue,
+            ),
             _buildTab(
-                'Approved', birthdayGiftsp.approvedBirthdayGift.length, Colors.green),
+              'Approved',
+              birthdayGiftsp.approvedBirthdayGift.length,
+              Colors.green,
+            ),
             _buildTab(
-                'Rejected', birthdayGiftsp.rejectBirthdayGift.length, Colors.red),
+              'Rejected',
+              birthdayGiftsp.rejectBirthdayGift.length,
+              Colors.red,
+            ),
           ],
         ),
       ),
@@ -301,12 +316,13 @@ Future<bool> _canAccessGiftDetails(
                 child: const Center(
                   child: RefreshProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(
-                        Constants.kSecondaryColor),
+                      Constants.kSecondaryColor,
+                    ),
                   ),
                 ),
               ),
             ),
-       //   const Watermark(),
+          //   const Watermark(),
         ],
       ),
     );
@@ -348,10 +364,10 @@ Future<bool> _canAccessGiftDetails(
     final String statusLabel = isApproved
         ? 'Approved'
         : isPending
-            ? 'Pending'
-            : isChecked
-                ? 'Checked'
-                : 'Rejected';
+        ? 'Pending'
+        : isChecked
+        ? 'Checked'
+        : 'Rejected';
 
     return FutureBuilder<List<BirthdayIncressGiftRequest>>(
       future: _filterGifts(gifts),
@@ -359,8 +375,9 @@ Future<bool> _canAccessGiftDetails(
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
             child: CircularProgressIndicator(
-              valueColor:
-                  AlwaysStoppedAnimation<Color>(Constants.kSecondaryColor),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Constants.kSecondaryColor,
+              ),
             ),
           );
         }
@@ -406,12 +423,12 @@ Future<bool> _canAccessGiftDetails(
                 InkWell(
                   borderRadius: BorderRadius.circular(10),
                   onTap: () async {
-                  final canAccess = await _canAccessGiftDetails(
-    gift,
-    isPending: isPending,
-    isApproved: isApproved,
-    isChecked: isChecked,
-  );
+                    final canAccess = await _canAccessGiftDetails(
+                      gift,
+                      isPending: isPending,
+                      isApproved: isApproved,
+                      isChecked: isChecked,
+                    );
                     if (!canAccess) {
                       if (mounted) _showAccessDeniedDialog();
                       return;
@@ -435,13 +452,18 @@ Future<bool> _canAccessGiftDetails(
                   },
                   child: Card(
                     margin: const EdgeInsets.symmetric(
-                        vertical: 10, horizontal: 16),
+                      vertical: 10,
+                      horizontal: 16,
+                    ),
                     elevation: 4,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                     child: ListTile(
                       contentPadding: const EdgeInsets.symmetric(
-                          vertical: 14, horizontal: 16),
+                        vertical: 14,
+                        horizontal: 16,
+                      ),
                       title: Text(
                         '${gift.mid} - ${gift.mname}',
                         style: TextStyle(
@@ -456,8 +478,11 @@ Future<bool> _canAccessGiftDetails(
                           // Birthday Gift label
                           Row(
                             children: [
-                              const Icon(Icons.cake,
-                                  color: Colors.pink, size: 18),
+                              const Icon(
+                                Icons.cake,
+                                color: Colors.pink,
+                                size: 18,
+                              ),
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
@@ -490,23 +515,28 @@ Future<bool> _canAccessGiftDetails(
                           //     ),
                           //   ],
                           // ),
-                           Row(
+                          Row(
                             children: [
-                             const Icon(Icons.access_time,
-                                 color: Color.fromARGB(255, 0, 0, 0),
-                                  size: 16),
-                            const SizedBox(width: 6),
-                              Text('Requested: ',
-                                  style: TextStyle(
-                                        color: Colors.black87,
-                                      fontSize: fontSettings.fontSize+1,
-                                      fontWeight: fontSettings.fontWeight)),
+                              const Icon(
+                                Icons.access_time,
+                                color: Color.fromARGB(255, 0, 0, 0),
+                                size: 16,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Requested: ',
+                                style: TextStyle(
+                                  color: Colors.black87,
+                                  fontSize: fontSettings.fontSize + 1,
+                                  fontWeight: fontSettings.fontWeight,
+                                ),
+                              ),
                               Expanded(
                                 child: Text(
-                                   _formatDate(gift.insertDate),
+                                  _formatDate(gift.insertDate),
                                   style: TextStyle(
                                     color: const Color.fromARGB(225, 0, 0, 0),
-                                    fontSize: fontSettings.fontSize+2,
+                                    fontSize: fontSettings.fontSize + 2,
                                     fontWeight: fontSettings.fontWeight,
                                   ),
                                   overflow: TextOverflow.ellipsis,
@@ -520,20 +550,26 @@ Future<bool> _canAccessGiftDetails(
                           // Requested By
                           Row(
                             children: [
-                              const Icon(Icons.person_outline,
-                                  color: Colors.blue, size: 16),
+                              const Icon(
+                                Icons.person_outline,
+                                color: Colors.blue,
+                                size: 16,
+                              ),
                               const SizedBox(width: 6),
-                              Text('Requested By: ',
-                                  style: TextStyle(
-                                        color: Colors.black87,
-                                      fontSize: fontSettings.fontSize+2,
-                                      fontWeight: fontSettings.fontWeight)),
+                              Text(
+                                'Requested By: ',
+                                style: TextStyle(
+                                  color: Colors.black87,
+                                  fontSize: fontSettings.fontSize + 2,
+                                  fontWeight: fontSettings.fontWeight,
+                                ),
+                              ),
                               Expanded(
                                 child: Text(
                                   gift.reqBy.isNotEmpty ? gift.reqBy : 'N/A',
                                   style: TextStyle(
                                     color: const Color.fromARGB(225, 0, 0, 0),
-                                    fontSize: fontSettings.fontSize+2,
+                                    fontSize: fontSettings.fontSize + 2,
                                     fontWeight: fontSettings.fontWeight,
                                   ),
                                   overflow: TextOverflow.ellipsis,
@@ -551,24 +587,28 @@ Future<bool> _canAccessGiftDetails(
                                   actionLabel == 'Approved By'
                                       ? Icons.check_circle_outline
                                       : actionLabel == 'Checked By'
-                                          ? Icons.fact_check_outlined
-                                          : Icons.cancel_outlined,
+                                      ? Icons.fact_check_outlined
+                                      : Icons.cancel_outlined,
                                   color: actionColor,
                                   size: 16,
                                 ),
                                 const SizedBox(width: 6),
-                                Text('$actionLabel: ',
-                                    style: TextStyle(
-                                         color: Colors.black87,
-                                        fontSize: fontSettings.fontSize+2,
-                                        fontWeight: fontSettings.fontWeight)),
+                                Text(
+                                  '$actionLabel: ',
+                                  style: TextStyle(
+                                    color: Colors.black87,
+                                    fontSize: fontSettings.fontSize + 2,
+                                    fontWeight: fontSettings.fontWeight,
+                                  ),
+                                ),
                                 Expanded(
                                   child: Text(
                                     actionBy,
                                     style: TextStyle(
-                                        color: actionColor,
-                                        fontSize: fontSettings.fontSize+2,
-                                        fontWeight: fontSettings.fontWeight),
+                                      color: actionColor,
+                                      fontSize: fontSettings.fontSize + 2,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -583,50 +623,137 @@ Future<bool> _canAccessGiftDetails(
                             const SizedBox(height: 6),
                             Row(
                               children: [
-                                const Icon(Icons.schedule,
-                                    color: Colors.blue, size: 16),
+                                const Icon(
+                                  Icons.schedule,
+                                  color: Colors.blue,
+                                  size: 16,
+                                ),
                                 const SizedBox(width: 6),
-                                Text('Checked At: ',
-                                    style: TextStyle(
-                                         color: Colors.black87,
-                                        fontSize: fontSettings.fontSize+2,
-                                        fontWeight: fontSettings.fontWeight)),
+                                Text(
+                                  'Checked At: ',
+                                  style: TextStyle(
+                                    color: Colors.black87,
+                                    fontSize: fontSettings.fontSize + 2,
+                                    fontWeight: fontSettings.fontWeight,
+                                  ),
+                                ),
                                 Expanded(
                                   child: Text(
                                     _formatDate(gift.checkAppByTime!),
                                     style: TextStyle(
-                                        color: Colors.blue,
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight),
+                                      color: Colors.blue,
+                                      fontSize: fontSettings.fontSize,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],
                             ),
                           ],
-
+                          if ((isApproved) &&
+                              gift.firstAppBy != null &&
+                              gift.firstAppBy!.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.schedule,
+                                  color: Color.fromARGB(255, 33, 243, 75),
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Approve By: ',
+                                  style: TextStyle(
+                                    color: Colors.black87,
+                                    fontSize: fontSettings.fontSize + 2,
+                                    fontWeight: fontSettings.fontWeight,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    gift.firstAppBy!,
+                                    style: TextStyle(
+                                     color: Colors.black87,
+                                      fontSize: fontSettings.fontSize,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                          if ((isApproved) &&
+                              gift.firstAppTime != null &&
+                              gift.firstAppTime!.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.schedule,
+                                  color: Color.fromARGB(255, 33, 243, 75),
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Approve At: ',
+                                  style: TextStyle(
+                                    color: Colors.black87,
+                                    fontSize: fontSettings.fontSize + 2,
+                                    fontWeight: fontSettings.fontWeight,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    _formatDate(gift.firstAppTime!),
+                                    style: TextStyle(
+                                     color: Colors.black87,
+                                      fontSize: fontSettings.fontSize,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                           // Previous Gift Amount
                           if (gift.prvGiftAmount != null &&
                               gift.prvGiftAmount!.isNotEmpty) ...[
                             const SizedBox(height: 6),
                             Row(
                               children: [
-                                const Icon(Icons.attach_money,
-                                    color: Colors.orange, size: 16),
+                                const Icon(
+                                  Icons.attach_money,
+                                  color: Colors.orange,
+                                  size: 16,
+                                ),
                                 const SizedBox(width: 6),
-                                Text('Previous Gift: ',
-                                    style: TextStyle(
-                                      color: const Color.fromARGB(
-                                          255, 44, 55, 255),
-                                      fontSize: fontSettings.fontSize+2,
-                                      fontWeight: fontSettings.fontWeight,
-                                    )),
+                                Text(
+                                  'Previous Gift: ',
+                                  style: TextStyle(
+                                    color: const Color.fromARGB(
+                                      255,
+                                      44,
+                                      55,
+                                      255,
+                                    ),
+                                    fontSize: fontSettings.fontSize + 2,
+                                    fontWeight: fontSettings.fontWeight,
+                                  ),
+                                ),
                                 Expanded(
                                   child: Text(
                                     _formatAmount(gift.prvGiftAmount),
                                     style: TextStyle(
                                       color: const Color.fromARGB(
-                                          255, 44, 55, 255),
+                                        255,
+                                        44,
+                                        55,
+                                        255,
+                                      ),
                                       fontSize: fontSettings.fontSize + 5,
                                       fontWeight: fontSettings.fontWeight,
                                     ),
@@ -640,22 +767,25 @@ Future<bool> _canAccessGiftDetails(
                           // Requested Gift Amount
                           Row(
                             children: [
-                              const Icon(Icons.attach_money,
-                                  color: Colors.orange, size: 16),
+                              const Icon(
+                                Icons.attach_money,
+                                color: Colors.orange,
+                                size: 16,
+                              ),
                               const SizedBox(width: 6),
-                              Text('Requested Gift: ',
-                                  style: TextStyle(
-                                    color: const Color.fromARGB(
-                                        255, 0, 0, 0),
-                                    fontSize: fontSettings.fontSize+2,
-                                    fontWeight: fontSettings.fontWeight,
-                                  )),
+                              Text(
+                                'Requested Gift: ',
+                                style: TextStyle(
+                                  color: const Color.fromARGB(255, 0, 0, 0),
+                                  fontSize: fontSettings.fontSize + 2,
+                                  fontWeight: fontSettings.fontWeight,
+                                ),
+                              ),
                               Expanded(
                                 child: Text(
                                   _formatAmount(gift.giftDesc.toString()),
                                   style: TextStyle(
-                                     color: const Color.fromARGB(
-                                        255, 0, 0, 0),
+                                    color: const Color.fromARGB(255, 0, 0, 0),
                                     fontSize: fontSettings.fontSize + 5,
                                     fontWeight: fontSettings.fontWeight,
                                   ),
@@ -672,20 +802,27 @@ Future<bool> _canAccessGiftDetails(
                             const SizedBox(height: 6),
                             Row(
                               children: [
-                                const Icon(Icons.calendar_today,
-                                    color: Colors.deepPurple, size: 16),
+                                const Icon(
+                                  Icons.calendar_today,
+                                  color: Colors.deepPurple,
+                                  size: 16,
+                                ),
                                 const SizedBox(width: 6),
-                                Text('Valid For: ',
-                                    style: TextStyle(
-                                        fontSize: fontSettings.fontSize+2,
-                                        fontWeight: fontSettings.fontWeight)),
+                                Text(
+                                  'Valid For: ',
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize + 2,
+                                    fontWeight: fontSettings.fontWeight,
+                                  ),
+                                ),
                                 Expanded(
                                   child: Text(
                                     '${gift.validDates} days',
                                     style: TextStyle(
-                                        color: Colors.deepPurple,
-                                        fontSize: fontSettings.fontSize+2,
-                                        fontWeight: fontSettings.fontWeight),
+                                      color: Colors.deepPurple,
+                                      fontSize: fontSettings.fontSize + 2,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -697,7 +834,9 @@ Future<bool> _canAccessGiftDetails(
                           const SizedBox(height: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: _getStatusColor(statusLabel),
                               borderRadius: BorderRadius.circular(12),
@@ -758,8 +897,9 @@ Future<bool> _canAccessGiftDetails(
       barrierDismissible: true,
       builder: (BuildContext context) {
         return Dialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           elevation: 0,
           backgroundColor: Colors.transparent,
           child: Container(
@@ -782,17 +922,23 @@ Future<bool> _canAccessGiftDetails(
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                      color: Colors.red.shade50, shape: BoxShape.circle),
-                  child: Icon(Icons.lock_outline,
-                      size: 50, color: Colors.red.shade400),
+                    color: Colors.red.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.lock_outline,
+                    size: 50,
+                    color: Colors.red.shade400,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 const Text(
                   "Access Denied",
                   style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2C3E50)),
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C3E50),
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
@@ -805,12 +951,17 @@ Future<bool> _canAccessGiftDetails(
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       elevation: 0,
                     ),
-                    child: const Text("Got It",
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      "Got It",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
               ],

@@ -78,10 +78,10 @@ class _ViewBirthdayGiftRequestState
   bool _canReverseApproved = false;
   bool _canReverseRejected = false;
 
-  /// Pending tab: AD001 OR bgChk == true
+  /// Pending tab: bgChk == true
   bool _canCheckOrRejectPending = false;
 
-  /// Checked tab: AD001 OR bgApp == true
+  /// Checked tab: bgApp == true
   bool _canApproveOrRejectChecked = false;
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────
@@ -142,15 +142,13 @@ class _ViewBirthdayGiftRequestState
 
     setState(() {
       // Reverse permissions
-      _canReverseApproved = bgChk == true ||  bgApp == true;
-      _canReverseRejected = bgChk == true ||  bgApp == true;
+      _canReverseApproved = bgChk == true || bgApp == true;
+      _canReverseRejected = bgChk == true || bgApp == true;
 
       // Pending tab → Check & Reject buttons
-      // AD001 has full access; otherwise bgChk must be true
-      _canCheckOrRejectPending =bgChk == true;
+      _canCheckOrRejectPending = bgChk == true;
 
       // Checked tab → Approve & Reject buttons
-      // AD001 has full access; otherwise bgApp must be true
       _canApproveOrRejectChecked = bgApp == true;
     });
   }
@@ -467,6 +465,76 @@ class _ViewBirthdayGiftRequestState
     );
   }
 
+  // ── Shared: Pending Gift & Issued Gift buttons ──────────────────────────────
+
+  Widget _buildPendingIssuedGiftButtons(FontSettings fs) {
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: () {
+              final memberId = _memberIdController.text.trim();
+              if (memberId.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Please enter a Member ID")),
+                );
+                return;
+              }
+              context.push(
+                '/gifts/special-gift-requests/prv-gifts/$memberId',
+                extra: {'iid': 988908},
+              );
+            },
+            icon: const Icon(Icons.hourglass_empty, size: 18),
+            label: Text(
+              "Pending Gift",
+              style: TextStyle(
+                  fontSize: fs.fontSize, fontWeight: FontWeight.w600),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: () {
+              final memberId = _memberIdController.text.trim();
+              if (memberId.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Please enter a Member ID")),
+                );
+                return;
+              }
+              context.push(
+                '/gifts/special-gift-requests/prv-gifts/$memberId',
+                extra: {'iid': 8888},
+              );
+            },
+            icon: const Icon(Icons.card_giftcard, size: 18),
+            label: Text(
+              "Issued Gift",
+              style: TextStyle(
+                  fontSize: fs.fontSize, fontWeight: FontWeight.w600),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   // ── Section builders ────────────────────────────────────────────────────────
 
   Widget _buildTopSection(FontSettings fs) {
@@ -506,113 +574,144 @@ class _ViewBirthdayGiftRequestState
       );
 
   Widget _buildBottomSection(FontSettings fs) {
-    // ── Pending tab: Check & Reject ─────────────────────────────────────────
-    // Visible to all who can open this screen, but only AD001 or bgChk=true
-    // users can actually execute the actions.
+    // ── Pending tab: Check & Reject + Pending/Issued Gift ──────────────────
     if (widget.isPending) {
-      return Row(
+      return Column(
         children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () {
-                if (!_canCheckOrRejectPending) {
-                  _showAccessDeniedDialog();
-                  return;
-                }
-                _doCheck();
-              },
-              icon: const Icon(Icons.fact_check),
-              label: const Text("CHECK"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    _canCheckOrRejectPending ? Colors.blue : Colors.blue,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(vertical: 16),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    if (!_canCheckOrRejectPending) {
+                      _showAccessDeniedDialog();
+                      return;
+                    }
+                    _doCheck();
+                  },
+                  icon: const Icon(Icons.fact_check),
+                  label: const Text("CHECK"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () {
-                if (!_canCheckOrRejectPending) {
-                  _showAccessDeniedDialog();
-                  return;
-                }
-                _doReject();
-              },
-              icon: const Icon(Icons.close),
-              label: const Text("REJECT"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    _canCheckOrRejectPending ? Colors.red : Colors.red,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(vertical: 16),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    if (!_canCheckOrRejectPending) {
+                      _showAccessDeniedDialog();
+                      return;
+                    }
+                    _doReject();
+                  },
+                  icon: const Icon(Icons.close),
+                  label: const Text("REJECT"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
+          const SizedBox(height: 12),
+          _buildPendingIssuedGiftButtons(fs),
         ],
       );
     }
 
-    // ── Checked tab: Approve & Reject ───────────────────────────────────────
-    // Visible to all who can open this screen, but only AD001 or bgApp=true
-    // users can actually execute the actions.
+    // ── Checked tab: Approve & Reject + Pending/Issued Gift ────────────────
     if (widget.isChecked) {
-      return Row(
+      return Column(
         children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () {
-                if (!_canApproveOrRejectChecked) {
-                  _showAccessDeniedDialog();
-                  return;
-                }
-                _doApprove();
-              },
-              icon: const Icon(Icons.check),
-              label: const Text("APPROVE"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    _canApproveOrRejectChecked ? Colors.green : Colors.grey,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(vertical: 16),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    if (!_canApproveOrRejectChecked) {
+                      _showAccessDeniedDialog();
+                      return;
+                    }
+                    _doApprove();
+                  },
+                  icon: const Icon(Icons.check),
+                  label: const Text("APPROVE"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        _canApproveOrRejectChecked ? Colors.green : Colors.grey,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () {
-                if (!_canApproveOrRejectChecked) {
-                  _showAccessDeniedDialog();
-                  return;
-                }
-                _doReject();
-              },
-              icon: const Icon(Icons.close),
-              label: const Text("REJECT"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    _canApproveOrRejectChecked ? Colors.red : Colors.grey,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(vertical: 16),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    if (!_canApproveOrRejectChecked) {
+                      _showAccessDeniedDialog();
+                      return;
+                    }
+                    _doReject();
+                  },
+                  icon: const Icon(Icons.close),
+                  label: const Text("REJECT"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        _canApproveOrRejectChecked ? Colors.red : Colors.grey,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
+          const SizedBox(height: 12),
+          _buildPendingIssuedGiftButtons(fs),
         ],
       );
     }
 
-    // Approved / Rejected → no bottom buttons
+    // ── Approved tab: Reverse button (bottom) + Pending/Issued Gift ────────
+    if (widget.isApproved) {
+      return Column(
+        children: [
+          if (_canReverseApproved) ...[
+            _reverseBtn(isRejected: false, fs: fs),
+            const SizedBox(height: 1),
+          ],
+          _buildPendingIssuedGiftButtons(fs),
+        ],
+      );
+    }
+
+    // ── Rejected tab: Reverse button (bottom) + Pending/Issued Gift ────────
+    if (!widget.isPending && !widget.isApproved && !widget.isChecked) {
+      return Column(
+        children: [
+          if (_canReverseRejected) ...[
+            _reverseBtn(isRejected: true, fs: fs),
+            const SizedBox(height: 1),
+          ],
+          _buildPendingIssuedGiftButtons(fs),
+        ],
+      );
+    }
+
     return const SizedBox.shrink();
   }
 
@@ -631,11 +730,68 @@ class _ViewBirthdayGiftRequestState
             else context.go('/menu');
           },
         ),
-        title: Text(
-          'Birthday Gift Request',
-          style: TextStyle(
-              fontSize: fontSettings.fontSize,
-              fontWeight: fontSettings.fontWeight),
+      //   title: Text(
+      //     'Birthday Gift Request',
+      //     style: TextStyle(
+      //         fontSize: fontSettings.fontSize,
+      //         fontWeight: fontSettings.fontWeight),
+      //   ),
+      // ),
+       title: Row(
+          children: [
+            Text(
+              'Birthday Gift Request',
+              style: TextStyle(
+                fontSize: fontSettings.fontSize,
+                fontWeight: fontSettings.fontWeight,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: widget.isApproved
+                    ? Colors.green
+                    : widget.isChecked
+                    ? const Color.fromARGB(255, 92, 17, 255)
+                    : widget.isPending
+                    ? Colors.orange
+                    : Colors.red,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    widget.isApproved
+                        ? Icons.check_circle
+                        : widget.isChecked
+                        ? Icons.rule_rounded
+                        : widget.isPending
+                        ? Icons.hourglass_bottom
+                        : Icons.cancel,
+                    size: 12,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    widget.isApproved
+                        ? 'Approved'
+                        : widget.isChecked
+                        ? 'Checked'
+                        : widget.isPending
+                        ? 'Pending'
+                        : 'Rejected',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
       body: Stack(
@@ -647,7 +803,7 @@ class _ViewBirthdayGiftRequestState
                 key: _formKey,
                 child: Column(
                   children: [
-                    // ── Reverse button (Approved / Rejected tabs, permission-gated) ──
+                    // ── Reverse button at TOP (Approved / Rejected tabs) ────
                     _buildTopSection(fontSettings),
 
                     // ── From / To Date ──────────────────────────────────────
@@ -777,7 +933,6 @@ class _ViewBirthdayGiftRequestState
                                 extra: {'iid': 988908},
                               );
                             },
-                          //  icon: const Icon(Icons.card_giftcard),
                             label: Text("Pending Gift",
                                 style: TextStyle(
                                     fontSize: fontSettings.fontSize,
@@ -811,7 +966,6 @@ class _ViewBirthdayGiftRequestState
                                 extra: {'iid': 8888},
                               );
                             },
-                            //icon: const Icon(Icons.card_giftcard),
                             label: Text("Issued Gift",
                                 style: TextStyle(
                                     fontSize: fontSettings.fontSize,
@@ -1147,7 +1301,136 @@ class _ViewBirthdayGiftRequestState
                         ),
                       ),
                     ],
+// ── Approved Information Card ───────────────────────────────────────────
+if (widget.isApproved &&
+    widget.gift != null &&
+    widget.gift!.firstAppBy != null &&
+    widget.gift!.firstAppBy!.isNotEmpty) ...[
+  const SizedBox(height: 16),
+  Container(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        colors: [
+          Colors.green.withOpacity(0.10),
+          Colors.green.withOpacity(0.03),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(
+        color: Colors.green.withOpacity(0.5),
+        width: 1.5,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.green.withOpacity(0.08),
+          blurRadius: 8,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(14.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header ────────────────────────────────────────────────
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.check_circle_outline,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                "Approved Information",
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize + 2,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green.shade700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Divider(color: Colors.green.withOpacity(0.35), height: 1),
+          const SizedBox(height: 12),
 
+          // ── Approved By ───────────────────────────────────────────
+          Row(
+            children: [
+              Icon(Icons.person_outline,
+                  color: Colors.green.shade700, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                "Approved By:",
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize,
+                  fontWeight: fontSettings.fontWeight,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  widget.gift!.firstAppBy!,
+                  style: TextStyle(
+                    fontSize: fontSettings.fontSize + 1,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade700,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+
+          // ── Approved At ───────────────────────────────────────────
+          if (widget.gift!.firstAppTime != null &&
+              widget.gift!.firstAppTime!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(Icons.schedule,
+                    color: Colors.green.shade700, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  "Approved At:",
+                  style: TextStyle(
+                    fontSize: fontSettings.fontSize,
+                    fontWeight: fontSettings.fontWeight,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _formatDateandTime(widget.gift!.firstAppTime),
+                    style: TextStyle(
+                      fontSize: fontSettings.fontSize,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green.shade700,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    ),
+  ),
+],
                     // ── Previous Gift Amount ────────────────────────────────
                     const SizedBox(height: 16),
                     TextFormField(
@@ -1276,11 +1559,13 @@ class _ViewBirthdayGiftRequestState
                       onChanged: (value) => _remarks = value,
                     ),
 
-                    // ── Bottom action row (Pending / Checked only) ──────────
-                    const SizedBox(height: 16.0),
+                    // ── Bottom action section ───────────────────────────────
+                    // Shows: action buttons (Check/Reject or Approve/Reject or Reverse)
+                    // + Pending Gift & Issued Gift buttons for ALL tabs
+                    const SizedBox(height: 10.0),
                     _buildBottomSection(fontSettings),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 10),
                   ],
                 ),
               ),

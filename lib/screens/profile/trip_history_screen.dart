@@ -658,8 +658,8 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                       child: Table(
                         border: TableBorder.all(),
                         columnWidths: const {
-                          0: FractionColumnWidth(0.6),
-                          1: FractionColumnWidth(0.4),
+                          0: FractionColumnWidth(0.5),
+                          1: FractionColumnWidth(0.5),
                         },
                         children: [
                           ..._tripHistory

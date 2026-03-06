@@ -584,7 +584,45 @@ class _SpecialGiftRequestScreenState
                               ],
                             ),
                           ],
-
+  if (isApproved ||
+                      
+                                  gift.firstAppTime != null &&
+                                  gift.firstAppTime!.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.schedule,
+                                  color: Color.fromARGB(255, 92, 17, 255),
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Approved Time: ',
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize,
+                                    fontWeight: fontSettings.fontWeight,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    _formatDate(gift.firstAppTime),
+                                    style: TextStyle(
+                                      color: const Color.fromARGB(
+                                        255,
+                                        92,
+                                        17,
+                                        255,
+                                      ),
+                                      fontSize: fontSettings.fontSize,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                           // Checked By (shown in both Checked and Approved tabs)
                           if (checkedBy != null) ...[
                             const SizedBox(height: 6),

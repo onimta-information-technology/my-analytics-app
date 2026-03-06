@@ -1056,19 +1056,48 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                 ),
 
               // ── Avatar (other user) ──
-              if (!message.isMe) ...[
-                CircleAvatar(
-                  backgroundColor: widget.contact.avatarColor,
-                  radius: 15,
-                  child: Text(
-                    widget.contact.initials,
-                    style:
-                        const TextStyle(color: Colors.white, fontSize: 12),
-                  ),
-                ),
-                const SizedBox(width: 8),
-              ],
-
+              // if (!message.isMe) ...[
+              //   CircleAvatar(
+              //     backgroundColor: widget.contact.avatarColor,
+              //     radius: 15,
+              //     child: Text(
+              //       widget.contact.initials,
+              //       style:
+              //           const TextStyle(color: Colors.white, fontSize: 12),
+              //     ),
+              //   ),
+              //   const SizedBox(width: 8),
+              // ],
+// ── Avatar (other user) ──
+if (!message.isMe) ...[
+  Stack(
+    children: [
+      CircleAvatar(
+        backgroundColor: widget.contact.avatarColor,
+        radius: 15,
+        child: Text(
+          widget.contact.initials,
+          style: const TextStyle(color: Colors.white, fontSize: 12),
+        ),
+      ),
+      if (widget.contact.isOnline)
+        Positioned(
+          bottom: 0,
+          right: 0,
+          child: Container(
+            width: 9,
+            height: 9,
+            decoration: BoxDecoration(
+              color: Colors.greenAccent,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 1.5),
+            ),
+          ),
+        ),
+    ],
+  ),
+  const SizedBox(width: 8),
+],
               // ── Bubble ──
               Flexible(
                 child: Container(

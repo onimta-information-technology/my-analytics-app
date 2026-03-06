@@ -708,20 +708,20 @@ if (message.data['msg_type'] == '35') {
                   ),
                 ),
               ),
-              if (contact.isOnline)
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    width: 16,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: Colors.green,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                  ),
-                ),
+             if (contact.isOnline)
+  Positioned(
+    bottom: 0,
+    right: 0,
+    child: Container(
+      width: 14,
+      height: 14,
+      decoration: BoxDecoration(
+        color: const Color(0xFF00E676), // bright greenAccent shade
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 2),
+      ),
+    ),
+  ),
             ],
           ),
           title: Text(
@@ -1126,11 +1126,28 @@ if (message.data['msg_type'] == '35') {
                                                   ),
                                                 ),
                                                 title: Text(contact.name),
-                                                subtitle: Text(
-                                                  contact.isOnline
-                                                      ? "Online"
-                                                      : "Offline",
-                                                ),
+                                                subtitle: Row(
+  children: [
+    Container(
+      width: 8,
+      height: 8,
+      decoration: BoxDecoration(
+        color: contact.isOnline
+            ? const Color(0xFF00E676)
+            : Colors.grey,
+        shape: BoxShape.circle,
+      ),
+    ),
+    const SizedBox(width: 6),
+    Text(
+      contact.isOnline ? "Online" : "Offline",
+      style: TextStyle(
+        color: contact.isOnline ? Colors.green[700] : Colors.grey,
+        fontSize: 13,
+      ),
+    ),
+  ],
+),
                                                 onTap: () async {
                                                   final navigator =
                                                       Navigator.of(context);

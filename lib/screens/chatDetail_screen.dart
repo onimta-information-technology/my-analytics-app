@@ -41,9 +41,12 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
 
   List<ChatMessage> _messages = [];
   String? _currentUserName;
-  String? _selectedMessageId;
   bool _isLoadingMessages = false;
   bool _isUploading = false;
+
+  // ── Multi-select ──
+  final Set<String> _selectedMessageIds = {};
+  bool get _isSelectionMode => _selectedMessageIds.isNotEmpty;
 
   Timer? _readStatusPollTimer;
   StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
@@ -102,65 +105,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     }
   }
 
-  //   void _setupForegroundMessageListener() {
-  //   _foregroundMessageSubscription =
-  //       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-
-  //     // DEBUG - remove after fixing
-  //     print('📩 ChatDetail received message: ${message.data}');
-  //     print('📩 msg_type: ${message.data['msg_type']}');
-  //     print('📩 current chatUuid: ${widget.contact.chatUuid}');
-
-  //     final msgType = message.data['msg_type']?.toString().trim() ??
-  //                     message.data['type']?.toString().trim();
-
-  //     // Skip guest booking notifications
-  //     if (msgType == '35') return;
-
-  //     // Extract chatId from top-level fields
-  //     String? chatId = message.data['chatId']?.toString() ??
-  //         message.data['chat_id']?.toString() ??
-  //         message.data['ChatId']?.toString() ??
-  //         message.data['Chat_Id']?.toString();
-
-  //     // Extract chatId from Details JSON field
-  //     final detailsJson = message.data['Details'];
-  //     if ((chatId == null || chatId.isEmpty) &&
-  //          detailsJson != null && detailsJson.isNotEmpty) {
-  //       try {
-  //         final details = jsonDecode(detailsJson);
-  //         chatId = details['chatId']?.toString() ??
-  //                  details['chat_id']?.toString();
-  //         print('📩 chatId from Details: $chatId');
-  //       } catch (e) {
-  //         print('📩 Error parsing Details: $e');
-  //       }
-  //     }
-
-  //     print('📩 resolved chatId: $chatId');
-  //     print('📩 match: ${chatId == widget.contact.chatUuid}');
-
-  //     // Refresh if it's any chat message type
-  //     final bool isChatMessage = msgType == '11' ||
-  //         msgType == 'chat' ||
-  //         message.data.containsKey('Details') ||
-  //         message.data.containsKey('message') ||
-  //         chatId != null;
-
-  //     if (isChatMessage) {
-  //       if (chatId == null ||
-  //           chatId.isEmpty ||
-  //           chatId == widget.contact.chatUuid) {
-  //         print('✅ Refreshing messages for chat: ${widget.contact.chatUuid}');
-  //         _fetchMessagesFromApi(silent: true);
-  //       } else {
-  //         print('⛔ chatId mismatch — skipping refresh');
-  //         print('   incoming: $chatId');
-  //         print('   current:  ${widget.contact.chatUuid}');
-  //       }
-  //     }
-  //   });
-  // }
   void _setupForegroundMessageListener() {
     _foregroundMessageSubscription = FirebaseMessaging.onMessage.listen((
       RemoteMessage message,
@@ -215,7 +159,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         if (rd['success'] == true && rd['messages'] != null) {
           final List<dynamic> raw = rd['messages'];
 
-          // Build flat list then group consecutive images into grid bubbles
           final flat = raw
               .map((j) => ChatMessage.fromApiResponse(j, deviceId ?? ''))
               .toList();
@@ -278,6 +221,11 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
+    // Exit selection mode if active
+    if (_isSelectionMode) {
+      setState(() => _selectedMessageIds.clear());
+    }
+
     final localId = DateTime.now().millisecondsSinceEpoch.toString();
     final now = DateTime.now();
 
@@ -333,7 +281,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     final now = DateTime.now();
     final localId = now.millisecondsSinceEpoch.toString();
 
-    // Determine which files are images
     final imageExts = {'jpg', 'jpeg', 'png', 'gif', 'webp'};
     final localItems = filePaths.map((p) {
       final ext = p.split('.').last.toLowerCase();
@@ -349,7 +296,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     setState(() {
       _isUploading = true;
       if (allImages && localItems.length > 1) {
-        // Single grouped bubble for multiple images
         _messages.add(
           ChatMessage(
             id: localId,
@@ -361,7 +307,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           ),
         );
       } else {
-        // One bubble per file (or single image)
         for (int i = 0; i < localItems.length; i++) {
           final item = localItems[i];
           final ext = (item.localPath ?? '').split('.').last.toLowerCase();
@@ -394,7 +339,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
 
         setState(() {
           if (allImages && localItems.length > 1) {
-            // Update the single grouped bubble
             final idx = _messages.indexWhere((m) => m.id == localId);
             if (idx != -1) {
               final updatedItems = <AttachmentItem>[];
@@ -421,7 +365,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
               );
             }
           } else {
-            // Update individual bubbles
             for (int i = 0; i < filePaths.length; i++) {
               final bubbleId = '${localId}_$i';
               final idx = _messages.indexWhere((m) => m.id == bubbleId);
@@ -552,50 +495,185 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     }
   }
 
-  // ─── Delete ─────────────────────────────────────────────────────────────────
+  // ─── Multi-select helpers ───────────────────────────────────────────────────
 
-  Future<void> _deleteMessageFromApi(String chatId, String messageId) async {
-    final response = await FirebaseApiService.softDeleteMessage(
-      chatId,
-      messageId,
-    );
-    if (response['success'] != true) {
-      _showErrorSnack('Could not delete message.');
-    }
+  void _toggleSelection(String messageId) {
+    setState(() {
+      if (_selectedMessageIds.contains(messageId)) {
+        _selectedMessageIds.remove(messageId);
+      } else {
+        _selectedMessageIds.add(messageId);
+      }
+    });
   }
 
-  void _deleteMessage(String messageId) {
-    showDialog(
+  void _selectAll() {
+    setState(() {
+      _selectedMessageIds.addAll(_messages.map((m) => m.id));
+    });
+  }
+
+  void _clearSelection() {
+    setState(() => _selectedMessageIds.clear());
+  }
+
+  // ─── Delete selected ────────────────────────────────────────────────────────
+
+  void _deleteSelectedMessages() {
+    final selectedIds = List<String>.from(_selectedMessageIds);
+    final selectedMsgs =
+        _messages.where((m) => selectedIds.contains(m.id)).toList();
+    final allMine = selectedMsgs.every((m) => m.isMe);
+
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Message'),
-        content: const Text('Are you sure you want to delete this message?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              final msg = _messages.firstWhere((m) => m.id == messageId);
-              if (msg.apiChatId != null && msg.apiMessageId != null) {
-                await _deleteMessageFromApi(msg.apiChatId!, msg.apiMessageId!);
-              }
-              setState(() {
-                _messages.removeWhere((m) => m.id == messageId);
-                _selectedMessageId = null;
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Message deleted'),
-                  duration: Duration(seconds: 2),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            // ── Header ──
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  const Icon(Icons.delete_outline, color: Colors.grey),
+                  const SizedBox(width: 10),
+                  Text(
+                    '${selectedIds.length} message${selectedIds.length > 1 ? 's' : ''} selected',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+
+            // ── Delete for Everyone (only if ALL selected are mine) ──
+            if (allMine)
+              ListTile(
+                leading:
+                    const Icon(Icons.delete_forever, color: Colors.red),
+                title: const Text(
+                  'Delete for Everyone',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
+                subtitle: const Text('Remove for all participants'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _performDelete(
+                    selectedMsgs: selectedMsgs,
+                    selectedIds: selectedIds,
+                    forEveryone: true,
+                  );
+                },
+              ),
+
+            // ── Delete for Me ──
+            ListTile(
+              leading:
+                  const Icon(Icons.delete_outline, color: Colors.orange),
+              title: const Text(
+                'Delete for Me',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              subtitle: const Text('Remove only from your view'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                await _performDelete(
+                  selectedMsgs: selectedMsgs,
+                  selectedIds: selectedIds,
+                  forEveryone: false,
+                );
+              },
+            ),
+
+            // ── Cancel ──
+            ListTile(
+              leading: const Icon(Icons.cancel, color: Colors.grey),
+              title: const Text('Cancel'),
+              onTap: () => Navigator.pop(ctx),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _performDelete({
+    required List<ChatMessage> selectedMsgs,
+    required List<String> selectedIds,
+    required bool forEveryone,
+  }) async {
+    // Show loading snack
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Deleting ${selectedIds.length} message${selectedIds.length > 1 ? 's' : ''}...',
+            ),
+          ],
+        ),
+        duration: const Duration(seconds: 10),
+        backgroundColor: Colors.grey[800],
+      ),
+    );
+
+    bool hasError = false;
+
+    for (final msg in selectedMsgs) {
+      if (msg.apiChatId != null && msg.apiMessageId != null) {
+        final response = forEveryone
+            ? await FirebaseApiService.deleteMessageForEveryone(
+                msg.apiChatId!,
+                msg.apiMessageId!,
+              )
+            : await FirebaseApiService.softDeleteMessage(
+                msg.apiChatId!,
+                msg.apiMessageId!,
               );
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
+        if (response['success'] != true) hasError = true;
+      }
+    }
+
+    if (!mounted) return;
+
+    // Dismiss loading snack
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    setState(() {
+      _messages.removeWhere((m) => selectedIds.contains(m.id));
+      _selectedMessageIds.clear();
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          hasError
+              ? 'Some messages could not be deleted.'
+              : forEveryone
+                  ? '${selectedIds.length} message${selectedIds.length > 1 ? 's' : ''} deleted for everyone'
+                  : '${selectedIds.length} message${selectedIds.length > 1 ? 's' : ''} deleted',
+        ),
+        backgroundColor: hasError ? Colors.red : Colors.green[700],
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -604,9 +682,9 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
 
   void _showErrorSnack(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: Colors.red),
+    );
   }
 
   void _scrollToBottom() {
@@ -643,22 +721,24 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           cur.timestamp.month,
           cur.timestamp.day,
         ) !=
-        DateTime(prev.timestamp.year, prev.timestamp.month, prev.timestamp.day);
+        DateTime(
+          prev.timestamp.year,
+          prev.timestamp.month,
+          prev.timestamp.day,
+        );
   }
 
-  // ─── Image grid widget (WhatsApp-style) ─────────────────────────────────────
+  // ─── Image grid widget ──────────────────────────────────────────────────────
 
-  /// Renders up to 4 cells in a 2×2 grid with "+N" overlay on the last cell.
   Widget _buildImageGrid(
     List<AttachmentItem> items,
     bool isMe,
     String messageId,
   ) {
-    const double gridSize = 220.0; // total grid width
+    const double gridSize = 220.0;
     const double gap = 3.0;
     const double cellSize = (gridSize - gap) / 2;
 
-    // Show max 4 cells; last cell may show "+N more" overlay
     final displayCount = items.length > 4 ? 4 : items.length;
     final extraCount = items.length - 4;
 
@@ -690,10 +770,12 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
             width: cellSize,
             height: cellSize,
             color: Colors.grey[300],
-            child: const Icon(Icons.broken_image, color: Colors.grey, size: 32),
+            child:
+                const Icon(Icons.broken_image, color: Colors.grey, size: 32),
           ),
         );
-      } else if (item.localPath != null && File(item.localPath!).existsSync()) {
+      } else if (item.localPath != null &&
+          File(item.localPath!).existsSync()) {
         img = Image.file(
           File(item.localPath!),
           width: cellSize,
@@ -742,15 +824,26 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
       }
 
       return GestureDetector(
-        onTap: () => _openGallery(items, index),
+        onTap: () {
+          if (_isSelectionMode) {
+            _toggleSelection(messageId);
+          } else {
+            _openGallery(items, index);
+          }
+        },
         child: cell,
       );
     }
 
-    // Layout: 1 image = full width, 2 = side by side, 3+ = 2×2 grid
     if (displayCount == 1) {
       return GestureDetector(
-        onTap: () => _openGallery(items, 0),
+        onTap: () {
+          if (_isSelectionMode) {
+            _toggleSelection(messageId);
+          } else {
+            _openGallery(items, 0);
+          }
+        },
         child: ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: items[0].url != null
@@ -783,18 +876,22 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                   ),
                 )
               : items[0].localPath != null
-              ? Image.file(
-                  File(items[0].localPath!),
-                  width: gridSize,
-                  height: gridSize,
-                  fit: BoxFit.cover,
-                )
-              : Container(
-                  width: gridSize,
-                  height: gridSize,
-                  color: Colors.grey[300],
-                  child: const Icon(Icons.image, color: Colors.grey, size: 48),
-                ),
+                  ? Image.file(
+                      File(items[0].localPath!),
+                      width: gridSize,
+                      height: gridSize,
+                      fit: BoxFit.cover,
+                    )
+                  : Container(
+                      width: gridSize,
+                      height: gridSize,
+                      color: Colors.grey[300],
+                      child: const Icon(
+                        Icons.image,
+                        color: Colors.grey,
+                        size: 48,
+                      ),
+                    ),
         ),
       );
     }
@@ -810,7 +907,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
       );
     }
 
-    // 3 or 4 cells → 2×2 grid
     return SizedBox(
       width: gridSize,
       child: Column(
@@ -844,134 +940,96 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
   void _openGallery(List<AttachmentItem> items, int initialIndex) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => _GalleryView(items: items, initialIndex: initialIndex),
+        builder: (_) =>
+            _GalleryView(items: items, initialIndex: initialIndex),
       ),
     );
   }
 
-  // ─── Single attachment (document or legacy single image) ────────────────────
+  // ─── Single attachment ──────────────────────────────────────────────────────
 
-  // Widget _buildSingleAttachment(ChatMessage message) {
-  //   if (message.fileType == 'image') {
-  //     // Wrap in a 1-item list and reuse grid (handles local vs remote)
-  //     final item = AttachmentItem(
-  //       url: message.attachmentUrl,
-  //       localPath: message.filePath,
-  //       fileName: message.fileName,
-  //       mimeType: message.attachmentType,
-  //     );
-  //     return _buildImageGrid([item], message.isMe, message.id);
-  //   }
+  Widget _buildSingleAttachment(ChatMessage message) {
+    if (message.fileType == 'image') {
+      final item = AttachmentItem(
+        url: message.attachmentUrl,
+        localPath: message.filePath,
+        fileName: message.fileName,
+        mimeType: message.attachmentType,
+      );
+      return _buildImageGrid([item], message.isMe, message.id);
+    }
 
-  //   // Document
-  //   final name = message.fileName ?? message.text;
-  //   return Container(
-  //     padding: const EdgeInsets.all(8),
-  //     decoration: BoxDecoration(
-  //       color: message.isMe ? Colors.green[700] : Colors.grey[400],
-  //       borderRadius: BorderRadius.circular(8),
-  //     ),
-  //     child: Row(
-  //       mainAxisSize: MainAxisSize.min,
-  //       children: [
-  //         Icon(
-  //           Icons.insert_drive_file,
-  //           color: message.isMe ? Colors.white : Colors.black87,
-  //           size: 24,
-  //         ),
-  //         const SizedBox(width: 8),
-  //         Flexible(
-  //           child: Text(
-  //             name,
-  //             style: TextStyle(
-  //               color: message.isMe ? Colors.white : Colors.black87,
-  //               fontSize: 14,
-  //             ),
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-Widget _buildSingleAttachment(ChatMessage message) {
-  if (message.fileType == 'image') {
-    final item = AttachmentItem(
-      url: message.attachmentUrl,
-      localPath: message.filePath,
-      fileName: message.fileName,
-      mimeType: message.attachmentType,
-    );
-    return _buildImageGrid([item], message.isMe, message.id);
-  }
-
-  // Document with download button
-  final name = message.fileName ?? message.text;
-  return GestureDetector(
-    onTap: () {
-      if (message.attachmentUrl != null) {
-        DownloadHelper.downloadAndOpen(
-          context,
-          message.attachmentUrl!,
-          name,
-        );
-      }
-    },
-    child: Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: message.isMe ? Colors.green[700] : Colors.grey[400],
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.insert_drive_file,
-            color: message.isMe ? Colors.white : Colors.black87,
-            size: 24,
-          ),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              name,
-              style: TextStyle(
-                color: message.isMe ? Colors.white : Colors.black87,
-                fontSize: 14,
+    final name = message.fileName ?? message.text;
+    return GestureDetector(
+      onTap: () {
+        if (_isSelectionMode) {
+          _toggleSelection(message.id);
+        } else if (message.attachmentUrl != null) {
+          DownloadHelper.downloadAndOpen(
+            context,
+            message.attachmentUrl!,
+            name,
+          );
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: message.isMe ? Colors.green[700] : Colors.grey[400],
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.insert_drive_file,
+              color: message.isMe ? Colors.white : Colors.black87,
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                name,
+                style: TextStyle(
+                  color: message.isMe ? Colors.white : Colors.black87,
+                  fontSize: 14,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Icon(
-            Icons.download,
-            color: message.isMe ? Colors.white70 : Colors.black54,
-            size: 20,
-          ),
-        ],
+            const SizedBox(width: 8),
+            Icon(
+              Icons.download,
+              color: message.isMe ? Colors.white70 : Colors.black54,
+              size: 20,
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
+
   // ─── Message bubble ─────────────────────────────────────────────────────────
 
   Widget _buildMessage(ChatMessage message) {
-    final isSelected = _selectedMessageId == message.id;
+    final isSelected = _selectedMessageIds.contains(message.id);
     final hasGrouped = message.hasGroupedAttachments;
     final showText =
         message.text.isNotEmpty &&
         message.fileType != 'image' &&
         message.fileType != 'document' &&
         !hasGrouped;
-
-    // Determine if this is a pure image bubble (no text padding needed)
-    final isImageBubble = hasGrouped
-        ? message.isImageGroup
-        : message.fileType == 'image';
+    final isImageBubble =
+        hasGrouped ? message.isImageGroup : message.fileType == 'image';
 
     return GestureDetector(
-      onLongPress: () => setState(() => _selectedMessageId = message.id),
-      onTap: () => setState(() => _selectedMessageId = null),
-      child: Container(
-        color: isSelected ? Colors.grey.withOpacity(0.1) : Colors.transparent,
+      onLongPress: () => _toggleSelection(message.id),
+      onTap: () {
+        if (_isSelectionMode) _toggleSelection(message.id);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        color:
+            isSelected ? Colors.green.withOpacity(0.15) : Colors.transparent,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Row(
@@ -980,20 +1038,40 @@ Widget _buildSingleAttachment(ChatMessage message) {
                 : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
+              // ── Checkbox (selection mode) ──
+              if (_isSelectionMode)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: Checkbox(
+                      value: isSelected,
+                      activeColor: Colors.green,
+                      shape: const CircleBorder(),
+                      side: const BorderSide(color: Colors.green, width: 2),
+                      onChanged: (_) => _toggleSelection(message.id),
+                    ),
+                  ),
+                ),
+
+              // ── Avatar (other user) ──
               if (!message.isMe) ...[
                 CircleAvatar(
                   backgroundColor: widget.contact.avatarColor,
                   radius: 15,
                   child: Text(
                     widget.contact.initials,
-                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                    style:
+                        const TextStyle(color: Colors.white, fontSize: 12),
                   ),
                 ),
                 const SizedBox(width: 8),
               ],
+
+              // ── Bubble ──
               Flexible(
                 child: Container(
-                  // For image-only bubbles, use tighter padding
                   padding: isImageBubble
                       ? const EdgeInsets.all(4)
                       : const EdgeInsets.symmetric(
@@ -1002,15 +1080,19 @@ Widget _buildSingleAttachment(ChatMessage message) {
                         ),
                   decoration: BoxDecoration(
                     color: message.isMe
-                        ? Colors.green
-                        : const Color.fromARGB(255, 200, 199, 199),
+                        ? (isSelected
+                            ? Colors.green[600]
+                            : Colors.green)
+                        : (isSelected
+                            ? Colors.grey[350]
+                            : const Color.fromARGB(255, 200, 199, 199)),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // ── Attachment area ──
+                      // Attachment
                       if (hasGrouped) ...[
                         _buildImageGrid(
                           message.groupedAttachments,
@@ -1024,7 +1106,7 @@ Widget _buildSingleAttachment(ChatMessage message) {
                       if (hasGrouped || message.fileType != null)
                         const SizedBox(height: 4),
 
-                      // ── Text ──
+                      // Text
                       if (showText)
                         Padding(
                           padding: isImageBubble
@@ -1041,7 +1123,7 @@ Widget _buildSingleAttachment(ChatMessage message) {
                           ),
                         ),
 
-                      // ── Time + read tick ──
+                      // Time + read tick
                       Padding(
                         padding: isImageBubble
                             ? const EdgeInsets.only(
@@ -1081,25 +1163,6 @@ Widget _buildSingleAttachment(ChatMessage message) {
                   ),
                 ),
               ),
-              // ── Delete button when selected ──
-              if (isSelected) ...[
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () => _deleteMessage(message.id),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.8),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.delete,
-                      color: Colors.white,
-                      size: 18,
-                    ),
-                  ),
-                ),
-              ],
             ],
           ),
         ),
@@ -1113,7 +1176,8 @@ Widget _buildSingleAttachment(ChatMessage message) {
     return Center(
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         decoration: BoxDecoration(
           color: const Color.fromARGB(255, 236, 236, 226),
           borderRadius: BorderRadius.circular(8),
@@ -1135,211 +1199,332 @@ Widget _buildSingleAttachment(ChatMessage message) {
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            _readStatusPollTimer?.cancel();
-            _foregroundMessageSubscription?.cancel();
-            CurrentChatState().clearCurrentChat();
-            Navigator.pop(context);
-          },
-        ),
-        title: Row(
-          children: [
-            Stack(
-              children: [
-                CircleAvatar(
-                  backgroundColor: widget.contact.avatarColor,
-                  radius: 18,
-                  child: Text(
-                    widget.contact.initials,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+    return WillPopScope(
+      // Back button clears selection instead of popping when in selection mode
+      onWillPop: () async {
+        if (_isSelectionMode) {
+          _clearSelection();
+          return false;
+        }
+        return true;
+      },
+      child: Scaffold(
+        appBar: _isSelectionMode
+            ? AppBar(
+                backgroundColor: Colors.green[700],
+                foregroundColor: Colors.white,
+                leading: IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: _clearSelection,
                 ),
-                if (widget.contact.isOnline)
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: Colors.greenAccent,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                    ),
+                title: Text(
+                  '${_selectedMessageIds.length} selected',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                actions: [
+                  // Select all
+                  IconButton(
+                    icon: const Icon(Icons.select_all),
+                    tooltip: 'Select All',
+                    onPressed: _selectAll,
                   ),
-              ],
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.contact.name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    widget.contact.isOnline ? 'Online' : 'Last seen recently',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.normal,
-                    ),
+                  // Delete
+                  IconButton(
+                    icon: const Icon(Icons.delete),
+                    tooltip: 'Delete',
+                    onPressed: _deleteSelectedMessages,
                   ),
                 ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => _fetchMessagesFromApi(silent: false),
-          ),
-          IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            if (_isLoadingMessages)
-              const LinearProgressIndicator(
-                backgroundColor: Colors.grey,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
-              ),
-            if (_isUploading)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 6,
+              )
+            : AppBar(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () {
+                    _readStatusPollTimer?.cancel();
+                    _foregroundMessageSubscription?.cancel();
+                    CurrentChatState().clearCurrentChat();
+                    Navigator.pop(context);
+                  },
                 ),
-                color: Colors.green.shade50,
-                child: const Row(
+                title: Row(
                   children: [
-                    SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.green,
-                      ),
+                    Stack(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: widget.contact.avatarColor,
+                          radius: 18,
+                          child: Text(
+                            widget.contact.initials,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        if (widget.contact.isOnline)
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              width: 12,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                color: Colors.greenAccent,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                    SizedBox(width: 10),
-                    Text(
-                      'Uploading file(s)...',
-                      style: TextStyle(fontSize: 13, color: Colors.green),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.contact.name,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            widget.contact.isOnline
+                                ? 'Online'
+                                : 'Last seen recently',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.normal,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-              ),
-            Expanded(
-              child: Container(
-                color: const Color.fromARGB(255, 245, 245, 230),
-                child: _messages.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'No messages yet',
-                          style: TextStyle(color: Colors.grey, fontSize: 16),
-                        ),
-                      )
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        reverse: true,
-                        itemCount: _messages.length,
-                        itemBuilder: (ctx, index) {
-                          final ri = _messages.length - 1 - index;
-                          final msg = _messages[ri];
-                          return Column(
-                            children: [
-                              if (_shouldShowDateSeparator(ri))
-                                _buildDateSeparator(msg.timestamp),
-                              _buildMessage(msg),
-                            ],
-                          );
-                        },
-                      ),
-              ),
-            ),
-            // ── Input bar ──
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.3),
-                    spreadRadius: 1,
-                    blurRadius: 5,
-                    offset: const Offset(0, -3),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
+                actions: [
                   IconButton(
-                    icon: const Icon(Icons.camera_alt, color: Colors.grey),
-                    onPressed: _onCameraPressed,
+                    icon: const Icon(Icons.refresh),
+                    onPressed: () => _fetchMessagesFromApi(silent: false),
                   ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      focusNode: _messageFocusNode,
-                      decoration: InputDecoration(
-                        hintText: 'Type a message',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(25),
-                          borderSide: BorderSide.none,
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey[200],
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 10,
-                        ),
-                        suffixIcon: IconButton(
-                          icon: const Icon(
-                            Icons.attach_file,
-                            color: Colors.grey,
-                          ),
-                          onPressed: _onAttachFilePressed,
-                        ),
-                      ),
-                      maxLines: null,
-                      textInputAction: TextInputAction.newline,
-                      onSubmitted: (_) => _sendMessage(),
-                      onTap: () {
-                        Future.delayed(const Duration(milliseconds: 300), () {
-                          if (mounted) _scrollToBottom();
-                        });
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  FloatingActionButton(
-                    backgroundColor: Colors.green,
-                    mini: true,
-                    onPressed: _sendMessage,
-                    child: const Icon(Icons.send, color: Colors.white),
+                  IconButton(
+                    icon: const Icon(Icons.more_vert),
+                    onPressed: () {},
                   ),
                 ],
               ),
-            ),
-          ],
+        body: SafeArea(
+          child: Column(
+            children: [
+              if (_isLoadingMessages)
+                const LinearProgressIndicator(
+                  backgroundColor: Colors.grey,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                ),
+              if (_isUploading)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
+                  color: Colors.green.shade50,
+                  child: const Row(
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.green,
+                        ),
+                      ),
+                      SizedBox(width: 10),
+                      Text(
+                        'Uploading file(s)...',
+                        style:
+                            TextStyle(fontSize: 13, color: Colors.green),
+                      ),
+                    ],
+                  ),
+                ),
+              Expanded(
+                child: Container(
+                  color: const Color.fromARGB(255, 245, 245, 230),
+                  child: _messages.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'No messages yet',
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 16,
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          controller: _scrollController,
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 8),
+                          reverse: true,
+                          itemCount: _messages.length,
+                          itemBuilder: (ctx, index) {
+                            final ri = _messages.length - 1 - index;
+                            final msg = _messages[ri];
+                            return Column(
+                              children: [
+                                if (_shouldShowDateSeparator(ri))
+                                  _buildDateSeparator(msg.timestamp),
+                                _buildMessage(msg),
+                              ],
+                            );
+                          },
+                        ),
+                ),
+              ),
+              // ── Input bar (hidden in selection mode) ──
+              if (!_isSelectionMode)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.3),
+                        spreadRadius: 1,
+                        blurRadius: 5,
+                        offset: const Offset(0, -3),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(
+                          Icons.camera_alt,
+                          color: Colors.grey,
+                        ),
+                        onPressed: _onCameraPressed,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: TextField(
+                          controller: _messageController,
+                          focusNode: _messageFocusNode,
+                          decoration: InputDecoration(
+                            hintText: 'Type a message',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(25),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey[200],
+                            contentPadding:
+                                const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 10,
+                            ),
+                            suffixIcon: IconButton(
+                              icon: const Icon(
+                                Icons.attach_file,
+                                color: Colors.grey,
+                              ),
+                              onPressed: _onAttachFilePressed,
+                            ),
+                          ),
+                          maxLines: null,
+                          textInputAction: TextInputAction.newline,
+                          onSubmitted: (_) => _sendMessage(),
+                          onTap: () {
+                            Future.delayed(
+                              const Duration(milliseconds: 300),
+                              () {
+                                if (mounted) _scrollToBottom();
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      FloatingActionButton(
+                        backgroundColor: Colors.green,
+                        mini: true,
+                        onPressed: _sendMessage,
+                        child: const Icon(
+                          Icons.send,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // ── Selection action bar ──
+              if (_isSelectionMode)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.3),
+                        spreadRadius: 1,
+                        blurRadius: 5,
+                        offset: const Offset(0, -3),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      // Selected count
+                      Expanded(
+                        child: Text(
+                          '${_selectedMessageIds.length} message${_selectedMessageIds.length > 1 ? 's' : ''} selected',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                      // Select all button
+                      TextButton.icon(
+                        onPressed: _selectAll,
+                        icon: const Icon(
+                          Icons.select_all,
+                          color: Colors.green,
+                        ),
+                        label: const Text(
+                          'All',
+                          style: TextStyle(color: Colors.green),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Delete button
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                        onPressed: _deleteSelectedMessages,
+                        icon: const Icon(Icons.delete, size: 18),
+                        label: const Text('Delete'),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -1382,25 +1567,23 @@ class _GalleryViewState extends State<_GalleryView> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        title: Text(
-          '${_currentIndex + 1} / ${widget.items.length}'),
-          actions: [
-    IconButton(
-      icon: const Icon(Icons.download),
-      tooltip: 'Download',
-      onPressed: () {
-        final item = widget.items[_currentIndex];
-        final url = item.url;
-        final name = item.fileName ??
-            'image_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        if (url != null) {
-          DownloadHelper.downloadAndOpen(context, url, name);
-        }
-      },
-    ),
-  ],
-        ),
-   
+        title: Text('${_currentIndex + 1} / ${widget.items.length}'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.download),
+            tooltip: 'Download',
+            onPressed: () {
+              final item = widget.items[_currentIndex];
+              final url = item.url;
+              final name = item.fileName ??
+                  'image_${DateTime.now().millisecondsSinceEpoch}.jpg';
+              if (url != null) {
+                DownloadHelper.downloadAndOpen(context, url, name);
+              }
+            },
+          ),
+        ],
+      ),
       body: PageView.builder(
         controller: _pageController,
         itemCount: widget.items.length,
@@ -1412,12 +1595,18 @@ class _GalleryViewState extends State<_GalleryView> {
             img = Image.network(
               item.url!,
               fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) =>
-                  const Icon(Icons.broken_image, color: Colors.white, size: 80),
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.broken_image,
+                color: Colors.white,
+                size: 80,
+              ),
             );
           } else if (item.localPath != null &&
               File(item.localPath!).existsSync()) {
-            img = Image.file(File(item.localPath!), fit: BoxFit.contain);
+            img = Image.file(
+              File(item.localPath!),
+              fit: BoxFit.contain,
+            );
           } else {
             img = const Icon(Icons.image, color: Colors.white, size: 80);
           }

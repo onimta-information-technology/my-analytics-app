@@ -400,18 +400,72 @@ class FirebaseApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> softDeleteMessage(
-    String chatId,
-    String messageId,
-  ) async {
-    try {
-      final deviceId = await DeviceId.get();
-      final url =
-          '$domain${endpoints['softDeleteMessage']}/$chatId/messages/$messageId';
-      return await deleteRequestWithBody(url, {'userId': deviceId});
-    } catch (e) {
-      return {'success': false, 'error': e.toString()};
-    }
+  // static Future<Map<String, dynamic>> softDeleteMessage(
+  //   String chatId,
+  //   String messageId,
+  // ) async {
+  //   try {
+  //     final deviceId = await DeviceId.get();
+  //     final url =
+  //         '$domain${endpoints['softDeleteMessage']}/$chatId/messages/$messageId';
+  //     return await deleteRequestWithBody(url, {'userId': deviceId});
+  //   } catch (e) {
+  //     return {'success': false, 'error': e.toString()};
+  //   }
+  // }
+  // Delete for ME only (existing - soft delete)
+static Future<Map<String, dynamic>> softDeleteMessage(
+
+  String chatId,
+  String messageId,
+) async {
+  try {
+    print('softDeleteMessage called with chatId: $chatId, messageId: $messageId');
+    final deviceId = await DeviceId.get();
+    final url = '$domain/api/chats/$chatId/messages/$messageId/soft-delete';
+    return await patchRequest(url, {'userId': deviceId});
+  } catch (e) {
+    return {'success': false, 'error': e.toString()};
   }
-  
+}
+
+// Delete for EVERYONE (hard delete)
+static Future<Map<String, dynamic>> deleteMessageForEveryone(
+  String chatId,
+  String messageId,
+) async {
+  try {
+    print('deleteMessageForEveryone called with chatId: $chatId, messageId: $messageId');
+    final deviceId = await DeviceId.get();
+    final url = '$domain/api/chats/$chatId/messages/$messageId';
+    return await deleteRequestWithBody(url, {'userId': deviceId});
+  } catch (e) {
+    return {'success': false, 'error': e.toString()};
+  }
+}
+static Future<Map<String, dynamic>> patchRequest(
+  String url,
+  Map<String, dynamic> body,
+) async {
+  try {
+    final headers = await getAuthHeaders();
+    final response = await http.patch(
+      Uri.parse(url),
+      headers: headers,
+      body: jsonEncode(body),
+    );
+    if (response.statusCode == 200) {
+      return {'success': true, 'data': jsonDecode(response.body)};
+    } else {
+      return {
+        'success': false,
+        'error': 'Server returned status code: ${response.statusCode}',
+        'statusCode': response.statusCode,
+        'responseBody': response.body,
+      };
+    }
+  } catch (e) {
+    return {'success': false, 'error': e.toString()};
+  }
+}
 }

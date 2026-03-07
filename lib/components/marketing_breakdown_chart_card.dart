@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:ui' as ui;
 
+import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/models/marketing_group.dart';
@@ -369,6 +370,7 @@ class _HalfPieSectionState extends State<_HalfPieSection>
           title: 'Other Marketing — $label',
           salesPersons: groupByMGroup(widget.otherMarketingGuests),
           accentColor: color,
+          disableNavigation: true,
         ),
       );
       return;
@@ -585,6 +587,7 @@ class _SalesPersonsSheet extends StatefulWidget {
   final Map<String, List<Guest>> salesPersons;
   final Color accentColor;
   final bool useKeyAsName;
+  final bool disableNavigation;
   // When provided (admin MKT), drives row order and counts from Table1
   final List<MarketingGroup>? salesPersonOrder;
 
@@ -594,6 +597,7 @@ class _SalesPersonsSheet extends StatefulWidget {
     required this.accentColor,
     this.useKeyAsName = false,
     this.salesPersonOrder,
+    this.disableNavigation = false, 
   });
 
   @override
@@ -694,6 +698,7 @@ class _SalesPersonsSheetState extends State<_SalesPersonsSheet> {
                                 guests: row.guests,
                                 accentColor: widget.accentColor,
                                 showBackButton: true,
+                                disableNavigation: widget.disableNavigation,
                               ),
                             );
                           },
@@ -743,12 +748,14 @@ class _MemberVisitsSheet extends ConsumerStatefulWidget {
   final List<Guest> guests;
   final Color accentColor;
   final bool showBackButton;
+  final bool disableNavigation;
 
   const _MemberVisitsSheet({
     required this.title,
     required this.guests,
     required this.accentColor,
     this.showBackButton = false,
+    this.disableNavigation = false,
   });
 
   @override
@@ -793,7 +800,86 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> {
             }).toList();
     });
   }
-
+void _showAccessDeniedDialog() {
+  showDialog(
+    context: context,
+    barrierDismissible: true,
+    builder: (BuildContext context) {
+      return Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.lock_outline,
+                  size: 50,
+                  color: Colors.red.shade400,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                "Access Denied",
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2C3E50),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Constants.kPrimaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    "Got It",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
   @override
   Widget build(BuildContext context) {
     return _SheetScaffold(
@@ -822,6 +908,10 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> {
                       child: InkWell(
                         borderRadius: BorderRadius.circular(10),
                         onTap: () {
+                           if (widget.disableNavigation) {
+                             _showAccessDeniedDialog();
+                             return;
+                           }
                           ref
                               .read(selectedGuestProvider.notifier)
                               .setSelectedGuest(guest);

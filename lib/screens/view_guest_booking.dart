@@ -501,12 +501,58 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
             }
           },
         ),
-        title: Text(
-          'Guest Booking Details',
-          style: TextStyle(
-            fontSize: fontSettings.fontSize,
-            fontWeight: fontSettings.fontWeight,
-          ),
+      //   title: Text(
+      //     'Guest Booking Details',
+      //     style: TextStyle(
+      //       fontSize: fontSettings.fontSize,
+      //       fontWeight: fontSettings.fontWeight,
+      //     ),
+      //   ),
+      // ),
+        title: Row(
+          children: [
+            Text(
+              'Guest Booking Details',
+              style: TextStyle(
+                fontSize: fontSettings.fontSize,
+                fontWeight: fontSettings.fontWeight,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: widget.isPending
+                    ? Colors.orange
+                    : Colors.green,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    widget.isPending
+                        ? Icons.hourglass_bottom
+                        : Icons.check_circle,
+                       
+                    size: 12,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    widget.isPending
+                        ? 'Pending'
+                        : 'Approved',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
       body: Stack(

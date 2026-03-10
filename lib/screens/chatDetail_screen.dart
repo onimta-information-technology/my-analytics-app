@@ -165,6 +165,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           final grouped = ChatMessage.groupImageMessages(flat);
 
           if (updateReadStatusOnly) {
+            // ── Only update read-status fields, don't disturb the list ──
             bool changed = false;
             for (int i = 0; i < _messages.length; i++) {
               final updated = grouped.firstWhere(
@@ -180,8 +181,20 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           } else {
             final hadMessages = _messages.isNotEmpty;
             final countChanged = _messages.length != grouped.length;
+
+            // ── FIX: Preserve optimistic/local messages not yet confirmed by server ──
+            // Local messages that were added optimistically (e.g. during upload)
+            // have apiMessageId == null. Keep them until the server confirms them.
+            final pendingLocal = _messages.where((m) {
+              return m.apiMessageId == null &&
+                  !grouped.any((g) => g.id == m.id);
+            }).toList();
+
+            final merged = [...grouped, ...pendingLocal]
+              ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
             setState(() {
-              _messages = grouped;
+              _messages = merged;
               if (!silent) _isLoadingMessages = false;
             });
             await _markMessagesAsRead();
@@ -400,6 +413,13 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         if (widget.onMessageSent != null) {
           widget.onMessageSent!('📎 ${filePaths.length} file(s) sent');
         }
+
+        // ── FIX: Give the server a moment to index the upload, then sync ──
+        // This ensures the next silent fetch sees the confirmed messages,
+        // so the merge logic above can match them and drop the local copies.
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) _fetchMessagesFromApi(silent: true);
+        });
       } else {
         setState(() => _isUploading = false);
         _showErrorSnack('Upload failed: ${result['error'] ?? 'Unknown error'}');
@@ -612,7 +632,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     required List<String> selectedIds,
     required bool forEveryone,
   }) async {
-    // Show loading snack
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -655,7 +674,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
 
     if (!mounted) return;
 
-    // Dismiss loading snack
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
     setState(() {
@@ -1056,48 +1074,36 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                 ),
 
               // ── Avatar (other user) ──
-              // if (!message.isMe) ...[
-              //   CircleAvatar(
-              //     backgroundColor: widget.contact.avatarColor,
-              //     radius: 15,
-              //     child: Text(
-              //       widget.contact.initials,
-              //       style:
-              //           const TextStyle(color: Colors.white, fontSize: 12),
-              //     ),
-              //   ),
-              //   const SizedBox(width: 8),
-              // ],
-// ── Avatar (other user) ──
-if (!message.isMe) ...[
-  Stack(
-    children: [
-      CircleAvatar(
-        backgroundColor: widget.contact.avatarColor,
-        radius: 15,
-        child: Text(
-          widget.contact.initials,
-          style: const TextStyle(color: Colors.white, fontSize: 12),
-        ),
-      ),
-      if (widget.contact.isOnline)
-        Positioned(
-          bottom: 0,
-          right: 0,
-          child: Container(
-            width: 9,
-            height: 9,
-            decoration: BoxDecoration(
-              color: Colors.greenAccent,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 1.5),
-            ),
-          ),
-        ),
-    ],
-  ),
-  const SizedBox(width: 8),
-],
+              if (!message.isMe) ...[
+                Stack(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: widget.contact.avatarColor,
+                      radius: 15,
+                      child: Text(
+                        widget.contact.initials,
+                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ),
+                    if (widget.contact.isOnline)
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          width: 9,
+                          height: 9,
+                          decoration: BoxDecoration(
+                            color: Colors.greenAccent,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 1.5),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(width: 8),
+              ],
+
               // ── Bubble ──
               Flexible(
                 child: Container(
@@ -1229,7 +1235,6 @@ if (!message.isMe) ...[
   Widget build(BuildContext context) {
     super.build(context);
     return WillPopScope(
-      // Back button clears selection instead of popping when in selection mode
       onWillPop: () async {
         if (_isSelectionMode) {
           _clearSelection();
@@ -1251,13 +1256,11 @@ if (!message.isMe) ...[
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 actions: [
-                  // Select all
                   IconButton(
                     icon: const Icon(Icons.select_all),
                     tooltip: 'Select All',
                     onPressed: _selectAll,
                   ),
-                  // Delete
                   IconButton(
                     icon: const Icon(Icons.delete),
                     tooltip: 'Delete',
@@ -1513,7 +1516,6 @@ if (!message.isMe) ...[
                   ),
                   child: Row(
                     children: [
-                      // Selected count
                       Expanded(
                         child: Text(
                           '${_selectedMessageIds.length} message${_selectedMessageIds.length > 1 ? 's' : ''} selected',
@@ -1523,7 +1525,6 @@ if (!message.isMe) ...[
                           ),
                         ),
                       ),
-                      // Select all button
                       TextButton.icon(
                         onPressed: _selectAll,
                         icon: const Icon(
@@ -1536,7 +1537,6 @@ if (!message.isMe) ...[
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // Delete button
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red,

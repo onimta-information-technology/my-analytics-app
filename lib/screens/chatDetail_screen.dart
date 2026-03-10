@@ -216,18 +216,46 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     }
   }
 
-  Future<void> _markMessagesAsRead() async {
-    try {
-      if (_currentUserName == null || _messages.isEmpty) return;
-      final ids = _messages
-          .where((m) => !m.isMe && m.apiMessageId != null)
-          .map((m) => m.apiMessageId!)
-          .toList();
-      if (ids.isEmpty) return;
-      await FirebaseApiService.markMessagesAsRead(widget.contact.chatUuid, ids);
-    } catch (_) {}
-  }
+  // Future<void> _markMessagesAsRead() async {
+  //   try {
+  //     if (_currentUserName == null || _messages.isEmpty) return;
+  //     final ids = _messages
+  //         .where((m) => !m.isMe && m.apiMessageId != null)
+  //         .map((m) => m.apiMessageId!)
+  //         .toList();
+  //     if (ids.isEmpty) return;
+  //     await FirebaseApiService.markMessagesAsRead(widget.contact.chatUuid, ids);
+  //   } catch (_) {}
+  // }
+Future<void> _markMessagesAsRead() async {
+  try {
+    if (_currentUserName == null || _messages.isEmpty) return;
 
+    final ids = <String>[];
+
+    for (final m in _messages) {
+      if (m.isMe) continue;
+
+      // Add the top-level message ID
+      if (m.apiMessageId != null) {
+        ids.add(m.apiMessageId!);
+      }
+
+      // ── FIX: Also add each individual image's messageId from grouped attachments ──
+      // Grouped images are collapsed into one ChatMessage but each has its own
+      // server messageId stored in AttachmentItem.messageId — those were being skipped.
+      for (final attachment in m.groupedAttachments) {
+        if (attachment.messageId != null &&
+            attachment.messageId != m.apiMessageId) {
+          ids.add(attachment.messageId!);
+        }
+      }
+    }
+
+    if (ids.isEmpty) return;
+    await FirebaseApiService.markMessagesAsRead(widget.contact.chatUuid, ids);
+  } catch (_) {}
+}
   // ─── Send text ──────────────────────────────────────────────────────────────
 
   void _sendMessage() async {

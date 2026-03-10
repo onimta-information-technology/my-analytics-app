@@ -17,56 +17,80 @@ class ApiService {
   ApiService(this.storage);
 
   Future<Map<String, dynamic>> post(
-    String endpoint,
-    Map<String, Object?> body,
-  ) async {
+  String endpoint,
+  Map<String, Object?> body,
+) async {
 String? accessToken = await storage.read(key: 'access_token');
-  
-    try {
-      var response = await _makeRequest(endpoint, body, accessToken);
-print(response.statusCode);
-      // ── 401: refresh token once, then retry ───────────────────────────────
-      if (response.statusCode == 401) {
-        await storage.delete(key: 'access_token');
-        final newToken = await _reAuthenticate();
 
-        if (newToken != null && newToken.isNotEmpty) {
-          response = await _makeRequest(endpoint, body, newToken);
+  try {
+    var response = await _makeRequest(endpoint, body, accessToken);
 print(response.statusCode);
-          if (response.statusCode == 200) {
-            return jsonDecode(response.body);
-          }
+print(response.body);
+    // ── 401 or 406 Invalid Token: refresh once, then retry ────────────────
+    if (response.statusCode == 401 || _isInvalidToken(response)) {
+      await storage.delete(key: 'access_token');
+      final newToken = await _reAuthenticate();
+
+      if (newToken != null && newToken.isNotEmpty) {
+        response = await _makeRequest(endpoint, body,newToken);
+print(response.body);
+print(response.statusCode);
+        // Check again after retry
+        if (_isInvalidToken(response)) {
+          await _forceLogout();
+          throw UnauthorizedException();
         }
 
-        // Still unauthorized or re-auth failed → force logout
-        await _forceLogout();
-        throw UnauthorizedException();
+        if (response.statusCode == 200) {
+          return jsonDecode(response.body);
+        }
       }
 
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      }
-
-      if (response.statusCode >= 500) {
-        throw ServerException(
-          response.reasonPhrase ?? 'Server error',
-          response.statusCode,
-        );
-      }
-
-      throw ApiException(
-        'Failed to load data: ${response.statusCode} - ${response.reasonPhrase}',
-        statusCode: response.statusCode,
-      );
-    } on http.ClientException catch (e) {
-      throw NetworkException(e.message);
-    } on ApiException {
-      rethrow;
-    } catch (e) {
-      throw ApiException('Unexpected error: $e');
+      // Re-auth failed or still unauthorized → force logout
+      await _forceLogout();
+      throw UnauthorizedException();
     }
-  }
 
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    if (response.statusCode >= 500) {
+      throw ServerException(
+        response.reasonPhrase ?? 'Server error',
+        response.statusCode,
+      );
+    }
+
+    throw ApiException(
+      'Failed to load data: ${response.statusCode} - ${response.reasonPhrase}',
+      statusCode: response.statusCode,
+    );
+  } on http.ClientException catch (e) {
+    throw NetworkException(e.message);
+  } on ApiException {
+    rethrow;
+  } catch (e) {
+    throw ApiException('Unexpected error: $e');
+  }
+}
+
+/// Detects the 406 Invalid Token response body
+bool _isInvalidToken(http.Response response) {
+  try {
+    if (response.statusCode == 200) {
+      final body = jsonDecode(response.body);
+      // Handle the typo "Erorr" as well as a potential fix "Error"
+      final status = (body['status'] as String? ?? '').toLowerCase();
+      final msg = (body['statusMsg'] as String? ?? '').toLowerCase();
+      return (status == 'erorr' || status == 'error') &&
+          msg.contains('invalid token');
+    }
+    return false;
+  } catch (_) {
+    return false;
+  }
+}
   // ── Private helpers ────────────────────────────────────────────────────────
 
   Future<http.Response> _makeRequest(

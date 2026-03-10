@@ -5,6 +5,7 @@ import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/components/developer_banner.dart';
 import 'package:ballys_reservation_app/components/localNotificationService.dart';
+import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/data/services/versioncehck_service.dart';
 import 'package:ballys_reservation_app/models/Guest/guest_booking.dart';
 import 'package:ballys_reservation_app/navigation/app_navigation.dart';
@@ -74,6 +75,12 @@ void main() async {
   // Initialize badge service
   await BadgeService().initialize();
  globalContainer = ProviderContainer();
+ registerLogoutCallback(() {
+    try {
+      globalContainer.read(authProvider.notifier).logout();
+    } catch (_) {}
+  });
+
  runApp(ProviderScope(
     parent: globalContainer, // ✅ Link ProviderScope to global container
     child: MyApp(),

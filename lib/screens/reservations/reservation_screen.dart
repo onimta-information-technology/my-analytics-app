@@ -186,12 +186,12 @@ String _formatDateTime(DateTime dt) {
            tabAlignment: TabAlignment.start,
           tabs: [
             _buildTab(
-              'Pending',
+              'Pending & Checked',
               reservations['Pending']?.length ?? 0,
               Colors.orange,
             ),
              _buildTab(
-              'Checked',
+              'For Approval',
               reservations['Checked']?.length ?? 0,
               Colors.blue,
             ),

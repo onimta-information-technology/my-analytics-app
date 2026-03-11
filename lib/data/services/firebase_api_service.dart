@@ -273,6 +273,7 @@ class FirebaseApiService {
   ) async {
     final deviceId = await DeviceId.get();
     final actualSalesCode = await StorageUtil.getSalesCode();
+     final phoneNumber = await StorageUtil.getMobileNumber();
     final url = '$fmcDomain${endpoints['InsertChatFMCToken']}';
     final timestamp = DateTime.now().toIso8601String();
     final response = await postRequest(url, {
@@ -282,6 +283,7 @@ class FirebaseApiService {
       'fcmToken': fcmToken,
       'appId': 2,
       'salesCode': actualSalesCode,
+      'phoneNo':phoneNumber
     });
 
     final prefs = await SharedPreferences.getInstance();

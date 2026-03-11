@@ -256,12 +256,12 @@ class _BirthdayGiftRequestScreenState
           tabAlignment: TabAlignment.start,
           tabs: [
             _buildTab(
-              'Pending',
+              'Pending & Checked',
               birthdayGiftsp.pendingBirthdayGift.length,
               Colors.orange,
             ),
             _buildTab(
-              'Checked',
+              'For Approval',
               birthdayGiftsp.checkedBirthdayGift.length,
               Colors.blue,
             ),

@@ -723,6 +723,7 @@ class _ViewBirthdayGiftRequestState
 
     return Scaffold(
       appBar: AppBar(
+         titleSpacing: 0, 
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
@@ -742,11 +743,11 @@ class _ViewBirthdayGiftRequestState
             Text(
               'Birthday Gift Request',
               style: TextStyle(
-                fontSize: fontSettings.fontSize,
+                fontSize: fontSettings.fontSize-2,
                 fontWeight: fontSettings.fontWeight,
               ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
@@ -762,28 +763,28 @@ class _ViewBirthdayGiftRequestState
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    widget.isApproved
-                        ? Icons.check_circle
-                        : widget.isChecked
-                        ? Icons.rule_rounded
-                        : widget.isPending
-                        ? Icons.hourglass_bottom
-                        : Icons.cancel,
-                    size: 12,
-                    color: Colors.white,
-                  ),
-                  const SizedBox(width: 8),
+                  // Icon(
+                  //   widget.isApproved
+                  //       ? Icons.check_circle
+                  //       : widget.isChecked
+                  //       ? Icons.rule_rounded
+                  //       : widget.isPending
+                  //       ? Icons.hourglass_bottom
+                  //       : Icons.cancel,
+                  //   size: 12,
+                  //   color: Colors.white,
+                  // ),
+                  // const SizedBox(width: 6),
                   Text(
                     widget.isApproved
                         ? 'Approved'
                         : widget.isChecked
-                        ? 'Checked'
+                        ? 'For Approval'
                         : widget.isPending
-                        ? 'Pending'
+                        ? 'Pending & Checked'
                         : 'Rejected',
                     style: const TextStyle(
-                      fontSize: 18,
+                      fontSize: 15,
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                     ),

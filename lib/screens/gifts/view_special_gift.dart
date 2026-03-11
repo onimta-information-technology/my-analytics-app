@@ -633,6 +633,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
 
     return Scaffold(
       appBar: AppBar(
+         titleSpacing: 0, 
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
@@ -646,13 +647,13 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
         title: Row(
           children: [
             Text(
-              'Special Gift Request',
+              'OTP Gift Request',
               style: TextStyle(
                 fontSize: fontSettings.fontSize,
                 fontWeight: fontSettings.fontWeight,
               ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
@@ -668,28 +669,28 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    widget.isApproved
-                        ? Icons.check_circle
-                        : widget.isChecked
-                        ? Icons.rule_rounded
-                        : widget.isPending
-                        ? Icons.hourglass_bottom
-                        : Icons.cancel,
-                    size: 12,
-                    color: Colors.white,
-                  ),
-                  const SizedBox(width: 8),
+                  // Icon(
+                  //   widget.isApproved
+                  //       ? Icons.check_circle
+                  //       : widget.isChecked
+                  //       ? Icons.rule_rounded
+                  //       : widget.isPending
+                  //       ? Icons.hourglass_bottom
+                  //       : Icons.cancel,
+                  //   size: 12,
+                  //   color: Colors.white,
+                  // ),
+                  // const SizedBox(width: 7),
                   Text(
                     widget.isApproved
                         ? 'Approved'
                         : widget.isChecked
-                        ? 'Checked'
+                        ? 'For Approval'
                         : widget.isPending
-                        ? 'Pending'
+                        ? 'Pending & Checked'
                         : 'Rejected',
                     style: const TextStyle(
-                      fontSize: 18,
+                      fontSize: 16,
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                     ),

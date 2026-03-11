@@ -33,30 +33,23 @@ class ReservationViewScreen extends ConsumerStatefulWidget {
       _NewReservationScreenState();
 }
 
-class _NewReservationScreenState
-    extends ConsumerState<ReservationViewScreen> {
+class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
   final TextEditingController _reservationNoController =
       TextEditingController();
-  final TextEditingController _memberIdController =
-      TextEditingController();
-  final TextEditingController _memberNameController =
-      TextEditingController();
+  final TextEditingController _memberIdController = TextEditingController();
+  final TextEditingController _memberNameController = TextEditingController();
 
-  final ValueNotifier<String> hotelRoomNotifier =
-      ValueNotifier<String>("");
-  final ValueNotifier<String> airTicketsNotifier =
-      ValueNotifier<String>("");
+  final ValueNotifier<String> hotelRoomNotifier = ValueNotifier<String>("");
+  final ValueNotifier<String> airTicketsNotifier = ValueNotifier<String>("");
 
   DateTimeRange? selectedDateRange;
   String? selectedHotelAndRoom;
   int? numberOfNights;
 
-  final TextEditingController _arrivalDateController =
-      TextEditingController();
+  final TextEditingController _arrivalDateController = TextEditingController();
   final TextEditingController _departureDateController =
       TextEditingController();
-  final TextEditingController _remarksController =
-      TextEditingController();
+  final TextEditingController _remarksController = TextEditingController();
 
   String _airTicketRequisition = "No";
   bool _isLoading = false;
@@ -75,12 +68,14 @@ class _NewReservationScreenState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       FocusScope.of(context).requestFocus(FocusNode());
       final selectedReservation = ref.watch(selectedReservationProvider);
-      ref.read(selectedHotelProvider.notifier).setHotels(
-            selectedReservation != null
-                ? selectedReservation.hotelDescip
-                : [],
+      ref
+          .read(selectedHotelProvider.notifier)
+          .setHotels(
+            selectedReservation != null ? selectedReservation.hotelDescip : [],
           );
-      ref.read(selectedFlightProvider.notifier).setFlights(
+      ref
+          .read(selectedFlightProvider.notifier)
+          .setFlights(
             selectedReservation != null
                 ? selectedReservation.airticketDescrip
                 : [],
@@ -198,8 +193,7 @@ class _NewReservationScreenState
           // ── Header bar ────────────────────────────────────────────────
           Container(
             width: double.infinity,
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: color.withOpacity(0.15),
               borderRadius: const BorderRadius.only(
@@ -260,11 +254,7 @@ class _NewReservationScreenState
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        Icons.comment_outlined,
-                        color: color,
-                        size: 18,
-                      ),
+                      Icon(Icons.comment_outlined, color: color, size: 18),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Column(
@@ -352,7 +342,8 @@ class _NewReservationScreenState
       builder: (BuildContext context) {
         return Dialog(
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20)),
+            borderRadius: BorderRadius.circular(20),
+          ),
           elevation: 0,
           backgroundColor: Colors.transparent,
           child: Container(
@@ -362,9 +353,10 @@ class _NewReservationScreenState
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5)),
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
               ],
             ),
             child: Column(
@@ -374,18 +366,23 @@ class _NewReservationScreenState
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      shape: BoxShape.circle),
-                  child: Icon(Icons.lock_outline,
-                      size: 50, color: Colors.red.shade400),
+                    color: Colors.red.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.lock_outline,
+                    size: 50,
+                    color: Colors.red.shade400,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 const Text(
                   "Access Denied",
                   style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2C3E50)),
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C3E50),
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
@@ -396,16 +393,19 @@ class _NewReservationScreenState
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Constants.kPrimaryColor,
                       foregroundColor: Colors.white,
-                      padding:
-                          const EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       elevation: 0,
                     ),
-                    child: const Text("Got It",
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      "Got It",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -422,8 +422,7 @@ class _NewReservationScreenState
     Color accentColor,
     IconData icon,
   ) async {
-    final TextEditingController remarksController =
-        TextEditingController();
+    final TextEditingController remarksController = TextEditingController();
 
     return showDialog<String>(
       context: context,
@@ -460,8 +459,7 @@ class _NewReservationScreenState
                       color: accentColor.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child:
-                        Icon(icon, size: 38, color: accentColor),
+                    child: Icon(icon, size: 38, color: accentColor),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -476,9 +474,7 @@ class _NewReservationScreenState
                   const SizedBox(height: 6),
                   Text(
                     'Please provide remarks to continue.',
-                    style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade500),
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 20),
@@ -500,18 +496,15 @@ class _NewReservationScreenState
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            BorderSide(color: Colors.grey.shade200),
+                        borderSide: BorderSide(color: Colors.grey.shade200),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            BorderSide(color: Colors.grey.shade200),
+                        borderSide: BorderSide(color: Colors.grey.shade200),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            BorderSide(color: accentColor, width: 1.5),
+                        borderSide: BorderSide(color: accentColor, width: 1.5),
                       ),
                     ),
                   ),
@@ -520,17 +513,13 @@ class _NewReservationScreenState
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () =>
-                              Navigator.of(context).pop(),
+                          onPressed: () => Navigator.of(context).pop(),
                           style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 14),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            side: BorderSide(
-                                color: Colors.grey.shade300),
+                            side: BorderSide(color: Colors.grey.shade300),
                           ),
                           child: Text(
                             'Cancel',
@@ -545,16 +534,14 @@ class _NewReservationScreenState
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: () => Navigator.of(context)
-                              .pop(remarksController.text),
+                          onPressed: () =>
+                              Navigator.of(context).pop(remarksController.text),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: accentColor,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 14),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             elevation: 0,
                           ),
@@ -589,22 +576,21 @@ class _NewReservationScreenState
         ApiService(const FlutterSecureStorage()),
       );
 
-      List<GuestSearchResponse> guests =
-          await guestRepository.searchGuest(
+      List<GuestSearchResponse> guests = await guestRepository.searchGuest(
         9021,
         _memberIdController.text,
       );
 
       if (guests.isNotEmpty) {
         final guestResponse = guests.first;
-        ref.read(selectedGuestProvider.notifier).setSelectedGuest(
+        ref
+            .read(selectedGuestProvider.notifier)
+            .setSelectedGuest(
               Guest(
                 mid: guestResponse.mid ?? _memberIdController.text,
-                memberName: guestResponse.mName ??
-                    _memberNameController.text,
+                memberName: guestResponse.mName ?? _memberNameController.text,
                 country: "",
-                lastVisitDate:
-                    guestResponse.lvd?.toString() ?? "",
+                lastVisitDate: guestResponse.lvd?.toString() ?? "",
                 age: 0,
                 gRating: guestResponse.gRating ?? "",
                 mGroup: guestResponse.mGroup,
@@ -629,26 +615,29 @@ class _NewReservationScreenState
   }
 
   String getGuestAndRoomCounts(List<HotelDescip> hotels) {
-    final totalGuests =
-        hotels.fold<int>(0, (sum, hotel) => sum + hotel.guestCount!);
-    final totalRooms =
-        hotels.fold<int>(0, (sum, hotel) => sum + hotel.roomCount!);
+    final totalGuests = hotels.fold<int>(
+      0,
+      (sum, hotel) => sum + hotel.guestCount!,
+    );
+    final totalRooms = hotels.fold<int>(
+      0,
+      (sum, hotel) => sum + hotel.roomCount!,
+    );
 
-    String txt =
-        totalGuests == 1 ? "$totalGuests GUEST" : "$totalGuests GUESTS";
-    txt += totalRooms == 1
-        ? ", $totalRooms ROOM"
-        : ", $totalRooms ROOMS";
+    String txt = totalGuests == 1
+        ? "$totalGuests GUEST"
+        : "$totalGuests GUESTS";
+    txt += totalRooms == 1 ? ", $totalRooms ROOM" : ", $totalRooms ROOMS";
     return txt;
   }
 
   String getGuestAndTicketCounts(List<FlightBooking> flights) {
-    final totalGuests =
-        flights.fold<int>(0, (sum, f) => sum + f.guestCount);
+    final totalGuests = flights.fold<int>(0, (sum, f) => sum + f.guestCount);
     final totalTickets = flights.length;
 
-    String txt =
-        totalGuests == 1 ? "$totalGuests GUEST" : "$totalGuests GUESTS";
+    String txt = totalGuests == 1
+        ? "$totalGuests GUEST"
+        : "$totalGuests GUESTS";
     txt += totalTickets == 1
         ? ", $totalTickets TICKET"
         : ", $totalTickets TICKETS";
@@ -766,8 +755,9 @@ class _NewReservationScreenState
     if (selectedReservation == null) return;
 
     final isPending = selectedReservation.requestStatus == 'Pending';
-    final hasPermission =
-        isPending ? _canCheckOrReject : _canApproveOrRejectChecked;
+    final hasPermission = isPending
+        ? _canCheckOrReject
+        : _canApproveOrRejectChecked;
 
     if (!hasPermission) {
       _showAccessDeniedDialog();
@@ -824,25 +814,26 @@ class _NewReservationScreenState
     final selectedHotels = ref.watch(selectedHotelProvider);
     hotelRoomNotifier.value = getGuestAndRoomCounts(selectedHotels);
     final selectedFlights = ref.watch(selectedFlightProvider);
-    airTicketsNotifier.value =
-        getGuestAndTicketCounts(selectedFlights);
+    airTicketsNotifier.value = getGuestAndTicketCounts(selectedFlights);
 
     if (selectedReservation != null) {
       _reservationNoController.text = selectedReservation.reservNo;
       _memberIdController.text = selectedReservation.mid;
       _memberNameController.text = selectedReservation.mName;
       final DateFormat dateFormat = DateFormat('yyyy-MM-dd');
-      _arrivalDateController.text =
-          dateFormat.format(selectedReservation.arrDate);
-      _departureDateController.text =
-          dateFormat.format(selectedReservation.depDate);
+      _arrivalDateController.text = dateFormat.format(
+        selectedReservation.arrDate,
+      );
+      _departureDateController.text = dateFormat.format(
+        selectedReservation.depDate,
+      );
 
-      final String status = selectedReservation
-          .airticketReservationStatus
+      final String status = selectedReservation.airticketReservationStatus
           .toString()
           .toUpperCase()
           .trim();
-      final bool hasAirTickets = status == "T" ||
+      final bool hasAirTickets =
+          status == "T" ||
           status == "TRUE" ||
           status == "YES" ||
           status == "Y" ||
@@ -854,14 +845,15 @@ class _NewReservationScreenState
     final fontSettings = ref.watch(fontSettingsProvider);
 
     // Determine if this reservation has been actioned
-    final String currentStatus =
-        selectedReservation?.requestStatus ?? '';
-    final bool isActioned = currentStatus == 'Checked' ||
+    final String currentStatus = selectedReservation?.requestStatus ?? '';
+    final bool isActioned =
+        currentStatus == 'Checked' ||
         currentStatus == 'Approved' ||
         currentStatus == 'Rejected';
 
     return Scaffold(
       appBar: AppBar(
+        titleSpacing: 0, 
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
@@ -877,53 +869,60 @@ class _NewReservationScreenState
         //   style: const TextStyle(fontSize: 18),
         // ),
         // REPLACE WITH:
-title: Row(
-  children: [
-    Text(
-      "Reservation - ${selectedReservation?.reservNo ?? ''}",
-      style: const TextStyle(fontSize: 18),
-    ),
-    const SizedBox(width: 12),
-    Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: currentStatus == 'Approved'
-            ? Colors.green
-            : currentStatus == 'Checked'
-            ? const Color.fromARGB(255, 92, 17, 255)
-            : currentStatus == 'Pending'
-            ? Colors.orange
-            : Colors.red,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            currentStatus == 'Approved'
-                ? Icons.check_circle
-                : currentStatus == 'Checked'
-                ? Icons.rule_rounded
-                : currentStatus == 'Pending'
-                ? Icons.hourglass_bottom
-                : Icons.cancel,
-            size: 12,
-            color: Colors.white,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            currentStatus.isEmpty ? 'Pending' : currentStatus,
-            style: const TextStyle(
-              fontSize: 18,
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
+        title: Row(
+          children: [
+            Text(
+              // "Reservation - ${selectedReservation?.reservNo ?? ''}",
+              "Reservation",
+              style: const TextStyle(fontSize: 18),
             ),
-          ),
-        ],
-      ),
-    ),
-  ],
-),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: currentStatus == 'Approved'
+                    ? Colors.green
+                    : currentStatus == 'Checked'
+                    ? const Color.fromARGB(255, 92, 17, 255)
+                    : currentStatus == 'Pending'
+                    ? Colors.orange
+                    : Colors.red,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Icon(
+                  //   currentStatus == 'Approved'
+                  //       ? Icons.check_circle
+                  //       : currentStatus == 'Checked'
+                  //       ? Icons.rule_rounded
+                  //       : currentStatus == 'Pending'
+                  //       ? Icons.hourglass_bottom
+                  //       : Icons.cancel,
+                  //   size: 12,
+                  //   color: Colors.white,
+                  // ),
+                  // const SizedBox(width: 6),
+                  Text(
+                    currentStatus.isEmpty
+                        ? 'Pending'
+                        : currentStatus == 'Pending'
+                        ? 'Pending & Checked'
+                        : currentStatus == 'Checked'
+                        ? 'For Approval'
+                        : currentStatus,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         actions: [
           PopScope(
             onPopInvokedWithResult: (bool didPop, dynamic result) {
@@ -931,36 +930,33 @@ title: Row(
                   .read(selectedReservationProvider.notifier)
                   .clearSelectedReservation();
               ref.read(selectedHotelProvider.notifier).setHotels([]);
-              ref
-                  .read(selectedFlightProvider.notifier)
-                  .setFlights([]);
+              ref.read(selectedFlightProvider.notifier).setFlights([]);
             },
             child: Padding(
               padding: const EdgeInsets.only(right: 8.0),
-              child:
-                  (selectedReservation?.requestStatus == 'Pending')
-                      ? IconButton(
-                          onPressed: () async {
-                            Future<void> navigateToEdit() async {
-                              final result = await context.push(
-                                  "/reservations/new-reservation");
-                              if (result == true && mounted) {
-                                Navigator.of(context).pop(true);
-                              }
-                            }
+              child: (selectedReservation?.requestStatus == 'Pending')
+                  ? IconButton(
+                      onPressed: () async {
+                        Future<void> navigateToEdit() async {
+                          final result = await context.push(
+                            "/reservations/new-reservation",
+                          );
+                          if (result == true && mounted) {
+                            Navigator.of(context).pop(true);
+                          }
+                        }
 
-                            if (_memberIdController.text.isNotEmpty &&
-                                !_guestDataLoaded) {
-                              await _loadGuestDataForView();
-                              await navigateToEdit();
-                            } else {
-                              await navigateToEdit();
-                            }
-                          },
-                          icon: const Icon(
-                              Icons.mode_edit_outline_sharp),
-                        )
-                      : const SizedBox.shrink(),
+                        if (_memberIdController.text.isNotEmpty &&
+                            !_guestDataLoaded) {
+                          await _loadGuestDataForView();
+                          await navigateToEdit();
+                        } else {
+                          await navigateToEdit();
+                        }
+                      },
+                      icon: const Icon(Icons.mode_edit_outline_sharp),
+                    )
+                  : const SizedBox.shrink(),
             ),
           ),
         ],
@@ -1001,8 +997,7 @@ title: Row(
                     children: [
                       Expanded(
                         child: TextFormField(
-                          keyboardType:
-                              const TextInputType.numberWithOptions(),
+                          keyboardType: const TextInputType.numberWithOptions(),
                           autofocus: false,
                           controller: _memberIdController,
                           style: TextStyle(
@@ -1047,8 +1042,7 @@ title: Row(
                             setState(() => _isLoading = false);
                           }
                         },
-                        child: const Icon(Icons.person_search,
-                            size: 25),
+                        child: const Icon(Icons.person_search, size: 25),
                       ),
                     ],
                   ),
@@ -1084,7 +1078,7 @@ title: Row(
                     memberNameText: _memberNameController.text,
                     showCard:
                         _memberIdController.text.isNotEmpty &&
-                            _memberNameController.text.isNotEmpty,
+                        _memberNameController.text.isNotEmpty,
                     isLoading: _isGuestLoading,
                     showLastVisitDate: true,
                   ),
@@ -1095,8 +1089,7 @@ title: Row(
                     valueListenable: hotelRoomNotifier,
                     builder: (context, value, child) {
                       return TextFormField(
-                        controller:
-                            TextEditingController(text: value),
+                        controller: TextEditingController(text: value),
                         style: TextStyle(
                           fontSize: fontSettings.fontSize,
                           fontWeight: fontSettings.fontWeight,
@@ -1127,8 +1120,7 @@ title: Row(
                             'No hotels selected.',
                             style: TextStyle(
                               fontSize: 16,
-                              color: const Color.fromARGB(
-                                  255, 168, 49, 49),
+                              color: const Color.fromARGB(255, 168, 49, 49),
                             ),
                           ),
                         )
@@ -1137,13 +1129,13 @@ title: Row(
                             return SizedBox(
                               width: double.infinity,
                               child: Card(
-                                color: const Color.fromARGB(
-                                    255, 228, 224, 224),
+                                color: const Color.fromARGB(255, 228, 224, 224),
                                 margin: const EdgeInsets.symmetric(
-                                    horizontal: 3, vertical: 8),
+                                  horizontal: 3,
+                                  vertical: 8,
+                                ),
                                 child: Padding(
-                                  padding:
-                                      const EdgeInsets.all(12.0),
+                                  padding: const EdgeInsets.all(12.0),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
@@ -1151,10 +1143,8 @@ title: Row(
                                       Text(
                                         hotel.hotelName!,
                                         style: TextStyle(
-                                          fontSize:
-                                              fontSettings.fontSize,
-                                          fontWeight:
-                                              fontSettings.fontWeight,
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: fontSettings.fontWeight,
                                         ),
                                       ),
                                       const SizedBox(height: 8),
@@ -1165,21 +1155,17 @@ title: Row(
                                               text: "Category: ",
                                               style: TextStyle(
                                                 color: Colors.black,
-                                                fontSize: fontSettings
-                                                        .fontSize +
-                                                    2,
-                                                fontWeight:
-                                                    FontWeight.bold,
+                                                fontSize:
+                                                    fontSettings.fontSize + 2,
+                                                fontWeight: FontWeight.bold,
                                               ),
                                             ),
                                             TextSpan(
-                                              text:
-                                                  hotel.roomCategoryName,
+                                              text: hotel.roomCategoryName,
                                               style: TextStyle(
-                                                fontSize:
-                                                    fontSettings.fontSize,
-                                                fontWeight: fontSettings
-                                                    .fontWeight,
+                                                fontSize: fontSettings.fontSize,
+                                                fontWeight:
+                                                    fontSettings.fontWeight,
                                                 color: Colors.black,
                                               ),
                                             ),
@@ -1194,21 +1180,19 @@ title: Row(
                                               text: "Room Type: ",
                                               style: TextStyle(
                                                 color: Colors.black,
-                                                fontSize: fontSettings
-                                                        .fontSize +
-                                                    2,
-                                                fontWeight: fontSettings
-                                                    .fontWeight,
+                                                fontSize:
+                                                    fontSettings.fontSize + 2,
+                                                fontWeight:
+                                                    fontSettings.fontWeight,
                                               ),
                                             ),
                                             TextSpan(
                                               text: hotel.roomTypeName,
                                               style: TextStyle(
                                                 color: Colors.black,
-                                                fontSize:
-                                                    fontSettings.fontSize,
-                                                fontWeight: fontSettings
-                                                    .fontWeight,
+                                                fontSize: fontSettings.fontSize,
+                                                fontWeight:
+                                                    fontSettings.fontWeight,
                                               ),
                                             ),
                                           ],
@@ -1216,36 +1200,32 @@ title: Row(
                                       ),
                                       const SizedBox(height: 8),
                                       Row(
-                                        mainAxisSize:
-                                            MainAxisSize.min,
+                                        mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Text(
                                             "Guests: ${hotel.guestCount}",
                                             style: TextStyle(
-                                              fontSize:
-                                                  fontSettings.fontSize,
-                                              fontWeight: fontSettings
-                                                  .fontWeight,
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
                                             ),
                                           ),
                                           const SizedBox(width: 20),
                                           Text(
                                             "Nights: ${hotel.noOfNights}",
                                             style: TextStyle(
-                                              fontSize:
-                                                  fontSettings.fontSize,
-                                              fontWeight: fontSettings
-                                                  .fontWeight,
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
                                             ),
                                           ),
                                           const SizedBox(width: 20),
                                           Text(
                                             "Rooms: ${hotel.roomCount}",
                                             style: TextStyle(
-                                              fontSize:
-                                                  fontSettings.fontSize,
-                                              fontWeight: fontSettings
-                                                  .fontWeight,
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
                                             ),
                                           ),
                                         ],
@@ -1254,10 +1234,8 @@ title: Row(
                                       Text(
                                         "Estimated Cost: ${hotel.selectedCost}",
                                         style: TextStyle(
-                                          fontSize:
-                                              fontSettings.fontSize + 2,
-                                          fontWeight:
-                                              fontSettings.fontWeight,
+                                          fontSize: fontSettings.fontSize + 2,
+                                          fontWeight: fontSettings.fontWeight,
                                         ),
                                       ),
                                     ],
@@ -1281,7 +1259,9 @@ title: Row(
                       labelText: "Arrival Date",
                       border: const OutlineInputBorder(),
                       contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12.0, vertical: -5.0),
+                        horizontal: 12.0,
+                        vertical: -5.0,
+                      ),
                       labelStyle: TextStyle(
                         fontSize: fontSettings.fontSize,
                         fontWeight: fontSettings.fontWeight,
@@ -1306,7 +1286,9 @@ title: Row(
                       ),
                       border: const OutlineInputBorder(),
                       contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12.0, vertical: -5.0),
+                        horizontal: 12.0,
+                        vertical: -5.0,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -1327,19 +1309,17 @@ title: Row(
                       Radio<String>(
                         value: "Yes",
                         groupValue: _airTicketRequisition,
-                        onChanged: (value) => setState(
-                            () => _airTicketRequisition = value!),
+                        onChanged: (value) =>
+                            setState(() => _airTicketRequisition = value!),
                       ),
-                      const Text("Yes",
-                          style: TextStyle(fontSize: 16)),
+                      const Text("Yes", style: TextStyle(fontSize: 16)),
                       Radio<String>(
                         value: "No",
                         groupValue: _airTicketRequisition,
-                        onChanged: (value) => setState(
-                            () => _airTicketRequisition = value!),
+                        onChanged: (value) =>
+                            setState(() => _airTicketRequisition = value!),
                       ),
-                      const Text("No",
-                          style: TextStyle(fontSize: 16)),
+                      const Text("No", style: TextStyle(fontSize: 16)),
                     ],
                   ),
 
@@ -1349,14 +1329,15 @@ title: Row(
                       valueListenable: airTicketsNotifier,
                       builder: (context, value, child) {
                         return TextFormField(
-                          controller:
-                              TextEditingController(text: value),
+                          controller: TextEditingController(text: value),
                           readOnly: true,
                           decoration: const InputDecoration(
                             labelText: "Select Air Tickets",
                             border: OutlineInputBorder(),
                             contentPadding: EdgeInsets.symmetric(
-                                horizontal: 12.0, vertical: -5.0),
+                              horizontal: 12.0,
+                              vertical: -5.0,
+                            ),
                           ),
                         );
                       },
@@ -1371,12 +1352,10 @@ title: Row(
                             ),
                           )
                         : Column(
-                            children:
-                                selectedFlights.map((flight) {
+                            children: selectedFlights.map((flight) {
                               return FlightCard(
                                 flight: flight,
-                                index: selectedFlights
-                                    .indexOf(flight),
+                                index: selectedFlights.indexOf(flight),
                                 showDelete: false,
                               );
                             }).toList(),
@@ -1430,8 +1409,7 @@ title: Row(
                         Expanded(
                           child: ElevatedButton.icon(
                             onPressed: _checkReservation,
-                            icon: const Icon(Icons.fact_check,
-                                size: 20),
+                            icon: const Icon(Icons.fact_check, size: 20),
                             label: const Text(
                               "CHECK",
                               style: TextStyle(
@@ -1443,11 +1421,12 @@ title: Row(
                               backgroundColor: Colors.blue,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(12),
                               ),
                               padding: const EdgeInsets.symmetric(
-                                  vertical: 16, horizontal: 20),
+                                vertical: 16,
+                                horizontal: 20,
+                              ),
                             ),
                           ),
                         ),
@@ -1464,15 +1443,15 @@ title: Row(
                               ),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  Constants.kSecondaryColor,
+                              backgroundColor: Constants.kSecondaryColor,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(12),
                               ),
                               padding: const EdgeInsets.symmetric(
-                                  vertical: 16, horizontal: 20),
+                                vertical: 16,
+                                horizontal: 20,
+                              ),
                             ),
                           ),
                         ),
@@ -1486,8 +1465,7 @@ title: Row(
                         Expanded(
                           child: ElevatedButton.icon(
                             onPressed: _approveReservation,
-                            icon:
-                                const Icon(Icons.done, size: 20),
+                            icon: const Icon(Icons.done, size: 20),
                             label: const Text(
                               "APPROVE",
                               style: TextStyle(
@@ -1499,11 +1477,12 @@ title: Row(
                               backgroundColor: Colors.green,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(12),
                               ),
                               padding: const EdgeInsets.symmetric(
-                                  vertical: 16, horizontal: 20),
+                                vertical: 16,
+                                horizontal: 20,
+                              ),
                             ),
                           ),
                         ),
@@ -1520,15 +1499,15 @@ title: Row(
                               ),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  Constants.kSecondaryColor,
+                              backgroundColor: Constants.kSecondaryColor,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(12),
                               ),
                               padding: const EdgeInsets.symmetric(
-                                  vertical: 16, horizontal: 20),
+                                vertical: 16,
+                                horizontal: 20,
+                              ),
                             ),
                           ),
                         ),

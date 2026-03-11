@@ -220,9 +220,9 @@ class _SpecialGiftRequestScreenState
           isScrollable: true, // ✅ FIX: prevents overflow
           tabAlignment: TabAlignment.center, // ✅ valid with isScrollable: true
           tabs: [
-            _buildTab('Pending', giftsp.pendinggift.length, Colors.orange),
+            _buildTab('Pending & Checked', giftsp.pendinggift.length, Colors.orange),
             _buildTab(
-              'Checked',
+              'For Approval',
               giftsp.chekbygift.length,
               const Color.fromARGB(255, 92, 17, 255),
             ),

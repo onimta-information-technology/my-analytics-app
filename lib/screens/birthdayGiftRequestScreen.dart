@@ -719,6 +719,40 @@ class _BirthdayGiftRequestScreenState
                               ],
                             ),
                           ],
+                           if (
+                              gift.deleteTime != null &&
+                              gift.deleteTime!.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.schedule,
+                                  color: Color.fromARGB(255, 33, 243, 75),
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Rejected At: ',
+                                  style: TextStyle(
+                                    color: Colors.black87,
+                                    fontSize: fontSettings.fontSize + 2,
+                                    fontWeight: fontSettings.fontWeight,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    _formatDate(gift.deleteTime!),
+                                    style: TextStyle(
+                                     color: Colors.black87,
+                                      fontSize: fontSettings.fontSize,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                           // Previous Gift Amount
                           if (gift.prvGiftAmount != null &&
                               gift.prvGiftAmount!.isNotEmpty) ...[

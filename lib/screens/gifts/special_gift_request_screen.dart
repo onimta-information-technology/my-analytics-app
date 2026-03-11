@@ -701,6 +701,39 @@ class _SpecialGiftRequestScreenState
                               ],
                             ),
                           ],
+                            if (
+                                  gift.deleteTime != null &&
+                                  gift.deleteTime!.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.schedule,
+                                  color: Color.fromARGB(255, 255, 17, 116),
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Rejected At: ',
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize-2,
+                                    fontWeight: fontSettings.fontWeight,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    _formatDate(gift.deleteTime),
+                                    style: TextStyle(
+                                      color: const Color.fromARGB(255, 255, 17, 17),
+                                      fontSize: fontSettings.fontSize,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
 
                           // Valid Days (Checked or Approved tab)
                           if ((isChecked || isApproved) &&

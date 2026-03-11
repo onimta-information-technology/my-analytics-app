@@ -13,6 +13,7 @@ import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class GiftsRepository {
@@ -1345,7 +1346,8 @@ Future<String> sendSpecialGiftWhatsapp({
       print('Sending special gift WhatsApp message...');
       print('WhatsApp: $whatsappNumber, BM: $bmNumber, Name: $memberName');
       print('Gift Value: $giftValue, Chip: $chipType, For: $giftFor');
-
+ final cleanGift = giftValue.replaceAll(',', '').trim();
+      final formattedGift = NumberFormat('#,##0', 'en_US').format(int.parse(cleanGift));
       final response = await http.post(
         Uri.parse('${Constants.laravelAPIbaseUrl}/gift/otp/send'),
         headers: {
@@ -1355,7 +1357,7 @@ Future<String> sendSpecialGiftWhatsapp({
           'whatsapp_number': whatsappNumber,
           'bm_number': bmNumber,
           'member_name': memberName,
-          'gift_value': giftValue,
+          'gift_value': formattedGift,
           'chip_type': chipType,
           'gift_for': giftFor,
           'created_by': createdBy,
@@ -1375,7 +1377,7 @@ Future<String> sendSpecialGiftWhatsapp({
             'You have received a special gift!\n\n'
             '━━━━━━━━━━━━━━━━━━\n'
             '📌 Gift Details:\n'
-            '💰 Amount: $giftValue\n'
+            '💰 Amount: $formattedGift\n'
             '🎰 Type: $chipType\n'
             '🎯 For: $giftFor\n'
             '━━━━━━━━━━━━━━━━━━\n\n'

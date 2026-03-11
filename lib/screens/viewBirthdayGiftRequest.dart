@@ -8,11 +8,14 @@ import 'package:ballys_reservation_app/models/gift/birthday_gift_request.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
 import 'package:ballys_reservation_app/providers/BirthdayGiftIncreesNotifier.dart';
+import 'package:ballys_reservation_app/providers/birthday_gift_provider.dart';
+import 'package:ballys_reservation_app/providers/birthdays_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/utils/formatter.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
@@ -53,6 +56,8 @@ class _ViewBirthdayGiftRequestState
   final TextEditingController _remarksController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _previousGiftAmountController =
+      TextEditingController();
+ final TextEditingController _whatsappNumberController =
       TextEditingController();
 
   String _remarks = "";
@@ -103,7 +108,7 @@ class _ViewBirthdayGiftRequestState
       _chipController.text = g.chipType.replaceAll("_", " ");
       _amountController.text = formatNumber(g.giftDesc.toString()) ?? "";
       _remarksController.text = g.giftCategory ?? "";
-      _previousGiftAmountController.text = g.prvGiftAmount ?? "0";
+      _previousGiftAmountController.text = formatNumber(g.prvGiftAmount) ?? "0";
 
       drop = g.mdrop;
       cashout = g.cashout;
@@ -119,6 +124,7 @@ class _ViewBirthdayGiftRequestState
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _loadGuestDataForCard();
+        _loadWhatsAppNumber();
       });
     }
   }
@@ -152,7 +158,22 @@ class _ViewBirthdayGiftRequestState
       _canApproveOrRejectChecked = bgApp == true;
     });
   }
-
+  Future<void> _loadWhatsAppNumber() async {
+    if (_memberIdController.text.isEmpty) return;
+    try {
+      await ref
+          .read(birthdayGiftProvider.notifier)
+          .fetchGiftData(_memberIdController.text);
+      final giftState = ref.read(birthdayGiftProvider);
+      if (giftState.giftData != null && giftState.giftData!.mobile.isNotEmpty) {
+        setState(() {
+          _whatsappNumberController.text = giftState.giftData!.mobile;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading WhatsApp number: $e');
+    }
+  }
   // ── Guest data ──────────────────────────────────────────────────────────────
 
   Future<void> _loadGuestDataForCard() async {
@@ -1563,6 +1584,299 @@ if (widget.isApproved &&
                     // ── Bottom action section ───────────────────────────────
                     // Shows: action buttons (Check/Reject or Approve/Reject or Reverse)
                     // + Pending Gift & Issued Gift buttons for ALL tabs
+                     if (widget.isApproved)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 16.0),
+                          child: Card(
+                            elevation: 5,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Container(
+                              color: Colors.green[10],
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text(
+                                        "Send Gift Details via WhatsApp",
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.refresh,
+                                          color: Colors.green,
+                                        ),
+                                        onPressed: () async {
+                                          await _loadWhatsAppNumber();
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'WhatsApp number refreshed',
+                                              ),
+                                              duration: Duration(seconds: 1),
+                                            ),
+                                          );
+                                        },
+                                        tooltip: 'Refresh WhatsApp Number',
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.shade50,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: Colors.green.shade300,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.card_giftcard,
+                                          color: Colors.green,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            "Amount: ${_amountController.text}",
+                                            style: const TextStyle(
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  TextField(
+                                    controller: _whatsappNumberController,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                    keyboardType: TextInputType.phone,
+                                    decoration: InputDecoration(
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 12,
+                                          ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(
+                                          color: Colors.green,
+                                          width: 2.0,
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(
+                                          color: Colors.green,
+                                          width: 2.0,
+                                        ),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(
+                                          color: Colors.green,
+                                          width: 2.5,
+                                        ),
+                                      ),
+                                      labelText: "WhatsApp Number",
+                                      hintText:
+                                          "Enter WhatsApp number with country code",
+                                      helperText: "e.g., 94712345678",
+                                      prefixIcon: Padding(
+                                        padding: const EdgeInsets.all(12.0),
+                                        child: Image.asset(
+                                          'assets/images/others/whatsapp.png',
+                                          width: 24,
+                                          height: 24,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    "Note: Please enter the WhatsApp number with the country code",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.black,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton(
+                                      onPressed: () async {
+                                        final whatsappNumber =
+                                            _whatsappNumberController.text
+                                                .trim();
+                                        if (whatsappNumber.isEmpty) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Please enter a WhatsApp number',
+                                              ),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                          return;
+                                        }
+                                        if (widget.gift == null) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Gift details not available',
+                                              ),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                          return;
+                                        }
+                                        try {
+                                          EasyLoading.show(
+                                            status: 'Sending gift details...',
+                                          );
+                                         final cleanAmount = _amountController.text.replaceAll(',', '').trim();
+                                         
+                                          final prvgift = _previousGiftAmountController.text.replaceAll(',', '').trim();
+                                              
+                                          final result = await ref
+                                              .read(birthdayProvider.notifier)
+                                                 .sendWhatsappMessagePriceIncrease(
+                                                mname: _memberNameController.text,
+                                                whatsappNumber: whatsappNumber,
+                                                gift: cleanAmount,
+                                                mid: _memberIdController.text,
+                                                memberMobile:
+                                                    whatsappNumber,
+                                                previousAmount: prvgift,
+                  
+                                                chiptype:_chipController.text,
+                                              );
+                                          EasyLoading.dismiss();
+                                          if (result == "Success") {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Gift details sent successfully via WhatsApp!',
+                                                ),
+                                                backgroundColor: Colors.green,
+                                                duration: Duration(seconds: 3),
+                                              ),
+                                            );
+                                          } else if (result ==
+                                              "WhatsApp not available") {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'WhatsApp is not installed or available on this device',
+                                                ),
+                                                backgroundColor: Colors.orange,
+                                                duration: Duration(seconds: 3),
+                                              ),
+                                            );
+                                          } else {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'Failed to send: $result',
+                                                ),
+                                                backgroundColor: Colors.orange,
+                                                duration: const Duration(
+                                                  seconds: 3,
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        } catch (e) {
+                                          EasyLoading.dismiss();
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Error: $e'),
+                                              backgroundColor: Colors.red,
+                                              duration: const Duration(
+                                                seconds: 3,
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(
+                                          0xFF25D366,
+                                        ),
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                          horizontal: 16,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Image.asset(
+                                            'assets/images/others/whatsapp.png',
+                                            width: 24,
+                                            height: 24,
+                                            color: Colors.white,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          const Flexible(
+                                            child: Text(
+                                              "Send Gift Details via WhatsApp",
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+const SizedBox(height: 24),
+                      const Divider(thickness: 1.2),
                     const SizedBox(height: 10.0),
                     _buildBottomSection(fontSettings),
 

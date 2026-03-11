@@ -35,8 +35,7 @@ class BirthdaysNotifier extends StateNotifier<Map<String, List<Birthday>>> {
       return state;
     }
   }
-
-  Future<String> sendWhatsappMessage({
+ Future<String> sendWhatsappMessage({
     required String mname,
     required String whatsappNumber,
     required String gift,
@@ -56,6 +55,42 @@ class BirthdaysNotifier extends StateNotifier<Map<String, List<Birthday>>> {
       return "Error sending message";
     }
   }
+  Future<String> sendWhatsappMessagePriceIncrease({
+    required String mname,
+    required String whatsappNumber,
+    required String gift,
+    required String mid,
+    required String memberMobile,
+    required String previousAmount,
+    required String chiptype,
+  }) async {
+    try {
+    print("=== sendWhatsappMessagePriceIncrease DEBUG ===");
+      print("mname: $mname");
+      print("whatsappNumber: $whatsappNumber");
+      print("gift: $gift");
+      print("mid: $mid");
+      print("memberMobile: $memberMobile");
+         print("previousAmount: $previousAmount");
+          print("chiptype: $chiptype");
+      print("=============================================");
+      final response = await birthdayRepository.sendWhatsappMessagetpPriceincrease(
+        gift: gift,
+        mname: mname,
+        whatsappNumber: whatsappNumber,
+        mid: mid,
+        memberMobile: memberMobile,
+        previousAmount:previousAmount,
+        chiptype:chiptype,
+
+      );
+      return response;
+    } catch (e) {
+      return "Error sending message";
+    }
+  }
+
+
 }
 
 final flutterSecureStorageProvider = Provider(

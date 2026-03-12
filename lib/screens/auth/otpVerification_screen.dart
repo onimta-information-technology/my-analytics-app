@@ -309,37 +309,64 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>{
   //   }
   // }
 
-  Future<bool> _sendOTPSMS(String phoneNumber, String otp) async {
-    try {
-      String baseUrl =
-          'https://richcommunication.dialog.lk/api/sms/inline/send';
+  // Future<bool> _sendOTPSMS(String phoneNumber, String otp) async {
+  //   try {
+  //     String baseUrl =
+  //         'https://richcommunication.dialog.lk/api/sms/inline/send';
 
-      String formattedPhone = phoneNumber;
-      if (phoneNumber.startsWith('+94')) {
-        formattedPhone = '0${phoneNumber.substring(3)}';
-      }
+  //     String formattedPhone = phoneNumber;
+  //     if (phoneNumber.startsWith('+94')) {
+  //       formattedPhone = '0${phoneNumber.substring(3)}';
+  //     }
 
-      String message =
-          'Your OTP code is $otp. Do not share this code with anyone.';
-      // if (_appSignature != null && _appSignature!.isNotEmpty) {
-      //   message += '\u200B$_appSignature';
-      // }
+  //     String message =
+  //         'Your OTP code is $otp. Do not share this code with anyone.';
+  //     // if (_appSignature != null && _appSignature!.isNotEmpty) {
+  //     //   message += '\u200B$_appSignature';
+  //     // }
 
-      String fullUrl =
-          '$baseUrl?q=968deddf5fd84b8&destination=$formattedPhone&message=${Uri.encodeComponent(message)}';
+  //     String fullUrl =
+  //         '$baseUrl?q=968deddf5fd84b8&destination=$formattedPhone&message=${Uri.encodeComponent(message)}';
 
-      final response = await http.get(Uri.parse(fullUrl));
+  //     final response = await http.get(Uri.parse(fullUrl));
 
-      if (response.statusCode == 200) {
-        return true;
-      } else {
-        return false;
-      }
-    } catch (e) {
+  //     if (response.statusCode == 200) {
+  //       return true;
+  //     } else {
+  //       return false;
+  //     }
+  //   } catch (e) {
+  //     return false;
+  //   }
+  // }
+Future<bool> _sendOTPSMS(String phoneNumber, String otp) async {
+  try {
+    // Get SMS gateway URL from current location
+    final smsGatewayUrl = await StorageUtil.getSmsGatewayUrl();
+    print("text");
+print(smsGatewayUrl);
+    if (smsGatewayUrl == null || smsGatewayUrl.isEmpty) {
       return false;
     }
-  }
 
+    String formattedPhone = phoneNumber;
+    if (phoneNumber.startsWith('+94')) {
+      formattedPhone = '0${phoneNumber.substring(3)}';
+    }
+
+    final message = 'Your OTP code is $otp. Do not share this code with anyone.';
+
+    // Replace placeholders: xxxxx = destination, yyyyy = message
+    final fullUrl = smsGatewayUrl
+        .replaceAll('xxxxx', formattedPhone)
+        .replaceAll('yyyyy', Uri.encodeComponent(message));
+print(fullUrl);
+    final response = await http.get(Uri.parse(fullUrl));
+    return response.statusCode == 200;
+  } catch (e) {
+    return false;
+  }
+}
   Future<void> _sendInitialOTP() async {
     setState(() {
       _isSendingOTP = true;

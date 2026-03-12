@@ -68,6 +68,7 @@ print(response.body);
             apiUrl: data['data']['api_url'],
             isEnabled: true,
             storedProcedureName: data['data']['stored_procedure_name'] ?? 'sp_CRM_Common_API',
+            smsGatewayUrl: data['data']['sms_gateway_url'], 
           );
           
           await StorageUtil.saveCurrentLocation(location);
@@ -140,7 +141,7 @@ class LocationConfig {
   final bool isEnabled;
   final String? imageUrl;
 final String storedProcedureName;
-
+  final String? smsGatewayUrl; 
   LocationConfig({
     this.id,
     required this.name,
@@ -148,7 +149,8 @@ final String storedProcedureName;
     required this.apiUrl,
     required this.isEnabled,
     this.imageUrl,
-    required this.storedProcedureName
+    required this.storedProcedureName,
+    this.smsGatewayUrl,
   });
 
   factory LocationConfig.fromJson(Map<String, dynamic> json) {
@@ -160,6 +162,7 @@ final String storedProcedureName;
       isEnabled: json['is_enabled'] ?? true,
       imageUrl: json['image_url'],
       storedProcedureName: json['stored_procedure_name'] ?? 'sp_CRM_Common_API',
+      smsGatewayUrl: json['sms_gateway_url'],
     );
   }
 
@@ -172,6 +175,7 @@ final String storedProcedureName;
       'is_enabled': isEnabled,
       'image_url': imageUrl,
       'stored_procedure_name': storedProcedureName,
+      'sms_gateway_url': smsGatewayUrl,
     };
   }
 }

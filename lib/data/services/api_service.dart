@@ -30,6 +30,8 @@ String? accessToken = await storage.read(key: 'access_token');
     var response = await _makeRequest(endpoint, body, accessToken);
 print(response.statusCode);
 print(response.body);
+print("test");
+print(endpoint);
     // ── 401 or 406 Invalid Token: refresh once, then retry ────────────────
     if (response.statusCode == 401 || _isInvalidToken(response)) {
       await storage.delete(key: 'access_token');
@@ -103,7 +105,9 @@ bool _isInvalidToken(http.Response response) {
     String? accessToken,
   ) async {
      final baseUrl = await _getBaseUrl();
+           print(baseUrl);
     return http.post(
+
       Uri.parse('$baseUrl/$endpoint'),
       headers: {
         'Content-Type': 'application/json',

@@ -47,6 +47,7 @@ class GuestRepository {
     final deviceId = await DeviceId.get();
     print("iid is $iid and text1 is $text1");
  final spName = await StorageUtil.getStoredProcedureName();
+ print(spName);
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -72,7 +73,7 @@ class GuestRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": spName,
+      "SpName":spName,
       "con": "1",
     });
 

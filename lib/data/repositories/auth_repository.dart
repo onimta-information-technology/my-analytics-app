@@ -44,6 +44,7 @@ class AuthRepository {
     final deviceId = await DeviceId.get();
       final spName = await StorageUtil.getStoredProcedureName();
   print(deviceId);
+  print(spName);
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [

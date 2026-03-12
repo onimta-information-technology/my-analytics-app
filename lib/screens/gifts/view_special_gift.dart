@@ -1064,7 +1064,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                         child: Text(
                                           row["Field"].toString(),
                                           style: TextStyle(
-                                            fontSize: fontSettings.fontSize + 2,
+                                            fontSize: fontSettings.fontSize,
                                             fontWeight: shouldHighlight
                                                 ? FontWeight.bold
                                                 : fontSettings.fontWeight,
@@ -1078,7 +1078,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                                         child: Text(
                                           formatNumber(row["Value"]),
                                           style: TextStyle(
-                                            fontSize: fontSettings.fontSize + 2,
+                                            fontSize: fontSettings.fontSize,
                                             fontWeight: fontSettings.fontWeight,
                                             fontFamily: 'monospace',
                                             fontFeatures: const [

@@ -67,6 +67,7 @@ print(response.body);
             code: data['data']['location_code'],
             apiUrl: data['data']['api_url'],
             isEnabled: true,
+            storedProcedureName: data['data']['stored_procedure_name'] ?? 'sp_CRM_Common_API',
           );
           
           await StorageUtil.saveCurrentLocation(location);
@@ -110,6 +111,7 @@ print(response.body);
   static Future<void> changeLocation(LocationConfig location) async {
     await StorageUtil.saveCurrentLocation(location);
   }
+  
 }
 
 class DeviceConfigResult {
@@ -137,6 +139,7 @@ class LocationConfig {
   final String apiUrl;
   final bool isEnabled;
   final String? imageUrl;
+final String storedProcedureName;
 
   LocationConfig({
     this.id,
@@ -145,6 +148,7 @@ class LocationConfig {
     required this.apiUrl,
     required this.isEnabled,
     this.imageUrl,
+    required this.storedProcedureName
   });
 
   factory LocationConfig.fromJson(Map<String, dynamic> json) {
@@ -155,6 +159,7 @@ class LocationConfig {
       apiUrl: json['api_url'],
       isEnabled: json['is_enabled'] ?? true,
       imageUrl: json['image_url'],
+      storedProcedureName: json['stored_procedure_name'] ?? 'sp_CRM_Common_API',
     );
   }
 
@@ -166,6 +171,7 @@ class LocationConfig {
       'api_url': apiUrl,
       'is_enabled': isEnabled,
       'image_url': imageUrl,
+      'stored_procedure_name': storedProcedureName,
     };
   }
 }

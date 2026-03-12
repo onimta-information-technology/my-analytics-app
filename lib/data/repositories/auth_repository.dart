@@ -42,6 +42,7 @@ class AuthRepository {
     final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
     final deviceId = await DeviceId.get();
+      final spName = await StorageUtil.getStoredProcedureName();
   print(deviceId);
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
@@ -90,7 +91,7 @@ class AuthRepository {
         },
 
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     });
 print("hellooo");

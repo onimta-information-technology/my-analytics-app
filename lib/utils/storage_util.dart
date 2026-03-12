@@ -195,7 +195,10 @@ class StorageUtil {
     }
     return [];
   }
-
+static Future<String> getStoredProcedureName() async {
+  final location = await getCurrentLocation();
+  return location?.storedProcedureName ?? 'sp_CRM_Common_API';
+}
   /// Clear location data (on logout)
   static Future<void> clearLocationData() async {
     await _storage.delete(key: _keyCurrentApiUrl);

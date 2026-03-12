@@ -1,5 +1,6 @@
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/core/exceptions.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -15,7 +16,10 @@ class ApiService {
   final FlutterSecureStorage storage;
 
   ApiService(this.storage);
-
+Future<String> _getBaseUrl() async {
+    final dynamicUrl = await StorageUtil.getCurrentApiUrl();
+    return dynamicUrl ?? '';
+  }
   Future<Map<String, dynamic>> post(
   String endpoint,
   Map<String, Object?> body,
@@ -97,9 +101,10 @@ bool _isInvalidToken(http.Response response) {
     String endpoint,
     Map<String, Object?> body,
     String? accessToken,
-  ) {
+  ) async {
+     final baseUrl = await _getBaseUrl();
     return http.post(
-      Uri.parse('${Constants.baseUrl}/$endpoint'),
+      Uri.parse('$baseUrl/$endpoint'),
       headers: {
         'Content-Type': 'application/json',
         if (accessToken != null) 'Authorization': 'Bearer $accessToken',
@@ -110,8 +115,9 @@ bool _isInvalidToken(http.Response response) {
 
   Future<String?> _reAuthenticate() async {
     try {
+        final baseUrl = await _getBaseUrl();
       final response = await http.post(
-        Uri.parse('${Constants.baseUrl}/Login'),
+        Uri.parse('$baseUrl/Login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           "UserName": "BaLlY\$#Crm619",

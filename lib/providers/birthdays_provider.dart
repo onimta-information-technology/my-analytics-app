@@ -14,7 +14,14 @@ class BirthdaysNotifier extends StateNotifier<Map<String, List<Birthday>>> {
         'recentUpcoming': [],
         'upcoming': [],
       });
-
+void clearBirthdays() {
+    state = {
+      'past': [],
+      'recentPast': [],
+      'recentUpcoming': [],
+      'upcoming': [],
+    };
+  }
   Future<Map<String, List<Birthday>>> getBirthdays() async {
     try {
       final birthdayMap = await birthdayRepository.getBirthdays();

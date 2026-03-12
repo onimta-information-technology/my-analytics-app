@@ -9,7 +9,15 @@ class BirthdayGiftIncreesNotifier extends StateNotifier<BirthdayGiftIncreesState
   final GiftsRepository giftRepository;
 
   BirthdayGiftIncreesNotifier(this.giftRepository) : super(BirthdayGiftIncreesState());
-
+ void clearbirthdayGifts() {
+    state = BirthdayGiftIncreesState(
+      pendingBirthdayGift: [],
+      checkedBirthdayGift: [],
+      approvedBirthdayGift: [],
+      rejectBirthdayGift: [],
+      
+    );
+  }
   Future<void> getBirthdayGiftData(int iid, String text1) async {
     try {
       var birthdayGiftList = await giftRepository.getBirthdayIncressGift(iid, text1);

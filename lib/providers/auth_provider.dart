@@ -173,7 +173,7 @@ class AuthNotifier extends StateNotifier<AuthState?> {
         state = AuthState(user: _pendingUser, isLoading: false);
         _pendingUser = null; // Clear pending data
 
-        TokenRefreshService().start(authRepository);
+      //  TokenRefreshService().start(authRepository);
       } else {
         throw Exception('No pending user data found');
       }
@@ -213,7 +213,7 @@ class AuthNotifier extends StateNotifier<AuthState?> {
   // }
   Future<void> logout() async {
     try {
-      TokenRefreshService().stop();
+     // TokenRefreshService().stop();
       final prefs = await SharedPreferences.getInstance();
       final fcmToken = prefs.getString('FCMToken');
       if (fcmToken != null) {

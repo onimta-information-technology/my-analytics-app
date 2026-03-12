@@ -401,13 +401,13 @@ class BirthdayRepository {
 
       if (response.statusCode == 200) {
         final responseBody = jsonDecode(response.body);
-        final giftCode = responseBody['gift_code'];
-
+        //final giftCode = responseBody['gift_code'];
+final shortUrl = responseBody['short_url'];
         String message = 'Congratulations! \n\n'
             'You have received a gift valued at $gift! 🎁✨\n\n'
             'Enjoy this special token of appreciation, and may it bring '
             'a little extra joy to your day!\n\n'
-            'Click here to claim: https://api.mkt.onimtaitsl.com/gift/$giftCode';
+            'Click here to claim: $shortUrl';
 
         String encodedMessage = Uri.encodeComponent(message);
         String phoneNumber = whatsappNumber.trim();
@@ -521,8 +521,8 @@ Future<String> sendWhatsappMessagetpPriceincrease({
 
       if (response.statusCode == 200) {
         final responseBody = jsonDecode(response.body);
-        final giftCode = responseBody['gift_code'];
-
+        //final giftCode = responseBody['gift_code'];
+final shortUrl = responseBody['short_url'];
         String message = 'Congratulations! 🎁\n\n'
             'Your Birthday gift Price Increase!\n\n'
             '━━━━━━━━━━━━━━━━━━\n'
@@ -533,7 +533,7 @@ Future<String> sendWhatsappMessagetpPriceincrease({
             '━━━━━━━━━━━━━━━━━━\n\n'
             '✨ Enjoy!\n\n'
       
-            'Click here to claim: https://api.mkt.onimtaitsl.com/gift/$giftCode';
+            'Click here to claim: $shortUrl';
 
         String encodedMessage = Uri.encodeComponent(message);
         String phoneNumber = whatsappNumber.trim();

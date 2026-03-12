@@ -1369,9 +1369,9 @@ Future<String> sendSpecialGiftWhatsapp({
 
       if (response.statusCode == 200) {
         final responseBody = jsonDecode(response.body);
-        final giftCode = responseBody['gift_code'];
-        print('Gift code received: $giftCode');
-
+        // final giftCode = responseBody['gift_code'];
+        // print('Gift code received: $giftCode');
+final shortUrl = responseBody['short_url'];
         // Create WhatsApp message with the gift code link
         String message = 'Congratulations! 🎁\n\n'
             'You have received a special gift!\n\n'
@@ -1383,7 +1383,7 @@ Future<String> sendSpecialGiftWhatsapp({
             '━━━━━━━━━━━━━━━━━━\n\n'
             '✨ Enjoy this special token of appreciation!\n\n'
             '👉 Click here to claim your gift:\n'
-            'https://api.mkt.onimtaitsl.com/gift/$giftCode';
+            '$shortUrl';
 
         String encodedMessage = Uri.encodeComponent(message);
         String phoneNumber = whatsappNumber.trim();

@@ -21,7 +21,7 @@ class DeviceConfigService {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({"device_id": deviceId, "username":username,"password":password}),
       );
-
+print(response.body);
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         

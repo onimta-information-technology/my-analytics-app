@@ -559,7 +559,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
             final container = ProviderScope.containerOf(context);
             final authRepo = container.read(authRepositoryProvider);
-            TokenRefreshService().start(authRepo);
+           // TokenRefreshService().start(authRepo);
 
             final booking = GuestBooking(
               idNo: 0, // Not available in notification payload
@@ -625,7 +625,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
           final container = ProviderScope.containerOf(context);
           final authRepo = container.read(authRepositoryProvider);
-          TokenRefreshService().start(authRepo);
+          // TokenRefreshService().start(authRepo);
 
           // Navigate based on notification data
           if (notificationChatData != null &&

@@ -675,6 +675,7 @@ class AppNavigation {
               child: GuestBookingScreen(
                 bookingRepository: GuestBookingRepository(
                   ApiService(const FlutterSecureStorage()),
+                  const FlutterSecureStorage(),
                 ),
               ),
               transitionsBuilder:
@@ -697,6 +698,7 @@ class AppNavigation {
                   return ViewGuestBooking(
                     bookingRepository: GuestBookingRepository(
                       ApiService(const FlutterSecureStorage()),
+                      const FlutterSecureStorage(),
                     ),
                     booking: booking,
                     isPending: isPending,

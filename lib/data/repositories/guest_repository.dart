@@ -46,8 +46,8 @@ class GuestRepository {
   Future<GuestDataResult> getGuestData2(int iid, String text1) async {
     final deviceId = await DeviceId.get();
     print("iid is $iid and text1 is $text1");
- final spName = await StorageUtil.getStoredProcedureName();
- print(spName);
+    final spName = await StorageUtil.getStoredProcedureName();
+    print(spName);
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -73,7 +73,7 @@ class GuestRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName":spName,
+      "SpName": spName,
       "con": "1",
     });
 
@@ -86,10 +86,27 @@ class GuestRepository {
 
       // ── Table (always present) ────────────────────────────────────────────
       final tableData = commonResult['Table'] as List? ?? [];
+
+      // 🔍 DEBUG: Print first Table item keys to check field name casing
+      if (tableData.isNotEmpty) {
+        print('🔍 [Table] keys: ${(tableData.first as Map).keys.toList()}');
+        print('🔍 [Table] first item: ${tableData.first}');
+      }
+
       List<Guest> guestList = tableData.map((e) => Guest.fromJson(e)).toList();
 
       // ── Table1 (admin only — sales person summary) ───────────────────────
       final table1Data = commonResult['Table1'];
+
+      // 🔍 DEBUG: Print raw Table1 to check GCode/GName/rc casing
+      if (table1Data is List && table1Data.isNotEmpty) {
+        print('🔍 [Table1] keys: ${(table1Data.first as Map).keys.toList()}');
+        print('🔍 [Table1] first item: ${table1Data.first}');
+        print('🔍 [Table1] ALL items: $table1Data');
+      } else {
+        print('🔍 [Table1] is empty or null');
+      }
+
       List<MarketingGroup> salesPersonGroups = [];
       if (table1Data is List && table1Data.isNotEmpty) {
         salesPersonGroups = table1Data
@@ -97,20 +114,51 @@ class GuestRepository {
             .where((g) => g.gCode.isNotEmpty && g.rc > 0)
             .toList()
           ..sort((a, b) => b.rc.compareTo(a.rc));
+
+        // 🔍 DEBUG: Print parsed sales person groups to confirm names parsed correctly
+        print('🔍 [Table1] PARSED salesPersonGroups:');
+        for (final g in salesPersonGroups) {
+          print('   gCode="${g.gCode}"  gName="${g.gName}"  rc=${g.rc}');
+        }
       }
 
       // ── Table2 (pie slices — always present) ─────────────────────────────
       final table2Data = commonResult['Table2'];
+
+      // 🔍 DEBUG: Print raw Table2 to check GCode/GName/rc casing
+      if (table2Data is List && table2Data.isNotEmpty) {
+        print('🔍 [Table2] keys: ${(table2Data.first as Map).keys.toList()}');
+        print('🔍 [Table2] first item: ${table2Data.first}');
+        print('🔍 [Table2] ALL items: $table2Data');
+      } else {
+        print('🔍 [Table2] is empty or null');
+      }
+
       List<MarketingGroup> marketingGroups = [];
       if (table2Data is List && table2Data.isNotEmpty) {
         marketingGroups = table2Data
             .map((e) => MarketingGroup.fromJson(e))
             .where((g) => g.gCode.isNotEmpty && g.rc > 0)
             .toList();
+
+        // 🔍 DEBUG: Print parsed marketing groups to confirm names parsed correctly
+        print('🔍 [Table2] PARSED marketingGroups:');
+        for (final g in marketingGroups) {
+          print('   gCode="${g.gCode}"  gName="${g.gName}"  rc=${g.rc}');
+        }
       }
 
       // ── Table3 (non-marketing guests) ────────────────────────────────────
       final table3Data = commonResult['Table3'];
+
+      // 🔍 DEBUG: Print first Table3 item keys
+      if (table3Data is List && table3Data.isNotEmpty) {
+        print('🔍 [Table3] keys: ${(table3Data.first as Map).keys.toList()}');
+        print('🔍 [Table3] first item: ${table3Data.first}');
+      } else {
+        print('🔍 [Table3] is empty or null');
+      }
+
       List<Guest> nonMarketingGuests = [];
       if (table3Data is List && table3Data.isNotEmpty) {
         nonMarketingGuests = table3Data.map((e) => Guest.fromJson(e)).toList();
@@ -118,17 +166,21 @@ class GuestRepository {
 
       // ── Table4 (other marketing guests — regular user only) ───────────────
       final table4Data = commonResult['Table4'];
+
+      // 🔍 DEBUG: Print first Table4 item keys
+      if (table4Data is List && table4Data.isNotEmpty) {
+        print('🔍 [Table4] keys: ${(table4Data.first as Map).keys.toList()}');
+        print('🔍 [Table4] first item: ${table4Data.first}');
+      } else {
+        print('🔍 [Table4] is empty or null');
+      }
+
       List<Guest> otherMarketingGuests = [];
       if (table4Data is List && table4Data.isNotEmpty) {
         otherMarketingGuests = table4Data.map((e) => Guest.fromJson(e)).toList();
       }
 
       // ── Detect layout ────────────────────────────────────────────────────
-      //
-      // Admin:               Table2 contains GCode == 'MKT'
-      // Regular + OTHER:     Table2 contains GCode == 'OTHER'
-      // Regular myData only: Table2 has neither MKT nor OTHER
-      //                      (only the user's own gCode like '1038')
       final hasMkt   = marketingGroups.any((g) => g.gCode == 'MKT');
       final hasOther = marketingGroups.any((g) => g.gCode == 'OTHER');
 
@@ -163,7 +215,7 @@ class GuestRepository {
 
   Future<List<Guest>> getGuestData(int iid, String text1) async {
     final deviceId = await DeviceId.get();
- final spName = await StorageUtil.getStoredProcedureName();
+    final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -209,7 +261,7 @@ class GuestRepository {
 
   Future<String?> fetchGuestImage(int iid, String text1) async {
     final deviceId = await DeviceId.get();
- final spName = await StorageUtil.getStoredProcedureName();
+    final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -252,7 +304,7 @@ class GuestRepository {
 
   Future<List<GuestSearchResponse>> searchGuest(int iid, String text1) async {
     final deviceId = await DeviceId.get();
- final spName = await StorageUtil.getStoredProcedureName();
+    final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [

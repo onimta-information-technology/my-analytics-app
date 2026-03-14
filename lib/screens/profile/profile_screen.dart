@@ -44,6 +44,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   bool _nogiftamount = false;
   bool? _memProfSH;
   String? _userMarketingCode;
+  bool _useBadgeForRating = false;
 
   @override
   void initState() {
@@ -52,7 +53,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       _memProfSH = await StorageUtil.getMemProfSH();
       _userMarketingCode = await StorageUtil.getMarketingCode();
-      
+
+      // Check if we should use badge instead of rating image
+      final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+      setState(() {
+        _useBadgeForRating = apiUrl.contains('bty.world');
+      });
+
       final extra = GoRouterState.of(context).extra;
       if (extra != null && extra is Map<String, dynamic>) {
         setState(() {
@@ -96,7 +103,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     if (_memProfSH == null || _memProfSH == true || guest?.mGroup == "W") {
       return true;
     }
-    
+
     if (_memProfSH == false) {
       if (_userMarketingCode != null &&
           guest?.mGroup != null &&
@@ -150,7 +157,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   ),
                 ),
                 const SizedBox(height: 20),
-                
                 const Text(
                   "Access Denied",
                   style: TextStyle(
@@ -161,7 +167,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
-                
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -233,11 +238,34 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     }
   }
 
+  Color _getRatingColor(String? rating) {
+    switch ((rating ?? '').toUpperCase()) {
+      case 'GOLD':
+        return const Color(0xFFDAA520);
+      case 'PLATINUM':
+        return const Color(0xFF707070);
+      case 'DIAMOND':
+        return const Color(0xFF1565C0);
+      case 'SILVER':
+        return const Color(0xFF9E9E9E);
+      case 'INFINITY':
+        return const Color(0xFF4A148C);
+      case 'PREMIER':
+        return const Color(0xFF1B5E20);
+      case 'RAFFELS CLUB':
+        return const Color(0xFF880E4F);
+      case 'CLASSIC':
+        return const Color(0xFF5D4037);
+      default:
+        return Constants.kPrimaryColor;
+    }
+  }
+
   void _showAddPhoneDialog(
     BuildContext context,
     String memberId,
     int phoneType,
-      String? currentPhone,
+    String? currentPhone,
   ) {
     showDialog(
       context: context,
@@ -258,7 +286,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     BuildContext context,
     String memberId,
     int phoneType,
-     String? currentPhone,
+    String? currentPhone,
   ) {
     showDialog(
       context: context,
@@ -266,7 +294,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         return AddwhatsappPhoneDialog(
           memberId: memberId,
           phoneType: phoneType,
-           currentPhone: currentPhone,
+          currentPhone: currentPhone,
           onPhoneAdded: (phone) {
             // Optional: Handle after phone is added
           },
@@ -296,54 +324,53 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     );
   }
 
-  // Helper methods for primary contact functionality
   List<String> _getAvailablePhones() {
     final profileDetails = ref.read(mainProfileDetailsProvider);
     List<String> phones = [];
-    
+
     for (var entry in profileDetails) {
       final name = entry.details['Name']?.toLowerCase() ?? '';
       final detail = entry.details['Detail'] ?? '';
-      
-      if ((name == 'phone1' || name == 'phone2' || name == 'phone3') && 
+
+      if ((name == 'phone1' || name == 'phone2' || name == 'phone3') &&
           detail.isNotEmpty) {
         phones.add(detail);
       }
     }
-    
+
     return phones;
   }
 
   List<String> _getAvailableEmails() {
     final profileDetails = ref.read(mainProfileDetailsProvider);
     List<String> emails = [];
-    
+
     for (var entry in profileDetails) {
       final name = entry.details['Name']?.toLowerCase() ?? '';
       final detail = entry.details['Detail'] ?? '';
-      
+
       if ((name == 'email1' || name == 'email2') && detail.isNotEmpty) {
         emails.add(detail);
       }
     }
-    
+
     return emails;
   }
 
   List<String> _getAvailableWhatsApps() {
     final profileDetails = ref.read(mainProfileDetailsProvider);
     List<String> whatsapps = [];
-    
+
     for (var entry in profileDetails) {
       final name = entry.details['Name']?.toLowerCase() ?? '';
       final detail = entry.details['Detail'] ?? '';
-      
-      if ((name == 'whatsapp' || name == 'whatsapp1' || name == 'whatsapp2') && 
+
+      if ((name == 'whatsapp' || name == 'whatsapp1' || name == 'whatsapp2') &&
           detail.isNotEmpty) {
         whatsapps.add(detail);
       }
     }
-    
+
     return whatsapps;
   }
 
@@ -383,9 +410,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   void _showSetPrimaryPhoneDialog() {
     final guest = ref.read(selectedGuestProvider);
     if (guest == null) return;
-    
+
     final availablePhones = _getAvailablePhones();
-    
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -400,9 +427,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   void _showSetPrimaryEmailDialog() {
     final guest = ref.read(selectedGuestProvider);
     if (guest == null) return;
-    
+
     final availableEmails = _getAvailableEmails();
-    
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -417,9 +444,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   void _showSetPrimaryWhatsAppDialog() {
     final guest = ref.read(selectedGuestProvider);
     if (guest == null) return;
-    
+
     final availableWhatsApps = _getAvailableWhatsApps();
-    
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -449,7 +476,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     ).routerDelegate.currentConfiguration.fullPath;
 
     final birthdayGiftState = ref.watch(birthdayGiftProvider);
-    
+
     final bool showGiftElements =
         !_nogiftamount &&
         (currentPath == '/birthdays' ||
@@ -476,7 +503,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
               onPressed: () => context.pop(),
-            ),title: const Text("Guest Profile")),
+            ),
+            title: const Text("Guest Profile")),
         body: Stack(
           children: [
             PopScope(
@@ -565,37 +593,71 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                 ),
                               ),
                             ),
+                            // Rating badge / image positioned top-left
                             Positioned(
                               top: 0,
                               left: -70,
-                              child: Card(
-                                elevation: 5,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(0),
-                                  child: SizedBox(
-                                    width: 120,
-                                    height: 50,
-                                    child: imagePath != null
-                                        ? Hero(
-                                            tag: "rating-image-${guest.mid}",
-                                            child: Image.asset(
-                                              imagePath,
-                                              fit: BoxFit.contain,
+                              child: _useBadgeForRating
+                                  ? Hero(
+                                      tag: "rating-image-${guest.mid}",
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: _getRatingColor(guest.gRating),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black
+                                                  .withOpacity(0.25),
+                                              blurRadius: 6,
+                                              offset: const Offset(0, 3),
                                             ),
-                                          )
-                                        : Hero(
-                                            tag: "rating-image-${guest.mid}",
-                                            child: Image.asset(
-                                              "assets/images/ratings/CLASSIC.png",
-                                              fit: BoxFit.contain,
-                                            ),
+                                          ],
+                                        ),
+                                        child: Text(
+                                          guest.gRating ?? 'N/A',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
                                           ),
-                                  ),
-                                ),
-                              ),
+                                        ),
+                                      ),
+                                    )
+                                  : Card(
+                                      elevation: 5,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(0),
+                                        child: SizedBox(
+                                          width: 120,
+                                          height: 50,
+                                          child: imagePath != null
+                                              ? Hero(
+                                                  tag:
+                                                      "rating-image-${guest.mid}",
+                                                  child: Image.asset(
+                                                    imagePath,
+                                                    fit: BoxFit.contain,
+                                                  ),
+                                                )
+                                              : Hero(
+                                                  tag:
+                                                      "rating-image-${guest.mid}",
+                                                  child: Image.asset(
+                                                    "assets/images/ratings/CLASSIC.png",
+                                                    fit: BoxFit.contain,
+                                                  ),
+                                                ),
+                                        ),
+                                      ),
+                                    ),
                             ),
                           ],
                         ),
@@ -881,7 +943,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                               ),
                                             ),
                                             AnimatedRotation(
-                                              turns: _isTableExpanded ? 0.5 : 0,
+                                              turns:
+                                                  _isTableExpanded ? 0.5 : 0,
                                               duration: const Duration(
                                                 milliseconds: 300,
                                               ),
@@ -896,7 +959,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                       ),
                                     ),
                                     const SizedBox(height: 8),
-                                    
+
                                     // Set Primary buttons
                                     if (_isTableExpanded) ...[
                                       const SizedBox(height: 12),
@@ -904,18 +967,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                         children: [
                                           Expanded(
                                             child: ElevatedButton.icon(
-                                              onPressed: _showSetPrimaryPhoneDialog,
-                                              icon: const Icon(Icons.phone, size: 18),
+                                              onPressed:
+                                                  _showSetPrimaryPhoneDialog,
+                                              icon: const Icon(Icons.phone,
+                                                  size: 18),
                                               label: const Text(
                                                 'Set Primary Phone',
-                                                style: TextStyle(fontSize: 14,fontWeight: FontWeight.bold),
+                                                style: TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight:
+                                                        FontWeight.bold),
                                               ),
                                               style: ElevatedButton.styleFrom(
-                                                backgroundColor: const Color(0xFF1976D2),
+                                                backgroundColor:
+                                                    const Color(0xFF1976D2),
                                                 foregroundColor: Colors.white,
-                                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 10),
                                                 shape: RoundedRectangleBorder(
-                                                  borderRadius: BorderRadius.circular(8),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
                                                 ),
                                               ),
                                             ),
@@ -923,18 +995,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                           const SizedBox(width: 8),
                                           Expanded(
                                             child: ElevatedButton.icon(
-                                              onPressed: _showSetPrimaryEmailDialog,
-                                              icon: const Icon(Icons.email, size: 18),
+                                              onPressed:
+                                                  _showSetPrimaryEmailDialog,
+                                              icon: const Icon(Icons.email,
+                                                  size: 18),
                                               label: const Text(
                                                 'Set Primary Email',
-                                                style: TextStyle(fontSize: 14,fontWeight: FontWeight.bold),
+                                                style: TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight:
+                                                        FontWeight.bold),
                                               ),
                                               style: ElevatedButton.styleFrom(
-                                                backgroundColor: const Color(0xFFD32F2F),
+                                                backgroundColor:
+                                                    const Color(0xFFD32F2F),
                                                 foregroundColor: Colors.white,
-                                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 10),
                                                 shape: RoundedRectangleBorder(
-                                                  borderRadius: BorderRadius.circular(8),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
                                                 ),
                                               ),
                                             ),
@@ -945,30 +1026,39 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                       SizedBox(
                                         width: double.infinity,
                                         child: ElevatedButton.icon(
-                                          onPressed: _showSetPrimaryWhatsAppDialog,
+                                          onPressed:
+                                              _showSetPrimaryWhatsAppDialog,
                                           icon: Image.asset(
                                             'assets/images/others/whatsapp.png',
                                             width: 18,
                                             height: 18,
-                                            color: const Color.fromARGB(255, 0, 0, 0),
+                                            color: const Color.fromARGB(
+                                                255, 0, 0, 0),
                                           ),
                                           label: const Text(
                                             'Set Primary WhatsApp',
-                                            style: TextStyle(fontSize: 15,fontWeight: FontWeight.bold),
+                                            style: TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold),
                                           ),
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: const Color(0xFF25D366),
-                                            foregroundColor: const Color.fromARGB(255, 0, 0, 0),
-                                            padding: const EdgeInsets.symmetric(vertical: 10),
+                                            backgroundColor:
+                                                const Color(0xFF25D366),
+                                            foregroundColor:
+                                                const Color.fromARGB(
+                                                    255, 0, 0, 0),
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 10),
                                             shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(8),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
                                             ),
                                           ),
                                         ),
                                       ),
                                       const SizedBox(height: 12),
                                     ],
-                                    
+
                                     AnimatedContainer(
                                       duration: const Duration(
                                         milliseconds: 400,
@@ -989,63 +1079,92 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                           children: [
                                             ...guestProfileDetails
                                                 .map((entry) {
-                                                  final name = entry.details['Name']?.toLowerCase() ?? '';
-                                                  final detail = entry.details['Detail'] ?? '';
-                                                  
-                                                  final isBirthday = name == 'birthday';
-                                                  final isPhone = name == 'phone1';
-                                                  final isPhone2 = name == 'phone2';
-                                                  final isPhone3 = name == 'phone3';
-                                                  final isEmail = name == 'email1';
-                                                  final isEmail2 = name == 'email2';
-                                                  final iswhatsapp = name == 'whatsapp';
-                                                  final iswhatsapp2 = name == 'whatsapp1';
-                                                  final iswhatsapp3 = name == 'whatsapp2';
-                                                  
-                                                  // Check if this is a primary contact row - HIDE these rows
-                                                  final isPhonePrimary = name == 'phone_primary';
-                                                  final isEmailPrimary = name == 'email_primary';
-                                                  final isWhatsAppPrimary = name == 'whatsapp_primary';
-                                                  
+                                                  final name = entry
+                                                          .details['Name']
+                                                          ?.toLowerCase() ??
+                                                      '';
+                                                  final detail =
+                                                      entry.details['Detail'] ??
+                                                          '';
+
+                                                  final isBirthday =
+                                                      name == 'birthday';
+                                                  final isPhone =
+                                                      name == 'phone1';
+                                                  final isPhone2 =
+                                                      name == 'phone2';
+                                                  final isPhone3 =
+                                                      name == 'phone3';
+                                                  final isEmail =
+                                                      name == 'email1';
+                                                  final isEmail2 =
+                                                      name == 'email2';
+                                                  final iswhatsapp =
+                                                      name == 'whatsapp';
+                                                  final iswhatsapp2 =
+                                                      name == 'whatsapp1';
+                                                  final iswhatsapp3 =
+                                                      name == 'whatsapp2';
+
+                                                  final isPhonePrimary =
+                                                      name == 'phone_primary';
+                                                  final isEmailPrimary =
+                                                      name == 'email_primary';
+                                                  final isWhatsAppPrimary =
+                                                      name ==
+                                                          'whatsapp_primary';
+
                                                   // Skip rendering primary rows
-                                                  if (isPhonePrimary || isEmailPrimary || isWhatsAppPrimary) {
+                                                  if (isPhonePrimary ||
+                                                      isEmailPrimary ||
+                                                      isWhatsAppPrimary) {
                                                     return null;
                                                   }
-                                                  
-                                                  // Get primary values for highlighting
-                                                  final primaryPhone = _getPrimaryPhone();
-                                                  final primaryEmail = _getPrimaryEmail();
-                                                  final primaryWhatsApp = _getPrimaryWhatsApp();
-                                                  
-                                                  // Check if this row's detail value matches any primary value
-                                                  // Only highlight if detail is not empty and matches a primary
+
+                                                  final primaryPhone =
+                                                      _getPrimaryPhone();
+                                                  final primaryEmail =
+                                                      _getPrimaryEmail();
+                                                  final primaryWhatsApp =
+                                                      _getPrimaryWhatsApp();
+
                                                   bool isPrimary = false;
                                                   if (detail.isNotEmpty) {
-                                                    if ((isPhone || isPhone2 || isPhone3) && 
-                                                        primaryPhone != null && 
+                                                    if ((isPhone ||
+                                                            isPhone2 ||
+                                                            isPhone3) &&
+                                                        primaryPhone != null &&
                                                         detail == primaryPhone) {
                                                       isPrimary = true;
-                                                    } else if ((isEmail || isEmail2) && 
-                                                               primaryEmail != null && 
-                                                               detail == primaryEmail) {
+                                                    } else if ((isEmail ||
+                                                            isEmail2) &&
+                                                        primaryEmail != null &&
+                                                        detail == primaryEmail) {
                                                       isPrimary = true;
-                                                    } else if ((iswhatsapp || iswhatsapp2 || iswhatsapp3) && 
-                                                               primaryWhatsApp != null && 
-                                                               detail == primaryWhatsApp) {
+                                                    } else if ((iswhatsapp ||
+                                                            iswhatsapp2 ||
+                                                            iswhatsapp3) &&
+                                                        primaryWhatsApp !=
+                                                            null &&
+                                                        detail ==
+                                                            primaryWhatsApp) {
                                                       isPrimary = true;
                                                     }
                                                   }
-                                                  
-                                                  // Determine background color
+
                                                   Color? backgroundColor;
                                                   if (isBirthday) {
-                                                    backgroundColor = Colors.green.shade200;
+                                                    backgroundColor =
+                                                        Colors.green.shade200;
                                                   } else if (isPrimary) {
-                                                    backgroundColor = Colors.amber.shade100;
+                                                    backgroundColor =
+                                                        Colors.amber.shade100;
                                                   } else {
-                                                    backgroundColor = Constants.kPrimaryColor.withAlpha(50);
+                                                    backgroundColor = Constants
+                                                        .kPrimaryColor
+                                                        .withAlpha(50);
                                                   }
-                                                  
+
                                                   return TableRow(
                                                     decoration: BoxDecoration(
                                                       color: backgroundColor,
@@ -1053,194 +1172,429 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                     children: [
                                                       // LEFT CELL - Name
                                                       InkWell(
-                                                        onTap: isBirthday ? () async {
-                                                          EasyLoading.show(status: 'Loading gift...');
-                                                          try {
-                                                            await ref.read(birthdayGiftProvider.notifier).fetchGiftData(guest.mid);
-                                                            EasyLoading.dismiss();
-                                                            final giftState = ref.read(birthdayGiftProvider);
-                                                            if (giftState.giftData != null) {
-                                                              ref.read(selectedGuestProvider.notifier).updateGuestGift(
-                                                                    gift: giftState.giftData!.gift,
-                                                                    mobile: giftState.giftData!.mobile,
+                                                        onTap: isBirthday
+                                                            ? () async {
+                                                                EasyLoading
+                                                                    .show(
+                                                                  status:
+                                                                      'Loading gift...',
+                                                                );
+                                                                try {
+                                                                  await ref
+                                                                      .read(birthdayGiftProvider
+                                                                          .notifier)
+                                                                      .fetchGiftData(
+                                                                          guest.mid);
+                                                                  EasyLoading
+                                                                      .dismiss();
+                                                                  final giftState =
+                                                                      ref.read(
+                                                                          birthdayGiftProvider);
+                                                                  if (giftState
+                                                                          .giftData !=
+                                                                      null) {
+                                                                    ref
+                                                                        .read(selectedGuestProvider
+                                                                            .notifier)
+                                                                        .updateGuestGift(
+                                                                          gift: giftState
+                                                                              .giftData!
+                                                                              .gift,
+                                                                          mobile: giftState
+                                                                              .giftData!
+                                                                              .mobile,
+                                                                        );
+                                                                    if (giftState
+                                                                        .giftData!
+                                                                        .mobile
+                                                                        .isNotEmpty) {
+                                                                      _whatsappNumberController
+                                                                              .text =
+                                                                          giftState
+                                                                              .giftData!
+                                                                              .mobile;
+                                                                    }
+                                                                    ScaffoldMessenger.of(
+                                                                            context)
+                                                                        .showSnackBar(
+                                                                      SnackBar(
+                                                                        content:
+                                                                            Text('Gift loaded: ${giftState.giftData!.gift}'),
+                                                                        backgroundColor:
+                                                                            Colors.green,
+                                                                        duration:
+                                                                            const Duration(seconds: 2),
+                                                                      ),
+                                                                    );
+                                                                  } else {
+                                                                    ScaffoldMessenger.of(
+                                                                            context)
+                                                                        .showSnackBar(
+                                                                      const SnackBar(
+                                                                        content:
+                                                                            Text('No gift data available'),
+                                                                        backgroundColor:
+                                                                            Colors.orange,
+                                                                      ),
+                                                                    );
+                                                                  }
+                                                                } catch (e) {
+                                                                  EasyLoading
+                                                                      .dismiss();
+                                                                  ScaffoldMessenger.of(
+                                                                          context)
+                                                                      .showSnackBar(
+                                                                    SnackBar(
+                                                                      content: Text(
+                                                                          'Error loading gift: $e'),
+                                                                      backgroundColor:
+                                                                          Colors
+                                                                              .red,
+                                                                    ),
                                                                   );
-                                                              if (giftState.giftData!.mobile.isNotEmpty) {
-                                                                _whatsappNumberController.text = giftState.giftData!.mobile;
+                                                                }
                                                               }
-                                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                                SnackBar(
-                                                                  content: Text('Gift loaded: ${giftState.giftData!.gift}'),
-                                                                  backgroundColor: Colors.green,
-                                                                  duration: const Duration(seconds: 2),
-                                                                ),
-                                                              );
-                                                            } else {
-                                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                                const SnackBar(
-                                                                  content: Text('No gift data available'),
-                                                                  backgroundColor: Colors.orange,
-                                                                ),
-                                                              );
-                                                            }
-                                                          } catch (e) {
-                                                            EasyLoading.dismiss();
-                                                            ScaffoldMessenger.of(context).showSnackBar(
-                                                              SnackBar(
-                                                                content: Text('Error loading gift: $e'),
-                                                                backgroundColor: Colors.red,
-                                                              ),
-                                                            );
-                                                          }
-                                                        } : null,
+                                                            : null,
                                                         child: Padding(
-                                                          padding: const EdgeInsets.all(8.0),
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .all(8.0),
                                                           child: Column(
-                                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                                            crossAxisAlignment:
+                                                                CrossAxisAlignment
+                                                                    .start,
                                                             children: [
-                                                              // First row - PRIMARY label at top right
                                                               if (isPrimary)
                                                                 Row(
-                                                                  mainAxisAlignment: MainAxisAlignment.start,
+                                                                  mainAxisAlignment:
+                                                                      MainAxisAlignment
+                                                                          .start,
                                                                   children: [
                                                                     Container(
-                                                                      padding: const EdgeInsets.symmetric(
-                                                                        horizontal: 6,
-                                                                        vertical: 2,
+                                                                      padding: const EdgeInsets
+                                                                          .symmetric(
+                                                                        horizontal:
+                                                                            6,
+                                                                        vertical:
+                                                                            2,
                                                                       ),
-                                                                      decoration: BoxDecoration(
-                                                                        color: Colors.green,
-                                                                        borderRadius: BorderRadius.circular(4),
+                                                                      decoration:
+                                                                          BoxDecoration(
+                                                                        color: Colors
+                                                                            .green,
+                                                                        borderRadius:
+                                                                            BorderRadius.circular(4),
                                                                       ),
-                                                                      child: const Text(
+                                                                      child:
+                                                                          const Text(
                                                                         'PRIMARY',
-                                                                        style: TextStyle(
-                                                                          color: Colors.white,
-                                                                          fontSize: 11,
-                                                                          fontWeight: FontWeight.bold,
+                                                                        style:
+                                                                            TextStyle(
+                                                                          color:
+                                                                              Colors.white,
+                                                                          fontSize:
+                                                                              11,
+                                                                          fontWeight:
+                                                                              FontWeight.bold,
                                                                         ),
                                                                       ),
                                                                     ),
                                                                   ],
                                                                 ),
-                                                              
-                                                              // Add spacing after PRIMARY label
-                                                              if (isPrimary) const SizedBox(height: 4),
-                                                              
-                                                              // Second row - Name and action icons
+                                                              if (isPrimary)
+                                                                const SizedBox(
+                                                                    height: 4),
                                                               Row(
                                                                 children: [
                                                                   Expanded(
                                                                     child: Text(
-                                                                      entry.details['Name']!,
-                                                                      style: TextStyle(
-                                                                        color: Colors.black,
-                                                                        fontSize: fontSettings.fontSize,
-                                                                        fontWeight: FontWeight.bold,
+                                                                      entry.details[
+                                                                          'Name']!,
+                                                                      style:
+                                                                          TextStyle(
+                                                                        color: Colors
+                                                                            .black,
+                                                                        fontSize:
+                                                                            fontSettings.fontSize,
+                                                                        fontWeight:
+                                                                            FontWeight.bold,
                                                                       ),
                                                                     ),
                                                                   ),
                                                                   if (isBirthday)
                                                                     Row(
                                                                       children: const [
-                                                                        Icon(Icons.touch_app, size: 23, color: Color.fromARGB(255, 230, 0, 0)),
-                                                                        SizedBox(width: 4),
-                                                                        Icon(Icons.card_giftcard, size: 23, color: Color.fromARGB(255, 230, 0, 0)),
+                                                                        Icon(
+                                                                            Icons
+                                                                                .touch_app,
+                                                                            size:
+                                                                                23,
+                                                                            color: Color.fromARGB(
+                                                                                255,
+                                                                                230,
+                                                                                0,
+                                                                                0)),
+                                                                        SizedBox(
+                                                                            width:
+                                                                                4),
+                                                                        Icon(
+                                                                            Icons
+                                                                                .card_giftcard,
+                                                                            size:
+                                                                                23,
+                                                                            color: Color.fromARGB(
+                                                                                255,
+                                                                                230,
+                                                                                0,
+                                                                                0)),
                                                                       ],
                                                                     ),
                                                                   if (isPhone)
                                                                     InkWell(
-                                                                      onTap: () => _showAddPhoneDialog(context, guest.mid, 1, entry.details['Detail']),
-                                                                      child: Container(
-                                                                        padding: const EdgeInsets.all(4),
-                                                                        decoration: BoxDecoration(
-                                                                          color: const Color.fromARGB(255, 230, 0, 0),
-                                                                          borderRadius: BorderRadius.circular(6),
+                                                                      onTap: () =>
+                                                                          _showAddPhoneDialog(
+                                                                              context,
+                                                                              guest.mid,
+                                                                              1,
+                                                                              entry.details['Detail']),
+                                                                      child:
+                                                                          Container(
+                                                                        padding:
+                                                                            const EdgeInsets.all(4),
+                                                                        decoration:
+                                                                            BoxDecoration(
+                                                                          color: const Color.fromARGB(
+                                                                              255,
+                                                                              230,
+                                                                              0,
+                                                                              0),
+                                                                          borderRadius:
+                                                                              BorderRadius.circular(6),
                                                                         ),
-                                                                        child: const Icon(Icons.add_call, size: 22, color: Colors.white),
+                                                                        child: const Icon(
+                                                                            Icons
+                                                                                .add_call,
+                                                                            size:
+                                                                                22,
+                                                                            color:
+                                                                                Colors.white),
                                                                       ),
                                                                     ),
                                                                   if (isPhone2)
                                                                     InkWell(
-                                                                      onTap: () => _showAddPhoneDialog(context, guest.mid, 2, entry.details['Detail']),
-                                                                      child: Container(
-                                                                        padding: const EdgeInsets.all(4),
-                                                                        decoration: BoxDecoration(
-                                                                          color: const Color.fromARGB(255, 230, 0, 0),
-                                                                          borderRadius: BorderRadius.circular(6),
+                                                                      onTap: () =>
+                                                                          _showAddPhoneDialog(
+                                                                              context,
+                                                                              guest.mid,
+                                                                              2,
+                                                                              entry.details['Detail']),
+                                                                      child:
+                                                                          Container(
+                                                                        padding:
+                                                                            const EdgeInsets.all(4),
+                                                                        decoration:
+                                                                            BoxDecoration(
+                                                                          color: const Color.fromARGB(
+                                                                              255,
+                                                                              230,
+                                                                              0,
+                                                                              0),
+                                                                          borderRadius:
+                                                                              BorderRadius.circular(6),
                                                                         ),
-                                                                        child: const Icon(Icons.add_call, size: 22, color: Colors.white),
+                                                                        child: const Icon(
+                                                                            Icons
+                                                                                .add_call,
+                                                                            size:
+                                                                                22,
+                                                                            color:
+                                                                                Colors.white),
                                                                       ),
                                                                     ),
                                                                   if (isPhone3)
                                                                     InkWell(
-                                                                      onTap: () => _showAddPhoneDialog(context, guest.mid, 3, entry.details['Detail']),
-                                                                      child: Container(
-                                                                        padding: const EdgeInsets.all(4),
-                                                                        decoration: BoxDecoration(
-                                                                          color: const Color.fromARGB(255, 230, 0, 0),
-                                                                          borderRadius: BorderRadius.circular(6),
+                                                                      onTap: () =>
+                                                                          _showAddPhoneDialog(
+                                                                              context,
+                                                                              guest.mid,
+                                                                              3,
+                                                                              entry.details['Detail']),
+                                                                      child:
+                                                                          Container(
+                                                                        padding:
+                                                                            const EdgeInsets.all(4),
+                                                                        decoration:
+                                                                            BoxDecoration(
+                                                                          color: const Color.fromARGB(
+                                                                              255,
+                                                                              230,
+                                                                              0,
+                                                                              0),
+                                                                          borderRadius:
+                                                                              BorderRadius.circular(6),
                                                                         ),
-                                                                        child: const Icon(Icons.add_call, size: 22, color: Colors.white),
+                                                                        child: const Icon(
+                                                                            Icons
+                                                                                .add_call,
+                                                                            size:
+                                                                                22,
+                                                                            color:
+                                                                                Colors.white),
                                                                       ),
                                                                     ),
                                                                   if (iswhatsapp)
                                                                     InkWell(
-                                                                      onTap: () => _showAddWhatsAppDialog(context, guest.mid, 1,entry.details['Detail']),
-                                                                      child: Container(
-                                                                        padding: const EdgeInsets.all(4),
-                                                                        decoration: BoxDecoration(
-                                                                          color: const Color.fromARGB(255, 230, 0, 0),
-                                                                          borderRadius: BorderRadius.circular(6),
+                                                                      onTap: () =>
+                                                                          _showAddWhatsAppDialog(
+                                                                              context,
+                                                                              guest.mid,
+                                                                              1,
+                                                                              entry.details['Detail']),
+                                                                      child:
+                                                                          Container(
+                                                                        padding:
+                                                                            const EdgeInsets.all(4),
+                                                                        decoration:
+                                                                            BoxDecoration(
+                                                                          color: const Color.fromARGB(
+                                                                              255,
+                                                                              230,
+                                                                              0,
+                                                                              0),
+                                                                          borderRadius:
+                                                                              BorderRadius.circular(6),
                                                                         ),
-                                                                        child: const Icon(Icons.add_call, size: 22, color: Colors.white),
+                                                                        child: const Icon(
+                                                                            Icons
+                                                                                .add_call,
+                                                                            size:
+                                                                                22,
+                                                                            color:
+                                                                                Colors.white),
                                                                       ),
                                                                     ),
                                                                   if (iswhatsapp2)
                                                                     InkWell(
-                                                                      onTap: () => _showAddWhatsAppDialog(context, guest.mid, 2,entry.details['Detail']),
-                                                                      child: Container(
-                                                                        padding: const EdgeInsets.all(4),
-                                                                        decoration: BoxDecoration(
-                                                                          color: const Color.fromARGB(255, 230, 0, 0),
-                                                                          borderRadius: BorderRadius.circular(6),
+                                                                      onTap: () =>
+                                                                          _showAddWhatsAppDialog(
+                                                                              context,
+                                                                              guest.mid,
+                                                                              2,
+                                                                              entry.details['Detail']),
+                                                                      child:
+                                                                          Container(
+                                                                        padding:
+                                                                            const EdgeInsets.all(4),
+                                                                        decoration:
+                                                                            BoxDecoration(
+                                                                          color: const Color.fromARGB(
+                                                                              255,
+                                                                              230,
+                                                                              0,
+                                                                              0),
+                                                                          borderRadius:
+                                                                              BorderRadius.circular(6),
                                                                         ),
-                                                                        child: const Icon(Icons.add_call, size: 22, color: Colors.white),
+                                                                        child: const Icon(
+                                                                            Icons
+                                                                                .add_call,
+                                                                            size:
+                                                                                22,
+                                                                            color:
+                                                                                Colors.white),
                                                                       ),
                                                                     ),
                                                                   if (iswhatsapp3)
                                                                     InkWell(
-                                                                      onTap: () => _showAddWhatsAppDialog(context, guest.mid, 3,entry.details['Detail']),
-                                                                      child: Container(
-                                                                        padding: const EdgeInsets.all(4),
-                                                                        decoration: BoxDecoration(
-                                                                          color: const Color.fromARGB(255, 230, 0, 0),
-                                                                          borderRadius: BorderRadius.circular(6),
+                                                                      onTap: () =>
+                                                                          _showAddWhatsAppDialog(
+                                                                              context,
+                                                                              guest.mid,
+                                                                              3,
+                                                                              entry.details['Detail']),
+                                                                      child:
+                                                                          Container(
+                                                                        padding:
+                                                                            const EdgeInsets.all(4),
+                                                                        decoration:
+                                                                            BoxDecoration(
+                                                                          color: const Color.fromARGB(
+                                                                              255,
+                                                                              230,
+                                                                              0,
+                                                                              0),
+                                                                          borderRadius:
+                                                                              BorderRadius.circular(6),
                                                                         ),
-                                                                        child: const Icon(Icons.add_call, size: 22, color: Colors.white),
+                                                                        child: const Icon(
+                                                                            Icons
+                                                                                .add_call,
+                                                                            size:
+                                                                                22,
+                                                                            color:
+                                                                                Colors.white),
                                                                       ),
                                                                     ),
                                                                   if (isEmail)
                                                                     InkWell(
-                                                                      onTap: () => _showUpdateEmailDialog(context, guest.mid, entry.details['Detail']!, 1),
-                                                                      child: Container(
-                                                                        padding: const EdgeInsets.all(4),
-                                                                        decoration: BoxDecoration(
-                                                                          color: const Color.fromARGB(255, 230, 0, 0),
-                                                                          borderRadius: BorderRadius.circular(6),
+                                                                      onTap: () =>
+                                                                          _showUpdateEmailDialog(
+                                                                              context,
+                                                                              guest.mid,
+                                                                              entry.details['Detail']!,
+                                                                              1),
+                                                                      child:
+                                                                          Container(
+                                                                        padding:
+                                                                            const EdgeInsets.all(4),
+                                                                        decoration:
+                                                                            BoxDecoration(
+                                                                          color: const Color.fromARGB(
+                                                                              255,
+                                                                              230,
+                                                                              0,
+                                                                              0),
+                                                                          borderRadius:
+                                                                              BorderRadius.circular(6),
                                                                         ),
-                                                                        child: const Icon(Icons.email, size: 22, color: Colors.white),
+                                                                        child: const Icon(
+                                                                            Icons
+                                                                                .email,
+                                                                            size:
+                                                                                22,
+                                                                            color:
+                                                                                Colors.white),
                                                                       ),
                                                                     ),
                                                                   if (isEmail2)
                                                                     InkWell(
-                                                                      onTap: () => _showUpdateEmailDialog(context, guest.mid, entry.details['Detail']!, 2),
-                                                                      child: Container(
-                                                                        padding: const EdgeInsets.all(4),
-                                                                        decoration: BoxDecoration(
-                                                                          color: const Color.fromARGB(255, 230, 0, 0),
-                                                                          borderRadius: BorderRadius.circular(6),
+                                                                      onTap: () =>
+                                                                          _showUpdateEmailDialog(
+                                                                              context,
+                                                                              guest.mid,
+                                                                              entry.details['Detail']!,
+                                                                              2),
+                                                                      child:
+                                                                          Container(
+                                                                        padding:
+                                                                            const EdgeInsets.all(4),
+                                                                        decoration:
+                                                                            BoxDecoration(
+                                                                          color: const Color.fromARGB(
+                                                                              255,
+                                                                              230,
+                                                                              0,
+                                                                              0),
+                                                                          borderRadius:
+                                                                              BorderRadius.circular(6),
                                                                         ),
-                                                                        child: const Icon(Icons.email, size: 22, color: Colors.white),
+                                                                        child: const Icon(
+                                                                            Icons
+                                                                                .email,
+                                                                            size:
+                                                                                22,
+                                                                            color:
+                                                                                Colors.white),
                                                                       ),
                                                                     ),
                                                                 ],
@@ -1251,54 +1605,107 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                       ),
                                                       // RIGHT CELL - Detail
                                                       InkWell(
-                                                        onTap: isBirthday ? () async {
-                                                          EasyLoading.show(status: 'Loading gift...');
-                                                          try {
-                                                            await ref.read(birthdayGiftProvider.notifier).fetchGiftData(guest.mid);
-                                                            EasyLoading.dismiss();
-                                                            final giftState = ref.read(birthdayGiftProvider);
-                                                            if (giftState.giftData != null) {
-                                                              ref.read(selectedGuestProvider.notifier).updateGuestGift(
-                                                                    gift: giftState.giftData!.gift,
-                                                                    mobile: giftState.giftData!.mobile,
+                                                        onTap: isBirthday
+                                                            ? () async {
+                                                                EasyLoading
+                                                                    .show(
+                                                                  status:
+                                                                      'Loading gift...',
+                                                                );
+                                                                try {
+                                                                  await ref
+                                                                      .read(birthdayGiftProvider
+                                                                          .notifier)
+                                                                      .fetchGiftData(
+                                                                          guest.mid);
+                                                                  EasyLoading
+                                                                      .dismiss();
+                                                                  final giftState =
+                                                                      ref.read(
+                                                                          birthdayGiftProvider);
+                                                                  if (giftState
+                                                                          .giftData !=
+                                                                      null) {
+                                                                    ref
+                                                                        .read(selectedGuestProvider
+                                                                            .notifier)
+                                                                        .updateGuestGift(
+                                                                          gift: giftState
+                                                                              .giftData!
+                                                                              .gift,
+                                                                          mobile: giftState
+                                                                              .giftData!
+                                                                              .mobile,
+                                                                        );
+                                                                    if (giftState
+                                                                        .giftData!
+                                                                        .mobile
+                                                                        .isNotEmpty) {
+                                                                      _whatsappNumberController
+                                                                              .text =
+                                                                          giftState
+                                                                              .giftData!
+                                                                              .mobile;
+                                                                    }
+                                                                    ScaffoldMessenger.of(
+                                                                            context)
+                                                                        .showSnackBar(
+                                                                      SnackBar(
+                                                                        content:
+                                                                            Text('Gift loaded: ${giftState.giftData!.gift}'),
+                                                                        backgroundColor:
+                                                                            Colors.green,
+                                                                        duration:
+                                                                            const Duration(seconds: 2),
+                                                                      ),
+                                                                    );
+                                                                  } else {
+                                                                    ScaffoldMessenger.of(
+                                                                            context)
+                                                                        .showSnackBar(
+                                                                      const SnackBar(
+                                                                        content:
+                                                                            Text('No gift data available'),
+                                                                        backgroundColor:
+                                                                            Colors.orange,
+                                                                      ),
+                                                                    );
+                                                                  }
+                                                                } catch (e) {
+                                                                  EasyLoading
+                                                                      .dismiss();
+                                                                  ScaffoldMessenger.of(
+                                                                          context)
+                                                                      .showSnackBar(
+                                                                    SnackBar(
+                                                                      content: Text(
+                                                                          'Error loading gift: $e'),
+                                                                      backgroundColor:
+                                                                          Colors
+                                                                              .red,
+                                                                    ),
                                                                   );
-                                                              if (giftState.giftData!.mobile.isNotEmpty) {
-                                                                _whatsappNumberController.text = giftState.giftData!.mobile;
+                                                                }
                                                               }
-                                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                                SnackBar(
-                                                                  content: Text('Gift loaded: ${giftState.giftData!.gift}'),
-                                                                  backgroundColor: Colors.green,
-                                                                  duration: const Duration(seconds: 2),
-                                                                ),
-                                                              );
-                                                            } else {
-                                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                                const SnackBar(
-                                                                  content: Text('No gift data available'),
-                                                                  backgroundColor: Colors.orange,
-                                                                ),
-                                                              );
-                                                            }
-                                                          } catch (e) {
-                                                            EasyLoading.dismiss();
-                                                            ScaffoldMessenger.of(context).showSnackBar(
-                                                              SnackBar(
-                                                                content: Text('Error loading gift: $e'),
-                                                                backgroundColor: Colors.red,
-                                                              ),
-                                                            );
-                                                          }
-                                                        } : null,
+                                                            : null,
                                                         child: Padding(
-                                                          padding: const EdgeInsets.all(8.0),
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .all(8.0),
                                                           child: Text(
-                                                            entry.details['Detail']!,
-                                                            textAlign: TextAlign.end,
+                                                            entry.details[
+                                                                'Detail']!,
+                                                            textAlign:
+                                                                TextAlign.end,
                                                             style: TextStyle(
-                                                              color: Colors.black,
-                                                              fontSize: fontSettings.fontSize,
-                                                              fontWeight: fontSettings.fontWeight,
+                                                              color:
+                                                                  Colors.black,
+                                                              fontSize:
+                                                                  fontSettings
+                                                                      .fontSize,
+                                                              fontWeight:
+                                                                  fontSettings
+                                                                      .fontWeight,
                                                             ),
                                                           ),
                                                         ),
@@ -1341,8 +1748,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                 style: TextStyle(
                                                   fontSize:
                                                       fontSettings.fontSize - 1,
-                                                  color:
-                                                      Constants.kPrimaryColor,
+                                                  color: Constants.kPrimaryColor,
                                                   fontWeight: FontWeight.w500,
                                                 ),
                                                 textAlign: TextAlign.center,
@@ -1376,7 +1782,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-
                                   if (guest.gift != null &&
                                       guest.gift!.isNotEmpty)
                                     Container(
@@ -1418,7 +1823,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                         ],
                                       ),
                                     ),
-
                                   const SizedBox(height: 10),
                                   TextField(
                                     controller: _whatsappNumberController,

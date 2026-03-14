@@ -8,6 +8,7 @@ import 'package:ballys_reservation_app/models/member/member_main_profile.dart';
 import 'package:ballys_reservation_app/models/member/member_summary.dart';
 import 'package:ballys_reservation_app/models/member/trip_history.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 
 class MemberProfileRepository {
   final ApiService apiService;
@@ -19,6 +20,7 @@ class MemberProfileRepository {
   ) async {
  print('getMemberMainProfileDetails called with text1: $text1');
     final deviceId = await DeviceId.get();
+     final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -44,7 +46,7 @@ class MemberProfileRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     });
 print('Response from CommonExecute: $response');
@@ -52,6 +54,7 @@ print('Response from CommonExecute: $response');
         response['CommonResult']['Table'] is List &&
         response['CommonResult']['Table'].isNotEmpty) {
       final tableData = response['CommonResult']['Table'];
+      print('call this');
 
       List<MemberMainProfile> guestMainProfileDynamicData = [];
 

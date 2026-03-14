@@ -78,7 +78,7 @@ final guestBookingProvider = StateNotifierProvider<GuestBookingNotifier, GuestBo
 
 final guestBookingRepositoryProvider = Provider((ref) {
   final apiService = ApiService(const FlutterSecureStorage());
-  return GuestBookingRepository(apiService);
+  return GuestBookingRepository(apiService, const FlutterSecureStorage());
 });
 
 class GuestBookingState {

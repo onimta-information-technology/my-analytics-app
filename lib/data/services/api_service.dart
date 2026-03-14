@@ -83,9 +83,20 @@ class ApiService {
       }
 
       // ── Success ───────────────────────────────────────────────────────────
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      }
+  if (response.statusCode == 200) {
+  final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+  final bodyStatusCode = decoded['statusCode'];
+
+  if (bodyStatusCode == null || bodyStatusCode == 200) {
+    return decoded;
+  }
+
+  throw ApiException(
+    'Request failed: $bodyStatusCode ${decoded['statusMsg']}',
+    statusCode: bodyStatusCode as int,
+  );
+}
+
 
       // ── Server error ──────────────────────────────────────────────────────
       if (response.statusCode >= 500) {
@@ -133,24 +144,25 @@ class ApiService {
   /// Handles:
   ///   - HTTP 401 Unauthorized
   ///   - HTTP 406 with `{ "status": "erorr"/"error", "statusMsg": "...invalid token..." }`
-  bool _isAuthFailure(http.Response response) {
-    if (response.statusCode == 401) return true;
+bool _isAuthFailure(http.Response response) {
+  if (response.statusCode == 401) return true;
 
-    if (response.statusCode == 406) {
-      try {
-        final body = jsonDecode(response.body) as Map<String, dynamic>;
-        final status = (body['status'] as String? ?? '').toLowerCase();
-        final msg = (body['statusMsg'] as String? ?? '').toLowerCase();
-        // Tolerate the API's "Erorr" typo alongside the correct spelling
-        return (status == 'erorr' || status == 'error') &&
-            msg.contains('invalid token');
-      } catch (_) {
-        return false;
-      }
+  try {
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final bodyStatusCode = body['statusCode'];
+    
+    if (bodyStatusCode == 406) {
+      final status = (body['status'] as String? ?? '').toLowerCase();
+      final msg = (body['statusMsg'] as String? ?? '').toLowerCase();
+      return (status == 'erorr' || status == 'error') &&
+          msg.contains('invalid token');
     }
-
+  } catch (_) {
     return false;
   }
+
+  return false;
+}
 
   /// Clears all stored credentials and triggers the app-wide logout callback.
   Future<void> _forceLogout() async {

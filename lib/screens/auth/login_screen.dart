@@ -400,13 +400,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  @override
-  void dispose() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(authProvider.notifier).clearPendingUser();
-    });
-    super.dispose();
-  }
+// AFTER — capture the notifier before disposing
+// FIXED
+@override
+void dispose() {
+  ref.read(authProvider.notifier).clearPendingUser();
+  super.dispose();
+}
 
   @override
   Widget build(BuildContext context) {

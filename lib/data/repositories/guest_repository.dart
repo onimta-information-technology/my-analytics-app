@@ -47,7 +47,7 @@ class GuestRepository {
     final deviceId = await DeviceId.get();
     print("iid is $iid and text1 is $text1");
     final spName = await StorageUtil.getStoredProcedureName();
-    print(spName);
+    print("spname :$spName");
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -87,25 +87,25 @@ class GuestRepository {
       // ── Table (always present) ────────────────────────────────────────────
       final tableData = commonResult['Table'] as List? ?? [];
 
-      // 🔍 DEBUG: Print first Table item keys to check field name casing
-      if (tableData.isNotEmpty) {
-        print('🔍 [Table] keys: ${(tableData.first as Map).keys.toList()}');
-        print('🔍 [Table] first item: ${tableData.first}');
-      }
+      // // 🔍 DEBUG: Print first Table item keys to check field name casing
+      // if (tableData.isNotEmpty) {
+      //   print('🔍 [Table] keys: ${(tableData.first as Map).keys.toList()}');
+      //   print('🔍 [Table] first item: ${tableData.first}');
+      // }
 
       List<Guest> guestList = tableData.map((e) => Guest.fromJson(e)).toList();
 
       // ── Table1 (admin only — sales person summary) ───────────────────────
       final table1Data = commonResult['Table1'];
 
-      // 🔍 DEBUG: Print raw Table1 to check GCode/GName/rc casing
-      if (table1Data is List && table1Data.isNotEmpty) {
-        print('🔍 [Table1] keys: ${(table1Data.first as Map).keys.toList()}');
-        print('🔍 [Table1] first item: ${table1Data.first}');
-        print('🔍 [Table1] ALL items: $table1Data');
-      } else {
-        print('🔍 [Table1] is empty or null');
-      }
+      // // 🔍 DEBUG: Print raw Table1 to check GCode/GName/rc casing
+      // if (table1Data is List && table1Data.isNotEmpty) {
+      //   print('🔍 [Table1] keys: ${(table1Data.first as Map).keys.toList()}');
+      //   print('🔍 [Table1] first item: ${table1Data.first}');
+      //   print('🔍 [Table1] ALL items: $table1Data');
+      // } else {
+      //   print('🔍 [Table1] is empty or null');
+      // }
 
       List<MarketingGroup> salesPersonGroups = [];
       if (table1Data is List && table1Data.isNotEmpty) {
@@ -115,24 +115,24 @@ class GuestRepository {
             .toList()
           ..sort((a, b) => b.rc.compareTo(a.rc));
 
-        // 🔍 DEBUG: Print parsed sales person groups to confirm names parsed correctly
-        print('🔍 [Table1] PARSED salesPersonGroups:');
-        for (final g in salesPersonGroups) {
-          print('   gCode="${g.gCode}"  gName="${g.gName}"  rc=${g.rc}');
-        }
+        // // 🔍 DEBUG: Print parsed sales person groups to confirm names parsed correctly
+        // print('🔍 [Table1] PARSED salesPersonGroups:');
+        // for (final g in salesPersonGroups) {
+        //   print('   gCode="${g.gCode}"  gName="${g.gName}"  rc=${g.rc}');
+        // }
       }
 
       // ── Table2 (pie slices — always present) ─────────────────────────────
       final table2Data = commonResult['Table2'];
 
       // 🔍 DEBUG: Print raw Table2 to check GCode/GName/rc casing
-      if (table2Data is List && table2Data.isNotEmpty) {
-        print('🔍 [Table2] keys: ${(table2Data.first as Map).keys.toList()}');
-        print('🔍 [Table2] first item: ${table2Data.first}');
-        print('🔍 [Table2] ALL items: $table2Data');
-      } else {
-        print('🔍 [Table2] is empty or null');
-      }
+      // if (table2Data is List && table2Data.isNotEmpty) {
+      //   print('🔍 [Table2] keys: ${(table2Data.first as Map).keys.toList()}');
+      //   print('🔍 [Table2] first item: ${table2Data.first}');
+      //   print('🔍 [Table2] ALL items: $table2Data');
+      // } else {
+      //   print('🔍 [Table2] is empty or null');
+      // }
 
       List<MarketingGroup> marketingGroups = [];
       if (table2Data is List && table2Data.isNotEmpty) {
@@ -141,23 +141,23 @@ class GuestRepository {
             .where((g) => g.gCode.isNotEmpty && g.rc > 0)
             .toList();
 
-        // 🔍 DEBUG: Print parsed marketing groups to confirm names parsed correctly
-        print('🔍 [Table2] PARSED marketingGroups:');
-        for (final g in marketingGroups) {
-          print('   gCode="${g.gCode}"  gName="${g.gName}"  rc=${g.rc}');
-        }
+        // // 🔍 DEBUG: Print parsed marketing groups to confirm names parsed correctly
+        // print('🔍 [Table2] PARSED marketingGroups:');
+        // for (final g in marketingGroups) {
+        //   print('   gCode="${g.gCode}"  gName="${g.gName}"  rc=${g.rc}');
+        // }
       }
 
       // ── Table3 (non-marketing guests) ────────────────────────────────────
       final table3Data = commonResult['Table3'];
 
-      // 🔍 DEBUG: Print first Table3 item keys
-      if (table3Data is List && table3Data.isNotEmpty) {
-        print('🔍 [Table3] keys: ${(table3Data.first as Map).keys.toList()}');
-        print('🔍 [Table3] first item: ${table3Data.first}');
-      } else {
-        print('🔍 [Table3] is empty or null');
-      }
+      // // 🔍 DEBUG: Print first Table3 item keys
+      // if (table3Data is List && table3Data.isNotEmpty) {
+      //   print('🔍 [Table3] keys: ${(table3Data.first as Map).keys.toList()}');
+      //   print('🔍 [Table3] first item: ${table3Data.first}');
+      // } else {
+      //   print('🔍 [Table3] is empty or null');
+      // }
 
       List<Guest> nonMarketingGuests = [];
       if (table3Data is List && table3Data.isNotEmpty) {

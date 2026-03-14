@@ -4,48 +4,51 @@ import 'package:ballys_reservation_app/models/run_date.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-
 final _flutterSecureStorageProvider = Provider(
   (ref) => const FlutterSecureStorage(),
 );
-
 final _apiServiceProvider = Provider((ref) {
   final storage = ref.read(_flutterSecureStorageProvider);
   return ApiService(storage);
 });
-
-
 final runDateRepositoryProvider = Provider((ref) {
   final apiService = ref.read(_apiServiceProvider);
   return RunDateRepository(apiService);
 });
 
+// ── Wrapper state so UI can distinguish loading vs failed ──────────────────
+class RunDateState {
+  final RunDate? runDate;
+  final bool isLoading;
+  final bool hasError;
 
+  const RunDateState({
+    this.runDate,
+    this.isLoading = false,
+    this.hasError = false,
+  });
+}
 
-class RunDateNotifier extends StateNotifier<RunDate?> {
+class RunDateNotifier extends StateNotifier<RunDateState> {
   final RunDateRepository runDateRepository;
 
-  RunDateNotifier(this.runDateRepository) : super(null);
+  RunDateNotifier(this.runDateRepository) : super(const RunDateState());
 
-  /// Fetches the server run date. Returns the [RunDate] on success, null on failure.
-  Future<RunDate?> getRunDate() async {
+  Future<void> getRunDate() async {
+    state = const RunDateState(isLoading: true);
     try {
       final runDate = await runDateRepository.getRunDate();
-      state = runDate;
-      return runDate;
+      state = RunDateState(runDate: runDate);
     } catch (e) {
-      state = null;
-      return null;
+      state = const RunDateState(hasError: true); // ← UI can now detect failure
     }
   }
 
-  /// Clears the stored run date (e.g. on logout).
-  void reset() => state = null;
+  void reset() => state = const RunDateState(isLoading: true);
 }
 
-// ─── Exposed provider ─────────────────────────────────────────────────────────
-
-final runDateProvider = StateNotifierProvider<RunDateNotifier, RunDate?>((ref) {
+final runDateProvider =
+    StateNotifierProvider<RunDateNotifier, RunDateState>((ref) {
   final repository = ref.read(runDateRepositoryProvider);
   return RunDateNotifier(repository);
 });

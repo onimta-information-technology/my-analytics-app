@@ -207,12 +207,9 @@ void dispose() {
 @override
 void didChangeAppLifecycleState(AppLifecycleState state) {
   super.didChangeAppLifecycleState(state);
-   print('🔄 App lifecycle state: $state');
   if (state == AppLifecycleState.resumed) {
-    // App came to foreground — refresh run date
-     print('✅ App foregrounded — fetching run date...');
-    ref.read(runDateProvider.notifier).reset();       // Show spinner
-    ref.read(runDateProvider.notifier).getRunDate();  // Fetch fresh date
+    ref.read(runDateProvider.notifier).reset();
+    ref.read(runDateProvider.notifier).getRunDate();
   }
 }
   Future<void> _initializeAppMode() async {
@@ -255,17 +252,12 @@ void didChangeAppLifecycleState(AppLifecycleState state) {
       final currentMode = ref.read(appmodeSettingsProvider).appMode;
       ref.read(guestsProvider.notifier).resetData();
 
-      await Future.wait<void>([
-        ref
-            .read(guestsProvider.notifier)
-            .getGuestData(9009, salesCode, currentMode),
-        ref
-            .read(guestsProvider.notifier)
-            .getGuestData(9010, salesCode, currentMode),
-        ref
-            .read(guestsProvider.notifier)
-            .getGuestData(9011, salesCode, currentMode),
-      ]);
+// AFTER — staggered to avoid server collision
+await ref.read(guestsProvider.notifier).getGuestData(9009, salesCode, currentMode);
+await Future.delayed(const Duration(milliseconds: 300));
+await ref.read(guestsProvider.notifier).getGuestData(9010, salesCode, currentMode);
+await Future.delayed(const Duration(milliseconds: 300));
+await ref.read(guestsProvider.notifier).getGuestData(9011, salesCode, currentMode);
 
       final guestsState = ref.read(guestsProvider);
       final finalMode = ref.read(appmodeSettingsProvider).appMode;
@@ -384,11 +376,11 @@ Future<void> _loadLocationLogo() async {
     final counts = ref.watch(guestCountsProvider);
     final activeEvent = ref.watch(activeEventProvider);
 
-    // 🔹 Watch runDateProvider — null while loading, populated after API responds
-    final runDate = ref.watch(runDateProvider);
-    final formattedDate = runDate != null
-        ? DateFormat('EEEE, MMM d, yyyy').format(runDate.date)
-        : null;
+// Watch the new state
+final runDateState = ref.watch(runDateProvider);
+final formattedDate = runDateState.runDate != null
+    ? DateFormat('EEEE, MMM d, yyyy').format(runDateState.runDate!.date)
+    : null;
 
     ref.listen<AppModeSettings>(appmodeSettingsProvider, (prev, next) {
       if (prev?.appMode != next.appMode) {
@@ -534,24 +526,33 @@ Future<void> _loadLocationLogo() async {
                             size: 20,
                             color: Colors.blue,
                           ),
-                          const SizedBox(width: 4),
-                          formattedDate == null
-                              ? const SizedBox(
-                                  height: 16,
-                                  width: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.blue,
-                                  ),
-                                )
-                              : Text(
-                                  formattedDate,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black87,
-                                  ),
-                                ),
+                        // Replace the formattedDate == null check with:
+runDateState.isLoading
+    ? const SizedBox(
+        height: 16,
+        width: 16,
+        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.blue),
+      )
+    : runDateState.hasError
+        ? GestureDetector(
+            onTap: () => ref.read(runDateProvider.notifier).getRunDate(),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.refresh, size: 16, color: Colors.red),
+                SizedBox(width: 4),
+                Text('Tap to retry', style: TextStyle(color: Colors.red)),
+              ],
+            ),
+          )
+        : Text(
+            formattedDate ?? '',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
                         ],
                       ),
                     ),

@@ -11,6 +11,7 @@ class RunDateRepository {
   Future<RunDate?> getRunDate() async {
     final deviceId = await DeviceId.get();
     final spName = await StorageUtil.getStoredProcedureName();
+    print("date");
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -32,7 +33,7 @@ class RunDateRepository {
       "SpName": spName,
       "con": "1",
     });
-
+print("date is :$response");
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List &&
         response['CommonResult']['Table'].isNotEmpty) {

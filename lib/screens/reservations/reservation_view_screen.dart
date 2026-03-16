@@ -806,7 +806,65 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
       setState(() => _isLoading = false);
     }
   }
+ Future<void> _rejectReservationinpendingtab() async {
+    final selectedReservation = ref.watch(selectedReservationProvider);
+    if (selectedReservation == null) return;
 
+    final isPending = selectedReservation.requestStatus == 'Pending';
+    final hasPermission = isPending
+        ? _canCheckOrReject
+        : _canApproveOrRejectChecked;
+    final currentUserName = await StorageUtil.getUserName();
+    final isRequester = (currentUserName ?? '').trim().toLowerCase() ==
+        selectedReservation.reqBy.trim().toLowerCase();
+       
+    if (!hasPermission && !isRequester) {
+      _showAccessDeniedDialog();
+      return;
+    }
+
+    final remarks = await _showRemarksDialog(
+      'Reject Reservation',
+      Colors.red,
+      Icons.cancel_outlined,
+    );
+    if (remarks == null) return;
+
+    try {
+      setState(() => _isLoading = true);
+      final currentUserName = await StorageUtil.getUserName();
+      final success = await ref
+          .read(reservationProvider.notifier)
+          .approveOrRejectReservation(
+            memberID: selectedReservation.mid,
+            reservationNo: selectedReservation.reservNo,
+            currentUName: currentUserName ?? '',
+            status: "Rejected",
+            remarks: remarks,
+          );
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Reservation rejected successfully'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        if (mounted) Navigator.of(context).pop(true);
+      } else {
+        throw Exception('Failed to reject reservation');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to reject reservation: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
   // ── Build ──────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
@@ -1433,7 +1491,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: ElevatedButton.icon(
-                            onPressed: _rejectReservation,
+                            onPressed: _rejectReservationinpendingtab,
                             icon: const Icon(Icons.cancel, size: 20),
                             label: const Text(
                               "REJECT",

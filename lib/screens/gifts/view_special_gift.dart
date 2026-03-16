@@ -1725,7 +1725,9 @@ if (widget.isApproved &&
                               child: ElevatedButton.icon(
                                 onPressed: () async {
                                   final allowed = await _canActOnPending();
-                                  if (!allowed) {
+                                   final reqBy = (widget.gift?.reqBy ?? '').trim().toLowerCase();
+                      final isRequester = (userName ?? '').trim().toLowerCase() == reqBy;          
+                                  if (!allowed && !isRequester) {
                                     if (mounted) _showAccessDeniedDialog();
                                     return;
                                   }

@@ -625,7 +625,9 @@ class _ViewBirthdayGiftRequestState
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    if (!_canCheckOrRejectPending) {
+                      final reqBy = (widget.gift?.reqBy ?? '').trim().toLowerCase();
+                      final isRequester = (userName ?? '').trim().toLowerCase() == reqBy;
+                    if (!_canCheckOrRejectPending && !isRequester) {
                       _showAccessDeniedDialog();
                       return;
                     }

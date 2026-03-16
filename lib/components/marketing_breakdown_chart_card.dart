@@ -82,17 +82,12 @@ class _MarketingBreakdownHalfPieCardState
       guestsState.monthlyMarketingGroups,
     ];
 
-    // Table — meaning depends on layout:
-    //   admin overallData: all marketing guests
-    //   admin myData:      AD001's own guests (already filtered by provider)
-    //   regular:           my data guests
     final allGuests = [
       guestsState.todayGuests,
       guestsState.yesterdayGuests,
       guestsState.monthlyGuests,
     ];
 
-    // Raw unfiltered Table guests — used for admin MKT tap to filter per person
     final allMarketingGuests = [
       guestsState.todayAllMarketingGuests,
       guestsState.yesterdayAllMarketingGuests,
@@ -184,15 +179,14 @@ class _MarketingBreakdownHalfPieCardState
                           myDataCode: _myDataCode,
                           selectedPeriod: _selectedPeriod,
                           tabColors: _tabColors,
-                          // used for: admin MKT filter per person + regular individual slice
                           marketingGuests: allMarketingGuests[_selectedPeriod],
-                          nonMarketingGuests: allNonMarketingGuests[_selectedPeriod],
-                          // used for: myData slice tap (both admin myData + regular)
+                          nonMarketingGuests:
+                              allNonMarketingGuests[_selectedPeriod],
                           myDataGuests: allGuests[_selectedPeriod],
-                          // used for: regular OTHER slice
-                          otherMarketingGuests: allOtherMarketingGuests[_selectedPeriod],
-                          // used for: admin MKT slice row order + counts
-                          salesPersonGroups: allSalesPersonGroups[_selectedPeriod],
+                          otherMarketingGuests:
+                              allOtherMarketingGuests[_selectedPeriod],
+                          salesPersonGroups:
+                              allSalesPersonGroups[_selectedPeriod],
                           layout: allLayouts[_selectedPeriod],
                           periodLabel: _periodLabels[_selectedPeriod],
                         ),
@@ -278,18 +272,13 @@ class _HalfPieSectionState extends State<_HalfPieSection>
     // ── ADMIN layout ──────────────────────────────────────────────────────
 
     if (widget.layout == ResponseLayout.admin) {
-      // MKT slice → sales persons list (Table1 order) → tap person → their guests from Table
       if (gCode == 'MKT') {
-        // Build map: salesPerson.gCode → filtered guests from raw Table
-        // Excludes AD001's own mCode guests so count matches the slice rc
         final Map<String, List<Guest>> personMap = {};
         for (final sp in widget.salesPersonGroups) {
-          // Skip AD001's own sales code — that belongs to the "My Data" slice
           if (sp.gCode == widget.myDataCode) continue;
           personMap[sp.gCode] =
               widget.marketingGuests.where((g) => g.mGroup == sp.gCode).toList();
         }
-        // Build order excluding myDataCode
         final filteredOrder = widget.salesPersonGroups
             .where((sp) => sp.gCode != widget.myDataCode)
             .toList();
@@ -307,7 +296,6 @@ class _HalfPieSectionState extends State<_HalfPieSection>
         return;
       }
 
-      // NON slice → Table3 grouped by country
       if (gCode == 'NON') {
         showModalBottomSheet(
           context: context,
@@ -323,8 +311,6 @@ class _HalfPieSectionState extends State<_HalfPieSection>
         return;
       }
 
-      // My Data slice (admin myData mode) → AD001's own guests
-      // myDataGuests is already filtered to AD001's own guests by the provider
       if (gCode == widget.myDataCode || group.gName == 'My Data') {
         showModalBottomSheet(
           context: context,
@@ -339,12 +325,11 @@ class _HalfPieSectionState extends State<_HalfPieSection>
         return;
       }
 
-      return; // unknown admin slice
+      return;
     }
 
     // ── REGULAR layouts ───────────────────────────────────────────────────
 
-    // NON MARKETING → grouped by country
     if (gCode == 'NON') {
       showModalBottomSheet(
         context: context,
@@ -360,7 +345,6 @@ class _HalfPieSectionState extends State<_HalfPieSection>
       return;
     }
 
-    // OTHER MARKETING → Table4 grouped by sales person name
     if (gCode == 'OTHER') {
       showModalBottomSheet(
         context: context,
@@ -376,7 +360,6 @@ class _HalfPieSectionState extends State<_HalfPieSection>
       return;
     }
 
-    // My Data slice (gCode == myDataCode or gName == 'My Data')
     if (gCode == widget.myDataCode || group.gName == 'My Data') {
       showModalBottomSheet(
         context: context,
@@ -391,7 +374,6 @@ class _HalfPieSectionState extends State<_HalfPieSection>
       return;
     }
 
-    // Individual marketing person → filter allMarketingGuests by mGroup
     final personGuests =
         widget.marketingGuests.where((g) => g.mGroup == gCode).toList();
     showModalBottomSheet(
@@ -410,7 +392,6 @@ class _HalfPieSectionState extends State<_HalfPieSection>
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // ── Half-pie chart ──
         AnimatedBuilder(
           animation: _animation,
           builder: (context, _) {
@@ -454,7 +435,6 @@ class _HalfPieSectionState extends State<_HalfPieSection>
         ),
         const SizedBox(height: 12),
 
-        // ── Legend rows ──
         Column(
           children: List.generate(widget.groups.length, (i) {
             final g = widget.groups[i];
@@ -588,7 +568,6 @@ class _SalesPersonsSheet extends StatefulWidget {
   final Color accentColor;
   final bool useKeyAsName;
   final bool disableNavigation;
-  // When provided (admin MKT), drives row order and counts from Table1
   final List<MarketingGroup>? salesPersonOrder;
 
   const _SalesPersonsSheet({
@@ -597,7 +576,7 @@ class _SalesPersonsSheet extends StatefulWidget {
     required this.accentColor,
     this.useKeyAsName = false,
     this.salesPersonOrder,
-    this.disableNavigation = false, 
+    this.disableNavigation = false,
   });
 
   @override
@@ -619,7 +598,6 @@ class _SalesPersonsSheetState extends State<_SalesPersonsSheet> {
 
   List<_PersonRow> _buildRows() {
     if (widget.salesPersonOrder != null) {
-      // Admin layout: order and counts come from Table1 (salesPersonOrder)
       return widget.salesPersonOrder!.map((sp) {
         final guests = widget.salesPersons[sp.gCode] ?? [];
         return _PersonRow(
@@ -631,7 +609,6 @@ class _SalesPersonsSheetState extends State<_SalesPersonsSheet> {
       }).toList();
     }
 
-    // Regular / country layout: derive from map entries (already sorted by count)
     return widget.salesPersons.entries.map((e) {
       final guests = e.value;
       final displayName = widget.useKeyAsName
@@ -670,7 +647,8 @@ class _SalesPersonsSheetState extends State<_SalesPersonsSheet> {
       accentColor: widget.accentColor,
       count: _filtered.length,
       searchCtrl: _searchCtrl,
-      searchHint: widget.useKeyAsName ? 'Search country…' : 'Search sales person…',
+      searchHint:
+          widget.useKeyAsName ? 'Search country…' : 'Search sales person…',
       child: _filtered.isEmpty
           ? _emptyWidget()
           : ListView.builder(
@@ -715,7 +693,6 @@ class _SalesPersonsSheetState extends State<_SalesPersonsSheet> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w900,
-                          //color: widget.accentColor,
                         ),
                       ),
                     ),
@@ -766,6 +743,9 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> {
   late List<Guest> _filtered;
   final _searchCtrl = TextEditingController();
 
+  // ── Rating mode (mirrors ProfileScreen + MemberVisits) ──
+  bool _useBadgeForRating = false;
+
   static const Map<String, String> _ratingImages = {
     "CLASSIC": "assets/images/ratings/CLASSIC.png",
     "DIAMOND": "assets/images/ratings/DIAMOND.png",
@@ -780,6 +760,39 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> {
     super.initState();
     _filtered = widget.guests;
     _searchCtrl.addListener(_onSearch);
+    _loadRatingMode();
+  }
+
+  Future<void> _loadRatingMode() async {
+    final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+    if (mounted) {
+      setState(() {
+        _useBadgeForRating = apiUrl.contains('bty.world');
+      });
+    }
+  }
+
+  Color _getRatingColor(String? rating) {
+    switch ((rating ?? '').toUpperCase()) {
+      case 'GOLD':
+        return const Color(0xFFDAA520);
+      case 'PLATINUM':
+        return const Color(0xFF707070);
+      case 'DIAMOND':
+        return const Color(0xFF1565C0);
+      case 'SILVER':
+        return const Color(0xFF9E9E9E);
+      case 'INFINITY':
+        return const Color(0xFF4A148C);
+      case 'PREMIER':
+        return const Color(0xFF1B5E20);
+      case 'RAFFELS CLUB':
+        return const Color(0xFF880E4F);
+      case 'CLASSIC':
+        return const Color(0xFF5D4037);
+      default:
+        return Colors.grey;
+    }
   }
 
   @override
@@ -800,86 +813,88 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> {
             }).toList();
     });
   }
-void _showAccessDeniedDialog() {
-  showDialog(
-    context: context,
-    barrierDismissible: true,
-    builder: (BuildContext context) {
-      return Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
+
+  void _showAccessDeniedDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
-              ),
-            ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  shape: BoxShape.circle,
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
                 ),
-                child: Icon(
-                  Icons.lock_outline,
-                  size: 50,
-                  color: Colors.red.shade400,
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                "Access Denied",
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2C3E50),
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Constants.kPrimaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    shape: BoxShape.circle,
                   ),
-                  child: const Text(
-                    "Got It",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  child: Icon(
+                    Icons.lock_outline,
+                    size: 50,
+                    color: Colors.red.shade400,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 20),
+                const Text(
+                  "Access Denied",
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C3E50),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Constants.kPrimaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      "Got It",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      );
-    },
-  );
-}
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return _SheetScaffold(
@@ -896,7 +911,6 @@ void _showAccessDeniedDialog() {
               itemCount: _filtered.length,
               itemBuilder: (context, index) {
                 final guest = _filtered[index];
-                final ratingImg = _ratingImages[guest.gRating];
 
                 return Stack(
                   children: [
@@ -908,10 +922,10 @@ void _showAccessDeniedDialog() {
                       child: InkWell(
                         borderRadius: BorderRadius.circular(10),
                         onTap: () {
-                           if (widget.disableNavigation) {
-                             _showAccessDeniedDialog();
-                             return;
-                           }
+                          if (widget.disableNavigation) {
+                            _showAccessDeniedDialog();
+                            return;
+                          }
                           ref
                               .read(selectedGuestProvider.notifier)
                               .setSelectedGuest(guest);
@@ -935,12 +949,16 @@ void _showAccessDeniedDialog() {
                               Row(
                                 children: [
                                   const Icon(Icons.flag_outlined,
-                                      size: 18, color: ui.Color.fromARGB(255, 0, 0, 0)),
+                                      size: 18,
+                                      color: ui.Color.fromARGB(255, 0, 0, 0)),
                                   const SizedBox(width: 6),
                                   Text(
                                     guest.country,
                                     style: const TextStyle(
-                                        fontSize: 18, fontWeight: FontWeight.w900, color: ui.Color.fromARGB(255, 0, 0, 0)),
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w900,
+                                        color:
+                                            ui.Color.fromARGB(255, 0, 0, 0)),
                                   ),
                                 ],
                               ),
@@ -948,12 +966,16 @@ void _showAccessDeniedDialog() {
                               Row(
                                 children: [
                                   const Icon(Icons.calendar_today,
-                                      size: 18, color: ui.Color.fromARGB(255, 0, 0, 0)),
+                                      size: 18,
+                                      color: ui.Color.fromARGB(255, 0, 0, 0)),
                                   const SizedBox(width: 6),
                                   Text(
                                     'Last visit on ${DateFormat('dd MMM yyyy').format(DateTime.tryParse(guest.lastVisitDate) ?? DateTime(2000))}',
                                     style: const TextStyle(
-                                        fontSize: 18, fontWeight: FontWeight.w900, color: ui.Color.fromARGB(255, 0, 0, 0)),
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w900,
+                                        color:
+                                            ui.Color.fromARGB(255, 0, 0, 0)),
                                   ),
                                 ],
                               ),
@@ -962,16 +984,46 @@ void _showAccessDeniedDialog() {
                         ),
                       ),
                     ),
-                    if (ratingImg != null)
-                      Positioned(
-                        top: 6,
-                        right: -2,
-                        child: SizedBox(
-                          width: 80,
-                          height: 26,
-                          child: Image.asset(ratingImg, fit: BoxFit.contain),
-                        ),
-                      ),
+
+                    // ── Rating badge / image (mirrors ProfileScreen logic) ──
+                    Positioned(
+                      top: 6,
+                      right: 2,
+                      child: _useBadgeForRating
+                          ? Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: _getRatingColor(guest.gRating),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.25),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                guest.gRating ?? 'N/A',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            )
+                          : (_ratingImages[guest.gRating] != null
+                              ? SizedBox(
+                                  width: 80,
+                                  height: 26,
+                                  child: Image.asset(
+                                    _ratingImages[guest.gRating]!,
+                                    fit: BoxFit.contain,
+                                  ),
+                                )
+                              : const SizedBox.shrink()),
+                    ),
                   ],
                 );
               },
@@ -1068,7 +1120,6 @@ class _SheetScaffold extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w900,
-                   //   color: accentColor,
                     ),
                   ),
                 ),

@@ -563,7 +563,7 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                 readOnly: true,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w900,
-                                  fontSize: 18,
+                                  fontSize: 15,
                                 ),
                                 decoration: InputDecoration(
                                   labelText: "Start Date",
@@ -597,7 +597,7 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                 readOnly: true,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w900,
-                                  fontSize: 18,
+                                  fontSize: 15,
                                 ),
                                 decoration: InputDecoration(
                                   labelText: "End Date",

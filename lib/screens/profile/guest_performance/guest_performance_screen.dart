@@ -777,7 +777,7 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                               readOnly: true,
                               style: const TextStyle(
                                 fontWeight: FontWeight.w900,
-                                fontSize: 18,
+                                fontSize: 15,
                               ),
                               decoration: InputDecoration(
                                 labelText: "Start Date",
@@ -811,7 +811,7 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                               readOnly: true,
                               style: const TextStyle(
                                 fontWeight: FontWeight.w900,
-                                fontSize: 18,
+                                fontSize: 15,
                               ),
                               decoration: InputDecoration(
                                 labelText: "End Date",

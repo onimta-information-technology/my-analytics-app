@@ -29,7 +29,9 @@ import 'package:ballys_reservation_app/screens/guest_booking_screen.dart';
 import 'package:ballys_reservation_app/screens/home_screen.dart';
 import 'package:ballys_reservation_app/screens/inactive_members.dart';
 import 'package:ballys_reservation_app/screens/member_visits.dart';
+import 'package:ballys_reservation_app/screens/member_visits/customer_due_diligence_screen.dart';
 import 'package:ballys_reservation_app/screens/member_visits/sales_persons.dart';
+import 'package:ballys_reservation_app/screens/membersMainScreen.dart';
 import 'package:ballys_reservation_app/screens/members_screen.dart';
 import 'package:ballys_reservation_app/screens/profile/guest_performance/guest_performance_screen.dart';
 import 'package:ballys_reservation_app/screens/profile/member_summary_screen.dart';
@@ -626,14 +628,14 @@ class AppNavigation {
             ],
           ),
           GoRoute(
-            path: '/members',
+            path: '/memberMain',
             pageBuilder: (context, state) => CustomTransitionPage(
               fullscreenDialog: true,
               key: state.pageKey,
-              child: MembersScreen(
-                giftsRepository: GiftsRepository(
-                  ApiService(const FlutterSecureStorage()),
-                ),
+              child: MemberMainScreen(
+                // giftsRepository: GiftsRepository(
+                //   ApiService(const FlutterSecureStorage()),
+                // ),
               ),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) {
@@ -645,6 +647,50 @@ class AppNavigation {
                     );
                   },
             ),
+            routes: [
+              GoRoute(
+                path: '/members',
+                pageBuilder: (context, state) => CustomTransitionPage(
+                  fullscreenDialog: true,
+                  key: state.pageKey,
+                  child: MembersScreen(
+                    giftsRepository: GiftsRepository(
+                      ApiService(const FlutterSecureStorage()),
+                    ),
+                  ),
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                        return FadeTransition(
+                          opacity: CurveTween(
+                            curve: Curves.easeInOutCirc,
+                          ).animate(animation),
+                          child: child,
+                        );
+                      },
+                ),
+              ),
+              GoRoute(
+                path: '/new_guest',
+                pageBuilder: (context, state) => CustomTransitionPage(
+                  fullscreenDialog: true,
+                  key: state.pageKey,
+                  child: CustomerDueDiligenceScreen(
+                    // giftsRepository: GiftsRepository(
+                    //   ApiService(const FlutterSecureStorage()),
+                    // ),
+                  ),
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                        return FadeTransition(
+                          opacity: CurveTween(
+                            curve: Curves.easeInOutCirc,
+                          ).animate(animation),
+                          child: child,
+                        );
+                      },
+                ),
+              ),
+            ],
           ),
           GoRoute(
             path: '/daily-gests',
@@ -707,99 +753,131 @@ class AppNavigation {
               ),
             ],
           ),
-            GoRoute(
-        path: '/menu',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          fullscreenDialog: true,
-          key: state.pageKey,
-          child: const MenuScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(
-              opacity: CurveTween(
-                curve: Curves.easeInOutCirc,
-              ).animate(animation),
-              child: child,
-            );
-          },
-        ),
-        routes: [
           GoRoute(
-            path: 'chats',
-            pageBuilder: (context, state) {
-              final notificationData = state.extra as Map<String, dynamic>?;
-              return CustomTransitionPage(
-                fullscreenDialog: false,
-                key: state.pageKey,
-                child: ChatScreen(notificationData: notificationData),
-                transitionsBuilder:
-                    (context, animation, secondaryAnimation, child) {
-                      return FadeTransition(
-                        opacity: CurveTween(
-                          curve: Curves.easeInOutCirc,
-                        ).animate(animation),
-                        child: child,
-                      );
-                    },
-              );
-            },
-          ),
-          GoRoute(
-            path: 'approve-reject',
-            builder: (context, state) => const ApproveScreen(),
+            path: '/menu',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              fullscreenDialog: true,
+              key: state.pageKey,
+              child: const MenuScreen(),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                    return FadeTransition(
+                      opacity: CurveTween(
+                        curve: Curves.easeInOutCirc,
+                      ).animate(animation),
+                      child: child,
+                    );
+                  },
+            ),
             routes: [
               GoRoute(
-                path: '/reservations',
-                pageBuilder: (context, state) => CustomTransitionPage(
-                  fullscreenDialog: true,
-                  key: state.pageKey,
-                  child: const ReservationScreen(hideAddButton: true),
-                  transitionsBuilder:
-                      (context, animation, secondaryAnimation, child) {
-                        return FadeTransition(
-                          opacity: CurveTween(
-                            curve: Curves.easeInOutCirc,
-                          ).animate(animation),
-                          child: child,
-                        );
-                      },
-                ),
+                path: 'chats',
+                pageBuilder: (context, state) {
+                  final notificationData = state.extra as Map<String, dynamic>?;
+                  return CustomTransitionPage(
+                    fullscreenDialog: false,
+                    key: state.pageKey,
+                    child: ChatScreen(notificationData: notificationData),
+                    transitionsBuilder:
+                        (context, animation, secondaryAnimation, child) {
+                          return FadeTransition(
+                            opacity: CurveTween(
+                              curve: Curves.easeInOutCirc,
+                            ).animate(animation),
+                            child: child,
+                          );
+                        },
+                  );
+                },
+              ),
+              GoRoute(
+                path: 'approve-reject',
+                builder: (context, state) => const ApproveScreen(),
                 routes: [
                   GoRoute(
-                    path: 'new-reservation',
-                    pageBuilder: (context, state) {
-                      return CustomTransitionPage(
-                        fullscreenDialog: false,
-                        key: state.pageKey,
-                        child: const NewReservationScreen(),
-                        transitionsBuilder:
-                            (context, animation, secondaryAnimation, child) {
-                              return FadeTransition(
-                                opacity: CurveTween(
-                                  curve: Curves.easeInOutCirc,
-                                ).animate(animation),
-                                child: child,
-                              );
-                            },
-                      );
-                    },
+                    path: '/reservations',
+                    pageBuilder: (context, state) => CustomTransitionPage(
+                      fullscreenDialog: true,
+                      key: state.pageKey,
+                      child: const ReservationScreen(hideAddButton: true),
+                      transitionsBuilder:
+                          (context, animation, secondaryAnimation, child) {
+                            return FadeTransition(
+                              opacity: CurveTween(
+                                curve: Curves.easeInOutCirc,
+                              ).animate(animation),
+                              child: child,
+                            );
+                          },
+                    ),
                     routes: [
                       GoRoute(
-                        path: 'air-tickets-selection',
+                        path: 'new-reservation',
                         pageBuilder: (context, state) {
-                          final Map<String, dynamic> data =
-                              state.extra as Map<String, dynamic>;
-                          final arrivalDate = data['arrivalDate'] ?? '';
-                          final departureDate = data['departureDate'] ?? '';
                           return CustomTransitionPage(
                             fullscreenDialog: false,
                             key: state.pageKey,
-                            child: AirTicketsSelectionScreen(
-                              AirportRepository(
-                                ApiService(const FlutterSecureStorage()),
-                              ),
-                              arrivalDate: arrivalDate,
-                              departureDate: departureDate,
-                            ),
+                            child: const NewReservationScreen(),
+                            transitionsBuilder:
+                                (
+                                  context,
+                                  animation,
+                                  secondaryAnimation,
+                                  child,
+                                ) {
+                                  return FadeTransition(
+                                    opacity: CurveTween(
+                                      curve: Curves.easeInOutCirc,
+                                    ).animate(animation),
+                                    child: child,
+                                  );
+                                },
+                          );
+                        },
+                        routes: [
+                          GoRoute(
+                            path: 'air-tickets-selection',
+                            pageBuilder: (context, state) {
+                              final Map<String, dynamic> data =
+                                  state.extra as Map<String, dynamic>;
+                              final arrivalDate = data['arrivalDate'] ?? '';
+                              final departureDate = data['departureDate'] ?? '';
+                              return CustomTransitionPage(
+                                fullscreenDialog: false,
+                                key: state.pageKey,
+                                child: AirTicketsSelectionScreen(
+                                  AirportRepository(
+                                    ApiService(const FlutterSecureStorage()),
+                                  ),
+                                  arrivalDate: arrivalDate,
+                                  departureDate: departureDate,
+                                ),
+                                transitionsBuilder:
+                                    (
+                                      context,
+                                      animation,
+                                      secondaryAnimation,
+                                      child,
+                                    ) {
+                                      return FadeTransition(
+                                        opacity: CurveTween(
+                                          curve: Curves.easeInOutCirc,
+                                        ).animate(animation),
+                                        child: child,
+                                      );
+                                    },
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      GoRoute(
+                        path: 'reservation-view',
+                        pageBuilder: (context, state) {
+                          return CustomTransitionPage(
+                            fullscreenDialog: false,
+                            key: state.pageKey,
+                            child: const ReservationViewScreen(),
                             transitionsBuilder:
                                 (
                                   context,
@@ -820,57 +898,15 @@ class AppNavigation {
                     ],
                   ),
                   GoRoute(
-                    path: 'reservation-view',
-                    pageBuilder: (context, state) {
-                      return CustomTransitionPage(
-                        fullscreenDialog: false,
-                        key: state.pageKey,
-                        child: const ReservationViewScreen(),
-                        transitionsBuilder:
-                            (context, animation, secondaryAnimation, child) {
-                              return FadeTransition(
-                                opacity: CurveTween(
-                                  curve: Curves.easeInOutCirc,
-                                ).animate(animation),
-                                child: child,
-                              );
-                            },
-                      );
-                    },
-                  ),
-                ],
-              ),
-              GoRoute(
-                path: '/special-gift-requests',
-                pageBuilder: (context, state) => CustomTransitionPage(
-                  fullscreenDialog: false,
-                  key: state.pageKey,
-                  child: SpecialGiftRequestScreen(
-                    giftsRepository: GiftsRepository(
-                      ApiService(const FlutterSecureStorage()),
-                    ),
-                    hideAddButton: true,
-                  ),
-                  transitionsBuilder:
-                      (context, animation, secondaryAnimation, child) {
-                        return FadeTransition(
-                          opacity: CurveTween(
-                            curve: Curves.easeInOutCirc,
-                          ).animate(animation),
-                          child: child,
-                        );
-                      },
-                ),
-                routes: [
-                  GoRoute(
-                    path: 'new-gift-request',
+                    path: '/special-gift-requests',
                     pageBuilder: (context, state) => CustomTransitionPage(
                       fullscreenDialog: false,
                       key: state.pageKey,
-                      child: NewGiftRequest(
+                      child: SpecialGiftRequestScreen(
                         giftsRepository: GiftsRepository(
                           ApiService(const FlutterSecureStorage()),
                         ),
+                        hideAddButton: true,
                       ),
                       transitionsBuilder:
                           (context, animation, secondaryAnimation, child) {
@@ -882,130 +918,173 @@ class AppNavigation {
                             );
                           },
                     ),
-                  ),
-                  GoRoute(
-                    path: 'prv-gifts/:mid',
-                    pageBuilder: (context, state) {
-                      final String mid = state.pathParameters['mid']!;
-                      final extra = state.extra as Map<String, dynamic>? ?? {};
-                      final int iid = extra['iid'] as int? ?? 8888;
-                      return CustomTransitionPage(
-                        fullscreenDialog: false,
-                        key: state.pageKey,
-                        child: PrvGiftScreen(
-                          memberId: mid,
-                          giftsRepository: GiftsRepository(
-                            ApiService(const FlutterSecureStorage()),
+                    routes: [
+                      GoRoute(
+                        path: 'new-gift-request',
+                        pageBuilder: (context, state) => CustomTransitionPage(
+                          fullscreenDialog: false,
+                          key: state.pageKey,
+                          child: NewGiftRequest(
+                            giftsRepository: GiftsRepository(
+                              ApiService(const FlutterSecureStorage()),
+                            ),
                           ),
-                          iid: iid,
+                          transitionsBuilder:
+                              (context, animation, secondaryAnimation, child) {
+                                return FadeTransition(
+                                  opacity: CurveTween(
+                                    curve: Curves.easeInOutCirc,
+                                  ).animate(animation),
+                                  child: child,
+                                );
+                              },
                         ),
-                        transitionsBuilder:
-                            (context, animation, secondaryAnimation, child) {
-                              return FadeTransition(
-                                opacity: CurvedAnimation(
-                                  parent: animation,
-                                  curve: Curves.easeInOutCirc,
-                                ),
-                                child: child,
-                              );
-                            },
-                      );
-                    },
+                      ),
+                      GoRoute(
+                        path: 'prv-gifts/:mid',
+                        pageBuilder: (context, state) {
+                          final String mid = state.pathParameters['mid']!;
+                          final extra =
+                              state.extra as Map<String, dynamic>? ?? {};
+                          final int iid = extra['iid'] as int? ?? 8888;
+                          return CustomTransitionPage(
+                            fullscreenDialog: false,
+                            key: state.pageKey,
+                            child: PrvGiftScreen(
+                              memberId: mid,
+                              giftsRepository: GiftsRepository(
+                                ApiService(const FlutterSecureStorage()),
+                              ),
+                              iid: iid,
+                            ),
+                            transitionsBuilder:
+                                (
+                                  context,
+                                  animation,
+                                  secondaryAnimation,
+                                  child,
+                                ) {
+                                  return FadeTransition(
+                                    opacity: CurvedAnimation(
+                                      parent: animation,
+                                      curve: Curves.easeInOutCirc,
+                                    ),
+                                    child: child,
+                                  );
+                                },
+                          );
+                        },
+                      ),
+                      GoRoute(
+                        path: 'view-specific-gift-request',
+                        builder: (context, state) {
+                          final extra =
+                              state.extra as Map<String, dynamic>? ?? {};
+                          final gift = extra['gift'] as SpecialGiftRequest?;
+                          final isPending =
+                              extra['isPending'] as bool? ?? false;
+                          final isApproved =
+                              extra['isApproved'] as bool? ?? false;
+                          final isChecked =
+                              extra['isChecked'] as bool? ?? false;
+                          return ViewSpecificGiftRequest(
+                            giftsRepository: GiftsRepository(
+                              ApiService(const FlutterSecureStorage()),
+                            ),
+                            gift: gift,
+                            isPending: isPending,
+                            isApproved: isApproved,
+                            isChecked: isChecked,
+                          );
+                        },
+                      ),
+                    ],
                   ),
                   GoRoute(
-                    path: 'view-specific-gift-request',
-                    builder: (context, state) {
-                      final extra = state.extra as Map<String, dynamic>? ?? {};
-                      final gift = extra['gift'] as SpecialGiftRequest?;
-                      final isPending = extra['isPending'] as bool? ?? false;
-                      final isApproved = extra['isApproved'] as bool? ?? false;
-                      final isChecked = extra['isChecked'] as bool? ?? false;
-                      return ViewSpecificGiftRequest(
+                    path: '/birthday-gifts',
+                    pageBuilder: (context, state) => CustomTransitionPage(
+                      fullscreenDialog: true,
+                      key: state.pageKey,
+                      child: BirthdayGiftRequestScreen(
                         giftsRepository: GiftsRepository(
                           ApiService(const FlutterSecureStorage()),
                         ),
-                        gift: gift,
-                        isPending: isPending,
-                        isApproved: isApproved,
-                        isChecked: isChecked,
-                      );
-                    },
-                  ),
-                ],
-              ),
-              GoRoute(
-                path: '/birthday-gifts',
-                pageBuilder: (context, state) => CustomTransitionPage(
-                  fullscreenDialog: true,
-                  key: state.pageKey,
-                  child: BirthdayGiftRequestScreen(
-                    giftsRepository: GiftsRepository(
-                      ApiService(const FlutterSecureStorage()),
+                        hideAddButton: true,
+                      ),
+                      transitionsBuilder:
+                          (context, animation, secondaryAnimation, child) {
+                            return FadeTransition(
+                              opacity: CurveTween(
+                                curve: Curves.easeInOutCirc,
+                              ).animate(animation),
+                              child: child,
+                            );
+                          },
                     ),
-                    hideAddButton: true,
-                  ),
-                  transitionsBuilder:
-                      (context, animation, secondaryAnimation, child) {
-                        return FadeTransition(
-                          opacity: CurveTween(
-                            curve: Curves.easeInOutCirc,
-                          ).animate(animation),
-                          child: child,
-                        );
-                      },
-                ),
-                routes: [
-                  // ── View Birthday Gift Request ─────────────────────────────
-                  // Now passes isChecked so the detail screen knows which tab
-                  // opened it and renders the correct buttons.
-                  GoRoute(
-                    path: 'view-birthday-gift-request',
-                    builder: (context, state) {
-                      final extra = state.extra as Map<String, dynamic>? ?? {};
-                      final gift = extra['gift'] as BirthdayIncressGiftRequest?;
-                      final isPending = extra['isPending'] as bool? ?? false;
-                      final isApproved = extra['isApproved'] as bool? ?? false;
-                      final isChecked =
-                          extra['isChecked'] as bool? ?? false; // ← fixed
-                      return ViewBirthdayGiftRequest(
-                        giftsRepository: GiftsRepository(
-                          ApiService(const FlutterSecureStorage()),
-                        ),
-                        gift: gift,
-                        isPending: isPending,
-                        isApproved: isApproved,
-                        isChecked: isChecked, // ← passed through
-                      );
-                    },
-                  ),
-                  GoRoute(
-                    path: 'prv-gifts/:mid',
-                    pageBuilder: (context, state) {
-                      final String mid = state.pathParameters['mid']!;
-                      final extra = state.extra as Map<String, dynamic>? ?? {};
-                      final int iid = extra['iid'] as int? ?? 8888;
-                      return CustomTransitionPage(
-                        fullscreenDialog: false,
-                        key: state.pageKey,
-                        child: PrvGiftScreen(
-                          memberId: mid,
-                          giftsRepository: GiftsRepository(
-                            ApiService(const FlutterSecureStorage()),
-                          ),
-                          iid: iid,
-                        ),
-                        transitionsBuilder:
-                            (context, animation, secondaryAnimation, child) {
-                              return FadeTransition(
-                                opacity: CurvedAnimation(
-                                  parent: animation,
-                                  curve: Curves.easeInOutCirc,
-                                ),
-                                child: child,
-                              );
-                            },
-                      );
-                    },
+                    routes: [
+                      // ── View Birthday Gift Request ─────────────────────────────
+                      // Now passes isChecked so the detail screen knows which tab
+                      // opened it and renders the correct buttons.
+                      GoRoute(
+                        path: 'view-birthday-gift-request',
+                        builder: (context, state) {
+                          final extra =
+                              state.extra as Map<String, dynamic>? ?? {};
+                          final gift =
+                              extra['gift'] as BirthdayIncressGiftRequest?;
+                          final isPending =
+                              extra['isPending'] as bool? ?? false;
+                          final isApproved =
+                              extra['isApproved'] as bool? ?? false;
+                          final isChecked =
+                              extra['isChecked'] as bool? ?? false; // ← fixed
+                          return ViewBirthdayGiftRequest(
+                            giftsRepository: GiftsRepository(
+                              ApiService(const FlutterSecureStorage()),
+                            ),
+                            gift: gift,
+                            isPending: isPending,
+                            isApproved: isApproved,
+                            isChecked: isChecked, // ← passed through
+                          );
+                        },
+                      ),
+                      GoRoute(
+                        path: 'prv-gifts/:mid',
+                        pageBuilder: (context, state) {
+                          final String mid = state.pathParameters['mid']!;
+                          final extra =
+                              state.extra as Map<String, dynamic>? ?? {};
+                          final int iid = extra['iid'] as int? ?? 8888;
+                          return CustomTransitionPage(
+                            fullscreenDialog: false,
+                            key: state.pageKey,
+                            child: PrvGiftScreen(
+                              memberId: mid,
+                              giftsRepository: GiftsRepository(
+                                ApiService(const FlutterSecureStorage()),
+                              ),
+                              iid: iid,
+                            ),
+                            transitionsBuilder:
+                                (
+                                  context,
+                                  animation,
+                                  secondaryAnimation,
+                                  child,
+                                ) {
+                                  return FadeTransition(
+                                    opacity: CurvedAnimation(
+                                      parent: animation,
+                                      curve: Curves.easeInOutCirc,
+                                    ),
+                                    child: child,
+                                  );
+                                },
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -1013,9 +1092,6 @@ class AppNavigation {
           ),
         ],
       ),
-        ],
-      ),
-    
     ],
   );
 }

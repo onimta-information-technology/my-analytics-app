@@ -10,6 +10,7 @@ import 'package:ballys_reservation_app/models/birthday.dart';
 import 'package:ballys_reservation_app/models/gift/birthday_gift_request.dart';
 import 'package:ballys_reservation_app/models/gift/special_gift_request.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
+import 'package:ballys_reservation_app/screens/air_ticket_screen.dart';
 import 'package:ballys_reservation_app/screens/approve_reject_show_screen.dart';
 import 'package:ballys_reservation_app/screens/auth/login_screen.dart';
 import 'package:ballys_reservation_app/screens/auth/otpVerification_screen.dart';
@@ -710,8 +711,8 @@ class AppNavigation {
             ),
           ),
           GoRoute(
-            path: '/reports',
-            builder: (context, state) => const ReportsScreen(),
+            path: '/aireticketscreen',
+            builder: (context, state) => const AirTicketScreen(),
           ),
           GoRoute(
             path: '/guest-bookings',

@@ -200,7 +200,7 @@ centerTitle: true,
                     Expanded(
                       child: GestureDetector(
                         onTap: () {
-                          context.go('/reports');
+                          context.go('/aireticketscreen');
                         },
                         // child: const Card(
                         //   color: Color.fromARGB(255, 4, 158, 143),

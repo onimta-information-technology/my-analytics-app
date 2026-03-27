@@ -54,9 +54,29 @@ class _CustomerDueDiligenceScreenState
   ];
 
   @override
+  void initState() {
+    super.initState();
+    // Rebuild button state whenever the ID text field changes
+    _idController.addListener(() => setState(() {}));
+    // Pre-select Passport when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(cddFormProvider.notifier).setIdType('PASSPORT');
+    });
+  }
+
+  @override
   void dispose() {
     _idController.dispose();
     super.dispose();
+  }
+
+  /// Returns true only when every required field is filled.
+  bool _isFormComplete(cddState) {
+    return cddState.idType != null &&
+        _idController.text.trim().isNotEmpty &&
+        cddState.sourceOfFunds != null &&
+        cddState.clientType != null &&
+        cddState.natureOfBusiness != null;
   }
 
   Future<void> _onSubmit() async {
@@ -87,6 +107,8 @@ class _CustomerDueDiligenceScreenState
     final fontSettings = ref.watch(fontSettingsProvider);
     final cddState = ref.watch(cddFormProvider);
     final notifier = ref.read(cddFormProvider.notifier);
+
+    final formReady = _isFormComplete(cddState);
 
     final labelStyle = TextStyle(
       fontSize: fontSettings.fontSize,
@@ -136,7 +158,7 @@ class _CustomerDueDiligenceScreenState
                     child: Text(
                       'Customer Due Diligence - Source of funds Details collects from Marketing Officer',
                       style: TextStyle(
-                        fontSize: fontSettings.fontSize,
+                        fontSize: fontSettings.fontSize + 2,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
                       ),
@@ -146,7 +168,7 @@ class _CustomerDueDiligenceScreenState
                   const SizedBox(height: 20),
 
                   // ── Section 1: Identification ─────────────────────────────
-                  _SectionHeader(title: '1. Identification Details'),
+                  const _SectionHeader(title: '1. Identification Details'),
                   const SizedBox(height: 10),
                   _buildSectionCard(
                     child: Column(
@@ -205,7 +227,7 @@ class _CustomerDueDiligenceScreenState
                   const SizedBox(height: 20),
 
                   // ── Section 2: Source of Funds ────────────────────────────
-                  _SectionHeader(title: '2. Source of Funds'),
+                  const _SectionHeader(title: '2. Source of Funds'),
                   const SizedBox(height: 10),
                   _buildSectionCard(
                     highlighted: true,
@@ -224,8 +246,8 @@ class _CustomerDueDiligenceScreenState
 
                   const SizedBox(height: 20),
 
-                  // ── Section 3.1: Client Type ───────────────────────────────
-                  _SectionHeader(title: '3.1 Client Type'),
+                  // ── Section 3.1: Client Type ──────────────────────────────
+                  const _SectionHeader(title: '3.1 Client Type'),
                   const SizedBox(height: 10),
                   _buildSectionCard(
                     child: Column(
@@ -244,21 +266,25 @@ class _CustomerDueDiligenceScreenState
                   const SizedBox(height: 20),
 
                   // ── Section 3.2: Nature of Business ───────────────────────
-                  _SectionHeader(
-                    title: '3.2 Nature Of Business /Profession of the customer',
+                  const _SectionHeader(
+                    title:
+                        '3.2 Nature Of Business /Profession of the customer',
                   ),
                   const SizedBox(height: 10),
                   _buildSectionCard(
                     child: Column(
-                      children: _natureOfBusinessOptions.map((entry) {
+                      children: _natureOfBusinessOptions.expand((entry) {
                         final (value, label) = entry;
-                        return _RadioListItem(
-                          label: label,
-                          value: value,
-                          groupValue: cddState.natureOfBusiness,
-                          onChanged: notifier.setNatureOfBusiness,
-                          optionStyle: optionStyle,
-                        );
+                        return [
+                          _RadioListItem(
+                            label: label,
+                            value: value,
+                            groupValue: cddState.natureOfBusiness,
+                            onChanged: notifier.setNatureOfBusiness,
+                            optionStyle: optionStyle,
+                          ),
+                          const SizedBox(height: 13),
+                        ];
                       }).toList(),
                     ),
                   ),
@@ -290,14 +316,20 @@ class _CustomerDueDiligenceScreenState
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: cddState.isSubmitting ? null : _onSubmit,
+                      onPressed:
+                          cddState.isSubmitting || !formReady ? null : _onSubmit,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Constants.kPrimaryColor,
+                        backgroundColor: formReady
+                            ? Constants.kPrimaryColor
+                            : Colors.grey.shade400,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
+                        // Keep the same colour even when disabled
+                        disabledBackgroundColor: Colors.grey.shade400,
+                        disabledForegroundColor: Colors.white,
                       ),
                       child: cddState.isSubmitting
                           ? const SizedBox(
@@ -345,9 +377,7 @@ class _CustomerDueDiligenceScreenState
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: highlighted
-            ? const Color(0xFFFFF8E1)
-            : Colors.white,
+        color: highlighted ? const Color(0xFFFFF8E1) : Colors.white,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.grey.shade300),
         boxShadow: [
@@ -389,8 +419,8 @@ class _SectionHeader extends StatelessWidget {
           child: Text(
             title,
             style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
               color: Colors.black87,
             ),
           ),

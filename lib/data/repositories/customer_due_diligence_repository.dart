@@ -17,7 +17,6 @@ class CustomerDueDiligenceRepository {
     required String natureOfBusiness,      
   }) async {
     final deviceId = await DeviceId.get();
-
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [

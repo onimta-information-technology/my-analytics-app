@@ -75,10 +75,7 @@ class _AirTicketScreenState extends ConsumerState<AirTicketScreen>
             }
           },
         ),
-        title: const Text(
-          'Package Guest',
-          style: TextStyle(fontSize: 20.0),
-        ),
+        title: const Text('Package Guest', style: TextStyle(fontSize: 20.0)),
         actions: [
           IconButton(
             icon: _isRefreshing
@@ -98,10 +95,10 @@ class _AirTicketScreenState extends ConsumerState<AirTicketScreen>
         ],
         bottom: TabBar(
           controller: _outerTabController,
-          indicatorColor: Constants.kPrimaryColor,
+          indicatorColor: const Color.fromARGB(255, 235, 0, 0),
           tabs: const [
-            Tab(child: Text('Past', style: TextStyle(fontSize: 17.0))),
-            Tab(child: Text('Recent', style: TextStyle(fontSize: 17.0))),
+            Tab(child: Text('Past', style: TextStyle(fontSize: 17.0,fontWeight: FontWeight.w900))),
+            Tab(child: Text('Recent', style: TextStyle(fontSize: 17.0,fontWeight: FontWeight.w900))),
           ],
         ),
       ),
@@ -196,17 +193,16 @@ class _VisitStatusTabViewState extends State<_VisitStatusTabView>
               fontWeight: FontWeight.w900,
             ),
             tabs: [
-              if (widget.showPending)
-                Tab(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.hourglass_empty, size: 15),
-                      const SizedBox(width: 4),
-                      Text('Pending (${_pending.length})'),
-                    ],
-                  ),
+               Tab(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.check_circle_outline, size: 15),
+                    const SizedBox(width: 4),
+                    Text('Visited (${_visited.length})'),
+                  ],
                 ),
+              ),
               Tab(
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -217,16 +213,18 @@ class _VisitStatusTabViewState extends State<_VisitStatusTabView>
                   ],
                 ),
               ),
-              Tab(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.check_circle_outline, size: 15),
-                    const SizedBox(width: 4),
-                    Text('Visited (${_visited.length})'),
-                  ],
+            
+               if (widget.showPending)
+                Tab(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.hourglass_empty, size: 15),
+                      const SizedBox(width: 4),
+                      Text('Pending (${_pending.length})'),
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -234,22 +232,23 @@ class _VisitStatusTabViewState extends State<_VisitStatusTabView>
           child: TabBarView(
             controller: _innerTabController,
             children: [
-              if (widget.showPending)
-                _AirTicketList(
-                  tickets: _pending,
-                  statusColor: Colors.orange,
-                  emptyMessage: 'No pending reservations',
-                ),
+             _AirTicketList(
+                tickets: _visited,
+                statusColor: Colors.green,
+                emptyMessage: 'No visited reservations',
+              ),
               _AirTicketList(
                 tickets: _notVisited,
                 statusColor: Constants.kSecondaryColor,
                 emptyMessage: 'No unvisited reservations',
               ),
-              _AirTicketList(
-                tickets: _visited,
-                statusColor: Colors.green,
-                emptyMessage: 'No visited reservations',
-              ),
+             
+                if (widget.showPending)
+                _AirTicketList(
+                  tickets: _pending,
+                  statusColor: Colors.orange,
+                  emptyMessage: 'No pending reservations',
+                ),
             ],
           ),
         ),
@@ -328,13 +327,19 @@ class _AirTicketCard extends StatelessWidget {
 
   String _formatDate(DateTime dt) => DateFormat('dd MMM yyyy').format(dt);
 
- String _formatCost(double cost) =>
-    NumberFormat('#,##0.00', 'en_US').format(cost);
+  String _formatCost(double cost) =>
+      NumberFormat('#,##0.00', 'en_US').format(cost);
 
   Color get _visitBadgeColor {
     if (ticket.isPending) return Colors.orange;
     if (ticket.isVisited) return Colors.green;
     return Constants.kSecondaryColor;
+  }
+
+  String get _visitBadgeLabel {
+    if (ticket.isPending) return 'Pending';
+    if (ticket.isVisited) return 'Visited';
+    return 'Not Visited';
   }
 
   void _navigateToProfile(BuildContext context) {
@@ -360,7 +365,7 @@ class _AirTicketCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-   // final isBmMember = ticket.mid.toUpperCase().startsWith('BM');
+    // final isBmMember = ticket.mid.toUpperCase().startsWith('BM');
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -386,7 +391,7 @@ class _AirTicketCard extends StatelessWidget {
                         ticket.mname ?? ticket.mid,
                         style: TextStyle(
                           fontWeight: fontSettings.fontWeight,
-                          fontSize: fontSettings.fontSize+1,
+                          fontSize: fontSettings.fontSize + 1,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -418,7 +423,7 @@ class _AirTicketCard extends StatelessWidget {
                               Text(
                                 ticket.mid,
                                 style: TextStyle(
-                                  fontSize: fontSettings.fontSize+2,
+                                  fontSize: fontSettings.fontSize + 2,
                                   fontWeight: fontSettings.fontWeight,
                                   //color: Constants.kPrimaryColor,
                                 ),
@@ -447,7 +452,7 @@ class _AirTicketCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    ticket.visitStatus,
+                    _visitBadgeLabel,
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: fontSettings.fontSize,
@@ -472,7 +477,11 @@ class _AirTicketCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'Reservation No: ${ticket.reservNo}',
-                    style: TextStyle(fontSize: fontSettings.fontSize+2,fontWeight: fontSettings.fontWeight),
+                    style: TextStyle(
+                      fontSize: fontSettings.fontSize + 2,
+                      fontWeight: fontSettings.fontWeight,
+                      color: Color.fromARGB(255, 64, 0, 255),
+                    ),
                   ),
                 ),
                 // Text(
@@ -500,10 +509,13 @@ class _AirTicketCard extends StatelessWidget {
                 //   ),
                 // ),
                 Text(
-                  'Tiket Cost: LKR ${_formatCost(ticket.tktCost)}',
+                  'Ticket Cost: LKR ${_formatCost(ticket.tktCost)}',
                   style: TextStyle(
                     fontWeight: fontSettings.fontWeight,
-                    fontSize: fontSettings.fontSize+2,
+                    fontSize: fontSettings.fontSize + 3,
+                    color: Color.fromARGB(255, 255, 0, 0),
+                    fontFamily: 'monospace',
+                    fontFeatures: const [FontFeature.tabularFigures()],
                     //color: statusColor,
                   ),
                 ),
@@ -513,47 +525,78 @@ class _AirTicketCard extends StatelessWidget {
             const SizedBox(height: 6),
 
             // ── Airline + Class + Sector ────────────────────────────────
-            Row(
-              children: [
-                const Icon(Icons.flight, size: 18, color: Color.fromARGB(255, 0, 0, 0)),
-                const SizedBox(width: 6),
-                Text(
-                  '${ticket.airLine} · ${ticket.cls}',
-                  style: TextStyle(
-                    fontWeight: fontSettings.fontWeight,
-                    fontSize: fontSettings.fontSize+2,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    ticket.sector,
-                    style: TextStyle(
-                      fontSize: fontSettings.fontSize+2,
-                     fontWeight: fontSettings.fontWeight,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-
+            // Row(
+            //   children: [
+            //     const Icon(
+            //       Icons.flight,
+            //       size: 18,
+            //       color: Color.fromARGB(255, 0, 0, 0),
+            //     ),
+            //     const SizedBox(width: 6),
+            //     Text(
+            //       '${ticket.airLine} · ${ticket.cls}',
+            //       style: TextStyle(
+            //         fontWeight: fontSettings.fontWeight,
+            //         fontSize: fontSettings.fontSize + 2,
+            //       ),
+            //     ),
+            //     const SizedBox(width: 8),
+            //     Expanded(
+            //       child: Text(
+            //         ticket.sector,
+            //         style: TextStyle(
+            //           fontSize: fontSettings.fontSize + 2,
+            //           fontWeight: fontSettings.fontWeight,
+            //         ),
+            //         overflow: TextOverflow.ellipsis,
+            //       ),
+            //     ),
+            //   ],
+            // ),
+Row(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    const Icon(
+      Icons.flight,
+      size: 18,
+      color: Color.fromARGB(255, 0, 0, 0),
+    ),
+    const SizedBox(width: 6),
+    Expanded(
+      child: Text(
+        '${ticket.airLine} · ${ticket.cls} · ${ticket.sector}',
+        style: TextStyle(
+          fontWeight: fontSettings.fontWeight,
+          fontSize: fontSettings.fontSize + 2,
+        ),
+        softWrap: true,
+      ),
+    ),
+  ],
+),
             const SizedBox(height: 6),
 
             // ── Dates ───────────────────────────────────────────────────
             Row(
               children: [
-                const Icon(Icons.calendar_today, size: 18, color: Color.fromARGB(255, 0, 0, 0)),
+                const Icon(
+                  Icons.calendar_today,
+                  size: 18,
+                  color: Color.fromARGB(255, 0, 0, 0),
+                ),
                 const SizedBox(width: 6),
                 Text(
                   'Arrival Date: ${_formatDate(ticket.arrDate)}',
-                  style: TextStyle(fontSize: fontSettings.fontSize+1, fontWeight: fontSettings.fontWeight,),
+                  style: TextStyle(
+                    fontSize: fontSettings.fontSize + 1,
+                    fontWeight: fontSettings.fontWeight,
+                    color: Color.fromARGB(255, 64, 0, 255),
+                  ),
                 ),
-              
               ],
             ),
-              const SizedBox(height: 6),
-                Row(
+            const SizedBox(height: 6),
+            Row(
               children: [
                 // const Icon(Icons.calendar_today, size: 18, color: Color.fromARGB(255, 0, 0, 0)),
                 // const SizedBox(width: 6),
@@ -562,11 +605,19 @@ class _AirTicketCard extends StatelessWidget {
                 //   style: TextStyle(fontSize: fontSettings.fontSize+1, fontWeight: fontSettings.fontWeight,),
                 // ),
                 // const SizedBox(width: 12),
-                const Icon(Icons.calendar_today, size: 18, color: Color.fromARGB(255, 0, 0, 0)),
+                const Icon(
+                  Icons.calendar_today,
+                  size: 18,
+                  color: Color.fromARGB(255, 0, 0, 0),
+                ),
                 const SizedBox(width: 4),
                 Text(
                   'Departure Date: ${_formatDate(ticket.depDate)}',
-                  style: TextStyle(fontSize: fontSettings.fontSize+1, fontWeight: fontSettings.fontWeight,),
+                  style: TextStyle(
+                    fontSize: fontSettings.fontSize + 1,
+                    fontWeight: fontSettings.fontWeight,
+                    color: Color.fromARGB(255, 64, 0, 255),
+                  ),
                 ),
               ],
             ),
@@ -575,13 +626,18 @@ class _AirTicketCard extends StatelessWidget {
               const SizedBox(height: 4),
               Row(
                 children: [
-                  const Icon(Icons.history, size: 18, color: Color.fromARGB(255, 0, 0, 0)),
+                  const Icon(
+                    Icons.history,
+                    size: 18,
+                    color: Color.fromARGB(255, 0, 0, 0),
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     'Last Visit: ${_formatDate(ticket.lvd!)}',
                     style: TextStyle(
-                      fontSize: fontSettings.fontSize+1,
+                      fontSize: fontSettings.fontSize + 1,
                       fontWeight: fontSettings.fontWeight,
+                      color: Color.fromARGB(255, 64, 0, 255),
                     ),
                   ),
                 ],
@@ -593,10 +649,7 @@ class _AirTicketCard extends StatelessWidget {
             // ── Remarks ─────────────────────────────────────────────────
             if (ticket.remarks.isNotEmpty)
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(4),
@@ -611,11 +664,11 @@ class _AirTicketCard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                         'Remark: ${ticket.remarks}',
+                        'Remark: ${ticket.remarks}',
                         style: TextStyle(
                           fontSize: fontSettings.fontSize,
-                           fontWeight: fontSettings.fontWeight,
-                            color: Color.fromARGB(255, 255, 0, 0),
+                          fontWeight: fontSettings.fontWeight,
+                          color: Color.fromARGB(255, 255, 0, 0),
                         ),
                       ),
                     ),
@@ -633,7 +686,6 @@ class _AirTicketCard extends StatelessWidget {
                     icon: Icons.person_outline,
                     label: 'Request By: ${ticket.requestBy}',
                     fontSettings: fontSettings,
-                    
                   ),
                 ),
                 // const SizedBox(width: 6),
@@ -646,8 +698,8 @@ class _AirTicketCard extends StatelessWidget {
                 // ),
               ],
             ),
-               const SizedBox(height: 6),
-              Row(
+            const SizedBox(height: 6),
+            Row(
               children: [
                 // Expanded(
                 //   child: _InfoChip(
@@ -661,6 +713,26 @@ class _AirTicketCard extends StatelessWidget {
                   child: _InfoChip(
                     icon: Icons.verified_user_outlined,
                     label: 'Approve By: ${ticket.approvedBy}',
+                    fontSettings: fontSettings,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                // Expanded(
+                //   child: _InfoChip(
+                //     icon: Icons.person_outline,
+                //     label: 'Request By: ${ticket.requestBy}',
+                //     fontSettings: fontSettings,
+                //   ),
+                // ),
+                // const SizedBox(width: 6),
+                Expanded(
+                  child: _InfoChip(
+                    icon: Icons.verified_user_outlined,
+                    label: 'Marketing Person: ${ticket.mktPerson}',
                     fontSettings: fontSettings,
                   ),
                 ),
@@ -688,14 +760,14 @@ class _InfoChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 16, color:Color.fromARGB(255, 0, 0, 0)),
+        Icon(icon, size: 16, color: Color.fromARGB(255, 0, 0, 0)),
         const SizedBox(width: 4),
         Expanded(
           child: Text(
             label,
             style: TextStyle(
               fontSize: fontSettings.fontSize,
-             fontWeight: fontSettings.fontWeight,
+              fontWeight: fontSettings.fontWeight,
             ),
             overflow: TextOverflow.ellipsis,
           ),

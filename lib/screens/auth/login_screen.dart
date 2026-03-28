@@ -114,8 +114,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Checking device configuration...'),
+                    // SizedBox(height: 16),
+                    // Text('Checking device configuration...'),
                   ],
                 ),
               ),
@@ -174,8 +174,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Checking device configuration...'),
+                // SizedBox(height: 16),
+                // Text('Checking device configuration...'),
               ],
             ),
           ),

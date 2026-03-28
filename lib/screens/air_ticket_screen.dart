@@ -509,7 +509,7 @@ class _AirTicketCard extends StatelessWidget {
                 //   ),
                 // ),
                 Text(
-                  'Ticket Cost: LKR ${_formatCost(ticket.tktCost)}',
+                  'Cost:LKR ${_formatCost(ticket.tktCost)}',
                   style: TextStyle(
                     fontWeight: fontSettings.fontWeight,
                     fontSize: fontSettings.fontSize + 3,

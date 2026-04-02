@@ -124,36 +124,59 @@ print('Response from CommonExecute: $response');
     }
   }
 
-  Future<List<TripHistory>> getTripHistory2({
+//   Future<List<TripHistory>> getTripHistory2({
 
-    required String playerId,
-    String? dateFrom,
-    String? dateTo,
-  }) async {
-    print(  'getTripHistory2 called with playerId: $playerId, dateFrom: $dateFrom, dateTo: $dateTo');
-    final response = await apiService.post('GetVisitFrequency2', {
-      "playerId": playerId,
-      "DateFrom": dateFrom,
-      "DateTo": dateTo,
-    });
-
-    if (response['status'] == 'SUCCESS' &&
-        response['data'] is Map &&
-        response['data']['Visits'] is List &&
-        response['data']['Visits'].isNotEmpty) {
-      final data = response['data']['Visits'];
-print(  'Raw trip history data: $data');
-      List<TripHistory> tripHistoryData = data
-          .map<TripHistory>((item) => TripHistory.fromJson(item))
-          .toList();
- print('Trip history data retrieved: $tripHistoryData');
-      return tripHistoryData;
+//     required String playerId,
+//     String? dateFrom,
+//     String? dateTo,
+//   }) async {
+//     print(  'getTripHistory2 called with playerId: $playerId, dateFrom: $dateFrom, dateTo: $dateTo');
+//     final response = await apiService.post('GetVisitFrequency2', {
+//       "playerId": playerId,
+//       "DateFrom": dateFrom,
+//       "DateTo": dateTo,
+//     });
+// print(  'Response from GetVisitFrequency2: $response');
+//     if (response['status'] == 'SUCCESS' &&
+//         response['data'] is Map &&
+//         response['data']['Visits'] is List &&
+//         response['data']['Visits'].isNotEmpty) {
+//       final data = response['data']['Visits'];
+// print(  'Raw trip history data: $data');
+//       List<TripHistory> tripHistoryData = data
+//           .map<TripHistory>((item) => TripHistory.fromJson(item))
+//           .toList();
+//  print('Trip history data retrieved: $tripHistoryData');
+//       return tripHistoryData;
      
-    } else {
-      throw Exception('Data retrieval failed: unexpected response structure');
-    }
-  }
+//     } else {
+//       throw Exception('Data retrieval failed: unexpected response structure');
+//     }
+//   }
+Future<List<TripHistory>> getTripHistory2({
+  required String playerId,
+  String? dateFrom,
+  String? dateTo,
+}) async {
+  final response = await apiService.post('GetVisitFrequency2', {
+    "playerId": playerId,
+    "DateFrom": dateFrom,
+    "DateTo": dateTo,
+  });
 
+  if (response['status'] == 'SUCCESS' &&
+      response['data'] is Map &&
+      response['data']['Visits'] is List) {
+    final data = response['data']['Visits'] as List;
+
+    // Return empty list instead of throwing when there are no visits
+    if (data.isEmpty) return [];
+
+    return data.map<TripHistory>((item) => TripHistory.fromJson(item)).toList();
+  } else {
+    throw Exception('Data retrieval failed: unexpected response structure');
+  }
+}
   Future<List<AirlineHistory>> getAirlineHistory({
     required String playerId,
     required String dateFrom,

@@ -84,24 +84,25 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
       );
 
       setState(() {
-        _tripHistory = tripHistory;
-        _isLoading = false;
+  _tripHistory = tripHistory;
+  _isLoading = false;
 
-        // Set date notifiers based on fetched data if not already set
-        if (_tripHistory.isNotEmpty && startDateNotifier.value == null) {
-          // Set start date to the last entry's arrival date
-          startDateNotifier.value = DateTime.parse(
-            _tripHistory.last.arrivalDate,
-          );
-        }
-
-        if (_tripHistory.isNotEmpty && endDateNotifier.value == null) {
-          // Set end date to the first entry's departure date
-          endDateNotifier.value = DateTime.parse(
-            _tripHistory.first.departureDate,
-          );
-        }
-      });
+  // Only set date notifiers if we have data AND they haven't been set yet
+  if (_tripHistory.isNotEmpty) {
+    if (startDateNotifier.value == null) {
+      final lastArrival = _tripHistory.last.arrivalDate;
+      if (lastArrival.isNotEmpty) {
+        startDateNotifier.value = DateTime.tryParse(lastArrival);
+      }
+    }
+    if (endDateNotifier.value == null) {
+      final firstDeparture = _tripHistory.first.departureDate;
+      if (firstDeparture.isNotEmpty) {
+        endDateNotifier.value = DateTime.tryParse(firstDeparture);
+      }
+    }
+  }
+});
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -323,17 +324,27 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
     _getTripHistory();
   }
 
-  String formatDate(String dateString) {
-    final date = DateTime.parse(dateString);
-    return DateFormat('dd MMM yyyy').format(date);
-  }
-
-  String _formatDate2(String dateString) {
-    if (dateString == "") return "N/A";
-    final date = DateTime.parse(dateString);
-    return DateFormat('yyyy-MM-dd').format(date);
-  }
-
+  // String formatDate(String dateString) {
+  //   final date = DateTime.parse(dateString);
+  //   return DateFormat('dd MMM yyyy').format(date);
+  // }
+String formatDate(String dateString) {
+  if (dateString.isEmpty) return "N/A";
+  final date = DateTime.tryParse(dateString);
+  if (date == null) return "N/A";
+  return DateFormat('dd MMM yyyy').format(date);
+}
+  // String _formatDate2(String dateString) {
+  //   if (dateString == "") return "N/A";
+  //   final date = DateTime.parse(dateString);
+  //   return DateFormat('yyyy-MM-dd').format(date);
+  // }
+String _formatDate2(String dateString) {
+  if (dateString.isEmpty) return "N/A";
+  final date = DateTime.tryParse(dateString);
+  if (date == null) return "N/A";
+  return DateFormat('yyyy-MM-dd').format(date);
+}
   String _parseNumberFormat(double? value) {
     if (value == null || value == 0) return "0.00";
     final formatter = NumberFormat('#,##0');

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/components/developer_banner.dart';
@@ -57,7 +58,9 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     print('Background handler error: $e');
   }
 }
+
 late ProviderContainer globalContainer;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -74,48 +77,50 @@ void main() async {
 
   // Initialize badge service
   await BadgeService().initialize();
- globalContainer = ProviderContainer();
-// ── Wire up the 401 auto-logout ───────────────────────────────────────────
-registerLogoutCallback(() {
-  try {
-    globalContainer.read(authProvider.notifier).logout().then((_) {
-      final context = navigatorKey.currentContext;
-      if (context != null && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.lock_outline, color: Colors.white),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Your session has expired. Please log in again.',
-                    style: TextStyle(fontSize: 14),
+
+  globalContainer = ProviderContainer();
+
+  // ── Wire up the 401 auto-logout ───────────────────────────────────────────
+  registerLogoutCallback(() {
+    try {
+      globalContainer.read(authProvider.notifier).logout().then((_) {
+        final context = navigatorKey.currentContext;
+        if (context != null && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.lock_outline, color: Colors.white),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Your session has expired. Please log in again.',
+                      style: TextStyle(fontSize: 14),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
+              backgroundColor: Colors.red[700],
+              duration: const Duration(seconds: 3),
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
-            backgroundColor: Colors.red[700],
-            duration: const Duration(seconds: 3),
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.all(16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        );
+          );
 
-        // Navigate after snackbar is visible
-        Future.delayed(const Duration(seconds: 3), () {
-          GoRouter.of(context).go('/login');
-        });
-      }
-    });
-  } catch (_) {}
-});
+          // Navigate after snackbar is visible
+          Future.delayed(const Duration(seconds: 3), () {
+            GoRouter.of(context).go('/login');
+          });
+        }
+      });
+    } catch (_) {}
+  });
 
- runApp(ProviderScope(
-    parent: globalContainer, // ✅ Link ProviderScope to global container
+  runApp(ProviderScope(
+    parent: globalContainer,
     child: MyApp(),
   ));
 }
@@ -154,16 +159,18 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       _syncBadgeIfLoggedIn();
     }
   }
-Future<void> _reloadGuestBookingsGlobally() async {
-  try {
-    await globalContainer
-        .read(guestBookingProvider.notifier)
-        .getAllBookings();
-    print('✅ Guest bookings reloaded from global listener');
-  } catch (e) {
-    print('Error reloading guest bookings globally: $e');
+
+  Future<void> _reloadGuestBookingsGlobally() async {
+    try {
+      await globalContainer
+          .read(guestBookingProvider.notifier)
+          .getAllBookings();
+      print('✅ Guest bookings reloaded from global listener');
+    } catch (e) {
+      print('Error reloading guest bookings globally: $e');
+    }
   }
-}
+
   Future<void> _syncBadgeIfLoggedIn() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -183,25 +190,16 @@ Future<void> _reloadGuestBookingsGlobally() async {
       // Token updated — handled after login
     });
 
-    // Handle foreground messages
-    // FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    //   // Only show notification UI for non-guest-booking messages
-    //   // (guest booking reload is handled in chat_screen.dart)
-    //   if (message.data['msg_type'] != '35') {
-    //     _showForegroundNotification(message);
-    //     _badgeService.addBadge(1);
-    //   }
-    // });
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-  if (message.data['msg_type'] == '35') {
-_showForegroundNotification(message); 
- _badgeService.addBadge(1);    
-    _reloadGuestBookingsGlobally();
-  } else {
-    _showForegroundNotification(message);
-    _badgeService.addBadge(1);
-  }
-});
+      if (message.data['msg_type'] == '35') {
+        _showForegroundNotification(message);
+        _badgeService.addBadge(1);
+        _reloadGuestBookingsGlobally();
+      } else {
+        _showForegroundNotification(message);
+        _badgeService.addBadge(1);
+      }
+    });
 
     // Handle notification tap when app is in background
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
@@ -232,12 +230,12 @@ _showForegroundNotification(message);
           final context = navigatorKey.currentContext;
           if (context != null && context.mounted) {
             final booking = GuestBooking(
-              idNo: 0, // Not available in notification payload
+              idNo: 0,
               mid: message.data['MID'] ?? '',
               pkgStart: message.data['Pkg_Start'] ?? '',
               pkgEnd: message.data['Pkg_End'] ?? '',
               insertDate: message.data['InsertDate'] ?? '',
-              pkgStatus: false, // Incoming notifications are always pending
+              pkgStatus: false,
             );
 
             context.go('/guest-bookings/view-booking', extra: {
@@ -247,7 +245,7 @@ _showForegroundNotification(message);
           }
         });
       });
-      return; // Skip chat handling
+      return;
     }
 
     // ─── Chat Notification ────────────────────────────────────────────────────
@@ -312,19 +310,20 @@ _showForegroundNotification(message);
       ),
       routerConfig: AppNavigation.router,
       builder: (context, child) {
-        // return DeveloperBanner(
-        // child: MediaQuery(
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
             textScaler: TextScaler.noScaling,
           ),
           child: child!,
-          // ),
         );
       },
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SplashScreen — with fade-in → breathe logo animation
+// ─────────────────────────────────────────────────────────────────────────────
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -333,16 +332,95 @@ class SplashScreen extends StatefulWidget {
   _SplashScreenState createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen>
+    with TickerProviderStateMixin {
   bool _hasInternet = true;
   double _loadingProgress = 0.0;
+
+  // ── Animation controllers ──────────────────────────────────────────────────
+  late final AnimationController _entryController;
+  late final AnimationController _breatheController;
+  late final Animation<double> _opacityAnim;
+  late final Animation<Offset> _slideAnim;
 
   @override
   void initState() {
     super.initState();
+    _initAnimations();
     _initializeSplash();
   }
 
+  void _initAnimations() {
+    // Phase 1: fade-in + rise — plays once on entry (800 ms)
+    _entryController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    // Phase 2: breathe loop — starts after Phase 1 completes (2400 ms)
+    _breatheController = AnimationController(
+      duration: const Duration(milliseconds: 2400),
+      vsync: this,
+    );
+
+    _opacityAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _entryController, curve: Curves.easeOut),
+    );
+
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.12),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _entryController, curve: Curves.easeOut),
+    );
+
+    // Start entry animation, then hand off to breathe loop
+    _entryController.forward().whenComplete(() {
+      if (mounted) _breatheController.repeat();
+    });
+  }
+
+  @override
+  void dispose() {
+    _entryController.dispose();
+    _breatheController.dispose();
+    super.dispose();
+  }
+
+  // ── Animated logo builder ──────────────────────────────────────────────────
+  Widget _buildAnimatedLogo() {
+    return AnimatedBuilder(
+      animation: Listenable.merge([_entryController, _breatheController]),
+      builder: (context, child) {
+        // Breathe: smooth sine-based scale & opacity ripple
+        final breatheT =
+            (1 - math.cos(_breatheController.value * 2 * math.pi)) / 2;
+        final breatheScale = 1.0 + 0.06 * breatheT;
+        final breatheOpacity = 0.9 + 0.1 * breatheT;
+
+        return FadeTransition(
+          opacity: _opacityAnim,
+          child: SlideTransition(
+            position: _slideAnim,
+            child: Opacity(
+              opacity: breatheOpacity,
+              child: Transform.scale(
+                scale: breatheScale,
+                child: child,
+              ),
+            ),
+          ),
+        );
+      },
+      child: Image.asset(
+        'assets/images/logo.png',
+        width: 400,
+        height: 400,
+      ),
+    );
+  }
+
+  // ── Internet & version check ───────────────────────────────────────────────
   Future<bool> _checkInternetConnectivity() async {
     try {
       final connectivityResult = await Connectivity().checkConnectivity();
@@ -352,14 +430,15 @@ class _SplashScreenState extends State<SplashScreen> {
       }
 
       final client = HttpClient();
-      client.connectionTimeout = Duration(seconds: 2);
+      client.connectionTimeout = const Duration(seconds: 2);
 
       try {
         final request = await client
             .getUrl(Uri.parse('http://clients3.google.com/generate_204'))
-            .timeout(Duration(seconds: 2));
+            .timeout(const Duration(seconds: 2));
 
-        final response = await request.close().timeout(Duration(seconds: 2));
+        final response =
+            await request.close().timeout(const Duration(seconds: 2));
         client.close();
 
         return response.statusCode == 204 || response.statusCode == 200;
@@ -384,7 +463,7 @@ class _SplashScreenState extends State<SplashScreen> {
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Row(
+          title: const Row(
             children: [
               Icon(Icons.wifi_off, color: Colors.red, size: 28),
               SizedBox(width: 10),
@@ -394,8 +473,9 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             ],
           ),
-          content: Text(
-            'Please check your internet connection and try again. This app requires an active internet connection to function properly.',
+          content: const Text(
+            'Please check your internet connection and try again. '
+            'This app requires an active internet connection to function properly.',
             style: TextStyle(fontSize: 16),
           ),
           actions: [
@@ -413,10 +493,8 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             ),
             TextButton(
-              onPressed: () {
-                exit(0);
-              },
-              child: Text(
+              onPressed: () => exit(0),
+              child: const Text(
                 'Exit',
                 style: TextStyle(
                   color: Colors.red,
@@ -443,40 +521,45 @@ class _SplashScreenState extends State<SplashScreen> {
             title: Row(
               children: [
                 Icon(Icons.system_update, color: customGoldColor, size: 28),
-                SizedBox(width: 10),
-                Text(
+                const SizedBox(width: 10),
+                const Text(
                   'Update Available',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
-            content: Text(
-              'A new version of the app is available. Please update to continue using the app.',
+            content: const Text(
+              'A new version of the app is available. '
+              'Please update to continue using the app.',
               style: TextStyle(fontSize: 16),
             ),
             actions: [
               TextButton(
-                onPressed: () {
-                  exit(0);
-                },
-                child: Text(
-                  'Cancel',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
+                onPressed: () => exit(0),
+                child: TextButton.styleFrom(
+                  foregroundColor: Colors.grey[600],
+                ).toString() == ''
+                    ? const SizedBox()
+                    : Text(
+                        'Cancel',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
               ),
               TextButton(
                 onPressed: () async {
-                  final url = Uri.parse(VersionCheckService.getUpdateUrl());
+                  final url =
+                      Uri.parse(VersionCheckService.getUpdateUrl());
                   if (await canLaunchUrl(url)) {
-                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                    await launchUrl(url,
+                        mode: LaunchMode.externalApplication);
                   } else {
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
+                        const SnackBar(
                           content: Text('Could not open update link'),
                           backgroundColor: Colors.red,
                         ),
@@ -506,7 +589,7 @@ class _SplashScreenState extends State<SplashScreen> {
         setState(() {
           _loadingProgress = i / 100;
         });
-        await Future.delayed(Duration(milliseconds: 25));
+        await Future.delayed(const Duration(milliseconds: 25));
       }
     }
   }
@@ -516,6 +599,7 @@ class _SplashScreenState extends State<SplashScreen> {
       _hasInternet = true;
       _loadingProgress = 0.0;
     });
+
     _animateLoadingBar();
 
     // Check internet connectivity first
@@ -548,7 +632,8 @@ class _SplashScreenState extends State<SplashScreen> {
     await BadgeService().initialize();
 
     // ─── Guest Booking: terminated app tapped notification ──────────────────
-    if (initialMessage != null && initialMessage.data['msg_type'] == '35') {
+    if (initialMessage != null &&
+        initialMessage.data['msg_type'] == '35') {
       Future.delayed(const Duration(seconds: 3), () async {
         final expiry = await StorageUtil.getExpiry();
         if (expiry != null) {
@@ -559,15 +644,14 @@ class _SplashScreenState extends State<SplashScreen> {
 
             final container = ProviderScope.containerOf(context);
             final authRepo = container.read(authRepositoryProvider);
-           // TokenRefreshService().start(authRepo);
 
             final booking = GuestBooking(
-              idNo: 0, // Not available in notification payload
+              idNo: 0,
               mid: initialMessage.data['MID'] ?? '',
               pkgStart: initialMessage.data['Pkg_Start'] ?? '',
               pkgEnd: initialMessage.data['Pkg_End'] ?? '',
               insertDate: initialMessage.data['InsertDate'] ?? '',
-              pkgStatus: false, // Notification-triggered bookings are pending
+              pkgStatus: false,
             );
 
             context.go('/guest-bookings/view-booking', extra: {
@@ -586,7 +670,7 @@ class _SplashScreenState extends State<SplashScreen> {
           context.go('/login');
         }
       });
-      return; // Skip normal chat/home routing
+      return;
     }
 
     // ─── Chat / Normal notification routing ─────────────────────────────────
@@ -605,7 +689,8 @@ class _SplashScreenState extends State<SplashScreen> {
           };
         } catch (e) {}
       }
-    } else if (receivedAction != null && receivedAction.payload != null) {
+    } else if (receivedAction != null &&
+        receivedAction.payload != null) {
       notificationChatData = {
         'chatId': receivedAction.payload!['chatId'] ?? '',
         'senderName': receivedAction.payload!['senderName'] ?? '',
@@ -619,15 +704,12 @@ class _SplashScreenState extends State<SplashScreen> {
       if (expiry != null) {
         final expiryTime = DateTime.parse(expiry);
         if (DateTime.now().isBefore(expiryTime)) {
-          // Mark as logged in
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('is_logged_in', true);
 
           final container = ProviderScope.containerOf(context);
           final authRepo = container.read(authRepositoryProvider);
-          // TokenRefreshService().start(authRepo);
 
-          // Navigate based on notification data
           if (notificationChatData != null &&
               notificationChatData['chatId'] != '') {
             context.go('/menu/chats', extra: notificationChatData);
@@ -636,22 +718,19 @@ class _SplashScreenState extends State<SplashScreen> {
           }
         } else {
           await StorageUtil.clearUserData();
-
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('is_logged_in', false);
-
           context.go('/login');
         }
       } else {
-        // Not logged in
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('is_logged_in', false);
-
         context.go('/login');
       }
     });
   }
 
+  // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -662,13 +741,9 @@ class _SplashScreenState extends State<SplashScreen> {
           children: [
             Hero(
               tag: 'hero-image',
-              child: Image.asset(
-                'assets/images/logo.png',
-                width: 400,
-                height: 400,
-              ),
+              child: _buildAnimatedLogo(),
             ),
-            SizedBox(height: 40),
+            const SizedBox(height: 40),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 60.0),
               child: Column(
@@ -680,7 +755,7 @@ class _SplashScreenState extends State<SplashScreen> {
                     minHeight: 6,
                     borderRadius: BorderRadius.circular(3),
                   ),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   Text(
                     'Loading...',
                     style: TextStyle(

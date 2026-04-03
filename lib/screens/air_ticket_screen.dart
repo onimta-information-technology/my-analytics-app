@@ -404,7 +404,7 @@ class _AirTicketCard extends StatelessWidget {
                             vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: Constants.kPrimaryColor.withOpacity(0.1),
+                            color: Constants.kPrimaryColor.withOpacity(0.5),
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(
                               color: Constants.kPrimaryColor.withOpacity(0.4),

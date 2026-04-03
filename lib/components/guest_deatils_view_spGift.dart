@@ -1,4 +1,3 @@
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,15 +24,6 @@ class GuestDisplayCardSpecialGiftview extends ConsumerWidget {
     this.showLastVisitDate = false,
   });
 
-  static const Map<String, String> ratingImageMap = {
-    "CLASSIC": "assets/images/ratings/CLASSIC.png",
-    "DIAMOND": "assets/images/ratings/DIAMOND.png",
-    "GOLD": "assets/images/ratings/GOLD.png",
-    "INFINITY": "assets/images/ratings/INFINITY.png",
-    "PLATINUM": "assets/images/ratings/PLATINUM.png",
-    "SILVER": "assets/images/ratings/SILVER.png",
-  };
-
   Widget _buildPlaceholderAvatar() {
     return Container(
       color: Colors.grey.shade300,
@@ -42,20 +32,25 @@ class GuestDisplayCardSpecialGiftview extends ConsumerWidget {
   }
 
   Color _getRatingColor(String rating) {
-    switch (rating.toLowerCase()) {
-      case 'vip':
-      case 'CLASSIC':
-        return const Color.fromARGB(255, 170, 41, 36);
+    switch (rating.toUpperCase()) {
       case 'GOLD':
-        return Colors.amber.shade600;
-      case 'SILVER':
-        return Colors.grey.shade600;
-      case 'INFINITY':
-        return Colors.brown.shade600;
+        return const Color(0xFFDAA520);
+      case 'PLATINUM':
+        return const Color(0xFF707070);
       case 'DIAMOND':
-        return Colors.blue.shade600;
+        return const Color(0xFF1565C0);
+      case 'SILVER':
+        return const Color(0xFF9E9E9E);
+      case 'INFINITY':
+        return const Color(0xFF4A148C);
+      case 'PREMIER':
+        return const Color(0xFF1B5E20);
+      case 'RAFFELS CLUB':
+        return const Color(0xFF880E4F);
+      case 'CLASSIC':
+        return const Color(0xFF5D4037);
       default:
-        return Colors.green.shade600;
+        return Colors.grey;
     }
   }
 
@@ -200,7 +195,8 @@ class GuestDisplayCardSpecialGiftview extends ConsumerWidget {
                                       return Image.memory(
                                         base64Decode(selectedGuest.memImage2!),
                                         fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) {
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
                                           return _buildPlaceholderAvatar();
                                         },
                                       );
@@ -228,10 +224,10 @@ class GuestDisplayCardSpecialGiftview extends ConsumerWidget {
                                   padding: const EdgeInsets.only(bottom: 6.0),
                                   child: Row(
                                     children: [
-                                      Icon(
+                                      const Icon(
                                         Icons.badge,
                                         size: 20,
-                                        color: const Color.fromARGB(255, 0, 0, 0),
+                                        color: Color.fromARGB(255, 0, 0, 0),
                                       ),
                                       const SizedBox(width: 6),
                                       Text(
@@ -239,7 +235,8 @@ class GuestDisplayCardSpecialGiftview extends ConsumerWidget {
                                         style: TextStyle(
                                           fontSize: fontSettings.fontSize,
                                           fontWeight: FontWeight.bold,
-                                          color: const Color.fromARGB(255, 0, 0, 0),
+                                          color:
+                                              const Color.fromARGB(255, 0, 0, 0),
                                         ),
                                       ),
                                     ],
@@ -252,19 +249,20 @@ class GuestDisplayCardSpecialGiftview extends ConsumerWidget {
                                   padding: const EdgeInsets.only(bottom: 6.0),
                                   child: Row(
                                     children: [
-                                      Icon(
+                                      const Icon(
                                         Icons.person,
                                         size: 20,
-                                        color: const Color.fromARGB(255, 0, 0, 0),
+                                        color: Color.fromARGB(255, 0, 0, 0),
                                       ),
                                       const SizedBox(width: 6),
                                       Expanded(
                                         child: Text(
-                                          "$memberNameText",
+                                          memberNameText,
                                           style: TextStyle(
                                             fontSize: fontSettings.fontSize,
                                             fontWeight: FontWeight.bold,
-                                            color: const Color.fromARGB(255, 0, 0, 0),
+                                            color: const Color.fromARGB(
+                                                255, 0, 0, 0),
                                           ),
                                           overflow: TextOverflow.ellipsis,
                                           maxLines: 2,
@@ -273,23 +271,19 @@ class GuestDisplayCardSpecialGiftview extends ConsumerWidget {
                                     ],
                                   ),
                                 ),
-
-
                             ],
                           ),
                         ),
                       ],
                     ),
 
-                    // SECOND ROW: Additional Information (Left Aligned)
+                    // SECOND ROW: Additional Information
                     const SizedBox(height: 12),
-                    
+
                     // Guest Name (M P - Member Principal)
                     Consumer(
                       builder: (context, ref, child) {
-                        final selectedGuest = ref.watch(
-                          selectedGuestProvider,
-                        );
+                        final selectedGuest = ref.watch(selectedGuestProvider);
 
                         if (selectedGuest?.gName != null &&
                             selectedGuest!.gName!.isNotEmpty) {
@@ -307,7 +301,7 @@ class GuestDisplayCardSpecialGiftview extends ConsumerWidget {
                                   child: Text(
                                     "M P: ${selectedGuest.gName!}",
                                     style: TextStyle(
-                                      fontSize: fontSettings.fontSize +1,
+                                      fontSize: fontSettings.fontSize + 1,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.blue.shade700,
                                     ),
@@ -323,7 +317,7 @@ class GuestDisplayCardSpecialGiftview extends ConsumerWidget {
                       },
                     ),
 
-                    // Last Visit Date and Rating Image in same row
+                    // Last Visit Date and Rating Badge in same row
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -331,76 +325,62 @@ class GuestDisplayCardSpecialGiftview extends ConsumerWidget {
                         if (showLastVisitDate)
                           Consumer(
                             builder: (context, ref, child) {
-                              final selectedGuest = ref.watch(
-                                selectedGuestProvider,
-                              );
+                              final selectedGuest =
+                                  ref.watch(selectedGuestProvider);
 
                               return Row(
                                 children: [
-                                  Icon(
+                                  const Icon(
                                     Icons.calendar_today,
                                     size: 14,
-                                    color: const Color.fromARGB(255, 0, 0, 0),
+                                    color: Color.fromARGB(255, 0, 0, 0),
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
                                     "Last Visit On: ${_formatLastVisitDate(selectedGuest?.lastVisitDate)}",
                                     style: TextStyle(
-                                      fontSize: fontSettings.fontSize +1,
+                                      fontSize: fontSettings.fontSize + 1,
                                       fontWeight: fontSettings.fontWeight,
-                                      color: const Color.fromARGB(255, 0, 0, 0),
+                                      color:
+                                          const Color.fromARGB(255, 0, 0, 0),
                                     ),
                                   ),
                                 ],
                               );
                             },
                           ),
-                        
-                        // Rating Image (Right)
+
+                        // Rating Badge (Right)
                         Consumer(
                           builder: (context, ref, child) {
-                            final selectedGuest = ref.watch(
-                              selectedGuestProvider,
-                            );
+                            final selectedGuest =
+                                ref.watch(selectedGuestProvider);
 
-                            String ratingToUse = "CLASSIC";
-                            if (selectedGuest?.gRating != null &&
-                                selectedGuest!.gRating!.isNotEmpty &&
-                                ratingImageMap.containsKey(
-                                  selectedGuest.gRating!.toUpperCase(),
-                                )) {
-                              ratingToUse = selectedGuest.gRating!
-                                  .toUpperCase();
-                            }
+                            final ratingToUse =
+                                (selectedGuest?.gRating ?? 'N/A').toUpperCase();
 
                             return Container(
-                              width: 80,
-                              height: 30,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: Colors.grey.shade300,
-                                  width: 1,
-                                ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
                               ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.asset(
-                                  ratingImageMap[ratingToUse]!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder:
-                                      (context, error, stackTrace) {
-                                    return Container(
-                                      color: Colors.grey.shade200,
-                                      child: Icon(
-                                        Icons.star,
-                                        color: _getRatingColor(
-                                          ratingToUse,
-                                        ),
-                                        size: 16,
-                                      ),
-                                    );
-                                  },
+                              decoration: BoxDecoration(
+                                color: _getRatingColor(ratingToUse),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.25),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                ratingToUse,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             );

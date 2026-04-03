@@ -180,6 +180,13 @@ class ReservationRepository {
           "Para_Name": "@Text11",
           "Para_Type": "varchar",
         },
+          {
+          "Para_Data": newReservation.reservationnewnumber,
+          "Para_Direction": "Input",
+          "Para_Lenth": 50,
+          "Para_Name": "@Text12",
+          "Para_Type": "varchar",
+        },
         {
           "Para_Data": deviceId,
           "Para_Direction": "Input",

@@ -61,6 +61,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
   final TextEditingController _departureDateController =
       TextEditingController();
   final TextEditingController _remarksController = TextEditingController();
+    final TextEditingController _reservationnewnumberController = TextEditingController();
 
   DateTime? _arrivalDate;
   DateTime? _departureDate;
@@ -98,6 +99,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
     _remarksController.dispose();
     hotelRoomNotifier.dispose();
     airTicketsNotifier.dispose();
+    _reservationnewnumberController.dispose();
     super.dispose();
   }
 
@@ -657,6 +659,7 @@ Future<void> _selectDepartureDate(BuildContext context) async {
       remarks: _remarksController.text,
       airTicketDetails:
           selectedFlights.map((ticket) => ticket.toJson()).toList(),
+      reservationnewnumber: _reservationnewnumberController.text,
     );
 
     if (_isEditMode) {
@@ -1607,7 +1610,32 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                           keyboardType: TextInputType.multiline,
                         ),
                         const SizedBox(height: 10.0),
-
+TextFormField(
+    controller: _reservationnewnumberController,
+    style: TextStyle(
+      fontSize: fontSettings.fontSize,
+      fontWeight: fontSettings.fontWeight,
+    ),
+    decoration: InputDecoration(
+      labelText: "Reservation No",
+      labelStyle: TextStyle(
+        fontSize: fontSettings.fontSize,
+        fontWeight: fontSettings.fontWeight,
+      ),
+      border: const OutlineInputBorder(),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 12.0,
+        vertical: -5.0,
+      ),
+    ),
+    validator: (value) {
+      if (value == null || value.trim().isEmpty) {
+        return "Reservation Number is required";
+      }
+      return null;
+    },
+  ),
+  const SizedBox(height: 10.0),
                         // ── Confirm / Update Button ────────────
                         SizedBox(
                           width: double.infinity,

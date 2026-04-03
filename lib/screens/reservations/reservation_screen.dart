@@ -137,15 +137,36 @@ String _formatDateTime(DateTime dt) {
   return '$day/$month/$year  $hourStr:$minute $period';
 }
 
-  final Map<String, String> ratingImageMap = {
-    "CLASSIC": "assets/images/ratings/CLASSIC.png",
-    "DIAMOND": "assets/images/ratings/DIAMOND.png",
-    "GOLD": "assets/images/ratings/GOLD.png",
-    "INFINITY": "assets/images/ratings/INFINITY.png",
-    "PLATINUM": "assets/images/ratings/PLATINUM.png",
-    "SILVER": "assets/images/ratings/SILVER.png",
-  };
-
+  // final Map<String, String> ratingImageMap = {
+  //   "CLASSIC": "assets/images/ratings/CLASSIC.png",
+  //   "DIAMOND": "assets/images/ratings/DIAMOND.png",
+  //   "GOLD": "assets/images/ratings/GOLD.png",
+  //   "INFINITY": "assets/images/ratings/INFINITY.png",
+  //   "PLATINUM": "assets/images/ratings/PLATINUM.png",
+  //   "SILVER": "assets/images/ratings/SILVER.png",
+  // };
+ Color _getRatingColor(String rating) {
+    switch (rating.toUpperCase()) {
+      case 'GOLD':
+        return const Color(0xFFDAA520);
+      case 'PLATINUM':
+        return const Color(0xFF707070);
+      case 'DIAMOND':
+        return const Color(0xFF1565C0);
+      case 'SILVER':
+        return const Color(0xFF9E9E9E);
+      case 'INFINITY':
+        return const Color(0xFF4A148C);
+      case 'PREMIER':
+        return const Color(0xFF1B5E20);
+      case 'RAFFELS CLUB':
+        return const Color(0xFF880E4F);
+      case 'CLASSIC':
+        return const Color(0xFF5D4037);
+      default:
+        return Colors.grey;
+    }
+  }
   @override
   Widget build(BuildContext context) {
     final reservations = ref.watch(reservationProvider);
@@ -603,18 +624,47 @@ String _formatDateTime(DateTime dt) {
                 Positioned(
                   top: 10,
                   right: 15,
-                  child: SizedBox(
-                    width: 100,
-                    height: 30,
-                    child: Hero(
-                      tag: "rating-image-${reservation.mid}",
-                      child: Image.asset(
-                        ratingImageMap[reservation.gRating] ??
-                            "assets/images/ratings/CLASSIC.png",
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
+                  child: 
+                  // SizedBox(
+                  //   width: 100,
+                  //   height: 30,
+                  //   child: Hero(
+                  //     tag: "rating-image-${reservation.mid}",
+                  //     child: Image.asset(
+                  //       ratingImageMap[reservation.gRating] ??
+                  //           "assets/images/ratings/CLASSIC.png",
+                  //       fit: BoxFit.contain,
+                  //     ),
+                  //   ),
+                  // ),
+                  Hero(
+    tag: "rating-image-${reservation.mid}",
+    child: Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 6,
+      ),
+      decoration: BoxDecoration(
+        color: _getRatingColor(reservation.gRating ?? 'CLASSIC'),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.25),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Text(
+        reservation.gRating ?? 'N/A',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    ),
+  ),
                 ),
               ],
             );

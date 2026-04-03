@@ -11,6 +11,7 @@ class NewReservation {
   String? remarks;
   List<Map<String, dynamic>>? airTicketDetails;
   String? reservationNo;
+  String? reservationnewnumber;
 
   NewReservation({
     this.bmNumber,
@@ -24,6 +25,7 @@ class NewReservation {
     this.remarks,
     this.airTicketDetails,
     this.reservationNo,
+    this.reservationnewnumber,
   });
 
   Map<String, dynamic> toJson() {
@@ -39,6 +41,7 @@ class NewReservation {
       'remarks': remarks,
       'air_ticket_details': airTicketDetails,
       'reservation_no': reservationNo,
+      'reservationnewnumber': reservationnewnumber,
     };
   }
 
@@ -56,6 +59,8 @@ class NewReservation {
       airTicketDetails:
           List<Map<String, dynamic>>.from(json['air_ticket_details'] ?? []),
       reservationNo: json['reservNo'] ?? '',
+      reservationnewnumber: json['reservationnewnumber'] ?? '',
+
     );
   }
 
@@ -70,6 +75,8 @@ class NewReservation {
     String? hasAirTicketReservation,
     String? remarks,
     List<Map<String, dynamic>>? airTicketDetails,
+    String? reservationnewnumber,
+
   }) {
     return NewReservation(
       bmNumber: bmNumber ?? this.bmNumber,
@@ -83,6 +90,7 @@ class NewReservation {
           hasAirTicketReservation ?? this.hasAirTicketReservation,
       remarks: remarks ?? this.remarks,
       airTicketDetails: airTicketDetails ?? this.airTicketDetails,
+      reservationnewnumber: reservationnewnumber ?? this.reservationnewnumber,
     );
   }
 }

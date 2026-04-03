@@ -539,9 +539,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
               final memberId = _memberIdController.text.trim();
               if (memberId.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Please enter a Member ID"),
-                  ),
+                  const SnackBar(content: Text("Please enter a Member ID")),
                 );
                 return;
               }
@@ -576,9 +574,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
               final memberId = _memberIdController.text.trim();
               if (memberId.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Please enter a Member ID"),
-                  ),
+                  const SnackBar(content: Text("Please enter a Member ID")),
                 );
                 return;
               }
@@ -633,7 +629,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
 
     return Scaffold(
       appBar: AppBar(
-         titleSpacing: 0, 
+        titleSpacing: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
@@ -1381,136 +1377,154 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                               ),
                             ),
                           ],
-// ── Approved Information Card ───────────────────────────────────────────
-if (widget.isApproved &&
-    widget.gift != null &&
-    widget.gift!.firstAppBy != null &&
-    widget.gift!.firstAppBy!.isNotEmpty) ...[
-  const SizedBox(height: 16),
-  Container(
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        colors: [
-          Colors.green.withOpacity(0.10),
-          Colors.green.withOpacity(0.03),
-        ],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(
-        color: Colors.green.withOpacity(0.5),
-        width: 1.5,
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.green.withOpacity(0.08),
-          blurRadius: 8,
-          offset: const Offset(0, 3),
-        ),
-      ],
-    ),
-    child: Padding(
-      padding: const EdgeInsets.all(14.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Header ────────────────────────────────────────────────
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.check_circle_outline,
-                  color: Colors.white,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                "Approved Information",
-                style: TextStyle(
-                  fontSize: fontSettings.fontSize + 2,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green.shade700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Divider(color: Colors.green.withOpacity(0.35), height: 1),
-          const SizedBox(height: 12),
+                          // ── Approved Information Card ───────────────────────────────────────────
+                          if (widget.isApproved &&
+                              widget.gift != null &&
+                              widget.gift!.firstAppBy != null &&
+                              widget.gift!.firstAppBy!.isNotEmpty) ...[
+                            const SizedBox(height: 16),
+                            Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.green.withOpacity(0.10),
+                                    Colors.green.withOpacity(0.03),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.green.withOpacity(0.5),
+                                  width: 1.5,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.green.withOpacity(0.08),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(14.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // ── Header ────────────────────────────────────────────────
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(6),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green,
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: const Icon(
+                                            Icons.check_circle_outline,
+                                            color: Colors.white,
+                                            size: 18,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Text(
+                                          "Approved Information",
+                                          style: TextStyle(
+                                            fontSize: fontSettings.fontSize + 2,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.green.shade700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Divider(
+                                      color: Colors.green.withOpacity(0.35),
+                                      height: 1,
+                                    ),
+                                    const SizedBox(height: 12),
 
-          // ── Approved By ───────────────────────────────────────────
-          Row(
-            children: [
-              Icon(Icons.person_outline,
-                  color: Colors.green.shade700, size: 18),
-              const SizedBox(width: 8),
-              Text(
-                "Approved By:",
-                style: TextStyle(
-                  fontSize: fontSettings.fontSize,
-                  fontWeight: fontSettings.fontWeight,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  widget.gift!.firstAppBy!,
-                  style: TextStyle(
-                    fontSize: fontSettings.fontSize + 1,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green.shade700,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
+                                    // ── Approved By ───────────────────────────────────────────
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.person_outline,
+                                          color: Colors.green.shade700,
+                                          size: 18,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          "Approved By:",
+                                          style: TextStyle(
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            widget.gift!.firstAppBy!,
+                                            style: TextStyle(
+                                              fontSize:
+                                                  fontSettings.fontSize + 1,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.green.shade700,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
 
-          // ── Approved At ───────────────────────────────────────────
-          if (widget.gift!.firstAppTime != null &&
-              widget.gift!.firstAppTime!.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Icon(Icons.schedule,
-                    color: Colors.green.shade700, size: 18),
-                const SizedBox(width: 8),
-                Text(
-                  "Approved At:",
-                  style: TextStyle(
-                    fontSize: fontSettings.fontSize,
-                    fontWeight: fontSettings.fontWeight,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _formatDateandTime(widget.gift!.firstAppTime),
-                    style: TextStyle(
-                      fontSize: fontSettings.fontSize,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green.shade700,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    ),
-  ),
-],
+                                    // ── Approved At ───────────────────────────────────────────
+                                    if (widget.gift!.firstAppTime != null &&
+                                        widget
+                                            .gift!
+                                            .firstAppTime!
+                                            .isNotEmpty) ...[
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.schedule,
+                                            color: Colors.green.shade700,
+                                            size: 18,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            "Approved At:",
+                                            style: TextStyle(
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              _formatDateandTime(
+                                                widget.gift!.firstAppTime,
+                                              ),
+                                              style: TextStyle(
+                                                fontSize: fontSettings.fontSize,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.green.shade700,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                           // ── Edit Toggle (Pending tab) ─────────────────
                           if (widget.isPending)
                             Row(
@@ -1663,6 +1677,34 @@ if (widget.isApproved &&
                                     );
                                     return;
                                   }
+                                  final confirmed = await showDialog<bool>(
+                                    context: context,
+                                    builder: (dialogContext) => AlertDialog(
+                                      title: const Text('Check Gift Request'),
+                                      content: const Text(
+                                        'Are you sure you want to check this gift request?',
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.of(
+                                            dialogContext,
+                                          ).pop(false),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () => Navigator.of(
+                                            dialogContext,
+                                          ).pop(true),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.blue,
+                                            foregroundColor: Colors.white,
+                                          ),
+                                          child: const Text('Check'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  if (confirmed != true) return;
                                   setState(() => _isLoading = true);
                                   try {
                                     final success = await ref
@@ -1725,8 +1767,12 @@ if (widget.isApproved &&
                               child: ElevatedButton.icon(
                                 onPressed: () async {
                                   final allowed = await _canActOnPending();
-                                   final reqBy = (widget.gift?.reqBy ?? '').trim().toLowerCase();
-                      final isRequester = (userName ?? '').trim().toLowerCase() == reqBy;          
+                                  final reqBy = (widget.gift?.reqBy ?? '')
+                                      .trim()
+                                      .toLowerCase();
+                                  final isRequester =
+                                      (userName ?? '').trim().toLowerCase() ==
+                                      reqBy;
                                   if (!allowed && !isRequester) {
                                     if (mounted) _showAccessDeniedDialog();
                                     return;
@@ -1739,6 +1785,34 @@ if (widget.isApproved &&
                                     );
                                     return;
                                   }
+                                  final confirmed = await showDialog<bool>(
+                                    context: context,
+                                    builder: (dialogContext) => AlertDialog(
+                                      title: const Text('Reject Gift Request'),
+                                      content: const Text(
+                                        'Are you sure you want to reject this gift request?',
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.of(
+                                            dialogContext,
+                                          ).pop(false),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () => Navigator.of(
+                                            dialogContext,
+                                          ).pop(true),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.red,
+                                            foregroundColor: Colors.white,
+                                          ),
+                                          child: const Text('Reject'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  if (confirmed != true) return;
                                   setState(() => _isLoading = true);
                                   try {
                                     final success = await ref
@@ -1830,6 +1904,34 @@ if (widget.isApproved &&
                                     );
                                     return;
                                   }
+                                  final confirmed = await showDialog<bool>(
+                                    context: context,
+                                    builder: (dialogContext) => AlertDialog(
+                                      title: const Text('Approve Gift Request'),
+                                      content: const Text(
+                                        'Are you sure you want to approve this gift request?',
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.of(
+                                            dialogContext,
+                                          ).pop(false),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () => Navigator.of(
+                                            dialogContext,
+                                          ).pop(true),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.green,
+                                            foregroundColor: Colors.white,
+                                          ),
+                                          child: const Text('Approve'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  if (confirmed != true) return;
                                   setState(() => _isLoading = true);
                                   try {
                                     final success = await ref
@@ -1903,6 +2005,7 @@ if (widget.isApproved &&
                                     );
                                     return;
                                   }
+
                                   setState(() => _isLoading = true);
                                   try {
                                     final success = await ref

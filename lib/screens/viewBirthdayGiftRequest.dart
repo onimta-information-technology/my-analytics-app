@@ -272,7 +272,28 @@ class _ViewBirthdayGiftRequestState
   Future<void> _doCheck() async {
     if (widget.gift == null) return;
     if (!_validateValidDays()) return;
-
+final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Check Gift Request'),
+      content: const Text('Are you sure you want to check this gift request?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Check'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true) return;
     setState(() => _isLoading = true);
     try {
       final success = await ref
@@ -303,7 +324,28 @@ class _ViewBirthdayGiftRequestState
   Future<void> _doApprove() async {
     if (widget.gift == null) return;
     if (!_validateValidDays()) return;
-
+final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Approve Gift Request'),
+      content: const Text('Are you sure you want to approve this gift request?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Approve'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true) return;
     setState(() => _isLoading = true);
     try {
       final success = await ref
@@ -332,7 +374,28 @@ class _ViewBirthdayGiftRequestState
 
   Future<void> _doReject() async {
     if (widget.gift == null) return;
-
+ final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Reject Gift Request'),
+      content: const Text('Are you sure you want to reject this gift request?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Reject'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true) return;
     setState(() => _isLoading = true);
     try {
       final success = await ref

@@ -65,13 +65,14 @@ class _SpecialGiftRequestScreenState
     if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
       return gifts;
     }
-    
+
     final otgiChk = await StorageUtil.getOtgiChk();
-  final otgiApp = await StorageUtil.getOtgiApp();
-  
-  if (otgiChk == true || otgiApp == true) {
-    return gifts;
-  } print(  "Filtering otp for user. resChk: $otgiChk, resApp: $otgiApp");
+    final otgiApp = await StorageUtil.getOtgiApp();
+
+    if (otgiChk == true || otgiApp == true) {
+      return gifts;
+    }
+    print("Filtering otp for user. resChk: $otgiChk, resApp: $otgiApp");
     final currentUserName = await StorageUtil.getUserName();
     if (currentUserName == null) return [];
     return gifts
@@ -128,6 +129,15 @@ class _SpecialGiftRequestScreenState
     return currentUserName == reqBy || currentUserName == rejectedBy;
   }
 
+  String _formatAmount(String? amount) {
+    if (amount == null || amount.isEmpty) return 'N/A';
+    try {
+      final number = double.parse(amount.replaceAll(',', ''));
+      return NumberFormat('#,##0.##').format(number);
+    } catch (e) {
+      return amount;
+    }
+  }
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   @override
@@ -192,7 +202,7 @@ class _SpecialGiftRequestScreenState
   //   "PLATINUM": "assets/images/ratings/PLATINUM.png",
   //   "SILVER": "assets/images/ratings/SILVER.png",
   // };
-Color _getRatingColor(String? rating) {
+  Color _getRatingColor(String? rating) {
     switch ((rating ?? '').toUpperCase()) {
       case 'GOLD':
         return const Color(0xFFDAA520);
@@ -241,7 +251,11 @@ Color _getRatingColor(String? rating) {
           isScrollable: true, // ✅ FIX: prevents overflow
           tabAlignment: TabAlignment.center, // ✅ valid with isScrollable: true
           tabs: [
-            _buildTab('Pending & Checked', giftsp.pendinggift.length, Colors.orange),
+            _buildTab(
+              'Pending & Checked',
+              giftsp.pendinggift.length,
+              Colors.orange,
+            ),
             _buildTab(
               'For Approval',
               giftsp.chekbygift.length,
@@ -510,6 +524,43 @@ Color _getRatingColor(String? rating) {
                           Row(
                             children: [
                               const Icon(
+                                Icons.attach_money,
+                                color: Color.fromARGB(221, 9, 108, 32),
+                                size: 16,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Amount: ',
+                                style: TextStyle(
+                                  color: const Color.fromARGB(221, 9, 108, 32),
+                                  fontSize: fontSettings.fontSize + 3,
+                                  fontWeight: fontSettings.fontWeight,
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  // AFTER
+                                  gift.giftDesc.isNotEmpty
+                                      ? _formatAmount(gift.giftDesc)
+                                      : 'N/A',
+                                  style: TextStyle(
+                                    color: const Color.fromARGB(
+                                      221,
+                                      9,
+                                      108,
+                                      32,
+                                    ),
+                                    fontSize: fontSettings.fontSize + 3,
+                                    fontWeight: fontSettings.fontWeight,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              const Icon(
                                 Icons.access_time,
                                 color: Color.fromARGB(255, 0, 0, 0),
                                 size: 16,
@@ -605,9 +656,8 @@ Color _getRatingColor(String? rating) {
                               ],
                             ),
                           ],
-  if (isApproved ||
-                      
-                                  gift.firstAppTime != null &&
+                          if (isApproved ||
+                              gift.firstAppTime != null &&
                                   gift.firstAppTime!.isNotEmpty) ...[
                             const SizedBox(height: 6),
                             Row(
@@ -722,9 +772,8 @@ Color _getRatingColor(String? rating) {
                               ],
                             ),
                           ],
-                            if (
-                                  gift.deleteTime != null &&
-                                  gift.deleteTime!.isNotEmpty) ...[
+                          if (gift.deleteTime != null &&
+                              gift.deleteTime!.isNotEmpty) ...[
                             const SizedBox(height: 6),
                             Row(
                               children: [
@@ -737,7 +786,7 @@ Color _getRatingColor(String? rating) {
                                 Text(
                                   'Rejected At: ',
                                   style: TextStyle(
-                                    fontSize: fontSettings.fontSize-2,
+                                    fontSize: fontSettings.fontSize - 2,
                                     fontWeight: fontSettings.fontWeight,
                                   ),
                                 ),
@@ -745,7 +794,12 @@ Color _getRatingColor(String? rating) {
                                   child: Text(
                                     _formatDate(gift.deleteTime),
                                     style: TextStyle(
-                                      color: const Color.fromARGB(255, 255, 17, 17),
+                                      color: const Color.fromARGB(
+                                        255,
+                                        255,
+                                        17,
+                                        17,
+                                      ),
                                       fontSize: fontSettings.fontSize,
                                       fontWeight: fontSettings.fontWeight,
                                     ),
@@ -832,44 +886,44 @@ Color _getRatingColor(String? rating) {
                 Positioned(
                   top: 10,
                   right: 15,
-                  child: 
-                  // SizedBox(
-                  //   width: 90,
-                  //   height: 30,
-                  //   child: Image.asset(
-                  //     ratingImageMap[gift.gRating] ??
-                  //         "assets/images/ratings/CLASSIC.png",
-                  //     fit: BoxFit.contain,
-                  //   ),
-                  // ),
-                  Hero(
-    tag: "rating-image-${gift.mid}",
-    child: Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 6,
-      ),
-      decoration: BoxDecoration(
-        color: _getRatingColor(gift.gRating),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.25),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Text(
-        gift.gRating ?? 'N/A',
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    ),
-  ),
+                  child:
+                      // SizedBox(
+                      //   width: 90,
+                      //   height: 30,
+                      //   child: Image.asset(
+                      //     ratingImageMap[gift.gRating] ??
+                      //         "assets/images/ratings/CLASSIC.png",
+                      //     fit: BoxFit.contain,
+                      //   ),
+                      // ),
+                      Hero(
+                        tag: "rating-image-${gift.mid}",
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getRatingColor(gift.gRating),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.25),
+                                blurRadius: 6,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            gift.gRating ?? 'N/A',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
                 ),
               ],
             );

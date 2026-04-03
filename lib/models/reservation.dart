@@ -26,6 +26,7 @@ class Reservation {
   DateTime lastEditTime;
   String returnStatus;
   String? gRating;
+  String? reservationnewnumber;
 
   Reservation({
     required this.idNo,
@@ -51,6 +52,7 @@ class Reservation {
     required this.lastEditTime,
     required this.returnStatus,
     required this.gRating,
+    this.reservationnewnumber,
   });
 
   factory Reservation.fromJson(Map<String, dynamic> json) {
@@ -106,6 +108,7 @@ class Reservation {
       lastEditTime: parseDate(json['Last_Edit_Time']) ?? DateTime.now(),
       returnStatus: json['ReturnStatus'] as String? ?? '',
       gRating: json['G_Rating'] as String? ?? '',
+      reservationnewnumber: json['Manual_Reserv_No'] as String? ?? '',
     );
   }
 
@@ -137,6 +140,7 @@ class Reservation {
       'Last_Edit_Time': formatDate(lastEditTime),
       'ReturnStatus': returnStatus,
       'G_Rating': gRating,
+      'Manual_Reserv_No': reservationnewnumber,
     };
   }
 

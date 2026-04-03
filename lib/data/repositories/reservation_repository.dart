@@ -45,7 +45,7 @@ class ReservationRepository {
       "SpName": "sp_CRM_Common_API",
       "con": "1",
     });
-
+print('Response from getReservations API: $response');
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List &&
         response['CommonResult']['Table'].isNotEmpty) {
@@ -321,6 +321,13 @@ class ReservationRepository {
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text12",
+          "Para_Type": "varchar",
+        },
+         {
+          "Para_Data": newReservation.reservationnewnumber,
+          "Para_Direction": "Input",
+          "Para_Lenth": 50,
+          "Para_Name": "@Text13",
           "Para_Type": "varchar",
         },
         {

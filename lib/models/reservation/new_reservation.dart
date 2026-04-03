@@ -41,7 +41,7 @@ class NewReservation {
       'remarks': remarks,
       'air_ticket_details': airTicketDetails,
       'reservation_no': reservationNo,
-      'reservationnewnumber': reservationnewnumber,
+      'Manual_Reserv_No': reservationnewnumber,
     };
   }
 
@@ -59,7 +59,7 @@ class NewReservation {
       airTicketDetails:
           List<Map<String, dynamic>>.from(json['air_ticket_details'] ?? []),
       reservationNo: json['reservNo'] ?? '',
-      reservationnewnumber: json['reservationnewnumber'] ?? '',
+      reservationnewnumber: json['Manual_Reserv_No'] ?? '',
 
     );
   }

@@ -196,6 +196,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
 
     _airTicketRequisition = hasAirTickets ? "Yes" : "No";
     _remarksController.text = selectedReservation.remarks;
+    _reservationnewnumberController.text = selectedReservation.reservationnewnumber ?? '';
   }
 
   Future<void> _getHotels() async {
@@ -1612,12 +1613,13 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                         const SizedBox(height: 10.0),
 TextFormField(
     controller: _reservationnewnumberController,
+    readOnly: _isEditMode, 
     style: TextStyle(
       fontSize: fontSettings.fontSize,
       fontWeight: fontSettings.fontWeight,
     ),
     decoration: InputDecoration(
-      labelText: "Reservation No",
+      labelText: "Manual Reservation No",
       labelStyle: TextStyle(
         fontSize: fontSettings.fontSize,
         fontWeight: fontSettings.fontWeight,
@@ -1630,7 +1632,7 @@ TextFormField(
     ),
     validator: (value) {
       if (value == null || value.trim().isEmpty) {
-        return "Reservation Number is required";
+        return "Manual Reservation Number is required";
       }
       return null;
     },

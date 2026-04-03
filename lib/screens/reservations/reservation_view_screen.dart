@@ -50,7 +50,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
   final TextEditingController _departureDateController =
       TextEditingController();
   final TextEditingController _remarksController = TextEditingController();
-
+  final TextEditingController _reservationnewnumberController = TextEditingController();
   String _airTicketRequisition = "No";
   bool _isLoading = false;
   bool _isGuestLoading = false;
@@ -898,6 +898,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
           status == "1";
       _airTicketRequisition = hasAirTickets ? "Yes" : "No";
       _remarksController.text = selectedReservation.remarks;
+      _reservationnewnumberController.text = selectedReservation.reservationnewnumber!;
     }
 
     final fontSettings = ref.watch(fontSettingsProvider);
@@ -1389,8 +1390,16 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                         return TextFormField(
                           controller: TextEditingController(text: value),
                           readOnly: true,
-                          decoration: const InputDecoration(
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: fontSettings.fontWeight,
+                          ),
+                          decoration:  InputDecoration(
                             labelText: "Select Air Tickets",
+                            labelStyle: TextStyle(
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: fontSettings.fontWeight,
+                            ),
                             border: OutlineInputBorder(),
                             contentPadding: EdgeInsets.symmetric(
                               horizontal: 12.0,
@@ -1446,7 +1455,27 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
                     keyboardType: TextInputType.multiline,
                   ),
                   const SizedBox(height: 16.0),
-
+TextFormField(
+    controller: _reservationnewnumberController,
+    readOnly: true,
+    style: TextStyle(
+      fontSize: fontSettings.fontSize,
+      fontWeight: fontSettings.fontWeight,
+    ),
+    decoration: InputDecoration(
+      labelText: "Manual Reservation No",
+      labelStyle: TextStyle(
+        fontSize: fontSettings.fontSize,
+        fontWeight: fontSettings.fontWeight,
+      ),
+      border: const OutlineInputBorder(),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 12.0,
+        vertical: -5.0,
+      ),
+    ),
+),
+const SizedBox(height: 10.0),
                   // ════════════════════════════════════════════════════
                   // ── Action Info Card (Checked / Approved / Rejected) ─
                   // ════════════════════════════════════════════════════

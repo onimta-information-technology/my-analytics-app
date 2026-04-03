@@ -9,11 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 class MemberVisits extends ConsumerStatefulWidget {
-  const MemberVisits({
-    super.key,
-    required this.title,
-    required this.guestList,
-  });
+  const MemberVisits({super.key, required this.title, required this.guestList});
 
   final String title;
   final List<Guest> guestList;
@@ -25,14 +21,32 @@ class MemberVisits extends ConsumerStatefulWidget {
 class _MemberVisitsState extends ConsumerState<MemberVisits> {
   bool _useBadgeForRating = false;
 
-  final Map<String, String> ratingImageMap = {
-    "CLASSIC": "assets/images/ratings/CLASSIC.png",
-    "DIAMOND": "assets/images/ratings/DIAMOND.png",
-    "GOLD": "assets/images/ratings/GOLD.png",
-    "INFINITY": "assets/images/ratings/INFINITY.png",
-    "PLATINUM": "assets/images/ratings/PLATINUM.png",
-    "SILVER": "assets/images/ratings/SILVER.png",
-  };
+  // final Map<String, String> ratingImageMap = {
+  //   "CLASSIC": "assets/images/ratings/CLASSIC.png",
+  //   "DIAMOND": "assets/images/ratings/DIAMOND.png",
+  //   "GOLD": "assets/images/ratings/GOLD.png",
+  //   "INFINITY": "assets/images/ratings/INFINITY.png",
+  //   "PLATINUM": "assets/images/ratings/PLATINUM.png",
+  //   "SILVER": "assets/images/ratings/SILVER.png",
+  // };
+  Color _getRatingColorBallys(String? rating) {
+    switch ((rating ?? '').toUpperCase()) {
+      case 'GOLD':
+        return const Color(0xFFDAA520);
+      case 'PLATINUM':
+        return const Color(0xFF707070);
+      case 'DIAMOND':
+        return const Color(0xFF1565C0);
+      case 'SILVER':
+        return const Color(0xFF9E9E9E);
+      case 'INFINITY':
+        return const Color(0xFF4A148C);
+      case 'CLASSIC':
+        return const Color(0xFF5D4037);
+      default:
+        return Colors.grey;
+    }
+  }
 
   @override
   void initState() {
@@ -78,10 +92,7 @@ class _MemberVisitsState extends ConsumerState<MemberVisits> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          widget.title,
-          style: const TextStyle(fontSize: 20.0),
-        ),
+        title: Text(widget.title, style: const TextStyle(fontSize: 20.0)),
       ),
       body: Stack(
         children: [
@@ -106,8 +117,7 @@ class _MemberVisitsState extends ConsumerState<MemberVisits> {
                               context.push('/home/profile');
                             },
                             child: Card(
-                              margin:
-                                  const EdgeInsets.symmetric(vertical: 5.0),
+                              margin: const EdgeInsets.symmetric(vertical: 5.0),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12.0),
                               ),
@@ -152,7 +162,11 @@ class _MemberVisitsState extends ConsumerState<MemberVisits> {
                                             fontSize: fontSettings.fontSize,
                                             fontWeight: fontSettings.fontWeight,
                                             color: const Color.fromARGB(
-                                                255, 0, 0, 0),
+                                              255,
+                                              0,
+                                              0,
+                                              0,
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -180,8 +194,9 @@ class _MemberVisitsState extends ConsumerState<MemberVisits> {
                                         borderRadius: BorderRadius.circular(12),
                                         boxShadow: [
                                           BoxShadow(
-                                            color:
-                                                Colors.black.withOpacity(0.25),
+                                            color: Colors.black.withOpacity(
+                                              0.25,
+                                            ),
                                             blurRadius: 6,
                                             offset: const Offset(0, 3),
                                           ),
@@ -197,29 +212,61 @@ class _MemberVisitsState extends ConsumerState<MemberVisits> {
                                       ),
                                     ),
                                   )
-                                : Padding(
-                                    padding: const EdgeInsets.all(0),
-                                    child: SizedBox(
-                                      width: 80,
-                                      height: 26,
-                                      child: ratingImageMap[guest.gRating] !=
-                                              null
-                                          ? Hero(
-                                              tag:
-                                                  "rating-image-${guest.mid}",
-                                              child: Image.asset(
-                                                ratingImageMap[guest.gRating]!,
-                                                fit: BoxFit.contain,
-                                              ),
-                                            )
-                                          : Hero(
-                                              tag:
-                                                  "rating-image-${guest.mid}",
-                                              child: Image.asset(
-                                                "assets/images/ratings/CLASSIC.png",
-                                                fit: BoxFit.contain,
-                                              ),
+                                // : Padding(
+                                //     padding: const EdgeInsets.all(0),
+                                //     child: SizedBox(
+                                //       width: 80,
+                                //       height: 26,
+                                //       child: ratingImageMap[guest.gRating] !=
+                                //               null
+                                //           ? Hero(
+                                //               tag:
+                                //                   "rating-image-${guest.mid}",
+                                //               child: Image.asset(
+                                //                 ratingImageMap[guest.gRating]!,
+                                //                 fit: BoxFit.contain,
+                                //               ),
+                                //             )
+                                //           : Hero(
+                                //               tag:
+                                //                   "rating-image-${guest.mid}",
+                                //               child: Image.asset(
+                                //                 "assets/images/ratings/CLASSIC.png",
+                                //                 fit: BoxFit.contain,
+                                //               ),
+                                //             ),
+                                //     ),
+                                //   ),
+                                : Hero(
+                                    tag: "rating-image-${guest.mid}",
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: _getRatingColorBallys(
+                                          guest.gRating,
+                                        ),
+                                        borderRadius: BorderRadius.circular(12),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(
+                                              0.25,
                                             ),
+                                            blurRadius: 6,
+                                            offset: const Offset(0, 3),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Text(
+                                        guest.gRating ?? 'N/A',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                                     ),
                                   ),
                           ),

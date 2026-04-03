@@ -13,7 +13,7 @@ import 'package:intl/intl.dart';
 
 class BirthdayScreen extends ConsumerStatefulWidget {
   final GiftsRepository giftsRepository;
-  
+
   const BirthdayScreen({super.key, required this.giftsRepository});
 
   @override
@@ -28,7 +28,7 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
   bool _showRecentUpcoming = true;
   bool _isLoading = false;
   bool _isRefreshing = false;
-  
+
   @override
   void initState() {
     super.initState();
@@ -90,14 +90,36 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
     });
   }
 
-  final Map<String, String> ratingImageMap = {
-    "CLASSIC": "assets/images/ratings/CLASSIC.png",
-    "DIAMOND": "assets/images/ratings/DIAMOND.png",
-    "GOLD": "assets/images/ratings/GOLD.png",
-    "INFINITY": "assets/images/ratings/INFINITY.png",
-    "PLATINUM": "assets/images/ratings/PLATINUM.png",
-    "SILVER": "assets/images/ratings/SILVER.png",
-  };
+  // final Map<String, String> ratingImageMap = {
+  //   "CLASSIC": "assets/images/ratings/CLASSIC.png",
+  //   "DIAMOND": "assets/images/ratings/DIAMOND.png",
+  //   "GOLD": "assets/images/ratings/GOLD.png",
+  //   "INFINITY": "assets/images/ratings/INFINITY.png",
+  //   "PLATINUM": "assets/images/ratings/PLATINUM.png",
+  //   "SILVER": "assets/images/ratings/SILVER.png",
+  // };
+  Color _getRatingColorBallys(String? rating) {
+    switch ((rating ?? '').toUpperCase()) {
+      case 'GOLD':
+        return const Color(0xFFDAA520);
+      case 'PLATINUM':
+        return const Color(0xFF707070);
+      case 'DIAMOND':
+        return const Color(0xFF1565C0);
+      case 'SILVER':
+        return const Color(0xFF9E9E9E);
+      case 'INFINITY':
+        return const Color(0xFF4A148C);
+      case 'CLASSIC':
+        return const Color(0xFF5D4037);
+      case 'PREMIER':
+        return const Color(0xFF1B5E20);
+      case 'RAFFELS CLUB':
+        return const Color(0xFF880E4F);
+      default:
+        return Colors.grey;
+    }
+  }
 
   @override
   void dispose() {
@@ -108,45 +130,45 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar:AppBar(
-  leading: IconButton(
-    icon: const Icon(Icons.arrow_back),
-     onPressed: () {
-      if (context.canPop()) {
-        context.pop();
-      } else {
-        context.go('/menu');
-      }
-    },
-  ),
-  title: const Text('Birthdays', style: TextStyle(fontSize: 20.0)),
-  actions: [
-    IconButton(
-      icon: _isRefreshing
-          ? const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.0,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  Color.fromARGB(255, 114, 6, 100),
-                ),
-              ),
-            )
-          : const Icon(Icons.refresh, size: 30),
-      onPressed: _isRefreshing ? null : _refreshBirthdays,
-    ),
-  ],
-  bottom: TabBar(
-    controller: _tabController,
-    indicatorColor: Constants.kPrimaryColor,
-    tabs: const [
-      Tab(child: Text('Past', style: TextStyle(fontSize: 16.0))),
-      Tab(child: Text('Recent', style: TextStyle(fontSize: 16.0))),
-      Tab(child: Text('Upcoming', style: TextStyle(fontSize: 16.0))),
-    ],
-  ),
-),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/menu');
+            }
+          },
+        ),
+        title: const Text('Birthdays', style: TextStyle(fontSize: 20.0)),
+        actions: [
+          IconButton(
+            icon: _isRefreshing
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.0,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Color.fromARGB(255, 114, 6, 100),
+                      ),
+                    ),
+                  )
+                : const Icon(Icons.refresh, size: 30),
+            onPressed: _isRefreshing ? null : _refreshBirthdays,
+          ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: Constants.kPrimaryColor,
+          tabs: const [
+            Tab(child: Text('Past', style: TextStyle(fontSize: 16.0))),
+            Tab(child: Text('Recent', style: TextStyle(fontSize: 16.0))),
+            Tab(child: Text('Upcoming', style: TextStyle(fontSize: 16.0))),
+          ],
+        ),
+      ),
       body: Stack(
         children: [
           TabBarView(
@@ -350,9 +372,15 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                       child: ElevatedButton.icon(
                         onPressed: () {
                           // Navigate using go_router with birthday object passed as extra
-                          context.push('/birthdays/gift-price-increase', extra: birthday);
+                          context.push(
+                            '/birthdays/gift-price-increase',
+                            extra: birthday,
+                          );
                         },
-                        icon: const Icon(Icons.trending_up, color: Colors.white),
+                        icon: const Icon(
+                          Icons.trending_up,
+                          color: Colors.white,
+                        ),
                         label: const Text(
                           'Request Gift Price Increase',
                           style: TextStyle(
@@ -379,28 +407,57 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(0),
-                    child: SizedBox(
-                      width: 100,
-                      height: 35,
-                      child: ratingImageMap[birthday.gRating] != null
-                          ? Hero(
-                              tag: "rating-image-${birthday.mid}",
-                              child: Image.asset(
-                                ratingImageMap[birthday.gRating]!,
-                                fit: BoxFit.contain,
+                  child:
+                      // Padding(
+                      //   padding: const EdgeInsets.all(0),
+                      //   child: SizedBox(
+                      //     width: 100,
+                      //     height: 35,
+                      //     child: ratingImageMap[birthday.gRating] != null
+                      //         ? Hero(
+                      //             tag: "rating-image-${birthday.mid}",
+                      //             child: Image.asset(
+                      //               ratingImageMap[birthday.gRating]!,
+                      //               fit: BoxFit.contain,
+                      //             ),
+                      //           )
+                      //         : Hero(
+                      //             tag: "rating-image-${birthday.mid}",
+                      //             child: Image.asset(
+                      //               "assets/images/ratings/CLASSIC.png",
+                      //               fit: BoxFit.contain,
+                      //             ),
+                      //           ),
+                      //   ),
+                      // ),
+                      Hero(
+                        tag: "rating-image-${birthday.mid}",
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getRatingColorBallys(birthday.gRating),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.25),
+                                blurRadius: 6,
+                                offset: const Offset(0, 3),
                               ),
-                            )
-                          : Hero(
-                              tag: "rating-image-${birthday.mid}",
-                              child: Image.asset(
-                                "assets/images/ratings/CLASSIC.png",
-                                fit: BoxFit.contain,
-                              ),
+                            ],
+                          ),
+                          child: Text(
+                            birthday.gRating ?? 'N/A',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
                             ),
-                    ),
-                  ),
+                          ),
+                        ),
+                      ),
                 ),
               ),
             ],

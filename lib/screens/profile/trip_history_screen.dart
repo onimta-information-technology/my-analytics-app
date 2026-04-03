@@ -84,25 +84,25 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
       );
 
       setState(() {
-  _tripHistory = tripHistory;
-  _isLoading = false;
+        _tripHistory = tripHistory;
+        _isLoading = false;
 
-  // Only set date notifiers if we have data AND they haven't been set yet
-  if (_tripHistory.isNotEmpty) {
-    if (startDateNotifier.value == null) {
-      final lastArrival = _tripHistory.last.arrivalDate;
-      if (lastArrival.isNotEmpty) {
-        startDateNotifier.value = DateTime.tryParse(lastArrival);
-      }
-    }
-    if (endDateNotifier.value == null) {
-      final firstDeparture = _tripHistory.first.departureDate;
-      if (firstDeparture.isNotEmpty) {
-        endDateNotifier.value = DateTime.tryParse(firstDeparture);
-      }
-    }
-  }
-});
+        // Only set date notifiers if we have data AND they haven't been set yet
+        if (_tripHistory.isNotEmpty) {
+          if (startDateNotifier.value == null) {
+            final lastArrival = _tripHistory.last.arrivalDate;
+            if (lastArrival.isNotEmpty) {
+              startDateNotifier.value = DateTime.tryParse(lastArrival);
+            }
+          }
+          if (endDateNotifier.value == null) {
+            final firstDeparture = _tripHistory.first.departureDate;
+            if (firstDeparture.isNotEmpty) {
+              endDateNotifier.value = DateTime.tryParse(firstDeparture);
+            }
+          }
+        }
+      });
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -328,23 +328,25 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
   //   final date = DateTime.parse(dateString);
   //   return DateFormat('dd MMM yyyy').format(date);
   // }
-String formatDate(String dateString) {
-  if (dateString.isEmpty) return "N/A";
-  final date = DateTime.tryParse(dateString);
-  if (date == null) return "N/A";
-  return DateFormat('dd MMM yyyy').format(date);
-}
+  String formatDate(String dateString) {
+    if (dateString.isEmpty) return "N/A";
+    final date = DateTime.tryParse(dateString);
+    if (date == null) return "N/A";
+    return DateFormat('dd MMM yyyy').format(date);
+  }
+
   // String _formatDate2(String dateString) {
   //   if (dateString == "") return "N/A";
   //   final date = DateTime.parse(dateString);
   //   return DateFormat('yyyy-MM-dd').format(date);
   // }
-String _formatDate2(String dateString) {
-  if (dateString.isEmpty) return "N/A";
-  final date = DateTime.tryParse(dateString);
-  if (date == null) return "N/A";
-  return DateFormat('yyyy-MM-dd').format(date);
-}
+  String _formatDate2(String dateString) {
+    if (dateString.isEmpty) return "N/A";
+    final date = DateTime.tryParse(dateString);
+    if (date == null) return "N/A";
+    return DateFormat('yyyy-MM-dd').format(date);
+  }
+
   String _parseNumberFormat(double? value) {
     if (value == null || value == 0) return "0.00";
     final formatter = NumberFormat('#,##0');
@@ -352,14 +354,36 @@ String _formatDate2(String dateString) {
     return formattedNumber;
   }
 
-  final Map<String, String> ratingImageMap = {
-    "CLASSIC": "assets/images/ratings/CLASSIC.png",
-    "DIAMOND": "assets/images/ratings/DIAMOND.png",
-    "GOLD": "assets/images/ratings/GOLD.png",
-    "INFINITY": "assets/images/ratings/INFINITY.png",
-    "PLATINUM": "assets/images/ratings/PLATINUM.png",
-    "SILVER": "assets/images/ratings/SILVER.png",
-  };
+  // final Map<String, String> ratingImageMap = {
+  //   "CLASSIC": "assets/images/ratings/CLASSIC.png",
+  //   "DIAMOND": "assets/images/ratings/DIAMOND.png",
+  //   "GOLD": "assets/images/ratings/GOLD.png",
+  //   "INFINITY": "assets/images/ratings/INFINITY.png",
+  //   "PLATINUM": "assets/images/ratings/PLATINUM.png",
+  //   "SILVER": "assets/images/ratings/SILVER.png",
+  // };
+ Color _getRatingColorBallys(String? rating) {
+    switch ((rating ?? '').toUpperCase()) {
+      case 'GOLD':
+        return const Color(0xFFDAA520);
+      case 'PLATINUM':
+        return const Color(0xFF707070);
+      case 'DIAMOND':
+        return const Color(0xFF1565C0);
+      case 'SILVER':
+        return const Color(0xFF9E9E9E);
+      case 'INFINITY':
+        return const Color(0xFF4A148C);
+      case 'CLASSIC':
+        return const Color(0xFF5D4037);
+      case 'PREMIER':
+        return const Color(0xFF1B5E20);
+      case 'RAFFELS CLUB':
+        return const Color(0xFF880E4F);
+      default:
+        return Colors.grey;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -373,7 +397,7 @@ String _formatDate2(String dateString) {
       );
     }
 
-    final String? imagePath = ratingImageMap[guest.gRating];
+    //final String? imagePath = ratingImageMap[guest.gRating];
 
     return Scaffold(
       appBar: AppBar(
@@ -525,34 +549,63 @@ String _formatDate2(String dateString) {
                         Positioned(
                           top: 10,
                           left: 10,
-                          child: Card(
-                            elevation: 5,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(0),
-                              child: SizedBox(
-                                width: 80,
-                                height: 30,
-                                child: imagePath != null
-                                    ? Hero(
-                                        tag: "rating-image",
-                                        child: Image.asset(
-                                          imagePath,
-                                          fit: BoxFit.contain,
-                                        ),
-                                      )
-                                    : Hero(
-                                        tag: "rating-image",
-                                        child: Image.asset(
-                                          "assets/images/ratings/CLASSIC.png",
-                                          fit: BoxFit.contain,
-                                        ),
+                          child:
+                              // Card(
+                              //   elevation: 5,
+                              //   shape: RoundedRectangleBorder(
+                              //     borderRadius: BorderRadius.circular(6),
+                              //   ),
+                              //   child: Padding(
+                              //     padding: const EdgeInsets.all(0),
+                              //     child: SizedBox(
+                              //       width: 80,
+                              //       height: 30,
+                              //       child: imagePath != null
+                              //           ? Hero(
+                              //               tag: "rating-image",
+                              //               child: Image.asset(
+                              //                 imagePath,
+                              //                 fit: BoxFit.contain,
+                              //               ),
+                              //             )
+                              //           : Hero(
+                              //               tag: "rating-image",
+                              //               child: Image.asset(
+                              //                 "assets/images/ratings/CLASSIC.png",
+                              //                 fit: BoxFit.contain,
+                              //               ),
+                              //             ),
+                              //     ),
+                              //   ),
+                              // ),
+                              Hero(
+                                tag: "rating-image-${guest.mid}",
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _getRatingColorBallys(guest.gRating),
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.25),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 3),
                                       ),
+                                    ],
+                                  ),
+                                  child: Text(
+                                    guest.gRating ?? 'N/A',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
                         ),
                       ],
                     ),

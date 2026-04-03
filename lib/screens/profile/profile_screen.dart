@@ -458,14 +458,32 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     );
   }
 
-  final Map<String, String> ratingImageMap = {
-    "CLASSIC": "assets/images/ratings/CLASSIC.png",
-    "DIAMOND": "assets/images/ratings/DIAMOND.png",
-    "GOLD": "assets/images/ratings/GOLD.png",
-    "INFINITY": "assets/images/ratings/INFINITY.png",
-    "PLATINUM": "assets/images/ratings/PLATINUM.png",
-    "SILVER": "assets/images/ratings/SILVER.png",
-  };
+  // final Map<String, String> ratingImageMap = {
+  //   "CLASSIC": "assets/images/ratings/CLASSIC.png",
+  //   "DIAMOND": "assets/images/ratings/DIAMOND.png",
+  //   "GOLD": "assets/images/ratings/GOLD.png",
+  //   "INFINITY": "assets/images/ratings/INFINITY.png",
+  //   "PLATINUM": "assets/images/ratings/PLATINUM.png",
+  //   "SILVER": "assets/images/ratings/SILVER.png",
+  // };
+  Color _getRatingColorBallys(String? rating) {
+    switch ((rating ?? '').toUpperCase()) {
+      case 'GOLD':
+        return const Color(0xFFDAA520);
+      case 'PLATINUM':
+        return const Color(0xFF707070);
+      case 'DIAMOND':
+        return const Color(0xFF1565C0);
+      case 'SILVER':
+        return const Color(0xFF9E9E9E);
+      case 'INFINITY':
+        return const Color(0xFF4A148C);
+      case 'CLASSIC':
+        return const Color(0xFF5D4037);
+      default:
+        return Colors.grey;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -492,7 +510,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
     final guestProfileDetails = ref.watch(mainProfileDetailsProvider);
 
-    final String? imagePath = ratingImageMap[guest.gRating];
+    // final String? imagePath = ratingImageMap[guest.gRating];
 
     return GestureDetector(
       onTap: () {
@@ -500,11 +518,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       },
       child: Scaffold(
         appBar: AppBar(
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => context.pop(),
-            ),
-            title: const Text("Guest Profile")),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.pop(),
+          ),
+          title: const Text("Guest Profile"),
+        ),
         body: Stack(
           children: [
             PopScope(
@@ -607,12 +626,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                         ),
                                         decoration: BoxDecoration(
                                           color: _getRatingColor(guest.gRating),
-                                          borderRadius:
-                                              BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.black
-                                                  .withOpacity(0.25),
+                                              color: Colors.black.withOpacity(
+                                                0.25,
+                                              ),
                                               blurRadius: 6,
                                               offset: const Offset(0, 3),
                                             ),
@@ -628,33 +649,67 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                         ),
                                       ),
                                     )
-                                  : Card(
-                                      elevation: 5,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(0),
-                                        child: SizedBox(
-                                          width: 120,
-                                          height: 50,
-                                          child: imagePath != null
-                                              ? Hero(
-                                                  tag:
-                                                      "rating-image-${guest.mid}",
-                                                  child: Image.asset(
-                                                    imagePath,
-                                                    fit: BoxFit.contain,
-                                                  ),
-                                                )
-                                              : Hero(
-                                                  tag:
-                                                      "rating-image-${guest.mid}",
-                                                  child: Image.asset(
-                                                    "assets/images/ratings/CLASSIC.png",
-                                                    fit: BoxFit.contain,
-                                                  ),
-                                                ),
+                                  // : Card(
+                                  //     elevation: 5,
+                                  //     shape: RoundedRectangleBorder(
+                                  //       borderRadius: BorderRadius.circular(12),
+                                  //     ),
+                                  //     child: Padding(
+                                  //       padding: const EdgeInsets.all(0),
+                                  //       child: SizedBox(
+                                  //         width: 120,
+                                  //         height: 50,
+                                  //         child: imagePath != null
+                                  //             ? Hero(
+                                  //                 tag:
+                                  //                     "rating-image-${guest.mid}",
+                                  //                 child: Image.asset(
+                                  //                   imagePath,
+                                  //                   fit: BoxFit.contain,
+                                  //                 ),
+                                  //               )
+                                  //             : Hero(
+                                  //                 tag:
+                                  //                     "rating-image-${guest.mid}",
+                                  //                 child: Image.asset(
+                                  //                   "assets/images/ratings/CLASSIC.png",
+                                  //                   fit: BoxFit.contain,
+                                  //                 ),
+                                  //               ),
+                                  //       ),
+                                  //     ),
+                                  //   ),
+                                  : Hero(
+                                      tag: "rating-image-${guest.mid}",
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: _getRatingColorBallys(
+                                            guest.gRating,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(
+                                                0.25,
+                                              ),
+                                              blurRadius: 6,
+                                              offset: const Offset(0, 3),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Text(
+                                          guest.gRating ?? 'N/A',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -943,8 +998,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                               ),
                                             ),
                                             AnimatedRotation(
-                                              turns:
-                                                  _isTableExpanded ? 0.5 : 0,
+                                              turns: _isTableExpanded ? 0.5 : 0,
                                               duration: const Duration(
                                                 milliseconds: 300,
                                               ),
@@ -969,22 +1023,26 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                             child: ElevatedButton.icon(
                                               onPressed:
                                                   _showSetPrimaryPhoneDialog,
-                                              icon: const Icon(Icons.phone,
-                                                  size: 18),
+                                              icon: const Icon(
+                                                Icons.phone,
+                                                size: 18,
+                                              ),
                                               label: const Text(
                                                 'Set Primary Phone',
                                                 style: TextStyle(
-                                                    fontSize: 14,
-                                                    fontWeight:
-                                                        FontWeight.bold),
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                               ),
                                               style: ElevatedButton.styleFrom(
-                                                backgroundColor:
-                                                    const Color(0xFF1976D2),
+                                                backgroundColor: const Color(
+                                                  0xFF1976D2,
+                                                ),
                                                 foregroundColor: Colors.white,
                                                 padding:
                                                     const EdgeInsets.symmetric(
-                                                        vertical: 10),
+                                                      vertical: 10,
+                                                    ),
                                                 shape: RoundedRectangleBorder(
                                                   borderRadius:
                                                       BorderRadius.circular(8),
@@ -997,22 +1055,26 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                             child: ElevatedButton.icon(
                                               onPressed:
                                                   _showSetPrimaryEmailDialog,
-                                              icon: const Icon(Icons.email,
-                                                  size: 18),
+                                              icon: const Icon(
+                                                Icons.email,
+                                                size: 18,
+                                              ),
                                               label: const Text(
                                                 'Set Primary Email',
                                                 style: TextStyle(
-                                                    fontSize: 14,
-                                                    fontWeight:
-                                                        FontWeight.bold),
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                               ),
                                               style: ElevatedButton.styleFrom(
-                                                backgroundColor:
-                                                    const Color(0xFFD32F2F),
+                                                backgroundColor: const Color(
+                                                  0xFFD32F2F,
+                                                ),
                                                 foregroundColor: Colors.white,
                                                 padding:
                                                     const EdgeInsets.symmetric(
-                                                        vertical: 10),
+                                                      vertical: 10,
+                                                    ),
                                                 shape: RoundedRectangleBorder(
                                                   borderRadius:
                                                       BorderRadius.circular(8),
@@ -1033,22 +1095,33 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                             width: 18,
                                             height: 18,
                                             color: const Color.fromARGB(
-                                                255, 0, 0, 0),
+                                              255,
+                                              0,
+                                              0,
+                                              0,
+                                            ),
                                           ),
                                           label: const Text(
                                             'Set Primary WhatsApp',
                                             style: TextStyle(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.bold),
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor:
-                                                const Color(0xFF25D366),
+                                            backgroundColor: const Color(
+                                              0xFF25D366,
+                                            ),
                                             foregroundColor:
                                                 const Color.fromARGB(
-                                                    255, 0, 0, 0),
+                                                  255,
+                                                  0,
+                                                  0,
+                                                  0,
+                                                ),
                                             padding: const EdgeInsets.symmetric(
-                                                vertical: 10),
+                                              vertical: 10,
+                                            ),
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
                                                   BorderRadius.circular(8),
@@ -1079,13 +1152,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                           children: [
                                             ...guestProfileDetails
                                                 .map((entry) {
-                                                  final name = entry
-                                                          .details['Name']
+                                                  final name =
+                                                      entry.details['Name']
                                                           ?.toLowerCase() ??
                                                       '';
                                                   final detail =
                                                       entry.details['Detail'] ??
-                                                          '';
+                                                      '';
 
                                                   final isBirthday =
                                                       name == 'birthday';
@@ -1112,7 +1185,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                       name == 'email_primary';
                                                   final isWhatsAppPrimary =
                                                       name ==
-                                                          'whatsapp_primary';
+                                                      'whatsapp_primary';
 
                                                   // Skip rendering primary rows
                                                   if (isPhonePrimary ||
@@ -1134,12 +1207,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                             isPhone2 ||
                                                             isPhone3) &&
                                                         primaryPhone != null &&
-                                                        detail == primaryPhone) {
+                                                        detail ==
+                                                            primaryPhone) {
                                                       isPrimary = true;
                                                     } else if ((isEmail ||
                                                             isEmail2) &&
                                                         primaryEmail != null &&
-                                                        detail == primaryEmail) {
+                                                        detail ==
+                                                            primaryEmail) {
                                                       isPrimary = true;
                                                     } else if ((iswhatsapp ||
                                                             iswhatsapp2 ||
@@ -1174,28 +1249,33 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                       InkWell(
                                                         onTap: isBirthday
                                                             ? () async {
-                                                                EasyLoading
-                                                                    .show(
+                                                                EasyLoading.show(
                                                                   status:
                                                                       'Loading gift...',
                                                                 );
                                                                 try {
                                                                   await ref
-                                                                      .read(birthdayGiftProvider
-                                                                          .notifier)
+                                                                      .read(
+                                                                        birthdayGiftProvider
+                                                                            .notifier,
+                                                                      )
                                                                       .fetchGiftData(
-                                                                          guest.mid);
-                                                                  EasyLoading
-                                                                      .dismiss();
+                                                                        guest
+                                                                            .mid,
+                                                                      );
+                                                                  EasyLoading.dismiss();
                                                                   final giftState =
                                                                       ref.read(
-                                                                          birthdayGiftProvider);
+                                                                        birthdayGiftProvider,
+                                                                      );
                                                                   if (giftState
                                                                           .giftData !=
                                                                       null) {
                                                                     ref
-                                                                        .read(selectedGuestProvider
-                                                                            .notifier)
+                                                                        .read(
+                                                                          selectedGuestProvider
+                                                                              .notifier,
+                                                                        )
                                                                         .updateGuestGift(
                                                                           gift: giftState
                                                                               .giftData!
@@ -1209,44 +1289,49 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                                         .mobile
                                                                         .isNotEmpty) {
                                                                       _whatsappNumberController
-                                                                              .text =
-                                                                          giftState
-                                                                              .giftData!
-                                                                              .mobile;
+                                                                          .text = giftState
+                                                                          .giftData!
+                                                                          .mobile;
                                                                     }
                                                                     ScaffoldMessenger.of(
-                                                                            context)
-                                                                        .showSnackBar(
+                                                                      context,
+                                                                    ).showSnackBar(
                                                                       SnackBar(
                                                                         content:
-                                                                            Text('Gift loaded: ${giftState.giftData!.gift}'),
+                                                                            Text(
+                                                                              'Gift loaded: ${giftState.giftData!.gift}',
+                                                                            ),
                                                                         backgroundColor:
                                                                             Colors.green,
-                                                                        duration:
-                                                                            const Duration(seconds: 2),
+                                                                        duration: const Duration(
+                                                                          seconds:
+                                                                              2,
+                                                                        ),
                                                                       ),
                                                                     );
                                                                   } else {
                                                                     ScaffoldMessenger.of(
-                                                                            context)
-                                                                        .showSnackBar(
+                                                                      context,
+                                                                    ).showSnackBar(
                                                                       const SnackBar(
                                                                         content:
-                                                                            Text('No gift data available'),
+                                                                            Text(
+                                                                              'No gift data available',
+                                                                            ),
                                                                         backgroundColor:
                                                                             Colors.orange,
                                                                       ),
                                                                     );
                                                                   }
                                                                 } catch (e) {
-                                                                  EasyLoading
-                                                                      .dismiss();
+                                                                  EasyLoading.dismiss();
                                                                   ScaffoldMessenger.of(
-                                                                          context)
-                                                                      .showSnackBar(
+                                                                    context,
+                                                                  ).showSnackBar(
                                                                     SnackBar(
                                                                       content: Text(
-                                                                          'Error loading gift: $e'),
+                                                                        'Error loading gift: $e',
+                                                                      ),
                                                                       backgroundColor:
                                                                           Colors
                                                                               .red,
@@ -1257,8 +1342,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                             : null,
                                                         child: Padding(
                                                           padding:
-                                                              const EdgeInsets
-                                                                  .all(8.0),
+                                                              const EdgeInsets.all(
+                                                                8.0,
+                                                              ),
                                                           child: Column(
                                                             crossAxisAlignment:
                                                                 CrossAxisAlignment
@@ -1271,25 +1357,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                                           .start,
                                                                   children: [
                                                                     Container(
-                                                                      padding: const EdgeInsets
-                                                                          .symmetric(
+                                                                      padding: const EdgeInsets.symmetric(
                                                                         horizontal:
                                                                             6,
                                                                         vertical:
                                                                             2,
                                                                       ),
-                                                                      decoration:
-                                                                          BoxDecoration(
+                                                                      decoration: BoxDecoration(
                                                                         color: Colors
                                                                             .green,
                                                                         borderRadius:
-                                                                            BorderRadius.circular(4),
+                                                                            BorderRadius.circular(
+                                                                              4,
+                                                                            ),
                                                                       ),
-                                                                      child:
-                                                                          const Text(
+                                                                      child: const Text(
                                                                         'PRIMARY',
-                                                                        style:
-                                                                            TextStyle(
+                                                                        style: TextStyle(
                                                                           color:
                                                                               Colors.white,
                                                                           fontSize:
@@ -1303,15 +1387,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                                 ),
                                                               if (isPrimary)
                                                                 const SizedBox(
-                                                                    height: 4),
+                                                                  height: 4,
+                                                                ),
                                                               Row(
                                                                 children: [
                                                                   Expanded(
                                                                     child: Text(
-                                                                      entry.details[
-                                                                          'Name']!,
-                                                                      style:
-                                                                          TextStyle(
+                                                                      entry
+                                                                          .details['Name']!,
+                                                                      style: TextStyle(
                                                                         color: Colors
                                                                             .black,
                                                                         fontSize:
@@ -1325,276 +1409,329 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                                     Row(
                                                                       children: const [
                                                                         Icon(
-                                                                            Icons
-                                                                                .touch_app,
-                                                                            size:
-                                                                                23,
-                                                                            color: Color.fromARGB(
-                                                                                255,
-                                                                                230,
-                                                                                0,
-                                                                                0)),
+                                                                          Icons
+                                                                              .touch_app,
+                                                                          size:
+                                                                              23,
+                                                                          color: Color.fromARGB(
+                                                                            255,
+                                                                            230,
+                                                                            0,
+                                                                            0,
+                                                                          ),
+                                                                        ),
                                                                         SizedBox(
-                                                                            width:
-                                                                                4),
+                                                                          width:
+                                                                              4,
+                                                                        ),
                                                                         Icon(
-                                                                            Icons
-                                                                                .card_giftcard,
-                                                                            size:
-                                                                                23,
-                                                                            color: Color.fromARGB(
-                                                                                255,
-                                                                                230,
-                                                                                0,
-                                                                                0)),
+                                                                          Icons
+                                                                              .card_giftcard,
+                                                                          size:
+                                                                              23,
+                                                                          color: Color.fromARGB(
+                                                                            255,
+                                                                            230,
+                                                                            0,
+                                                                            0,
+                                                                          ),
+                                                                        ),
                                                                       ],
                                                                     ),
                                                                   if (isPhone)
                                                                     InkWell(
-                                                                      onTap: () =>
-                                                                          _showAddPhoneDialog(
-                                                                              context,
-                                                                              guest.mid,
-                                                                              1,
-                                                                              entry.details['Detail']),
-                                                                      child:
-                                                                          Container(
+                                                                      onTap: () => _showAddPhoneDialog(
+                                                                        context,
+                                                                        guest
+                                                                            .mid,
+                                                                        1,
+                                                                        entry
+                                                                            .details['Detail'],
+                                                                      ),
+                                                                      child: Container(
                                                                         padding:
-                                                                            const EdgeInsets.all(4),
-                                                                        decoration:
-                                                                            BoxDecoration(
+                                                                            const EdgeInsets.all(
+                                                                              4,
+                                                                            ),
+                                                                        decoration: BoxDecoration(
                                                                           color: const Color.fromARGB(
-                                                                              255,
-                                                                              230,
-                                                                              0,
-                                                                              0),
+                                                                            255,
+                                                                            230,
+                                                                            0,
+                                                                            0,
+                                                                          ),
                                                                           borderRadius:
-                                                                              BorderRadius.circular(6),
+                                                                              BorderRadius.circular(
+                                                                                6,
+                                                                              ),
                                                                         ),
                                                                         child: const Icon(
-                                                                            Icons
-                                                                                .add_call,
-                                                                            size:
-                                                                                22,
-                                                                            color:
-                                                                                Colors.white),
+                                                                          Icons
+                                                                              .add_call,
+                                                                          size:
+                                                                              22,
+                                                                          color:
+                                                                              Colors.white,
+                                                                        ),
                                                                       ),
                                                                     ),
                                                                   if (isPhone2)
                                                                     InkWell(
-                                                                      onTap: () =>
-                                                                          _showAddPhoneDialog(
-                                                                              context,
-                                                                              guest.mid,
-                                                                              2,
-                                                                              entry.details['Detail']),
-                                                                      child:
-                                                                          Container(
+                                                                      onTap: () => _showAddPhoneDialog(
+                                                                        context,
+                                                                        guest
+                                                                            .mid,
+                                                                        2,
+                                                                        entry
+                                                                            .details['Detail'],
+                                                                      ),
+                                                                      child: Container(
                                                                         padding:
-                                                                            const EdgeInsets.all(4),
-                                                                        decoration:
-                                                                            BoxDecoration(
+                                                                            const EdgeInsets.all(
+                                                                              4,
+                                                                            ),
+                                                                        decoration: BoxDecoration(
                                                                           color: const Color.fromARGB(
-                                                                              255,
-                                                                              230,
-                                                                              0,
-                                                                              0),
+                                                                            255,
+                                                                            230,
+                                                                            0,
+                                                                            0,
+                                                                          ),
                                                                           borderRadius:
-                                                                              BorderRadius.circular(6),
+                                                                              BorderRadius.circular(
+                                                                                6,
+                                                                              ),
                                                                         ),
                                                                         child: const Icon(
-                                                                            Icons
-                                                                                .add_call,
-                                                                            size:
-                                                                                22,
-                                                                            color:
-                                                                                Colors.white),
+                                                                          Icons
+                                                                              .add_call,
+                                                                          size:
+                                                                              22,
+                                                                          color:
+                                                                              Colors.white,
+                                                                        ),
                                                                       ),
                                                                     ),
                                                                   if (isPhone3)
                                                                     InkWell(
-                                                                      onTap: () =>
-                                                                          _showAddPhoneDialog(
-                                                                              context,
-                                                                              guest.mid,
-                                                                              3,
-                                                                              entry.details['Detail']),
-                                                                      child:
-                                                                          Container(
+                                                                      onTap: () => _showAddPhoneDialog(
+                                                                        context,
+                                                                        guest
+                                                                            .mid,
+                                                                        3,
+                                                                        entry
+                                                                            .details['Detail'],
+                                                                      ),
+                                                                      child: Container(
                                                                         padding:
-                                                                            const EdgeInsets.all(4),
-                                                                        decoration:
-                                                                            BoxDecoration(
+                                                                            const EdgeInsets.all(
+                                                                              4,
+                                                                            ),
+                                                                        decoration: BoxDecoration(
                                                                           color: const Color.fromARGB(
-                                                                              255,
-                                                                              230,
-                                                                              0,
-                                                                              0),
+                                                                            255,
+                                                                            230,
+                                                                            0,
+                                                                            0,
+                                                                          ),
                                                                           borderRadius:
-                                                                              BorderRadius.circular(6),
+                                                                              BorderRadius.circular(
+                                                                                6,
+                                                                              ),
                                                                         ),
                                                                         child: const Icon(
-                                                                            Icons
-                                                                                .add_call,
-                                                                            size:
-                                                                                22,
-                                                                            color:
-                                                                                Colors.white),
+                                                                          Icons
+                                                                              .add_call,
+                                                                          size:
+                                                                              22,
+                                                                          color:
+                                                                              Colors.white,
+                                                                        ),
                                                                       ),
                                                                     ),
                                                                   if (iswhatsapp)
                                                                     InkWell(
-                                                                      onTap: () =>
-                                                                          _showAddWhatsAppDialog(
-                                                                              context,
-                                                                              guest.mid,
-                                                                              1,
-                                                                              entry.details['Detail']),
-                                                                      child:
-                                                                          Container(
+                                                                      onTap: () => _showAddWhatsAppDialog(
+                                                                        context,
+                                                                        guest
+                                                                            .mid,
+                                                                        1,
+                                                                        entry
+                                                                            .details['Detail'],
+                                                                      ),
+                                                                      child: Container(
                                                                         padding:
-                                                                            const EdgeInsets.all(4),
-                                                                        decoration:
-                                                                            BoxDecoration(
+                                                                            const EdgeInsets.all(
+                                                                              4,
+                                                                            ),
+                                                                        decoration: BoxDecoration(
                                                                           color: const Color.fromARGB(
-                                                                              255,
-                                                                              230,
-                                                                              0,
-                                                                              0),
+                                                                            255,
+                                                                            230,
+                                                                            0,
+                                                                            0,
+                                                                          ),
                                                                           borderRadius:
-                                                                              BorderRadius.circular(6),
+                                                                              BorderRadius.circular(
+                                                                                6,
+                                                                              ),
                                                                         ),
                                                                         child: const Icon(
-                                                                            Icons
-                                                                                .add_call,
-                                                                            size:
-                                                                                22,
-                                                                            color:
-                                                                                Colors.white),
+                                                                          Icons
+                                                                              .add_call,
+                                                                          size:
+                                                                              22,
+                                                                          color:
+                                                                              Colors.white,
+                                                                        ),
                                                                       ),
                                                                     ),
                                                                   if (iswhatsapp2)
                                                                     InkWell(
-                                                                      onTap: () =>
-                                                                          _showAddWhatsAppDialog(
-                                                                              context,
-                                                                              guest.mid,
-                                                                              2,
-                                                                              entry.details['Detail']),
-                                                                      child:
-                                                                          Container(
+                                                                      onTap: () => _showAddWhatsAppDialog(
+                                                                        context,
+                                                                        guest
+                                                                            .mid,
+                                                                        2,
+                                                                        entry
+                                                                            .details['Detail'],
+                                                                      ),
+                                                                      child: Container(
                                                                         padding:
-                                                                            const EdgeInsets.all(4),
-                                                                        decoration:
-                                                                            BoxDecoration(
+                                                                            const EdgeInsets.all(
+                                                                              4,
+                                                                            ),
+                                                                        decoration: BoxDecoration(
                                                                           color: const Color.fromARGB(
-                                                                              255,
-                                                                              230,
-                                                                              0,
-                                                                              0),
+                                                                            255,
+                                                                            230,
+                                                                            0,
+                                                                            0,
+                                                                          ),
                                                                           borderRadius:
-                                                                              BorderRadius.circular(6),
+                                                                              BorderRadius.circular(
+                                                                                6,
+                                                                              ),
                                                                         ),
                                                                         child: const Icon(
-                                                                            Icons
-                                                                                .add_call,
-                                                                            size:
-                                                                                22,
-                                                                            color:
-                                                                                Colors.white),
+                                                                          Icons
+                                                                              .add_call,
+                                                                          size:
+                                                                              22,
+                                                                          color:
+                                                                              Colors.white,
+                                                                        ),
                                                                       ),
                                                                     ),
                                                                   if (iswhatsapp3)
                                                                     InkWell(
-                                                                      onTap: () =>
-                                                                          _showAddWhatsAppDialog(
-                                                                              context,
-                                                                              guest.mid,
-                                                                              3,
-                                                                              entry.details['Detail']),
-                                                                      child:
-                                                                          Container(
+                                                                      onTap: () => _showAddWhatsAppDialog(
+                                                                        context,
+                                                                        guest
+                                                                            .mid,
+                                                                        3,
+                                                                        entry
+                                                                            .details['Detail'],
+                                                                      ),
+                                                                      child: Container(
                                                                         padding:
-                                                                            const EdgeInsets.all(4),
-                                                                        decoration:
-                                                                            BoxDecoration(
+                                                                            const EdgeInsets.all(
+                                                                              4,
+                                                                            ),
+                                                                        decoration: BoxDecoration(
                                                                           color: const Color.fromARGB(
-                                                                              255,
-                                                                              230,
-                                                                              0,
-                                                                              0),
+                                                                            255,
+                                                                            230,
+                                                                            0,
+                                                                            0,
+                                                                          ),
                                                                           borderRadius:
-                                                                              BorderRadius.circular(6),
+                                                                              BorderRadius.circular(
+                                                                                6,
+                                                                              ),
                                                                         ),
                                                                         child: const Icon(
-                                                                            Icons
-                                                                                .add_call,
-                                                                            size:
-                                                                                22,
-                                                                            color:
-                                                                                Colors.white),
+                                                                          Icons
+                                                                              .add_call,
+                                                                          size:
+                                                                              22,
+                                                                          color:
+                                                                              Colors.white,
+                                                                        ),
                                                                       ),
                                                                     ),
                                                                   if (isEmail)
                                                                     InkWell(
-                                                                      onTap: () =>
-                                                                          _showUpdateEmailDialog(
-                                                                              context,
-                                                                              guest.mid,
-                                                                              entry.details['Detail']!,
-                                                                              1),
-                                                                      child:
-                                                                          Container(
+                                                                      onTap: () => _showUpdateEmailDialog(
+                                                                        context,
+                                                                        guest
+                                                                            .mid,
+                                                                        entry
+                                                                            .details['Detail']!,
+                                                                        1,
+                                                                      ),
+                                                                      child: Container(
                                                                         padding:
-                                                                            const EdgeInsets.all(4),
-                                                                        decoration:
-                                                                            BoxDecoration(
+                                                                            const EdgeInsets.all(
+                                                                              4,
+                                                                            ),
+                                                                        decoration: BoxDecoration(
                                                                           color: const Color.fromARGB(
-                                                                              255,
-                                                                              230,
-                                                                              0,
-                                                                              0),
+                                                                            255,
+                                                                            230,
+                                                                            0,
+                                                                            0,
+                                                                          ),
                                                                           borderRadius:
-                                                                              BorderRadius.circular(6),
+                                                                              BorderRadius.circular(
+                                                                                6,
+                                                                              ),
                                                                         ),
                                                                         child: const Icon(
-                                                                            Icons
-                                                                                .email,
-                                                                            size:
-                                                                                22,
-                                                                            color:
-                                                                                Colors.white),
+                                                                          Icons
+                                                                              .email,
+                                                                          size:
+                                                                              22,
+                                                                          color:
+                                                                              Colors.white,
+                                                                        ),
                                                                       ),
                                                                     ),
                                                                   if (isEmail2)
                                                                     InkWell(
-                                                                      onTap: () =>
-                                                                          _showUpdateEmailDialog(
-                                                                              context,
-                                                                              guest.mid,
-                                                                              entry.details['Detail']!,
-                                                                              2),
-                                                                      child:
-                                                                          Container(
+                                                                      onTap: () => _showUpdateEmailDialog(
+                                                                        context,
+                                                                        guest
+                                                                            .mid,
+                                                                        entry
+                                                                            .details['Detail']!,
+                                                                        2,
+                                                                      ),
+                                                                      child: Container(
                                                                         padding:
-                                                                            const EdgeInsets.all(4),
-                                                                        decoration:
-                                                                            BoxDecoration(
+                                                                            const EdgeInsets.all(
+                                                                              4,
+                                                                            ),
+                                                                        decoration: BoxDecoration(
                                                                           color: const Color.fromARGB(
-                                                                              255,
-                                                                              230,
-                                                                              0,
-                                                                              0),
+                                                                            255,
+                                                                            230,
+                                                                            0,
+                                                                            0,
+                                                                          ),
                                                                           borderRadius:
-                                                                              BorderRadius.circular(6),
+                                                                              BorderRadius.circular(
+                                                                                6,
+                                                                              ),
                                                                         ),
                                                                         child: const Icon(
-                                                                            Icons
-                                                                                .email,
-                                                                            size:
-                                                                                22,
-                                                                            color:
-                                                                                Colors.white),
+                                                                          Icons
+                                                                              .email,
+                                                                          size:
+                                                                              22,
+                                                                          color:
+                                                                              Colors.white,
+                                                                        ),
                                                                       ),
                                                                     ),
                                                                 ],
@@ -1607,28 +1744,33 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                       InkWell(
                                                         onTap: isBirthday
                                                             ? () async {
-                                                                EasyLoading
-                                                                    .show(
+                                                                EasyLoading.show(
                                                                   status:
                                                                       'Loading gift...',
                                                                 );
                                                                 try {
                                                                   await ref
-                                                                      .read(birthdayGiftProvider
-                                                                          .notifier)
+                                                                      .read(
+                                                                        birthdayGiftProvider
+                                                                            .notifier,
+                                                                      )
                                                                       .fetchGiftData(
-                                                                          guest.mid);
-                                                                  EasyLoading
-                                                                      .dismiss();
+                                                                        guest
+                                                                            .mid,
+                                                                      );
+                                                                  EasyLoading.dismiss();
                                                                   final giftState =
                                                                       ref.read(
-                                                                          birthdayGiftProvider);
+                                                                        birthdayGiftProvider,
+                                                                      );
                                                                   if (giftState
                                                                           .giftData !=
                                                                       null) {
                                                                     ref
-                                                                        .read(selectedGuestProvider
-                                                                            .notifier)
+                                                                        .read(
+                                                                          selectedGuestProvider
+                                                                              .notifier,
+                                                                        )
                                                                         .updateGuestGift(
                                                                           gift: giftState
                                                                               .giftData!
@@ -1642,44 +1784,49 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                                         .mobile
                                                                         .isNotEmpty) {
                                                                       _whatsappNumberController
-                                                                              .text =
-                                                                          giftState
-                                                                              .giftData!
-                                                                              .mobile;
+                                                                          .text = giftState
+                                                                          .giftData!
+                                                                          .mobile;
                                                                     }
                                                                     ScaffoldMessenger.of(
-                                                                            context)
-                                                                        .showSnackBar(
+                                                                      context,
+                                                                    ).showSnackBar(
                                                                       SnackBar(
                                                                         content:
-                                                                            Text('Gift loaded: ${giftState.giftData!.gift}'),
+                                                                            Text(
+                                                                              'Gift loaded: ${giftState.giftData!.gift}',
+                                                                            ),
                                                                         backgroundColor:
                                                                             Colors.green,
-                                                                        duration:
-                                                                            const Duration(seconds: 2),
+                                                                        duration: const Duration(
+                                                                          seconds:
+                                                                              2,
+                                                                        ),
                                                                       ),
                                                                     );
                                                                   } else {
                                                                     ScaffoldMessenger.of(
-                                                                            context)
-                                                                        .showSnackBar(
+                                                                      context,
+                                                                    ).showSnackBar(
                                                                       const SnackBar(
                                                                         content:
-                                                                            Text('No gift data available'),
+                                                                            Text(
+                                                                              'No gift data available',
+                                                                            ),
                                                                         backgroundColor:
                                                                             Colors.orange,
                                                                       ),
                                                                     );
                                                                   }
                                                                 } catch (e) {
-                                                                  EasyLoading
-                                                                      .dismiss();
+                                                                  EasyLoading.dismiss();
                                                                   ScaffoldMessenger.of(
-                                                                          context)
-                                                                      .showSnackBar(
+                                                                    context,
+                                                                  ).showSnackBar(
                                                                     SnackBar(
                                                                       content: Text(
-                                                                          'Error loading gift: $e'),
+                                                                        'Error loading gift: $e',
+                                                                      ),
                                                                       backgroundColor:
                                                                           Colors
                                                                               .red,
@@ -1690,11 +1837,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                             : null,
                                                         child: Padding(
                                                           padding:
-                                                              const EdgeInsets
-                                                                  .all(8.0),
+                                                              const EdgeInsets.all(
+                                                                8.0,
+                                                              ),
                                                           child: Text(
-                                                            entry.details[
-                                                                'Detail']!,
+                                                            entry
+                                                                .details['Detail']!,
                                                             textAlign:
                                                                 TextAlign.end,
                                                             style: TextStyle(
@@ -1748,7 +1896,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                                 style: TextStyle(
                                                   fontSize:
                                                       fontSettings.fontSize - 1,
-                                                  color: Constants.kPrimaryColor,
+                                                  color:
+                                                      Constants.kPrimaryColor,
                                                   fontWeight: FontWeight.w500,
                                                 ),
                                                 textAlign: TextAlign.center,

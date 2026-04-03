@@ -746,15 +746,36 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> {
   // ── Rating mode (mirrors ProfileScreen + MemberVisits) ──
   bool _useBadgeForRating = false;
 
-  static const Map<String, String> _ratingImages = {
-    "CLASSIC": "assets/images/ratings/CLASSIC.png",
-    "DIAMOND": "assets/images/ratings/DIAMOND.png",
-    "GOLD": "assets/images/ratings/GOLD.png",
-    "INFINITY": "assets/images/ratings/INFINITY.png",
-    "PLATINUM": "assets/images/ratings/PLATINUM.png",
-    "SILVER": "assets/images/ratings/SILVER.png",
-  };
-
+  // static const Map<String, String> _ratingImages = {
+  //   "CLASSIC": "assets/images/ratings/CLASSIC.png",
+  //   "DIAMOND": "assets/images/ratings/DIAMOND.png",
+  //   "GOLD": "assets/images/ratings/GOLD.png",
+  //   "INFINITY": "assets/images/ratings/INFINITY.png",
+  //   "PLATINUM": "assets/images/ratings/PLATINUM.png",
+  //   "SILVER": "assets/images/ratings/SILVER.png",
+  // };
+ Color _getRatingColorBallys(String? rating) {
+    switch ((rating ?? '').toUpperCase()) {
+      case 'GOLD':
+        return const Color(0xFFDAA520);
+      case 'PLATINUM':
+        return const Color(0xFF707070);
+      case 'DIAMOND':
+        return const Color(0xFF1565C0);
+      case 'SILVER':
+        return const Color(0xFF9E9E9E);
+      case 'INFINITY':
+        return const Color(0xFF4A148C);
+      case 'CLASSIC':
+        return const Color(0xFF5D4037);
+      case 'PREMIER':
+        return const Color(0xFF1B5E20);
+      case 'RAFFELS CLUB':
+        return const Color(0xFF880E4F);
+      default:
+        return Colors.grey;
+    }
+  }
   @override
   void initState() {
     super.initState();
@@ -989,8 +1010,42 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> {
                     Positioned(
                       top: 6,
                       right: 2,
-                      child: _useBadgeForRating
-                          ? Container(
+                    //   child: _useBadgeForRating
+                    //       ? Container(
+                    //           padding: const EdgeInsets.symmetric(
+                    //               horizontal: 10, vertical: 6),
+                    //           decoration: BoxDecoration(
+                    //             color: _getRatingColor(guest.gRating),
+                    //             borderRadius: BorderRadius.circular(12),
+                    //             boxShadow: [
+                    //               BoxShadow(
+                    //                 color: Colors.black.withOpacity(0.25),
+                    //                 blurRadius: 6,
+                    //                 offset: const Offset(0, 3),
+                    //               ),
+                    //             ],
+                    //           ),
+                    //           child: Text(
+                    //             guest.gRating ?? 'N/A',
+                    //             style: const TextStyle(
+                    //               color: Colors.white,
+                    //               fontSize: 12,
+                    //               fontWeight: FontWeight.bold,
+                    //             ),
+                    //           ),
+                    //         )
+                    //       : (_ratingImages[guest.gRating] != null
+                    //           ? SizedBox(
+                    //               width: 80,
+                    //               height: 26,
+                    //               child: Image.asset(
+                    //                 _ratingImages[guest.gRating]!,
+                    //                 fit: BoxFit.contain,
+                    //               ),
+                    //             )
+                    //           : const SizedBox.shrink()),
+                    // ),
+                     child: Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
@@ -1013,16 +1068,7 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> {
                                 ),
                               ),
                             )
-                          : (_ratingImages[guest.gRating] != null
-                              ? SizedBox(
-                                  width: 80,
-                                  height: 26,
-                                  child: Image.asset(
-                                    _ratingImages[guest.gRating]!,
-                                    fit: BoxFit.contain,
-                                  ),
-                                )
-                              : const SizedBox.shrink()),
+                        
                     ),
                   ],
                 );

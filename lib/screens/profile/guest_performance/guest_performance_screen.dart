@@ -38,7 +38,6 @@ class GuestPerformanceScreen extends ConsumerStatefulWidget {
 }
 
 class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
-
   final ValueNotifier<DateTime?> startDateNotifier = ValueNotifier<DateTime?>(
     null,
   );
@@ -101,13 +100,10 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
     if (guest!.memImage2 != null) return;
 
     if (guest.memImage2 == null) {
-   
       await ref
           .read(selectedGuestProvider.notifier)
           .getGuestImage(9021, guest.mid);
-    } else {
-     
-    }
+    } else {}
   }
 
   // Future<void> _selectArrivalDate(BuildContext context) async {
@@ -119,9 +115,9 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
   //   );
   //   if (selectedArrivalDate != null && selectedArrivalDate != _dateFrom) {
   //     ref.read(dateFilterProvider.notifier).setDateFrom(selectedArrivalDate);
-  
+
   //   }
-   
+
   // }
 
   // Future<void> _selectDepartureDate(BuildContext context) async {
@@ -133,176 +129,163 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
   //   );
   //   if (selectedDepartureDate != null && selectedDepartureDate != _dateTo) {
   //     ref.read(dateFilterProvider.notifier).setDateTo(selectedDepartureDate);
-   
+
   //   }
   // }
-Future<void> _selectArrivalDate(BuildContext context) async {
-  final now = DateTime(
-    DateTime.now().year,
-    DateTime.now().month,
-    DateTime.now().day,
-  );
+  Future<void> _selectArrivalDate(BuildContext context) async {
+    final now = DateTime(
+      DateTime.now().year,
+      DateTime.now().month,
+      DateTime.now().day,
+    );
 
-  DateTime selectedDate = _dateFrom ?? now;
+    DateTime selectedDate = _dateFrom ?? now;
 
-  await showModalBottomSheet(
-    context: context,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-    ),
-    builder: (BuildContext context) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Text(
-              "Select Start Date",
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade600,
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                "Select Start Date",
+                style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
               ),
             ),
-          ),
-          SizedBox(
-            height: 200,
-            child: CupertinoDatePicker(
-              mode: CupertinoDatePickerMode.date,
-              initialDateTime: selectedDate,
-              minimumDate: DateTime(2000),
-              maximumDate: DateTime(2101),
-              onDateTimeChanged: (DateTime newDate) {
-                selectedDate = newDate;
-              },
-            ),
-          ),
-          const Divider(height: 1),
-          TextButton(
-            onPressed: () {
-              ref
-                  .read(dateFilterProvider.notifier)
-                  .setDateFrom(selectedDate);
-              setState(() {
-                _dateFrom = selectedDate;
-                startDateNotifier.value = selectedDate;
-                // Reset end date if it's before new start date
-                if (_dateTo != null &&
-                    _dateTo!.isBefore(selectedDate)) {
-                  _dateTo = null;
-                  endDateNotifier.value = null;
-                  ref
-                      .read(dateFilterProvider.notifier)
-                      .setDateTo(selectedDate);
-                }
-              });
-              Navigator.of(context).pop();
-            },
-            child: const Text(
-              "Confirm",
-              style: TextStyle(fontSize: 18, color: Colors.blue),
-            ),
-          ),
-          const Divider(height: 1),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text(
-              "Cancel",
-              style: TextStyle(fontSize: 18, color: Colors.blue),
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
-      );
-    },
-  );
-}
-
-Future<void> _selectDepartureDate(BuildContext context) async {
-  final now = DateTime(
-    DateTime.now().year,
-    DateTime.now().month,
-    DateTime.now().day,
-  );
-
-  DateTime selectedDate = _dateTo ?? _dateFrom ?? now;
-
-  await showModalBottomSheet(
-    context: context,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-    ),
-    builder: (BuildContext context) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Text(
-              "Select End Date",
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade600,
+            SizedBox(
+              height: 200,
+              child: CupertinoDatePicker(
+                mode: CupertinoDatePickerMode.date,
+                initialDateTime: selectedDate,
+                minimumDate: DateTime(2000),
+                maximumDate: DateTime(2101),
+                onDateTimeChanged: (DateTime newDate) {
+                  selectedDate = newDate;
+                },
               ),
             ),
-          ),
-          SizedBox(
-            height: 200,
-            child: CupertinoDatePicker(
-              mode: CupertinoDatePickerMode.date,
-              initialDateTime: selectedDate,
-              minimumDate: DateTime(2000),
-              maximumDate: DateTime(2101),
-              onDateTimeChanged: (DateTime newDate) {
-                selectedDate = newDate;
+            const Divider(height: 1),
+            TextButton(
+              onPressed: () {
+                ref.read(dateFilterProvider.notifier).setDateFrom(selectedDate);
+                setState(() {
+                  _dateFrom = selectedDate;
+                  startDateNotifier.value = selectedDate;
+                  // Reset end date if it's before new start date
+                  if (_dateTo != null && _dateTo!.isBefore(selectedDate)) {
+                    _dateTo = null;
+                    endDateNotifier.value = null;
+                    ref
+                        .read(dateFilterProvider.notifier)
+                        .setDateTo(selectedDate);
+                  }
+                });
+                Navigator.of(context).pop();
               },
+              child: const Text(
+                "Confirm",
+                style: TextStyle(fontSize: 18, color: Colors.blue),
+              ),
             ),
-          ),
-          const Divider(height: 1),
-          TextButton(
-            onPressed: () {
-              // Validate end date is after start date
-              if (_dateFrom != null &&
-                  selectedDate.isBefore(_dateFrom!)) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'End date must be after start date',
+            const Divider(height: 1),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                "Cancel",
+                style: TextStyle(fontSize: 18, color: Colors.blue),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _selectDepartureDate(BuildContext context) async {
+    final now = DateTime(
+      DateTime.now().year,
+      DateTime.now().month,
+      DateTime.now().day,
+    );
+
+    DateTime selectedDate = _dateTo ?? _dateFrom ?? now;
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                "Select End Date",
+                style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+              ),
+            ),
+            SizedBox(
+              height: 200,
+              child: CupertinoDatePicker(
+                mode: CupertinoDatePickerMode.date,
+                initialDateTime: selectedDate,
+                minimumDate: DateTime(2000),
+                maximumDate: DateTime(2101),
+                onDateTimeChanged: (DateTime newDate) {
+                  selectedDate = newDate;
+                },
+              ),
+            ),
+            const Divider(height: 1),
+            TextButton(
+              onPressed: () {
+                // Validate end date is after start date
+                if (_dateFrom != null && selectedDate.isBefore(_dateFrom!)) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('End date must be after start date'),
+                      backgroundColor: Colors.red,
                     ),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-                return;
-              }
-              ref
-                  .read(dateFilterProvider.notifier)
-                  .setDateTo(selectedDate);
-              setState(() {
-                _dateTo = selectedDate;
-                endDateNotifier.value = selectedDate;
-              });
-              Navigator.of(context).pop();
-            },
-            child: const Text(
-              "Confirm",
-              style: TextStyle(fontSize: 18, color: Colors.blue),
+                  );
+                  return;
+                }
+                ref.read(dateFilterProvider.notifier).setDateTo(selectedDate);
+                setState(() {
+                  _dateTo = selectedDate;
+                  endDateNotifier.value = selectedDate;
+                });
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                "Confirm",
+                style: TextStyle(fontSize: 18, color: Colors.blue),
+              ),
             ),
-          ),
-          const Divider(height: 1),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text(
-              "Cancel",
-              style: TextStyle(fontSize: 18, color: Colors.blue),
+            const Divider(height: 1),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                "Cancel",
+                style: TextStyle(fontSize: 18, color: Colors.blue),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-        ],
-      );
-    },
-  );
-}
+            const SizedBox(height: 8),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _performAction() async {
     try {
       if (startDateNotifier.value == null || endDateNotifier.value == null) {
@@ -356,7 +339,6 @@ Future<void> _selectDepartureDate(BuildContext context) async {
       setState(() {
         _isLoading = false;
       });
-   
     }
   }
 
@@ -386,7 +368,6 @@ Future<void> _selectDepartureDate(BuildContext context) async {
               ? DateFormat('yyyy-MM-dd').format(endDateNotifier.value!)
               : '',
         );
-  
   }
 
   Future<void> getTripHistory2(
@@ -397,7 +378,6 @@ Future<void> _selectDepartureDate(BuildContext context) async {
     await ref
         .read(tripHistoryProvider.notifier)
         .getTripHistory2(playerId: mid, dateFrom: dateFrom, dateTo: dateTo);
-   
   }
 
   Future<void> getAirlineHistory(String mid) async {
@@ -461,14 +441,36 @@ Future<void> _selectDepartureDate(BuildContext context) async {
     return DateFormat('dd MMM yyyy').format(date);
   }
 
-  final Map<String, String> ratingImageMap = {
-    "CLASSIC": "assets/images/ratings/CLASSIC.png",
-    "DIAMOND": "assets/images/ratings/DIAMOND.png",
-    "GOLD": "assets/images/ratings/GOLD.png",
-    "INFINITY": "assets/images/ratings/INFINITY.png",
-    "PLATINUM": "assets/images/ratings/PLATINUM.png",
-    "SILVER": "assets/images/ratings/SILVER.png",
-  };
+  // final Map<String, String> ratingImageMap = {
+  //   "CLASSIC": "assets/images/ratings/CLASSIC.png",
+  //   "DIAMOND": "assets/images/ratings/DIAMOND.png",
+  //   "GOLD": "assets/images/ratings/GOLD.png",
+  //   "INFINITY": "assets/images/ratings/INFINITY.png",
+  //   "PLATINUM": "assets/images/ratings/PLATINUM.png",
+  //   "SILVER": "assets/images/ratings/SILVER.png",
+  // };
+  Color _getRatingColorBallys(String? rating) {
+    switch ((rating ?? '').toUpperCase()) {
+      case 'GOLD':
+        return const Color(0xFFDAA520);
+      case 'PLATINUM':
+        return const Color(0xFF707070);
+      case 'DIAMOND':
+        return const Color(0xFF1565C0);
+      case 'SILVER':
+        return const Color(0xFF9E9E9E);
+      case 'INFINITY':
+        return const Color(0xFF4A148C);
+      case 'CLASSIC':
+        return const Color(0xFF5D4037);
+      case 'PREMIER':
+        return const Color(0xFF1B5E20);
+      case 'RAFFELS CLUB':
+        return const Color(0xFF880E4F);
+      default:
+        return Colors.grey;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -499,7 +501,7 @@ Future<void> _selectDepartureDate(BuildContext context) async {
       );
     }
 
-    final String? imagePath = ratingImageMap[guest.gRating];
+    //  final String? imagePath = ratingImageMap[guest.gRating];
 
     return Scaffold(
       appBar: AppBar(
@@ -523,7 +525,7 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                   leading: Icon(Icons.attach_money),
                   title: Text(
                     'Loyalty Summary',
-                    style: TextStyle(fontWeight: FontWeight.bold,fontSize: 20),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                   ),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -535,7 +537,7 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                   leading: Icon(Icons.local_taxi),
                   title: Text(
                     'Trip Information',
-                    style: TextStyle(fontWeight: FontWeight.bold,fontSize: 20),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                   ),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -547,7 +549,7 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                   leading: Icon(Icons.airplanemode_active),
                   title: Text(
                     'Air Ticket Reservation',
-                    style: TextStyle(fontWeight: FontWeight.bold,fontSize: 20),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                   ),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -559,7 +561,7 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                   leading: Icon(Icons.hotel),
                   title: Text(
                     'Hotel Reservation',
-                    style: TextStyle(fontWeight: FontWeight.bold,fontSize: 20),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                   ),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -571,7 +573,7 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                   leading: Icon(Icons.local_cafe),
                   title: Text(
                     'F & B',
-                    style: TextStyle(fontWeight: FontWeight.bold,fontSize: 20),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                   ),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -583,7 +585,7 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                   leading: Icon(Icons.sports_esports),
                   title: Text(
                     'Games Summary',
-                    style: TextStyle(fontWeight: FontWeight.bold,fontSize: 20),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                   ),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -730,34 +732,63 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                       Positioned(
                         top: 10,
                         left: 10,
-                        child: Card(
-                          elevation: 5,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(0),
-                            child: SizedBox(
-                              width: 80,
-                              height: 30,
-                              child: imagePath != null
-                                  ? Hero(
-                                      tag: "rating-image",
-                                      child: Image.asset(
-                                        imagePath,
-                                        fit: BoxFit.contain,
-                                      ),
-                                    )
-                                  : Hero(
-                                      tag: "rating-image",
-                                      child: Image.asset(
-                                        "assets/images/ratings/CLASSIC.png",
-                                        fit: BoxFit.contain,
-                                      ),
+                        child:
+                            // Card(
+                            //   elevation: 5,
+                            //   shape: RoundedRectangleBorder(
+                            //     borderRadius: BorderRadius.circular(6),
+                            //   ),
+                            //   child: Padding(
+                            //     padding: const EdgeInsets.all(0),
+                            //     child: SizedBox(
+                            //       width: 80,
+                            //       height: 30,
+                            //       child: imagePath != null
+                            //           ? Hero(
+                            //               tag: "rating-image",
+                            //               child: Image.asset(
+                            //                 imagePath,
+                            //                 fit: BoxFit.contain,
+                            //               ),
+                            //             )
+                            //           : Hero(
+                            //               tag: "rating-image",
+                            //               child: Image.asset(
+                            //                 "assets/images/ratings/CLASSIC.png",
+                            //                 fit: BoxFit.contain,
+                            //               ),
+                            //             ),
+                            //     ),
+                            //   ),
+                            // ),
+                            Hero(
+                              tag: "rating-image-${guest.mid}",
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _getRatingColorBallys(guest.gRating),
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.25),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 3),
                                     ),
+                                  ],
+                                ),
+                                child: Text(
+                                  guest.gRating ?? 'N/A',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
                       ),
                     ],
                   ),

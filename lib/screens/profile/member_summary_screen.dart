@@ -15,8 +15,7 @@ import 'package:intl/intl.dart';
 class MemberSummaryScreen extends ConsumerStatefulWidget {
   final MemberProfileRepository memberProfileRepository;
 
-  const MemberSummaryScreen(
-      {required this.memberProfileRepository, super.key});
+  const MemberSummaryScreen({required this.memberProfileRepository, super.key});
 
   @override
   ConsumerState<MemberSummaryScreen> createState() => _GuestPerformanceState();
@@ -25,10 +24,12 @@ class MemberSummaryScreen extends ConsumerStatefulWidget {
 class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
   final TextEditingController _startDateController = TextEditingController();
   final TextEditingController _endDateController = TextEditingController();
-  final ValueNotifier<DateTime?> startDateNotifier =
-      ValueNotifier<DateTime?>(null);
-  final ValueNotifier<DateTime?> endDateNotifier =
-      ValueNotifier<DateTime?>(null);
+  final ValueNotifier<DateTime?> startDateNotifier = ValueNotifier<DateTime?>(
+    null,
+  );
+  final ValueNotifier<DateTime?> endDateNotifier = ValueNotifier<DateTime?>(
+    null,
+  );
 
   bool _isLoading = false;
   DateTime? _dateFrom;
@@ -74,181 +75,171 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
   //     ref.read(dateFilterProvider.notifier).setDateTo(selectedDepartureDate);
   //   }
   // }
-Future<void> _selectArrivalDate(BuildContext context) async {
-  final now = DateTime(
-    DateTime.now().year,
-    DateTime.now().month,
-    DateTime.now().day,
-  );
+  Future<void> _selectArrivalDate(BuildContext context) async {
+    final now = DateTime(
+      DateTime.now().year,
+      DateTime.now().month,
+      DateTime.now().day,
+    );
 
-  DateTime selectedDate = _dateFrom ?? now;
+    DateTime selectedDate = _dateFrom ?? now;
 
-  await showModalBottomSheet(
-    context: context,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-    ),
-    builder: (BuildContext context) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Text(
-              "Select Start Date",
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade600,
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                "Select Start Date",
+                style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
               ),
             ),
-          ),
-          SizedBox(
-            height: 200,
-            child: CupertinoDatePicker(
-              mode: CupertinoDatePickerMode.date,
-              initialDateTime: selectedDate,
-              minimumDate: DateTime(2000),
-              maximumDate: DateTime(2101),
-              onDateTimeChanged: (DateTime newDate) {
-                selectedDate = newDate;
-              },
-            ),
-          ),
-          const Divider(height: 1),
-          TextButton(
-            onPressed: () {
-              ref
-                  .read(dateFilterProvider.notifier)
-                  .setDateFrom(selectedDate);
-              setState(() {
-                _dateFrom = selectedDate;
-                startDateNotifier.value = selectedDate;
-                _startDateController.text =
-                    DateFormat('yyyy-MM-dd').format(selectedDate);
-                // Reset end date if before new start date
-                if (_dateTo != null &&
-                    _dateTo!.isBefore(selectedDate)) {
-                  _dateTo = null;
-                  endDateNotifier.value = null;
-                  _endDateController.text = '';
-                  ref
-                      .read(dateFilterProvider.notifier)
-                      .setDateTo(selectedDate);
-                }
-              });
-              Navigator.of(context).pop();
-            },
-            child: const Text(
-              "Confirm",
-              style: TextStyle(fontSize: 18, color: Colors.blue),
-            ),
-          ),
-          const Divider(height: 1),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text(
-              "Cancel",
-              style: TextStyle(fontSize: 18, color: Colors.blue),
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
-      );
-    },
-  );
-}
-
-Future<void> _selectDepartureDate(BuildContext context) async {
-  final now = DateTime(
-    DateTime.now().year,
-    DateTime.now().month,
-    DateTime.now().day,
-  );
-
-  DateTime selectedDate = _dateTo ?? _dateFrom ?? now;
-
-  await showModalBottomSheet(
-    context: context,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-    ),
-    builder: (BuildContext context) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Text(
-              "Select End Date",
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade600,
+            SizedBox(
+              height: 200,
+              child: CupertinoDatePicker(
+                mode: CupertinoDatePickerMode.date,
+                initialDateTime: selectedDate,
+                minimumDate: DateTime(2000),
+                maximumDate: DateTime(2101),
+                onDateTimeChanged: (DateTime newDate) {
+                  selectedDate = newDate;
+                },
               ),
             ),
-          ),
-          SizedBox(
-            height: 200,
-            child: CupertinoDatePicker(
-              mode: CupertinoDatePickerMode.date,
-              initialDateTime: selectedDate,
-              minimumDate: DateTime(2000),
-              maximumDate: DateTime(2101),
-              onDateTimeChanged: (DateTime newDate) {
-                selectedDate = newDate;
+            const Divider(height: 1),
+            TextButton(
+              onPressed: () {
+                ref.read(dateFilterProvider.notifier).setDateFrom(selectedDate);
+                setState(() {
+                  _dateFrom = selectedDate;
+                  startDateNotifier.value = selectedDate;
+                  _startDateController.text = DateFormat(
+                    'yyyy-MM-dd',
+                  ).format(selectedDate);
+                  // Reset end date if before new start date
+                  if (_dateTo != null && _dateTo!.isBefore(selectedDate)) {
+                    _dateTo = null;
+                    endDateNotifier.value = null;
+                    _endDateController.text = '';
+                    ref
+                        .read(dateFilterProvider.notifier)
+                        .setDateTo(selectedDate);
+                  }
+                });
+                Navigator.of(context).pop();
               },
+              child: const Text(
+                "Confirm",
+                style: TextStyle(fontSize: 18, color: Colors.blue),
+              ),
             ),
-          ),
-          const Divider(height: 1),
-          TextButton(
-            onPressed: () {
-              // Validate end date is after start date
-              if (_dateFrom != null &&
-                  selectedDate.isBefore(_dateFrom!)) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'End date must be after start date',
+            const Divider(height: 1),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                "Cancel",
+                style: TextStyle(fontSize: 18, color: Colors.blue),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _selectDepartureDate(BuildContext context) async {
+    final now = DateTime(
+      DateTime.now().year,
+      DateTime.now().month,
+      DateTime.now().day,
+    );
+
+    DateTime selectedDate = _dateTo ?? _dateFrom ?? now;
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                "Select End Date",
+                style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+              ),
+            ),
+            SizedBox(
+              height: 200,
+              child: CupertinoDatePicker(
+                mode: CupertinoDatePickerMode.date,
+                initialDateTime: selectedDate,
+                minimumDate: DateTime(2000),
+                maximumDate: DateTime(2101),
+                onDateTimeChanged: (DateTime newDate) {
+                  selectedDate = newDate;
+                },
+              ),
+            ),
+            const Divider(height: 1),
+            TextButton(
+              onPressed: () {
+                // Validate end date is after start date
+                if (_dateFrom != null && selectedDate.isBefore(_dateFrom!)) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('End date must be after start date'),
+                      backgroundColor: Colors.red,
                     ),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-                return;
-              }
-              ref
-                  .read(dateFilterProvider.notifier)
-                  .setDateTo(selectedDate);
-              setState(() {
-                _dateTo = selectedDate;
-                endDateNotifier.value = selectedDate;
-                _endDateController.text =
-                    DateFormat('yyyy-MM-dd').format(selectedDate);
-              });
-              Navigator.of(context).pop();
-            },
-            child: const Text(
-              "Confirm",
-              style: TextStyle(fontSize: 18, color: Colors.blue),
+                  );
+                  return;
+                }
+                ref.read(dateFilterProvider.notifier).setDateTo(selectedDate);
+                setState(() {
+                  _dateTo = selectedDate;
+                  endDateNotifier.value = selectedDate;
+                  _endDateController.text = DateFormat(
+                    'yyyy-MM-dd',
+                  ).format(selectedDate);
+                });
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                "Confirm",
+                style: TextStyle(fontSize: 18, color: Colors.blue),
+              ),
             ),
-          ),
-          const Divider(height: 1),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text(
-              "Cancel",
-              style: TextStyle(fontSize: 18, color: Colors.blue),
+            const Divider(height: 1),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                "Cancel",
+                style: TextStyle(fontSize: 18, color: Colors.blue),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-        ],
-      );
-    },
-  );
-}
+            const SizedBox(height: 8),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _getLoyalitySummary() async {
     try {
-      if (_startDateController.text.isEmpty || _endDateController.text.isEmpty) {
+      if (_startDateController.text.isEmpty ||
+          _endDateController.text.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Please select start and end dates.")),
         );
@@ -258,7 +249,9 @@ Future<void> _selectDepartureDate(BuildContext context) async {
       final guest = ref.read(selectedGuestProvider);
       setState(() => _isLoading = true);
 
-      await ref.read(memberSummaryProvider.notifier).getMemberSummary(
+      await ref
+          .read(memberSummaryProvider.notifier)
+          .getMemberSummary(
             playerId: guest!.mid,
             dateFrom: startDateNotifier.value != null
                 ? DateFormat('yyyy-MM-dd').format(startDateNotifier.value!)
@@ -284,14 +277,36 @@ Future<void> _selectDepartureDate(BuildContext context) async {
     return formatter.format(value);
   }
 
-  final Map<String, String> ratingImageMap = {
-    "CLASSIC": "assets/images/ratings/CLASSIC.png",
-    "DIAMOND": "assets/images/ratings/DIAMOND.png",
-    "GOLD": "assets/images/ratings/GOLD.png",
-    "INFINITY": "assets/images/ratings/INFINITY.png",
-    "PLATINUM": "assets/images/ratings/PLATINUM.png",
-    "SILVER": "assets/images/ratings/SILVER.png",
-  };
+  // final Map<String, String> ratingImageMap = {
+  //   "CLASSIC": "assets/images/ratings/CLASSIC.png",
+  //   "DIAMOND": "assets/images/ratings/DIAMOND.png",
+  //   "GOLD": "assets/images/ratings/GOLD.png",
+  //   "INFINITY": "assets/images/ratings/INFINITY.png",
+  //   "PLATINUM": "assets/images/ratings/PLATINUM.png",
+  //   "SILVER": "assets/images/ratings/SILVER.png",
+  // };
+ Color _getRatingColorBallys(String? rating) {
+    switch ((rating ?? '').toUpperCase()) {
+      case 'GOLD':
+        return const Color(0xFFDAA520);
+      case 'PLATINUM':
+        return const Color(0xFF707070);
+      case 'DIAMOND':
+        return const Color(0xFF1565C0);
+      case 'SILVER':
+        return const Color(0xFF9E9E9E);
+      case 'INFINITY':
+        return const Color(0xFF4A148C);
+      case 'CLASSIC':
+        return const Color(0xFF5D4037);
+      case 'PREMIER':
+        return const Color(0xFF1B5E20);
+      case 'RAFFELS CLUB':
+        return const Color(0xFF880E4F);
+      default:
+        return Colors.grey;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -327,14 +342,17 @@ Future<void> _selectDepartureDate(BuildContext context) async {
       _dateTo = dateFilter.dateTo;
     }
 
-    final String? imagePath = ratingImageMap[guest.gRating];
+    // final String? imagePath = ratingImageMap[guest.gRating];
 
     return Scaffold(
       appBar: AppBar(title: const Text("Member Summary")),
       body: Stack(
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 15.0),
+            padding: const EdgeInsets.symmetric(
+              vertical: 10.0,
+              horizontal: 15.0,
+            ),
             child: SingleChildScrollView(
               child: Column(
                 children: [
@@ -345,7 +363,9 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                         elevation: 5,
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
-                              vertical: 20.0, horizontal: 5.0),
+                            vertical: 20.0,
+                            horizontal: 5.0,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             mainAxisSize: MainAxisSize.min,
@@ -379,7 +399,8 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                                 child: guest.memImage2 != null
                                                     ? Image.memory(
                                                         base64Decode(
-                                                            guest.memImage2!),
+                                                          guest.memImage2!,
+                                                        ),
                                                         fit: BoxFit.contain,
                                                       )
                                                     : Image.asset(
@@ -399,9 +420,11 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                       radius: 70,
                                       backgroundImage: guest.memImage2 != null
                                           ? MemoryImage(
-                                              base64Decode(guest.memImage2!))
+                                              base64Decode(guest.memImage2!),
+                                            )
                                           : const AssetImage(
-                                              'assets/images/placeholder_image.jpg'),
+                                              'assets/images/placeholder_image.jpg',
+                                            ),
                                       backgroundColor: Colors.grey[200],
                                     ),
                                   ),
@@ -413,8 +436,9 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                   "${guest.mid} -  ${guest.memberName}",
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w900),
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w900,
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 5),
@@ -433,15 +457,19 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(Icons.calendar_today,
-                                      size: 16, color: Colors.grey),
+                                  const Icon(
+                                    Icons.calendar_today,
+                                    size: 16,
+                                    color: Colors.grey,
+                                  ),
                                   const SizedBox(width: 8),
                                   Text(
                                     "Last Visit on -  ${formatDate(guest.lastVisitDate)}",
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold),
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -452,27 +480,57 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                       Positioned(
                         top: 10,
                         left: 10,
-                        child: Card(
-                          elevation: 5,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(6)),
-                          child: Padding(
-                            padding: const EdgeInsets.all(0),
-                            child: SizedBox(
-                              width: 80,
-                              height: 30,
-                              child: Hero(
-                                tag: "rating-image",
-                                child: Image.asset(
-                                  imagePath ??
-                                      "assets/images/ratings/CLASSIC.png",
-                                  fit: BoxFit.contain,
+                        // child: Card(
+                        //   elevation: 5,
+                        //   shape: RoundedRectangleBorder(
+                        //     borderRadius: BorderRadius.circular(6),
+                        //   ),
+                          child:
+                              // Padding(
+                              //   padding: const EdgeInsets.all(0),
+                              //   child: SizedBox(
+                              //     width: 80,
+                              //     height: 30,
+                              //     child: Hero(
+                              //       tag: "rating-image",
+                              //       child: Image.asset(
+                              //         imagePath ??
+                              //             "assets/images/ratings/CLASSIC.png",
+                              //         fit: BoxFit.contain,
+                              //       ),
+                              //     ),
+                              //   ),
+                              // ),
+                              Hero(
+                                tag: "rating-image-${guest.mid}",
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _getRatingColorBallys(guest.gRating),
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.25),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Text(
+                                    guest.gRating ?? 'N/A',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
                         ),
-                      ),
+                    //  ),
                     ],
                   ),
 
@@ -493,16 +551,19 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                               ),
                               readOnly: true,
                               style: const TextStyle(
-                                  fontWeight: FontWeight.w900, fontSize: 15),
+                                fontWeight: FontWeight.w900,
+                                fontSize: 15,
+                              ),
                               decoration: InputDecoration(
                                 labelText: "Start Date",
                                 labelStyle: const TextStyle(
-                                    fontWeight: FontWeight.w900, fontSize: 18),
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 18,
+                                ),
                                 border: const OutlineInputBorder(),
                                 suffixIcon: IconButton(
                                   icon: const Icon(Icons.calendar_today),
-                                  onPressed: () =>
-                                      _selectArrivalDate(context),
+                                  onPressed: () => _selectArrivalDate(context),
                                 ),
                               ),
                             );
@@ -522,11 +583,15 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                               ),
                               readOnly: true,
                               style: const TextStyle(
-                                  fontWeight: FontWeight.w900, fontSize: 15),
+                                fontWeight: FontWeight.w900,
+                                fontSize: 15,
+                              ),
                               decoration: InputDecoration(
                                 labelText: "End Date",
                                 labelStyle: const TextStyle(
-                                    fontWeight: FontWeight.w900, fontSize: 18),
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 18,
+                                ),
                                 border: const OutlineInputBorder(),
                                 suffixIcon: IconButton(
                                   icon: const Icon(Icons.calendar_today),
@@ -552,18 +617,25 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                         backgroundColor: Constants.kSecondaryColor,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         padding: const EdgeInsets.symmetric(
-                            vertical: 16, horizontal: 20),
+                          vertical: 16,
+                          horizontal: 20,
+                        ),
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.search, size: 20),
                           SizedBox(width: 10),
-                          Text("Search",
-                              style: TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.bold)),
+                          Text(
+                            "Search",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -576,8 +648,10 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                       ? Container(
                           height: 200,
                           alignment: Alignment.center,
-                          child: const Text("No data available",
-                              style: TextStyle(color: Colors.grey)),
+                          child: const Text(
+                            "No data available",
+                            style: TextStyle(color: Colors.grey),
+                          ),
                         )
                       : SizedBox(
                           width: double.infinity,
@@ -596,8 +670,8 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                       Text(
                                         "Total Cash In (Est):",
                                         style: TextStyle(
-                                          fontSize: fontSettings.fontSize+3,
-                                          fontWeight:  fontSettings.fontWeight,
+                                          fontSize: fontSettings.fontSize + 3,
+                                          fontWeight: fontSettings.fontWeight,
                                         ),
                                       ),
                                       Text(
@@ -605,11 +679,11 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                             ? _formatAmount(table1.mDrop)
                                             : "N/A",
                                         style: TextStyle(
-                                          fontSize: fontSettings.fontSize+3,
-                                          fontWeight:  fontSettings.fontWeight,
+                                          fontSize: fontSettings.fontSize + 3,
+                                          fontWeight: fontSettings.fontWeight,
                                           fontFamily: 'monospace',
                                           fontFeatures: const [
-                                            FontFeature.tabularFigures()
+                                            FontFeature.tabularFigures(),
                                           ],
                                         ),
                                       ),
@@ -625,8 +699,8 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                       Text(
                                         "Total Cash Out (Est):",
                                         style: TextStyle(
-                                           fontSize: fontSettings.fontSize+3,
-                                          fontWeight:  fontSettings.fontWeight,
+                                          fontSize: fontSettings.fontSize + 3,
+                                          fontWeight: fontSettings.fontWeight,
                                         ),
                                       ),
                                       Text(
@@ -634,11 +708,11 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                             ? _formatAmount(table1.cashOut)
                                             : "N/A",
                                         style: TextStyle(
-                                           fontSize: fontSettings.fontSize+3,
-                                          fontWeight:  fontSettings.fontWeight,
+                                          fontSize: fontSettings.fontSize + 3,
+                                          fontWeight: fontSettings.fontWeight,
                                           fontFamily: 'monospace',
                                           fontFeatures: const [
-                                            FontFeature.tabularFigures()
+                                            FontFeature.tabularFigures(),
                                           ],
                                         ),
                                       ),
@@ -656,9 +730,10 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                             ? "Win (Est):"
                                             : "Loss (Est):",
                                         style: TextStyle(
-                                           fontSize: fontSettings.fontSize+3,
-                                          fontWeight:  fontSettings.fontWeight,
-                                          color: table1 != null && table1.res >= 0
+                                          fontSize: fontSettings.fontSize + 3,
+                                          fontWeight: fontSettings.fontWeight,
+                                          color:
+                                              table1 != null && table1.res >= 0
                                               ? Colors.green
                                               : Colors.red,
                                         ),
@@ -668,14 +743,15 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                             ? _formatAmount(table1.res.abs())
                                             : "N/A",
                                         style: TextStyle(
-                                           fontSize: fontSettings.fontSize+3,
-                                          fontWeight:  fontSettings.fontWeight,
+                                          fontSize: fontSettings.fontSize + 3,
+                                          fontWeight: fontSettings.fontWeight,
                                           fontFamily: 'monospace',
-                                          color: table1 != null && table1.res >= 0
+                                          color:
+                                              table1 != null && table1.res >= 0
                                               ? Colors.green
                                               : Colors.red,
                                           fontFeatures: const [
-                                            FontFeature.tabularFigures()
+                                            FontFeature.tabularFigures(),
                                           ],
                                         ),
                                       ),
@@ -709,85 +785,96 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                             // Header Row
                             TableRow(
                               decoration: BoxDecoration(
-                                color:
-                                    Constants.kPrimaryColor.withAlpha(50),
+                                color: Constants.kPrimaryColor.withAlpha(50),
                               ),
-                              children: [
-                                "DESCRIPTION",
-                                "IN",
-                                "OUT",
-                                "TDATE",
-                                "TTIME",
-                                "CURRENCY",
-                                "INSERT DATE",
-                                "RN",
-                              ]
-                                  .map(
-                                    (header) => Padding(
-                                      padding: const EdgeInsets.all(8.0),
-                                      child: Text(
-                                        header,
-                                        style: TextStyle(
-                                          fontSize: fontSettings.fontSize,
-                                          fontWeight: FontWeight.w900,
+                              children:
+                                  [
+                                        "DESCRIPTION",
+                                        "IN",
+                                        "OUT",
+                                        "TDATE",
+                                        "TTIME",
+                                        "CURRENCY",
+                                        "INSERT DATE",
+                                        "RN",
+                                      ]
+                                      .map(
+                                        (header) => Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Text(
+                                            header,
+                                            style: TextStyle(
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
+                                      )
+                                      .toList(),
                             ),
 
                             // Data Rows
                             ...memberSummary.map((entry) {
                               return TableRow(
                                 children: [
-                                  _tableCell(entry.descrip.isNotEmpty
-                                      ? entry.descrip
-                                      : "N/A", fontSettings,
-                                      align: TextAlign.start),
                                   _tableCell(
-                                      entry.inAmount.isNotEmpty
-                                          ? entry.inAmount
-                                          : "N/A",
-                                      fontSettings,
-                                      align: TextAlign.end,
-                                      mono: true),
+                                    entry.descrip.isNotEmpty
+                                        ? entry.descrip
+                                        : "N/A",
+                                    fontSettings,
+                                    align: TextAlign.start,
+                                  ),
                                   _tableCell(
-                                      entry.outAmount.isNotEmpty
-                                          ? entry.outAmount
-                                          : "N/A",
-                                      fontSettings,
-                                      align: TextAlign.end,
-                                      mono: true),
+                                    entry.inAmount.isNotEmpty
+                                        ? entry.inAmount
+                                        : "N/A",
+                                    fontSettings,
+                                    align: TextAlign.end,
+                                    mono: true,
+                                  ),
                                   _tableCell(
-                                      entry.tDate.isNotEmpty
-                                          ? entry.tDate
-                                          : "N/A",
-                                      fontSettings,
-                                      align: TextAlign.end,
-                                      mono: true),
+                                    entry.outAmount.isNotEmpty
+                                        ? entry.outAmount
+                                        : "N/A",
+                                    fontSettings,
+                                    align: TextAlign.end,
+                                    mono: true,
+                                  ),
                                   _tableCell(
-                                      entry.tTime.isNotEmpty
-                                          ? entry.tTime
-                                          : "N/A",
-                                      fontSettings,
-                                      align: TextAlign.end,
-                                      mono: true),
+                                    entry.tDate.isNotEmpty
+                                        ? entry.tDate
+                                        : "N/A",
+                                    fontSettings,
+                                    align: TextAlign.end,
+                                    mono: true,
+                                  ),
                                   _tableCell(
-                                      entry.cur.isNotEmpty
-                                          ? entry.cur
-                                          : "N/A",
-                                      fontSettings,
-                                      align: TextAlign.end),
+                                    entry.tTime.isNotEmpty
+                                        ? entry.tTime
+                                        : "N/A",
+                                    fontSettings,
+                                    align: TextAlign.end,
+                                    mono: true,
+                                  ),
                                   _tableCell(
-                                      entry.insertDate.isNotEmpty
-                                          ? entry.insertDate
-                                          : "N/A",
-                                      fontSettings,
-                                      align: TextAlign.end,
-                                      mono: true),
-                                  _tableCell(entry.rn.toString(), fontSettings,
-                                      align: TextAlign.end, mono: true),
+                                    entry.cur.isNotEmpty ? entry.cur : "N/A",
+                                    fontSettings,
+                                    align: TextAlign.end,
+                                  ),
+                                  _tableCell(
+                                    entry.insertDate.isNotEmpty
+                                        ? entry.insertDate
+                                        : "N/A",
+                                    fontSettings,
+                                    align: TextAlign.end,
+                                    mono: true,
+                                  ),
+                                  _tableCell(
+                                    entry.rn.toString(),
+                                    fontSettings,
+                                    align: TextAlign.end,
+                                    mono: true,
+                                  ),
                                 ],
                               );
                             }),
@@ -804,11 +891,13 @@ Future<void> _selectDepartureDate(BuildContext context) async {
           if (_isLoading)
             Container(
               decoration: const BoxDecoration(
-                  color: Color.fromARGB(135, 117, 115, 115)),
+                color: Color.fromARGB(135, 117, 115, 115),
+              ),
               child: const Center(
                 child: RefreshProgressIndicator(
                   valueColor: AlwaysStoppedAnimation<Color>(
-                      Constants.kSecondaryColor),
+                    Constants.kSecondaryColor,
+                  ),
                 ),
               ),
             ),

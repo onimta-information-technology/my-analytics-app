@@ -527,6 +527,7 @@ final formattedDate = runDateState.runDate != null
                             color: Colors.blue,
                           ),
                         // Replace the formattedDate == null check with:
+                        const SizedBox(width: 6),
 runDateState.isLoading
     ? const SizedBox(
         height: 16,

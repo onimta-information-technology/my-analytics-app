@@ -96,12 +96,18 @@ class _ReservationPdfButtonState extends State<ReservationPdfButton> {
     final pdf = pw.Document();
 
     // ── Colour palette ────────────────────────────────────────────────────
-    const headerBg  = PdfColor.fromInt(0xFF1B5E20); // deep green
-    const sectionBg = PdfColor.fromInt(0xFFE8F5E9); // light green tint
-    const accentCol = PdfColor.fromInt(0xFF2E7D32); // medium green
-    const lineColor = PdfColor.fromInt(0xFFB2DFDB);
-    const textDark  = PdfColor.fromInt(0xFF212121);
-    const textGrey  = PdfColor.fromInt(0xFF616161);
+    const headerBg   = PdfColor.fromInt(0xFF1B5E20); // deep green
+    const sectionBg  = PdfColor.fromInt(0xFFE8F5E9); // light green tint
+    const accentCol  = PdfColor.fromInt(0xFF2E7D32); // medium green
+    const lineColor  = PdfColor.fromInt(0xFFB2DFDB);
+    const textDark   = PdfColor.fromInt(0xFF212121);
+    const textGrey   = PdfColor.fromInt(0xFF616161);
+    // Card colours — matches Flutter view screen
+    const cardBg     = PdfColor.fromInt(0xFFE4E0E0); // same grey as Card color in view
+    const cardBorder = PdfColor.fromInt(0xFFBDBDBD);
+    // Flight accent colours
+    const blueCol    = PdfColor.fromInt(0xFF1565C0); // departure blue
+    const greenCol   = PdfColor.fromInt(0xFF2E7D32); // return green
 
     // ── Text styles ───────────────────────────────────────────────────────
     final titleStyle = pw.TextStyle(
@@ -119,14 +125,36 @@ class _ReservationPdfButtonState extends State<ReservationPdfButton> {
     final valueStyle = pw.TextStyle(
       font: ttf, fontSize: 10, color: textGrey,
     );
-    final smallBold = pw.TextStyle(
-      font: ttfBold, fontSize: 9, color: textDark,
-    );
-    final smallVal = pw.TextStyle(
-      font: ttfLight, fontSize: 9, color: textGrey,
-    );
     final footerStyle = pw.TextStyle(
       font: ttfLight, fontSize: 8, color: textGrey,
+    );
+    // Card-specific styles
+    final cardTitleStyle = pw.TextStyle(
+      font: ttfBold, fontSize: 12, color: textDark,
+    );
+    final cardLabelStyle = pw.TextStyle(
+      font: ttfBold, fontSize: 10, color: textDark,
+    );
+    final cardValueStyle = pw.TextStyle(
+      font: ttf, fontSize: 10, color: textDark,
+    );
+    final cardCostStyle = pw.TextStyle(
+      font: ttfBold, fontSize: 11, color: textDark,
+    );
+    final flightRouteStyle = pw.TextStyle(
+      font: ttfBold, fontSize: 13, color: textDark,
+    );
+    final flightLabelStyle = pw.TextStyle(
+      font: ttfBold, fontSize: 10, color: textDark,
+    );
+    final flightValueStyle = pw.TextStyle(
+      font: ttf, fontSize: 10, color: textGrey,
+    );
+    final guestLabelStyle = pw.TextStyle(
+      font: ttfBold, fontSize: 10, color: textGrey,
+    );
+    final guestCountStyle = pw.TextStyle(
+      font: ttfBold, fontSize: 13, color: textDark,
     );
 
     // ── Helper: divider ───────────────────────────────────────────────────
@@ -160,147 +188,316 @@ class _ReservationPdfButtonState extends State<ReservationPdfButton> {
           ),
         );
 
-    // ── Hotel table ───────────────────────────────────────────────────────
-    pw.Widget hotelTable() {
+    // ── Helper: card-style rich text row (label: value) ───────────────────
+    pw.Widget cardRichRow(String label, String value) => pw.RichText(
+          text: pw.TextSpan(
+            children: [
+              pw.TextSpan(text: '$label: ', style: cardLabelStyle),
+              pw.TextSpan(text: value, style: cardValueStyle),
+            ],
+          ),
+        );
+
+    // ══════════════════════════════════════════════════════════════════════
+    // ── Hotel Cards — matches view screen Card layout exactly ─────────────
+    // ══════════════════════════════════════════════════════════════════════
+    pw.Widget hotelCards() {
       if (widget.hotels.isEmpty) {
         return pw.Padding(
-          padding: const pw.EdgeInsets.all(10),
+          padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           child: pw.Text('No hotels selected.', style: valueStyle),
         );
       }
 
-      final headers = [
-        'Hotel', 'Category', 'Room Type',
-        'Guests', 'Rooms', 'Nights', 'Est. Cost',
-      ];
-
-      final rows = widget.hotels.map((h) => [
-        h.hotelName        ?? 'N/A',
-        h.roomCategoryName ?? 'N/A',
-        h.roomTypeName     ?? 'N/A',
-        '${h.guestCount}',
-        '${h.roomCount}',
-        '${h.noOfNights}',
-        '${h.selectedCost ?? 'N/A'}',
-      ]).toList();
-
-      return pw.Padding(
-        padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        child: pw.Table(
-          border: pw.TableBorder.all(color: lineColor, width: 0.5),
-          columnWidths: const {
-            0: pw.FlexColumnWidth(2.2),
-            1: pw.FlexColumnWidth(1.5),
-            2: pw.FlexColumnWidth(1.5),
-            3: pw.FlexColumnWidth(0.8),
-            4: pw.FlexColumnWidth(0.8),
-            5: pw.FlexColumnWidth(0.8),
-            6: pw.FlexColumnWidth(1.4),
-          },
-          children: [
-            pw.TableRow(
-              decoration: const pw.BoxDecoration(color: sectionBg),
-              children: headers
-                  .map((h) => pw.Padding(
-                        padding: const pw.EdgeInsets.all(4),
-                        child: pw.Text(h, style: smallBold),
-                      ))
-                  .toList(),
+      return pw.Column(
+        children: widget.hotels.map((hotel) {
+          return pw.Container(
+            width: double.infinity,
+            margin: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 6),
+            decoration: pw.BoxDecoration(
+              color: cardBg,
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+              border: pw.Border.all(color: cardBorder, width: 0.5),
             ),
-            ...rows.map((row) => pw.TableRow(
-                  children: row
-                      .map((cell) => pw.Padding(
-                            padding: const pw.EdgeInsets.all(4),
-                            child: pw.Text(cell, style: smallVal),
-                          ))
-                      .toList(),
-                )),
-          ],
-        ),
+            padding: const pw.EdgeInsets.all(12),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // Hotel name — matches view screen title text
+                pw.Text(
+                  hotel.hotelName ?? 'N/A',
+                  style: cardTitleStyle,
+                ),
+                pw.SizedBox(height: 5),
+
+                // Category
+                cardRichRow('Category', hotel.roomCategoryName ?? 'N/A'),
+                pw.SizedBox(height: 4),
+
+                // Room Type
+                cardRichRow('Room Type', hotel.roomTypeName ?? 'N/A'),
+                pw.SizedBox(height: 5),
+
+                // Guests | Nights | Rooms — inline row like view screen
+                pw.Row(
+                  children: [
+                    pw.Text(
+                      'Guests: ${hotel.guestCount}',
+                      style: cardValueStyle,
+                    ),
+                    pw.SizedBox(width: 16),
+                    pw.Text(
+                      'Nights: ${hotel.noOfNights}',
+                      style: cardValueStyle,
+                    ),
+                    pw.SizedBox(width: 16),
+                    pw.Text(
+                      'Rooms: ${hotel.roomCount}',
+                      style: cardValueStyle,
+                    ),
+                  ],
+                ),
+                pw.SizedBox(height: 6),
+
+                // Estimated Cost — slightly larger, like view screen
+                pw.Text(
+                  'Estimated Cost: ${hotel.selectedCost ?? 'N/A'}',
+                  style: cardCostStyle,
+                ),
+              ],
+            ),
+          );
+        }).toList(),
       );
     }
 
-    // ── Flight table ──────────────────────────────────────────────────────
-    pw.Widget flightTable() {
+    // ══════════════════════════════════════════════════════════════════════
+    // ── Flight Cards — matches FlightCard widget layout exactly ───────────
+    // ══════════════════════════════════════════════════════════════════════
+    pw.Widget flightCards() {
       if (widget.flights.isEmpty) {
         return pw.Padding(
-          padding: const pw.EdgeInsets.all(10),
+          padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           child: pw.Text('No air tickets.', style: valueStyle),
         );
       }
 
-      final headers = [
-        'Leg', 'From Code', 'From City',
-        'To Code', 'To City', 'Dep. Date', 'Arr. Date', 'Class', 'Guests',
-      ];
+      return pw.Column(
+        children: widget.flights.asMap().entries.map((entry) {
+          final flight = entry.value;
+          final dep = flight.airports?.departure;
+          final ret = flight.airports?.returnFlight;
 
-      final List<List<String>> rows = [];
-      for (final f in widget.flights) {
-        final dep = f.airports?.departure;
-        final ret = f.airports?.returnFlight;
+          // Build departure route string: "CMB → DXB"
+          final depFrom = dep?.dFrom.airportCode.isNotEmpty == true
+              ? dep!.dFrom.airportCode
+              : 'N/A';
+          final depTo = dep?.dTo.airportCode.isNotEmpty == true
+              ? dep!.dTo.airportCode
+              : 'N/A';
 
-        rows.add([
-          'Departure',
-          dep?.dFrom.airportCode.isNotEmpty == true ? dep!.dFrom.airportCode : 'N/A',
-          dep?.dFrom.cityName.isNotEmpty    == true ? dep!.dFrom.cityName    : 'N/A',
-          dep?.dTo.airportCode.isNotEmpty   == true ? dep!.dTo.airportCode   : 'N/A',
-          dep?.dTo.cityName.isNotEmpty      == true ? dep!.dTo.cityName      : 'N/A',
-          f.departureDate != null ? _fmtDate(f.departureDate!) : 'N/A',
-          f.arrivalDate   != null ? _fmtDate(f.arrivalDate!)   : 'N/A',
-          f.airTicketClassName.isNotEmpty   ? f.airTicketClassName            : 'N/A',
-          '${f.guestCount}',
-        ]);
+          // Build return route string if round trip
+          final retFrom = ret?.rFrom.airportCode.isNotEmpty == true
+              ? ret!.rFrom.airportCode
+              : null;
+          final retTo = ret?.rTo.airportCode.isNotEmpty == true
+              ? ret!.rTo.airportCode
+              : null;
+          final hasReturn = flight.isRoundTrip && ret != null;
 
-        if (f.isRoundTrip && ret != null) {
-          rows.add([
-            'Return',
-            ret.rFrom.airportCode.isNotEmpty ? ret.rFrom.airportCode : 'N/A',
-            ret.rFrom.cityName.isNotEmpty    ? ret.rFrom.cityName    : 'N/A',
-            ret.rTo.airportCode.isNotEmpty   ? ret.rTo.airportCode   : 'N/A',
-            ret.rTo.cityName.isNotEmpty      ? ret.rTo.cityName      : 'N/A',
-            f.departureDate != null ? _fmtDate(f.departureDate!) : 'N/A',
-            f.arrivalDate   != null ? _fmtDate(f.arrivalDate!)   : 'N/A',
-            f.airTicketClassName.isNotEmpty  ? f.airTicketClassName  : 'N/A',
-            '${f.guestCount}',
-          ]);
-        }
-      }
+          final depDate = flight.departureDate != null
+              ? _fmtDate(flight.departureDate!)
+              : 'N/A';
+          final arrDate = flight.arrivalDate != null
+              ? _fmtDate(flight.arrivalDate!)
+              : 'N/A';
 
-      return pw.Padding(
-        padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        child: pw.Table(
-          border: pw.TableBorder.all(color: lineColor, width: 0.5),
-          columnWidths: const {
-            0: pw.FlexColumnWidth(1.2),
-            1: pw.FlexColumnWidth(1.0),
-            2: pw.FlexColumnWidth(1.4),
-            3: pw.FlexColumnWidth(1.0),
-            4: pw.FlexColumnWidth(1.4),
-            5: pw.FlexColumnWidth(1.2),
-            6: pw.FlexColumnWidth(1.2),
-            7: pw.FlexColumnWidth(1.2),
-            8: pw.FlexColumnWidth(0.7),
-          },
-          children: [
-            pw.TableRow(
-              decoration: const pw.BoxDecoration(color: sectionBg),
-              children: headers
-                  .map((h) => pw.Padding(
-                        padding: const pw.EdgeInsets.all(4),
-                        child: pw.Text(h, style: smallBold),
-                      ))
-                  .toList(),
+          return pw.Container(
+            width: double.infinity,
+            margin: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 6),
+            decoration: pw.BoxDecoration(
+              // color: PdfColors.white,
+               color: cardBg,
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+              border: pw.Border.all(color: cardBorder, width: 0.5),
+              boxShadow: [
+                const pw.BoxShadow(
+                  color: PdfColor.fromInt(0x1A000000),
+                  blurRadius: 2,
+                  offset: PdfPoint(0, 1),
+                ),
+              ],
             ),
-            ...rows.map((row) => pw.TableRow(
-                  children: row
-                      .map((cell) => pw.Padding(
-                            padding: const pw.EdgeInsets.all(4),
-                            child: pw.Text(cell, style: smallVal),
-                          ))
-                      .toList(),
-                )),
-          ],
-        ),
+            padding: const pw.EdgeInsets.all(12),
+            child: pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                // ── Left column: routes + class + dates + cost ────────────
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      // Departure route with coloured bullet
+                      pw.Row(
+                        crossAxisAlignment: pw.CrossAxisAlignment.center,
+                        children: [
+                          // Blue circle bullet (mimics flight_takeoff icon colour)
+                          pw.Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const pw.BoxDecoration(
+                              color: blueCol,
+                              shape: pw.BoxShape.circle,
+                            ),
+                          ),
+                          pw.SizedBox(width: 6),
+                          // Use plain ASCII '>' — Nunito does not include U+2192
+                          pw.Text(
+                            '$depFrom  >  $depTo',
+                            style: flightRouteStyle.copyWith(color: blueCol),
+                          ),
+                        ],
+                      ),
+
+                      // Return route (only if round trip)
+                      if (hasReturn) ...[
+                        pw.SizedBox(height: 4),
+                        pw.Row(
+                          crossAxisAlignment: pw.CrossAxisAlignment.center,
+                          children: [
+                            pw.Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const pw.BoxDecoration(
+                                color: greenCol,
+                                shape: pw.BoxShape.circle,
+                              ),
+                            ),
+                            pw.SizedBox(width: 6),
+                            pw.Text(
+                              '${retFrom ?? 'N/A'}  >  ${retTo ?? 'N/A'}',
+                              style: flightRouteStyle.copyWith(
+                                color: greenCol,
+                                fontWeight: pw.FontWeight.normal,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+
+                      pw.SizedBox(height: 6),
+
+                      // Class
+                      pw.RichText(
+                        text: pw.TextSpan(
+                          children: [
+                            pw.TextSpan(
+                              text: 'Class: ',
+                              style: flightLabelStyle,
+                            ),
+                            pw.TextSpan(
+                              text: flight.airTicketClassName.isNotEmpty
+                                  ? flight.airTicketClassName
+                                  : 'N/A',
+                              style: flightLabelStyle,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      pw.SizedBox(height: 6),
+
+                      // Arrival Date — matches FlightCard label
+                      pw.RichText(
+                        text: pw.TextSpan(
+                          children: [
+                            pw.TextSpan(
+                              text: 'Arrival Date: ',
+                              style: flightLabelStyle,
+                            ),
+                            pw.TextSpan(
+                              text: arrDate,
+                              style: flightValueStyle,
+                            ),
+                          ],
+                        ),
+                      ),
+                      pw.SizedBox(height: 4),
+
+                      // Departure Date
+                      pw.RichText(
+                        text: pw.TextSpan(
+                          children: [
+                            pw.TextSpan(
+                              text: 'Departure Date: ',
+                              style: flightLabelStyle,
+                            ),
+                            pw.TextSpan(
+                              text: depDate,
+                              style: flightValueStyle,
+                            ),
+                          ],
+                        ),
+                      ),
+                      pw.SizedBox(height: 4),
+
+                      // Estimated Cost
+                      pw.RichText(
+                        text: pw.TextSpan(
+                          children: [
+                            pw.TextSpan(
+                              text: 'Estimated Cost: ',
+                              style: flightLabelStyle,
+                            ),
+                            pw.TextSpan(
+                              text: '${flight.selectedCost ?? 'N/A'}',
+                              style: flightValueStyle,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // ── Right column: guest icon + label + count ──────────
+                // Matches FlightCard's right-side Column layout
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  children: [
+                    // Clean grey circle — no emoji, just a solid dot
+                    pw.Container(
+                      width: 28,
+                      height: 28,
+                      decoration: const pw.BoxDecoration(
+                        color: PdfColor.fromInt(0xFF9E9E9E),
+                        shape: pw.BoxShape.circle,
+                      ),
+                      child: pw.Center(
+                        child: pw.Text(
+                          'G',
+                          style: pw.TextStyle(
+                            font: ttfBold,
+                            fontSize: 13,
+                            color: PdfColors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    pw.SizedBox(height: 4),
+                    pw.Text('Guests', style: guestLabelStyle),
+                    pw.SizedBox(height: 4),
+                    pw.Text(
+                      '${flight.guestCount}',
+                      style: guestCountStyle,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        }).toList(),
       );
     }
 
@@ -325,7 +522,7 @@ class _ReservationPdfButtonState extends State<ReservationPdfButton> {
                   'Reservation No: ${widget.reservation.reservNo}',
                   style: subtitleStyle,
                 ),
-                 pw.Text(
+                pw.Text(
                   'Manual No: ${widget.reservation.reservationnewnumber}',
                   style: subtitleStyle,
                 ),
@@ -340,58 +537,48 @@ class _ReservationPdfButtonState extends State<ReservationPdfButton> {
           kv('Member ID',   widget.reservation.mid),
           kv('Member Name', widget.reservation.mName),
           kv('Rating',      widget.reservation.gRating ?? 'N/A'),
+          kv('Remarks',      widget.reservation.remarks ?? 'N/A'),
           divider(),
 
-          // 2. Hotel & Room Details
+          // 2. Hotel & Room Details — card layout matching view screen
           sectionHeader('Hotel & Room Details'),
-          pw.SizedBox(height: 4),
-          hotelTable(),
+          pw.SizedBox(height: 2),
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 6),
+            child: hotelCards(),
+          ),
           divider(),
 
           // 3. Stay Dates
           sectionHeader('Stay Dates'),
-          pw.SizedBox(height: 4),
+          pw.SizedBox(height: 2),
           kv('Arrival Date',   _fmtDate(widget.reservation.arrDate)),
           kv('Departure Date', _fmtDate(widget.reservation.depDate)),
           divider(),
 
-          // 4. Air Ticket Details (conditional)
+          // 4. Air Ticket Details — card layout matching FlightCard widget
           if (widget.flights.isNotEmpty) ...[
             sectionHeader('Air Ticket Details'),
-            pw.SizedBox(height: 4),
-            flightTable(),
-            pw.SizedBox(height: 6),
-            ...widget.flights.asMap().entries.map((entry) {
-              final i = entry.key + 1;
-              final f = entry.value;
-              return kv(
-                'Ticket $i Est. Cost',
-                '${f.selectedCost ?? 'N/A'}',
-              );
-            }),
-            divider(),
-          ],
-
-          // 5. Remarks (conditional)
-          if (widget.reservation.remarks.trim().isNotEmpty) ...[
-            sectionHeader('Remarks'),
-            pw.SizedBox(height: 4),
+            pw.SizedBox(height: 2),
             pw.Padding(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              child: pw.Text(widget.reservation.remarks, style: valueStyle),
+              padding: const pw.EdgeInsets.symmetric(horizontal: 6),
+              child: flightCards(),
             ),
             divider(),
           ],
 
-          // 6. Manual Reservation No (conditional)
-          // if ((widget.reservation.reservationnewnumber ?? '').trim().isNotEmpty) ...[
-          //   sectionHeader('Manual Reservation No'),
+          // 5. Remarks (conditional)
+          // if (widget.reservation.remarks.trim().isNotEmpty) ...[
+          //   sectionHeader('Remarks'),
           //   pw.SizedBox(height: 4),
-          //   kv('Manual No', widget.reservation.reservationnewnumber!),
+          //   pw.Padding(
+          //     padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          //     child: pw.Text(widget.reservation.remarks, style: valueStyle),
+          //   ),
           //   divider(),
           // ],
 
-          // 7. Approval Information
+          // 6. Approval Information
           sectionHeader('Approval Information'),
           pw.SizedBox(height: 4),
           kv('Approved By',      widget.reservation.isAppBy ?? 'N/A'),

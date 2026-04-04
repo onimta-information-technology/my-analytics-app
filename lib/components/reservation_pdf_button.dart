@@ -520,11 +520,11 @@ class _ReservationPdfButtonState extends State<ReservationPdfButton> {
                 pw.SizedBox(height: 4),
                 pw.Text(
                   'Reservation No: ${widget.reservation.reservNo}',
-                  style: subtitleStyle,
+                  style: pw.TextStyle(fontSize: 16),
                 ),
                 pw.Text(
                   'Manual No: ${widget.reservation.reservationnewnumber}',
-                  style: subtitleStyle,
+                  style: pw.TextStyle(fontSize: 16),
                 ),
               ],
             ),

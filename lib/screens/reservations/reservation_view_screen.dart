@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:ballys_reservation_app/components/flight_card.dart';
 import 'package:ballys_reservation_app/components/guest_deatils_view_spGift.dart';
 import 'package:ballys_reservation_app/components/guest_details_card.dart';
+import 'package:ballys_reservation_app/components/reservation_pdf_button.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
@@ -24,6 +25,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ReservationViewScreen extends ConsumerStatefulWidget {
   const ReservationViewScreen({super.key});
@@ -125,7 +127,6 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
     final hourStr = hour12.toString().padLeft(2, '0');
     return '$day/$month/$year  $hourStr:$minute $period';
   }
-
   // ── Status helpers ─────────────────────────────────────────────────────
   Color _getStatusColor(String status) {
     switch (status) {
@@ -1475,6 +1476,13 @@ TextFormField(
       ),
     ),
 ),
+const SizedBox(height: 10.0),
+if (selectedReservation?.requestStatus == 'Approved')
+  ReservationPdfButton(
+    reservation: selectedReservation!,
+    hotels: selectedHotels,
+    flights: selectedFlights,
+  ),
 const SizedBox(height: 10.0),
                   // ════════════════════════════════════════════════════
                   // ── Action Info Card (Checked / Approved / Rejected) ─

@@ -17,6 +17,7 @@ class GiftNotifier extends StateNotifier<GiftState> {
       chekbygift: [],
       approvedgift: [],
       rejectgift: [],
+      issuedgift: [],
       guestGiftData: [],
       giftForList: [],
       prvgiftList: [],
@@ -39,6 +40,9 @@ class GiftNotifier extends StateNotifier<GiftState> {
         case 8891:
           state = state.copyWith(approvedgift: gifttList);
           break;
+        case 88891:
+          state = state.copyWith(issuedgift: gifttList);
+          break;
         case 8893:
           state = state.copyWith(rejectgift: gifttList);
           break;
@@ -55,6 +59,9 @@ class GiftNotifier extends StateNotifier<GiftState> {
           break;
         case 8891:
           state = state.copyWith(approvedgift: []);
+          break;
+        case 88891:
+          state = state.copyWith(issuedgift: []);
           break;
         case 8893:
           state = state.copyWith(rejectgift: []);
@@ -515,6 +522,7 @@ class GiftState {
   final List<SpecialGiftRequest> chekbygift;
   final List<SpecialGiftRequest> approvedgift;
   final List<SpecialGiftRequest> rejectgift;
+  final List<SpecialGiftRequest> issuedgift;
   final List<GestGiftData> guestGiftData;
   final List<GiftType> giftForList;
   final List<PrevGift> prvgiftList;
@@ -526,6 +534,7 @@ class GiftState {
     this.chekbygift = const [],
     this.approvedgift = const [],
     this.rejectgift = const [],
+    this.issuedgift = const [],
     this.guestGiftData = const [],
     this.giftForList = const [],
     this.prvgiftList = const [],
@@ -538,6 +547,7 @@ class GiftState {
     List<SpecialGiftRequest>? chekbygift,
     List<SpecialGiftRequest>? approvedgift,
     List<SpecialGiftRequest>? rejectgift,
+    List<SpecialGiftRequest>? issuedgift,
     List<GestGiftData>? guestGiftData,
     List<GiftType>? giftForList,
     List<PrevGift>? prvgiftList,
@@ -549,6 +559,7 @@ class GiftState {
       approvedgift: approvedgift ?? this.approvedgift,
       chekbygift: chekbygift ?? this.chekbygift,
       rejectgift: rejectgift ?? this.rejectgift,
+      issuedgift: issuedgift ?? this.issuedgift,
       guestGiftData: guestGiftData ?? this.guestGiftData,
       giftForList: giftForList ?? this.giftForList,
       prvgiftList: prvgiftList ?? this.prvgiftList,

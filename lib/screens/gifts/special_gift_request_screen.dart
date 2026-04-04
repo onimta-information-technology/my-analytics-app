@@ -143,13 +143,14 @@ class _SpecialGiftRequestScreenState
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final giftSp = ref.read(giftProvider);
       if (giftSp.pendinggift.isNotEmpty ||
           giftSp.chekbygift.isNotEmpty ||
           giftSp.approvedgift.isNotEmpty ||
+          giftSp.issuedgift.isNotEmpty ||
           giftSp.rejectgift.isNotEmpty) {
         return;
       }
@@ -187,6 +188,7 @@ class _SpecialGiftRequestScreenState
           .getSpecialGiftData(88790, salesCode);
       await ref.read(giftProvider.notifier).getSpecialGiftData(8891, salesCode);
       await ref.read(giftProvider.notifier).getSpecialGiftData(8893, salesCode);
+      await ref.read(giftProvider.notifier).getSpecialGiftData(88891, salesCode);
     } finally {
       setState(() => _isLoading = false);
     }
@@ -262,6 +264,7 @@ class _SpecialGiftRequestScreenState
               const Color.fromARGB(255, 92, 17, 255),
             ),
             _buildTab('Approved', giftsp.approvedgift.length, Colors.green),
+            _buildTab('Issued', giftsp.issuedgift.length, Colors.green),
             _buildTab('Rejected', giftsp.rejectgift.length, Colors.red),
           ],
         ),
@@ -287,6 +290,12 @@ class _SpecialGiftRequestScreenState
                 giftsp.approvedgift,
                 isPending: false,
                 isApproved: true,
+                isChecked: false,
+              ),
+               _buildGiftList(
+                giftsp.issuedgift,
+                isPending: false,
+                isApproved: false,
                 isChecked: false,
               ),
               _buildGiftList(

@@ -148,7 +148,7 @@ class _BirthdayGiftRequestScreenState
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final birthdayGiftSp = ref.read(birthdayGiftIncreesProvider);
@@ -156,6 +156,7 @@ class _BirthdayGiftRequestScreenState
       if (birthdayGiftSp.pendingBirthdayGift.isNotEmpty ||
           birthdayGiftSp.checkedBirthdayGift.isNotEmpty ||
           birthdayGiftSp.approvedBirthdayGift.isNotEmpty ||
+          birthdayGiftSp.issuedBirthdayGift.isNotEmpty ||
           birthdayGiftSp.rejectBirthdayGift.isNotEmpty) {
         return;
       }
@@ -211,7 +212,12 @@ class _BirthdayGiftRequestScreenState
           .getBirthdayGiftData(98891, salesCode); // approved
       await ref
           .read(birthdayGiftIncreesProvider.notifier)
-          .getBirthdayGiftData(98893, salesCode); // rejected
+          .getBirthdayGiftData(998891, salesCode); // issued
+      await ref
+          .read(birthdayGiftIncreesProvider.notifier)
+          .getBirthdayGiftData(98893, salesCode); 
+          // rejected
+     
     } finally {
       setState(() => _isLoading = false);
     }
@@ -291,6 +297,11 @@ Color _getRatingColor(String? rating) {
               birthdayGiftsp.approvedBirthdayGift.length,
               Colors.green,
             ),
+             _buildTab(
+              'Issued',
+              birthdayGiftsp.issuedBirthdayGift.length,
+              Colors.green,
+            ),
             _buildTab(
               'Rejected',
               birthdayGiftsp.rejectBirthdayGift.length,
@@ -320,6 +331,12 @@ Color _getRatingColor(String? rating) {
                 birthdayGiftsp.approvedBirthdayGift,
                 isPending: false,
                 isApproved: true,
+                isChecked: false,
+              ),
+               _buildGiftList(
+                birthdayGiftsp.issuedBirthdayGift,
+                isPending: false,
+                isApproved: false,
                 isChecked: false,
               ),
               _buildGiftList(

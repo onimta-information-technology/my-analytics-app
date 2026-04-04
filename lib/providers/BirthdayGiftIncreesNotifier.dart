@@ -14,6 +14,7 @@ class BirthdayGiftIncreesNotifier extends StateNotifier<BirthdayGiftIncreesState
       pendingBirthdayGift: [],
       checkedBirthdayGift: [],
       approvedBirthdayGift: [],
+      issuedBirthdayGift: [],
       rejectBirthdayGift: [],
       
     );
@@ -32,6 +33,9 @@ class BirthdayGiftIncreesNotifier extends StateNotifier<BirthdayGiftIncreesState
         case 98891:
           state = state.copyWith(approvedBirthdayGift: birthdayGiftList);
           break;
+        case 998891:
+          state = state.copyWith(issuedBirthdayGift: birthdayGiftList);
+          break;
         case 98893:
           state = state.copyWith(rejectBirthdayGift: birthdayGiftList);
           break;
@@ -47,6 +51,9 @@ class BirthdayGiftIncreesNotifier extends StateNotifier<BirthdayGiftIncreesState
           break;
         case 98891:
           state = state.copyWith(approvedBirthdayGift: []);
+          break;
+        case 998891:
+          state = state.copyWith(issuedBirthdayGift: []);
           break;
         case 98893:
           state = state.copyWith(rejectBirthdayGift: []);
@@ -135,12 +142,14 @@ class BirthdayGiftIncreesState {
   final List<BirthdayIncressGiftRequest> pendingBirthdayGift;
   final List<BirthdayIncressGiftRequest> checkedBirthdayGift;
   final List<BirthdayIncressGiftRequest> approvedBirthdayGift;
+  final List<BirthdayIncressGiftRequest> issuedBirthdayGift;
   final List<BirthdayIncressGiftRequest> rejectBirthdayGift;
 
   BirthdayGiftIncreesState({
     this.pendingBirthdayGift = const [],
     this.checkedBirthdayGift = const [],
     this.approvedBirthdayGift = const [],
+    this.issuedBirthdayGift = const [],
     this.rejectBirthdayGift = const [],
   });
 
@@ -148,12 +157,14 @@ class BirthdayGiftIncreesState {
     List<BirthdayIncressGiftRequest>? pendingBirthdayGift,
     List<BirthdayIncressGiftRequest>? checkedBirthdayGift,
     List<BirthdayIncressGiftRequest>? approvedBirthdayGift,
+    List<BirthdayIncressGiftRequest>? issuedBirthdayGift,
     List<BirthdayIncressGiftRequest>? rejectBirthdayGift,
   }) {
     return BirthdayGiftIncreesState(
       pendingBirthdayGift: pendingBirthdayGift ?? this.pendingBirthdayGift,
       checkedBirthdayGift: checkedBirthdayGift ?? this.checkedBirthdayGift,
       approvedBirthdayGift: approvedBirthdayGift ?? this.approvedBirthdayGift,
+      issuedBirthdayGift: issuedBirthdayGift ?? this.issuedBirthdayGift,
       rejectBirthdayGift: rejectBirthdayGift ?? this.rejectBirthdayGift,
     );
   }

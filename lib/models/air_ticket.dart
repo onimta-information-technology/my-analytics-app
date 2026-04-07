@@ -14,6 +14,7 @@ class AirTicket {
   final String requestBy;
   final String approvedBy;
   final String mktPerson;
+  final String? gRating; 
 
   AirTicket({
     required this.mid,
@@ -31,6 +32,7 @@ class AirTicket {
     required this.requestBy,
     required this.approvedBy,
     required this.mktPerson,
+    this.gRating,
   });
 
   factory AirTicket.fromJson(Map<String, dynamic> json) {
@@ -50,6 +52,7 @@ class AirTicket {
       requestBy: json['RequestBy']?.toString() ?? '',
       approvedBy: json['ApprovedBy']?.toString() ?? '',
       mktPerson: json['Mkt_Person']?.toString() ?? '',
+      gRating: json['G_Rating']?.toString(),
     );
   }
 

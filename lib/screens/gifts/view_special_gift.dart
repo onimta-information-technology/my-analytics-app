@@ -203,6 +203,7 @@ Future<void> _loadGiftCounts() async {
   TextStyle _inputTextStyleForAmount(FontSettings fontSettings) => TextStyle(
     fontSize: fontSettings.fontSize + 5,
     fontWeight: fontSettings.fontWeight,
+    color: const Color.fromARGB(255, 255, 0, 30),
   );
 
   final Map<String, String> ratingImageMap = {
@@ -1223,7 +1224,11 @@ Row(
                                 vertical: -5.0,
                               ),
                             ),
-                            style: _inputTextStyle(fontSettings),
+                          //  style: _inputTextStyle(fontSettings),
+                          style: _inputTextStyle(fontSettings).copyWith(
+  color: const Color.fromARGB(255, 255, 30, 0),
+  fontWeight: FontWeight.w900,
+),
                           ),
                           const SizedBox(height: 16),
                           TextFormField(
@@ -1241,7 +1246,11 @@ Row(
                                 vertical: -5.0,
                               ),
                             ),
-                            style: _inputTextStyle(fontSettings),
+                            // style: _inputTextStyle(fontSettings),
+                            style: _inputTextStyle(fontSettings).copyWith(
+  color: const Color.fromARGB(255, 255, 30, 0),
+  fontWeight: FontWeight.w900,
+),
                           ),
 
                           // ── Checked Information Card ──────────────────

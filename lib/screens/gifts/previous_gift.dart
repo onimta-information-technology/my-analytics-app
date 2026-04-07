@@ -472,7 +472,7 @@ Widget _buildSummaryBanner(List<dynamic> summaries) {
               Text(
                 chipLabel.isEmpty ? 'TOTAL' : chipLabel,
                 style: const TextStyle(
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: FontWeight.w900,
                   color: ui.Color.fromARGB(255, 0, 0, 0),
                 ),
@@ -480,7 +480,7 @@ Widget _buildSummaryBanner(List<dynamic> summaries) {
               Text(
                 formatter.format(s['amount']),
                 style: const TextStyle(
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: FontWeight.w900,
                   color: Colors.black,
                   fontFamily: 'monospace',

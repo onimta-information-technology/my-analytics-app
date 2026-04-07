@@ -780,7 +780,7 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
                                   ],
                                 ),
                                 child: Text(
-                                  guest.gRating ?? 'N/A',
+                                  guest.gRating ?? 'CLASSIC',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 12,

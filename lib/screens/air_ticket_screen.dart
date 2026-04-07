@@ -354,7 +354,7 @@ class _AirTicketCard extends StatelessWidget {
             country: '',
             lastVisitDate: ticket.lvd?.toString() ?? '',
             age: 0,
-            gRating: '',
+            gRating:ticket.gRating,
             mGroup: '',
             gName: ticket.mktPerson ?? 'N/A',
             mobile: '',

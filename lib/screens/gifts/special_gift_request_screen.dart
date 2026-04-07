@@ -224,7 +224,7 @@ class _SpecialGiftRequestScreenState
       case 'CLASSIC':
         return const Color(0xFF5D4037);
       default:
-        return Constants.kPrimaryColor;
+       return const Color(0xFF5D4037);
     }
   }
 
@@ -984,38 +984,76 @@ class _SpecialGiftRequestScreenState
                 ),
 
                 // Rating badge
-                Positioned(
-                  top: 10,
-                  right: 15,
-                  child: Hero(
-                    tag: "rating-image-${gift.mid}",
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _getRatingColor(gift.gRating),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.25),
-                            blurRadius: 6,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        gift.gRating ?? 'N/A',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                // Positioned(
+                //   top: 10,
+                //   right: 15,
+                //   child: Hero(
+                //     tag: "rating-image-${gift.mid}",
+                //     child: Container(
+                //       padding: const EdgeInsets.symmetric(
+                //         horizontal: 10,
+                //         vertical: 6,
+                //       ),
+                //       decoration: BoxDecoration(
+                //         color: _getRatingColor(gift.gRating?? 'CLASSIC'),
+                //         borderRadius: BorderRadius.circular(12),
+                //         boxShadow: [
+                //           BoxShadow(
+                //             color: Colors.black.withOpacity(0.25),
+                //             blurRadius: 6,
+                //             offset: const Offset(0, 3),
+                //           ),
+                //         ],
+                //       ),
+                //       child: Text(
+                //         gift.gRating ?? 'CLASSIC',
+                //         style: const TextStyle(
+                //           color: Colors.white,
+                //           fontSize: 12,
+                //           fontWeight: FontWeight.bold,
+                //         ),
+                //       ),
+                //     ),
+                //   ),
+                // ),
+                // Rating badge
+Positioned(
+  top: 10,
+  right: 15,
+  child: Hero(
+    tag: "rating-image-${gift.mid}",
+    child: Builder(
+      builder: (context) {
+        final rating = (gift.gRating == null || gift.gRating!.trim().isEmpty)
+            ? 'CLASSIC'
+            : gift.gRating!.trim().toUpperCase();  // also normalise case
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: _getRatingColor(rating),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.25),
+                blurRadius: 6,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Text(
+            rating,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        );
+      },
+    ),
+  ),
+),
               ],
             );
           },

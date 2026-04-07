@@ -640,7 +640,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                           ],
                                         ),
                                         child: Text(
-                                          guest.gRating ?? 'N/A',
+                                          guest.gRating ?? 'CLASSIC',
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 12,
@@ -704,7 +704,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                           ],
                                         ),
                                         child: Text(
-                                          guest.gRating ?? 'N/A',
+                                          guest.gRating ??'CLASSIC',
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 12,

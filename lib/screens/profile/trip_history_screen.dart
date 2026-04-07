@@ -597,7 +597,7 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
                                     ],
                                   ),
                                   child: Text(
-                                    guest.gRating ?? 'N/A',
+                                    guest.gRating ?? 'CLASSIC',
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 12,

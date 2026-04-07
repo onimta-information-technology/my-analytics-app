@@ -28,15 +28,36 @@ class _GuestDisplayCardByIdState extends ConsumerState<GuestDisplayCardById> {
   String? _errorMessage;
   String? _lastFetchedMemberId;
 
-  static const Map<String, String> ratingImageMap = {
-    "CLASSIC": "assets/images/ratings/CLASSIC.png",
-    "DIAMOND": "assets/images/ratings/DIAMOND.png",
-    "GOLD": "assets/images/ratings/GOLD.png",
-    "INFINITY": "assets/images/ratings/INFINITY.png",
-    "PLATINUM": "assets/images/ratings/PLATINUM.png",
-    "SILVER": "assets/images/ratings/SILVER.png",
-  };
-
+  // static const Map<String, String> ratingImageMap = {
+  //   "CLASSIC": "assets/images/ratings/CLASSIC.png",
+  //   "DIAMOND": "assets/images/ratings/DIAMOND.png",
+  //   "GOLD": "assets/images/ratings/GOLD.png",
+  //   "INFINITY": "assets/images/ratings/INFINITY.png",
+  //   "PLATINUM": "assets/images/ratings/PLATINUM.png",
+  //   "SILVER": "assets/images/ratings/SILVER.png",
+  // };
+  Color _getRatingColor(String? rating) {
+    switch ((rating ?? '').toUpperCase()) {
+      case 'GOLD':
+        return const Color(0xFFDAA520);
+      case 'PLATINUM':
+        return const Color(0xFF707070);
+      case 'DIAMOND':
+        return const Color(0xFF1565C0);
+      case 'SILVER':
+        return const Color(0xFF9E9E9E);
+      case 'INFINITY':
+        return const Color(0xFF4A148C);
+      case 'PREMIER':
+        return const Color(0xFF1B5E20);
+      case 'RAFFELS CLUB':
+        return const Color(0xFF880E4F);
+      case 'CLASSIC':
+        return const Color(0xFF5D4037);
+      default:
+        return const Color(0xFF5D4037);
+    }
+  }
   @override
   void initState() {
     super.initState();
@@ -115,23 +136,23 @@ class _GuestDisplayCardByIdState extends ConsumerState<GuestDisplayCardById> {
     );
   }
 
-  Color _getRatingColor(String rating) {
-    switch (rating.toLowerCase()) {
-      case 'vip':
-      case 'classic':
-        return const Color.fromARGB(255, 170, 41, 36);
-      case 'gold':
-        return Colors.amber.shade600;
-      case 'silver':
-        return Colors.grey.shade600;
-      case 'infinity':
-        return Colors.brown.shade600;
-      case 'diamond':
-        return Colors.blue.shade600;
-      default:
-        return Colors.green.shade600;
-    }
-  }
+  // Color _getRatingColor(String rating) {
+  //   switch (rating.toLowerCase()) {
+  //     case 'vip':
+  //     case 'classic':
+  //       return const Color.fromARGB(255, 170, 41, 36);
+  //     case 'gold':
+  //       return Colors.amber.shade600;
+  //     case 'silver':
+  //       return Colors.grey.shade600;
+  //     case 'infinity':
+  //       return Colors.brown.shade600;
+  //     case 'diamond':
+  //       return Colors.blue.shade600;
+  //     default:
+  //       return Colors.green.shade600;
+  //   }
+  // }
 String _formatLastVisitDate(String? dateString) {
   if (dateString == null || dateString.isEmpty) return "N/A";
   try {
@@ -444,47 +465,72 @@ String _formatLastVisitDate(String? dateString) {
                                   ),
 
                                 // Rating Image (Right)
-                                Builder(
-                                  builder: (context) {
-                                    String ratingToUse = "CLASSIC";
-                                    if (guestData.gRating != null &&
-                                        guestData.gRating!.isNotEmpty &&
-                                        ratingImageMap.containsKey(
-                                          guestData.gRating!.toUpperCase(),
-                                        )) {
-                                      ratingToUse = guestData.gRating!.toUpperCase();
-                                    }
+                                // Builder(
+                                //   builder: (context) {
+                                //     String ratingToUse = "CLASSIC";
+                                //     if (guestData.gRating != null &&
+                                //         guestData.gRating!.isNotEmpty &&
+                                //         ratingImageMap.containsKey(
+                                //           guestData.gRating!.toUpperCase(),
+                                //         )) {
+                                //       ratingToUse = guestData.gRating!.toUpperCase();
+                                //     }
 
-                                    return Container(
-                                      width: 80,
-                                      height: 30,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: Colors.grey.shade300,
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: Image.asset(
-                                          ratingImageMap[ratingToUse]!,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) {
-                                            return Container(
-                                              color: Colors.grey.shade200,
-                                              child: Icon(
-                                                Icons.star,
-                                                color: _getRatingColor(ratingToUse),
-                                                size: 16,
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
+                                //     return Container(
+                                //       width: 80,
+                                //       height: 30,
+                                //       decoration: BoxDecoration(
+                                //         borderRadius: BorderRadius.circular(8),
+                                //         border: Border.all(
+                                //           color: Colors.grey.shade300,
+                                //           width: 1,
+                                //         ),
+                                //       ),
+                                //       child: ClipRRect(
+                                //         borderRadius: BorderRadius.circular(8),
+                                //         child: Image.asset(
+                                //           ratingImageMap[ratingToUse]!,
+                                //           fit: BoxFit.cover,
+                                //           errorBuilder: (context, error, stackTrace) {
+                                //             return Container(
+                                //               color: Colors.grey.shade200,
+                                //               child: Icon(
+                                //                 Icons.star,
+                                //                 color: _getRatingColor(ratingToUse),
+                                //                 size: 16,
+                                //               ),
+                                //             );
+                                //           },
+                                //         ),
+                                //       ),
+                                //     );
+                                //   },
+                                // ),
+                                Container(
+  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+  decoration: BoxDecoration(
+    color: _getRatingColor(guestData.gRating),
+    borderRadius: BorderRadius.circular(12),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withOpacity(0.25),
+        blurRadius: 6,
+        offset: const Offset(0, 3),
+      ),
+    ],
+  ),
+  child: Text(
+    (guestData.gRating != null && guestData.gRating!.isNotEmpty)
+        ? guestData.gRating!.toUpperCase()
+        : 'CLASSIC',
+    style: const TextStyle(
+      color: Colors.white,
+      fontSize: 12,
+      fontWeight: FontWeight.bold,
+    ),
+  ),
+),
+
                               ],
                             ),
                           ],

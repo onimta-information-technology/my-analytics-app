@@ -52,15 +52,36 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> {
     });
   }
 
-  final Map<String, String> ratingImageMap = {
-    "CLASSIC": "assets/images/ratings/CLASSIC.png",
-    "DIAMOND": "assets/images/ratings/DIAMOND.png",
-    "GOLD": "assets/images/ratings/GOLD.png",
-    "INFINITY": "assets/images/ratings/INFINITY.png",
-    "PLATINUM": "assets/images/ratings/PLATINUM.png",
-    "SILVER": "assets/images/ratings/SILVER.png",
-  };
-
+  // final Map<String, String> ratingImageMap = {
+  //   "CLASSIC": "assets/images/ratings/CLASSIC.png",
+  //   "DIAMOND": "assets/images/ratings/DIAMOND.png",
+  //   "GOLD": "assets/images/ratings/GOLD.png",
+  //   "INFINITY": "assets/images/ratings/INFINITY.png",
+  //   "PLATINUM": "assets/images/ratings/PLATINUM.png",
+  //   "SILVER": "assets/images/ratings/SILVER.png",
+  // };
+ Color _getRatingColor(String? rating) {
+    switch ((rating ?? '').toUpperCase()) {
+      case 'GOLD':
+        return const Color(0xFFDAA520);
+      case 'PLATINUM':
+        return const Color(0xFF707070);
+      case 'DIAMOND':
+        return const Color(0xFF1565C0);
+      case 'SILVER':
+        return const Color(0xFF9E9E9E);
+      case 'INFINITY':
+        return const Color(0xFF4A148C);
+      case 'PREMIER':
+        return const Color(0xFF1B5E20);
+      case 'RAFFELS CLUB':
+        return const Color(0xFF880E4F);
+      case 'CLASSIC':
+        return const Color(0xFF5D4037);
+      default:
+        return const Color(0xFF5D4037);
+    }
+  }
   void _showImagePopup(BuildContext context, Guest selectedGuest) {
     showDialog(
       context: context,
@@ -247,18 +268,45 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> {
             ),
 
             /// ⭐ Rating image in bottom-right corner
-            if ((displayRating?.isNotEmpty ?? false) &&
-                ratingImageMap.containsKey(displayRating))
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Image.asset(
-                  ratingImageMap[displayRating]!,
-                  height: 45,
-                  width: 90,
-                  fit: BoxFit.contain,
-                ),
-              ),
+            // if ((displayRating?.isNotEmpty ?? false) &&
+            //     ratingImageMap.containsKey(displayRating))
+            //   Positioned(
+            //     bottom: 0,
+            //     right: 0,
+            //     child: Image.asset(
+            //       ratingImageMap[displayRating]!,
+            //       height: 45,
+            //       width: 90,
+            //       fit: BoxFit.contain,
+            //     ),
+            //   ),
+            if (displayRating != null && displayRating.isNotEmpty)
+  Positioned(
+    bottom: 0,
+    right: 0,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: _getRatingColor(displayRating),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.25),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Text(
+        displayRating,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    ),
+  ),
           ],
         ),
       ),

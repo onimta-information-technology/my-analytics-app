@@ -73,15 +73,36 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> {
     });
   }
 
-  final Map<String, String> ratingImageMap = {
-    "CLASSIC": "assets/images/ratings/CLASSIC.png",
-    "DIAMOND": "assets/images/ratings/DIAMOND.png",
-    "GOLD": "assets/images/ratings/GOLD.png",
-    "INFINITY": "assets/images/ratings/INFINITY.png",
-    "PLATINUM": "assets/images/ratings/PLATINUM.png",
-    "SILVER": "assets/images/ratings/SILVER.png",
-  };
-
+  // final Map<String, String> ratingImageMap = {
+  //   "CLASSIC": "assets/images/ratings/CLASSIC.png",
+  //   "DIAMOND": "assets/images/ratings/DIAMOND.png",
+  //   "GOLD": "assets/images/ratings/GOLD.png",
+  //   "INFINITY": "assets/images/ratings/INFINITY.png",
+  //   "PLATINUM": "assets/images/ratings/PLATINUM.png",
+  //   "SILVER": "assets/images/ratings/SILVER.png",
+  // };
+  Color _getRatingColor(String? rating) {
+    switch ((rating ?? '').toUpperCase()) {
+      case 'GOLD':
+        return const Color(0xFFDAA520);
+      case 'PLATINUM':
+        return const Color(0xFF707070);
+      case 'DIAMOND':
+        return const Color(0xFF1565C0);
+      case 'SILVER':
+        return const Color(0xFF9E9E9E);
+      case 'INFINITY':
+        return const Color(0xFF4A148C);
+      case 'PREMIER':
+        return const Color(0xFF1B5E20);
+      case 'RAFFELS CLUB':
+        return const Color(0xFF880E4F);
+      case 'CLASSIC':
+        return const Color(0xFF5D4037);
+      default:
+        return const Color(0xFF5D4037);
+    }
+  }
   @override
   Widget build(BuildContext context) {
     final fontSettings = ref.watch(fontSettingsProvider);
@@ -231,34 +252,63 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> {
                                   ),
                                   Positioned(
                                     top: 6,
-                                    right: -2,
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(0),
-                                      child: SizedBox(
-                                        width: 80,
-                                        height: 26,
-                                        child:
-                                            ratingImageMap[guest.gRating] !=
-                                                null
-                                            ? Hero(
-                                                tag:
-                                                    "rating-image-${guest.mid}",
-                                                child: Image.asset(
-                                                  ratingImageMap[guest
-                                                      .gRating]!,
-                                                  fit: BoxFit.contain,
-                                                ),
-                                              )
-                                            : Hero(
-                                                tag:
-                                                    "rating-image-${guest.mid}",
-                                                child: Image.asset(
-                                                  "assets/images/ratings/CLASSIC.png",
-                                                  fit: BoxFit.contain,
-                                                ),
-                                              ),
-                                      ),
-                                    ),
+                                    right: 3,
+                                    child: 
+                                    // Padding(
+                                    //   padding: const EdgeInsets.all(0),
+                                    //   child: SizedBox(
+                                    //     width: 80,
+                                    //     height: 26,
+                                    //     child:
+                                    //         ratingImageMap[guest.gRating] !=
+                                    //             null
+                                    //         ? Hero(
+                                    //             tag:
+                                    //                 "rating-image-${guest.mid}",
+                                    //             child: Image.asset(
+                                    //               ratingImageMap[guest
+                                    //                   .gRating]!,
+                                    //               fit: BoxFit.contain,
+                                    //             ),
+                                    //           )
+                                    //         : Hero(
+                                    //             tag:
+                                    //                 "rating-image-${guest.mid}",
+                                    //             child: Image.asset(
+                                    //               "assets/images/ratings/CLASSIC.png",
+                                    //               fit: BoxFit.contain,
+                                    //             ),
+                                    //           ),
+                                    //   ),
+                                    // ),
+                                     Hero(
+                    tag: "rating-image-${guest.mid}",
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _getRatingColor(guest.gRating),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.25),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        guest.gRating ?? 'CLASSIC',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
                                   ),
                                 ],
                               );

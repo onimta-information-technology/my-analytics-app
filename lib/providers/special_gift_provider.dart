@@ -4,6 +4,7 @@ import 'package:ballys_reservation_app/models/gift/gest_gift_data.dart';
 import 'package:ballys_reservation_app/models/gift/gift_type.dart';
 import 'package:ballys_reservation_app/models/gift/prev_gift.dart';
 import 'package:ballys_reservation_app/models/gift/special_gift_request.dart';
+import 'package:ballys_reservation_app/models/prev_gift_summary.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -415,12 +416,15 @@ Future<String> sendSpecialGiftWhatsapp({
 
   Future<void> getprvGift(String text1, int iid,{String text2 = ""}) async {
     try {
-      final prvgiftList = await giftRepository.getPrvGiftList(text1, iid: iid,text2: text2);
-      state = state.copyWith(prvgiftList: prvgiftList);
+       final (gifts, summaries)  = await giftRepository.getPrvGiftList(text1, iid: iid,text2: text2);
+state = state.copyWith(
+      prvgiftList: gifts,
+      prvgiftSummary: summaries,
+    );
     } catch (e, stack) { 
       print('Error in getprvGift: $e');
       print('Stack trace: $stack');
-      state = state.copyWith(prvgiftList: []);
+     state = state.copyWith(prvgiftList: [], prvgiftSummary: []);
     }
   }
 
@@ -528,7 +532,7 @@ class GiftState {
   final List<PrevGift> prvgiftList;
   final Map<String, dynamic>? lastApiResponse;
   final String? lastReturnSerial;
-
+ final List<PrevGiftSummary> prvgiftSummary;
   GiftState({
     this.pendinggift = const [],
     this.chekbygift = const [],
@@ -540,6 +544,8 @@ class GiftState {
     this.prvgiftList = const [],
     this.lastApiResponse,
     this.lastReturnSerial,
+    this.prvgiftSummary = const [],  
+    
   });
 
   GiftState copyWith({
@@ -553,6 +559,7 @@ class GiftState {
     List<PrevGift>? prvgiftList,
     Map<String, dynamic>? lastApiResponse,
     String? lastReturnSerial,
+     List<PrevGiftSummary>? prvgiftSummary,
   }) {
     return GiftState(
       pendinggift: pendinggift ?? this.pendinggift,
@@ -565,6 +572,7 @@ class GiftState {
       prvgiftList: prvgiftList ?? this.prvgiftList,
       lastApiResponse: lastApiResponse ?? this.lastApiResponse,
       lastReturnSerial: lastReturnSerial ?? this.lastReturnSerial,
+        prvgiftSummary: prvgiftSummary ?? this.prvgiftSummary,
     );
   }
 }

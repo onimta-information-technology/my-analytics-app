@@ -10,6 +10,7 @@ import 'package:ballys_reservation_app/models/gift/prev_gift.dart';
 import 'package:ballys_reservation_app/models/gift/special_gift_request.dart';
 import 'package:ballys_reservation_app/models/guest_gift_modal.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
+import 'package:ballys_reservation_app/models/prev_gift_summary.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:http/http.dart' as http;
@@ -295,7 +296,7 @@ class GiftsRepository {
     }
   }
 
-  Future<List<PrevGift>> getPrvGiftList(String text1, {required int iid, String text2 = ""}) async {
+  Future<(List<PrevGift>, List<PrevGiftSummary>)> getPrvGiftList(String text1, {required int iid, String text2 = ""}) async {
     print('getPrvGiftList called with text1: $text1, iid: $iid, text2: $text2');
     final deviceId = await DeviceId.get();
       //  final reqidInt = text2.toInt();
@@ -345,21 +346,43 @@ class GiftsRepository {
       "con": "1",
     });
     
-    print('Prev Gift Response: $response');
+  //   print('Prev Gift Response: $response');
     
-    if (response['CommonResult'] != null &&
-        response['CommonResult']['Table'] is List &&
-        (response['CommonResult']['Table'] as List).isNotEmpty) {
-      final tableData = response['CommonResult']['Table'] as List;
+  //   if (response['CommonResult'] != null &&
+  //       response['CommonResult']['Table'] is List &&
+  //       (response['CommonResult']['Table'] as List).isNotEmpty) {
+  //     final tableData = response['CommonResult']['Table'] as List;
 
-      return tableData.map((item) {
+  //     return tableData.map((item) {
+  //       return PrevGift.fromJson(Map<String, dynamic>.from(item));
+  //     }).toList();
+  //   } else {
+  //     return [];
+  //   }
+  // }
+  final commonResult = response['CommonResult'];
+  
+  List<PrevGift> gifts = [];
+  List<PrevGiftSummary> summaries = [];
+
+  if (commonResult != null) {
+    if (commonResult['Table'] is List &&
+        (commonResult['Table'] as List).isNotEmpty) {
+      gifts = (commonResult['Table'] as List).map((item) {
         return PrevGift.fromJson(Map<String, dynamic>.from(item));
       }).toList();
-    } else {
-      return [];
+    }
+
+    if (commonResult['Table1'] is List &&
+        (commonResult['Table1'] as List).isNotEmpty) {
+      summaries = (commonResult['Table1'] as List).map((item) {
+        return PrevGiftSummary.fromJson(Map<String, dynamic>.from(item));
+      }).toList();
     }
   }
 
+  return (gifts, summaries);
+}
   Future<Map<String, dynamic>?> insertSpecialGiftRequest({
     required String mid,
     required String memberName,

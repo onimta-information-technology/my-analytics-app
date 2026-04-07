@@ -105,7 +105,7 @@ class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
   }
 
   bool _isMarketingField(String fieldName) {
-    return fieldName == "Marketing Person" || fieldName == "Gift Issue Time";
+    return fieldName == "Marketing Person" || fieldName == "Gift Issue Time" || fieldName == "Result"|| fieldName == "Actual Drop"|| fieldName == "Coupon";
   }
 
   List<Map<String, String>> _getGiftData(dynamic gift) {
@@ -214,33 +214,46 @@ class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          FutureBuilder(
-            future: ref
-                .read(giftProvider.notifier)
-                .getprvGift(widget.memberId, widget.iid, text2: widget.text2),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
+     body: Stack(
+  children: [
+    FutureBuilder(
+      future: ref
+          .read(giftProvider.notifier)
+          .getprvGift(widget.memberId, widget.iid, text2: widget.text2),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-              final prvgifts = ref.watch(
-                giftProvider.select((s) => s.prvgiftList),
-              );
+        final prvgifts = ref.watch(
+          giftProvider.select((s) => s.prvgiftList),
+        );
 
-              if (prvgifts.isEmpty) {
-                return const Center(child: Text("No gifts found"));
-              }
+        final summaries = ref.watch(
+          giftProvider.select((s) => s.prvgiftSummary),
+        );
 
-              return _isHorizontal
-                  ? _buildHorizontalView(prvgifts, fontSettings)
-                  : _buildVerticalView(prvgifts, fontSettings);
-            },
-          ),
-          const Watermark(),
-        ],
-      ),
+        if (prvgifts.isEmpty) {
+          return const Center(child: Text("No gifts found"));
+        }
+
+        if (!_isHorizontal) {
+          return Column(
+            children: [
+              _buildSummaryBanner(summaries),
+              Expanded(
+                child: _buildVerticalView(prvgifts, fontSettings),
+              ),
+            ],
+          );
+        }
+
+        return _buildHorizontalView(prvgifts, fontSettings);
+      },
+    ),
+    const Watermark(),
+  ],
+),
     );
   }
 
@@ -304,7 +317,182 @@ class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
       },
     );
   }
+// Widget _buildSummaryBanner(List<dynamic> summaries) {
+//   if (summaries.isEmpty) return const SizedBox.shrink();
 
+//   final formatter = NumberFormat('#,##0.##', 'en_US');
+
+//   return Container(
+//     margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+//     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+//     decoration: BoxDecoration(
+//       color: const Color(0xFFCCFFCC),
+//       border: Border.all(color: Colors.green.shade400),
+//       borderRadius: BorderRadius.circular(8),
+//     ),
+//     child: Row(
+//       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+//       children: summaries.map<Widget>((s) {
+//         final chipLabel = (s.chipType as String)
+//             .replaceAll('_', ' ')
+//             .trim();
+//         return Column(
+//           mainAxisSize: MainAxisSize.min,
+//           children: [
+//             Text(
+//               chipLabel.isEmpty ? 'TOTAL' : chipLabel,
+//               style: const TextStyle(
+//                 fontSize: 12,
+//                 fontWeight: FontWeight.bold,
+//                 color: Colors.black54,
+//               ),
+//             ),
+//             const SizedBox(height: 2),
+//             Text(
+//               formatter.format(s.amount),
+//               style: const TextStyle(
+//                 fontSize: 16,
+//                 fontWeight: FontWeight.bold,
+//                 color: Colors.black,
+//                 fontFamily: 'monospace',
+//               ),
+//             ),
+//           ],
+//         );
+//       }).toList(),
+//     ),
+//   );
+// }
+    // ── Build the rotated view ──
+// Widget _buildSummaryBanner(List<dynamic> summaries) {
+//   if (summaries.isEmpty) return const SizedBox.shrink();
+
+//   final formatter = NumberFormat('#,##0.##', 'en_US');
+
+//   return Container(
+//     margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+//     decoration: BoxDecoration(
+//       color: const Color(0xFFCCFFCC),
+//       border: Border.all(color: Colors.green.shade400),
+//       borderRadius: BorderRadius.circular(8),
+//     ),
+//     child: Column(
+//       children: summaries.map<Widget>((s) {
+//         final chipLabel = (s.chipType as String)
+//             .replaceAll('_', ' ')
+//             .trim();
+//         return Container(
+//           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+//           decoration: BoxDecoration(
+//             border: Border(
+//               bottom: BorderSide(
+//                 color: Colors.green.shade300,
+//                 width: summaries.last != s ? 1 : 0,
+//               ),
+//             ),
+//           ),
+//           child: Row(
+//             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//             children: [
+//               Text(
+//                 chipLabel.isEmpty ? 'TOTAL' : chipLabel,
+//                 style: const TextStyle(
+//                   fontSize: 15,
+//                   fontWeight: FontWeight.w900,
+//                   color: ui.Color.fromARGB(255, 0, 0, 0),
+//                 ),
+//               ),
+//               Text(
+//                 formatter.format(s.amount),
+//                 style: const TextStyle(
+//                   fontSize: 17,
+//                   fontWeight: FontWeight.bold,
+//                   color: Colors.black,
+//                   fontFamily: 'monospace',
+//                 ),
+//               ),
+//             ],
+//           ),
+//         );
+//       }).toList(),
+//     ),
+//   );
+// }
+Widget _buildSummaryBanner(List<dynamic> summaries) {
+  if (summaries.isEmpty) return const SizedBox.shrink();
+  
+  final formatter = NumberFormat('#,##0.##', 'en_US');
+  
+  // Define the expected chip types
+  const expectedChipTypes = [ 'OTP_CHIPS','NC_CHIPS'];
+  
+  // Build a map from the API response
+  final Map<String, double> amountMap = {};
+  for (final s in summaries) {
+    final chipType = (s.chipType as String).toUpperCase().trim();
+    amountMap[chipType] = (s.amount as num).toDouble();
+  }
+  
+  // Ensure both chip types are always present, defaulting to 0
+  final List<Map<String, dynamic>> normalizedSummaries = expectedChipTypes.map((type) {
+    return {
+      'chipType': type,
+      'amount': amountMap[type] ?? 0.0,
+    };
+  }).toList();
+
+  return Container(
+    margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+    decoration: BoxDecoration(
+     // color: const Color(0xFFCCFFCC),
+      border: Border.all(color: Colors.green.shade400),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Column(
+      children: normalizedSummaries.asMap().entries.map<Widget>((entry) {
+        final index = entry.key;
+        final s = entry.value;
+        final chipLabel = (s['chipType'] as String)
+            .replaceAll('_', ' ')
+            .trim();
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: Colors.green.shade300,
+                width: index < normalizedSummaries.length - 1 ? 1 : 0,
+              ),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                chipLabel.isEmpty ? 'TOTAL' : chipLabel,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: ui.Color.fromARGB(255, 0, 0, 0),
+                ),
+              ),
+              Text(
+                formatter.format(s['amount']),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.black,
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    ),
+  );
+}
   Widget _buildHorizontalView(
     List<dynamic> prvgifts,
     FontSettings fontSettings,
@@ -440,8 +628,6 @@ class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
       );
     }
 
-    // ── Build the rotated view ──
-
     return RotatedBox(
       quarterTurns: 1,
       child: SizedBox(
@@ -515,7 +701,7 @@ class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
 
     final isAmount = label == "Amount";
     final isMarketingPerson =
-        label == "Marketing Person" || label == "Gift Issue Time";
+        label == "Marketing Person" || label == "Gift Issue Time" || label == "Result"|| label == "Actual Drop"|| label == "Coupon";
 
     return TableRow(
       decoration: BoxDecoration(

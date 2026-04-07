@@ -42,6 +42,8 @@ class _BirthdayGiftRequestScreenState
         return Colors.red;
       case 'Checked':
         return Colors.blue;
+      case 'Issued':
+        return Colors.teal;
       default:
         return Colors.orange;
     }
@@ -55,6 +57,8 @@ class _BirthdayGiftRequestScreenState
         return Icons.cancel;
       case 'Checked':
         return Icons.fact_check;
+      case 'Issued':
+        return Icons.card_giftcard;
       default:
         return Icons.hourglass_bottom;
     }
@@ -104,6 +108,7 @@ class _BirthdayGiftRequestScreenState
     required bool isPending,
     required bool isApproved,
     required bool isChecked,
+    required bool isIssued,
   }) async {
     final salesCode = await StorageUtil.getSalesCode();
 
@@ -140,7 +145,11 @@ class _BirthdayGiftRequestScreenState
           currentUserName == reqBy ||
           currentUserName == approvedBy;
     }
-
+    if (isIssued) {
+      final bgApp = await StorageUtil.getBgApp();
+      final bgChk = await StorageUtil.getBgChk();
+      return bgApp == true || bgChk == true || currentUserName == reqBy;
+    }
     // Rejected: loginUser == reqBy OR loginUser == rejectedBy
     return currentUserName == reqBy || currentUserName == rejectedBy;
   }
@@ -300,7 +309,7 @@ Color _getRatingColor(String? rating) {
              _buildTab(
               'Issued',
               birthdayGiftsp.issuedBirthdayGift.length,
-              Colors.green,
+              Colors.teal,
             ),
             _buildTab(
               'Rejected',
@@ -320,30 +329,35 @@ Color _getRatingColor(String? rating) {
                 isPending: true,
                 isApproved: false,
                 isChecked: false,
+                isIssued: false,
               ),
               _buildGiftList(
                 birthdayGiftsp.checkedBirthdayGift,
                 isPending: false,
                 isApproved: false,
                 isChecked: true,
+                isIssued: false,
               ),
               _buildGiftList(
                 birthdayGiftsp.approvedBirthdayGift,
                 isPending: false,
                 isApproved: true,
                 isChecked: false,
+                                isIssued: false,
               ),
                _buildGiftList(
                 birthdayGiftsp.issuedBirthdayGift,
                 isPending: false,
                 isApproved: false,
                 isChecked: false,
+                                isIssued: true,
               ),
               _buildGiftList(
                 birthdayGiftsp.rejectBirthdayGift,
                 isPending: false,
                 isApproved: false,
                 isChecked: false,
+                                isIssued: false,
               ),
             ],
           ),
@@ -395,6 +409,7 @@ Color _getRatingColor(String? rating) {
     required bool isPending,
     required bool isApproved,
     required bool isChecked,
+     required bool isIssued,
   }) {
     final fontSettings = ref.watch(fontSettingsProvider);
 
@@ -405,6 +420,8 @@ Color _getRatingColor(String? rating) {
         ? 'Pending'
         : isChecked
         ? 'Checked'
+        : isIssued
+        ? 'Issued'
         : 'Rejected';
 
     return FutureBuilder<List<BirthdayIncressGiftRequest>>(
@@ -466,6 +483,7 @@ Color _getRatingColor(String? rating) {
                       isPending: isPending,
                       isApproved: isApproved,
                       isChecked: isChecked,
+                      isIssued: isIssued,
                     );
                     if (!canAccess) {
                       if (mounted) _showAccessDeniedDialog();
@@ -479,6 +497,7 @@ Color _getRatingColor(String? rating) {
                         'isPending': isPending,
                         'isApproved': isApproved,
                         'isChecked': isChecked,
+                        'isIssued': isIssued,
                       },
                     );
                     if (result == true) {
@@ -723,7 +742,7 @@ Color _getRatingColor(String? rating) {
                               ],
                             ),
                           ],
-                          if ((isApproved) &&
+                          if ((isApproved) || (isIssued) &&
                               gift.firstAppTime != null &&
                               gift.firstAppTime!.isNotEmpty) ...[
                             const SizedBox(height: 6),
@@ -736,7 +755,7 @@ Color _getRatingColor(String? rating) {
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  'Approve At: ',
+                                  'Approved: ',
                                   style: TextStyle(
                                     color: Colors.black87,
                                     fontSize: fontSettings.fontSize + 2,
@@ -747,8 +766,8 @@ Color _getRatingColor(String? rating) {
                                   child: Text(
                                     _formatDate(gift.firstAppTime!),
                                     style: TextStyle(
-                                     color: Colors.black87,
-                                      fontSize: fontSettings.fontSize,
+                                    color: Colors.black87,
+                                      fontSize: fontSettings.fontSize+1,
                                       fontWeight: fontSettings.fontWeight,
                                     ),
                                     overflow: TextOverflow.ellipsis,
@@ -757,6 +776,106 @@ Color _getRatingColor(String? rating) {
                               ],
                             ),
                           ],
+
+if (isIssued ||
+                              gift.lastAppBy != null &&
+                                  gift.lastAppBy!.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                             Row(
+                              children: [
+                                const Icon(
+                                  Icons.person,
+                                  color: Color.fromARGB(255, 92, 17, 255),
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Issued Serial No: ',
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize+2,
+                                    fontWeight: fontSettings.fontWeight,
+                                        color: Colors.black87,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    gift.lastsrNo!,
+                                    style: TextStyle(
+                                       color: Colors.black87,
+                                      fontSize: fontSettings.fontSize+1,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                              const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.person,
+                                  color: Color.fromARGB(255, 92, 17, 255),
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Issued By: ',
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize+2,
+                                    fontWeight: fontSettings.fontWeight,
+                                        color: Colors.black87,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    gift.lastAppBy!,
+                                    style: TextStyle(
+                                       color: Colors.black87,
+                                      fontSize: fontSettings.fontSize+1,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                              const SizedBox(height: 6),
+                              Row(
+                              children: [
+                                const Icon(
+                                  Icons.schedule,
+                                  color: Color.fromARGB(255, 92, 17, 255),
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Issued: ',
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize+2,
+                                    fontWeight: fontSettings.fontWeight,
+                                        color: Colors.black87,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(                         
+                                      _formatDate(gift.lastAppTime),
+                                    style: TextStyle(
+                                       color: Colors.black87,
+                                      
+                                      fontSize: fontSettings.fontSize+1,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+
+
+
+
                            if (
                               gift.deleteTime != null &&
                               gift.deleteTime!.isNotEmpty) ...[

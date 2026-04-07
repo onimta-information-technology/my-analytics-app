@@ -64,6 +64,10 @@ class BirthdayIncressGiftRequest {
     final bool checkBy;
   final String? checkApp;
   final String? checkAppByTime;
+   final String? lastAppBy;
+  final String? lastAppTime;
+  final String? lastsrNo;
+
   BirthdayIncressGiftRequest({
     required this.idNo,
     required this.mid,
@@ -130,6 +134,9 @@ class BirthdayIncressGiftRequest {
      required this.checkBy,
     this.checkApp,
     this.checkAppByTime,
+      this.lastAppBy,
+      this.lastAppTime,
+      this.lastsrNo,
   });
 
   factory BirthdayIncressGiftRequest.fromJson(Map<String, dynamic> json) {
@@ -205,6 +212,9 @@ class BirthdayIncressGiftRequest {
            checkBy: json['Check_By'] == true || json['Check_By'] == 1,
       checkApp: json['Check_App']?.toString(),
       checkAppByTime: json['Check_AppBy_Time']?.toString(),
+      lastAppBy: json['Last_CreateBy']?.toString(),
+      lastAppTime: json['Last_Create_Time']?.toString(),
+      lastsrNo: json['Last_Create_Sr_No']?.toString(),
     );
   }
 
@@ -275,6 +285,9 @@ class BirthdayIncressGiftRequest {
       'Check_By': checkBy,
       'Check_App': checkApp,
       'Check_AppBy_Time': checkAppByTime,
+      'Last_CreateBy': lastAppBy,
+      'Last_Create_Time': lastAppTime,
+      'Last_Create_Sr_No': lastsrNo,
     };
   }
 }

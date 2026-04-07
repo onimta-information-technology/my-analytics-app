@@ -12,6 +12,7 @@ import 'package:ballys_reservation_app/providers/birthday_gift_provider.dart';
 import 'package:ballys_reservation_app/providers/birthdays_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+import 'package:ballys_reservation_app/providers/special_gift_provider.dart';
 import 'package:ballys_reservation_app/utils/formatter.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
@@ -28,6 +29,7 @@ class ViewBirthdayGiftRequest extends ConsumerStatefulWidget {
   final bool isPending;
   final bool isApproved;
   final bool isChecked;
+  final bool isIssued;
 
   const ViewBirthdayGiftRequest({
     super.key,
@@ -36,6 +38,7 @@ class ViewBirthdayGiftRequest extends ConsumerStatefulWidget {
     this.isPending = false,
     this.isApproved = false,
     this.isChecked = false,
+    this.isIssued = false,
   });
 
   @override
@@ -74,7 +77,8 @@ class _ViewBirthdayGiftRequestState
   double flushactdrop = 0.0;
   double avgbet = 0.0;
   int? _selectedValidDays;
-
+int _pendingGiftCount = 0;
+int _issuedGiftCount = 0;
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _isEditable = false;
@@ -125,12 +129,32 @@ class _ViewBirthdayGiftRequestState
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _loadGuestDataForCard();
         _loadWhatsAppNumber();
+          _loadGiftCounts(); 
       });
     }
   }
 
   // ── Permission helpers ──────────────────────────────────────────────────────
+Future<void> _loadGiftCounts() async {
+  final memberId = _memberIdController.text.trim();
+  if (memberId.isEmpty) return;
+  try {
+    await ref.read(giftProvider.notifier).getprvGift(memberId, 88940);
+    final pendingCount = ref.read(giftProvider).prvgiftList.length;
 
+    await ref.read(giftProvider.notifier).getprvGift(memberId, 8888);
+    final issuedCount = ref.read(giftProvider).prvgiftList.length;
+
+    if (mounted) {
+      setState(() {
+        _pendingGiftCount = pendingCount;
+        _issuedGiftCount = issuedCount;
+      });
+    }
+  } catch (e) {
+    debugPrint('Error loading gift counts: $e');
+  }
+}
   Future<void> _loadAllPermissions() async {
     final salesCode = await StorageUtil.getSalesCode();
     final isAdmin =
@@ -551,74 +575,260 @@ final confirmed = await showDialog<bool>(
 
   // ── Shared: Pending Gift & Issued Gift buttons ──────────────────────────────
 
-  Widget _buildPendingIssuedGiftButtons(FontSettings fs) {
-    return Row(
-      children: [
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: () {
-              final memberId = _memberIdController.text.trim();
-              if (memberId.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Please enter a Member ID")),
-                );
-                return;
-              }
-              context.push(
-                '/gifts/special-gift-requests/prv-gifts/$memberId',
-                extra: {'iid': 988908},
-              );
-            },
-            icon: const Icon(Icons.hourglass_empty, size: 18),
-            label: Text(
-              "Pending Gift",
-              style: TextStyle(
-                  fontSize: fs.fontSize, fontWeight: FontWeight.w600),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: () {
-              final memberId = _memberIdController.text.trim();
-              if (memberId.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Please enter a Member ID")),
-                );
-                return;
-              }
-              context.push(
-                '/gifts/special-gift-requests/prv-gifts/$memberId',
-                extra: {'iid': 8888},
-              );
-            },
-            icon: const Icon(Icons.card_giftcard, size: 18),
-            label: Text(
-              "Issued Gift",
-              style: TextStyle(
-                  fontSize: fs.fontSize, fontWeight: FontWeight.w600),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  // Widget _buildPendingIssuedGiftButtons(FontSettings fs) {
+  //   return Row(
+  //     children: [
+  //       Expanded(
+  //         child: ElevatedButton.icon(
+  //           onPressed: () {
+  //             final memberId = _memberIdController.text.trim();
+  //             if (memberId.isEmpty) {
+  //               ScaffoldMessenger.of(context).showSnackBar(
+  //                 const SnackBar(content: Text("Please enter a Member ID")),
+  //               );
+  //               return;
+  //             }
+  //             context.push(
+  //               '/gifts/special-gift-requests/prv-gifts/$memberId',
+  //               extra: {'iid': 988908},
+  //             );
+  //           },
+  //           icon: const Icon(Icons.hourglass_empty, size: 18),
+  //           label: Text(
+  //             "Pending Gift",
+  //             style: TextStyle(
+  //                 fontSize: fs.fontSize, fontWeight: FontWeight.w600),
+  //           ),
+  //           style: ElevatedButton.styleFrom(
+  //             backgroundColor: Colors.red,
+  //             foregroundColor: Colors.white,
+  //             shape: RoundedRectangleBorder(
+  //                 borderRadius: BorderRadius.circular(12)),
+  //             padding: const EdgeInsets.symmetric(vertical: 14),
+  //           ),
+  //         ),
+  //       ),
+  //       const SizedBox(width: 12),
+  //       Expanded(
+  //         child: ElevatedButton.icon(
+  //           onPressed: () {
+  //             final memberId = _memberIdController.text.trim();
+  //             if (memberId.isEmpty) {
+  //               ScaffoldMessenger.of(context).showSnackBar(
+  //                 const SnackBar(content: Text("Please enter a Member ID")),
+  //               );
+  //               return;
+  //             }
+  //             context.push(
+  //               '/gifts/special-gift-requests/prv-gifts/$memberId',
+  //               extra: {'iid': 8888},
+  //             );
+  //           },
+  //           icon: const Icon(Icons.card_giftcard, size: 18),
+  //           label: Text(
+  //             "Issued Gift",
+  //             style: TextStyle(
+  //                 fontSize: fs.fontSize, fontWeight: FontWeight.w600),
+  //           ),
+  //           style: ElevatedButton.styleFrom(
+  //             backgroundColor: Colors.green,
+  //             foregroundColor: Colors.white,
+  //             shape: RoundedRectangleBorder(
+  //                 borderRadius: BorderRadius.circular(12)),
+  //             padding: const EdgeInsets.symmetric(vertical: 14),
+  //           ),
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
+Widget _buildPendingIssuedGiftButtons(FontSettings fontSettings) {
+  final memberId = _memberIdController.text.trim();
 
+  return Row(
+    children: [
+      // ── Pending Gift ─────────────────────────────────────
+      Expanded(
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            InkWell(
+              onTap: () {
+                if (memberId.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Please enter a Member ID")),
+                  );
+                  return;
+                }
+                context.push(
+                  '/gifts/special-gift-requests/prv-gifts/$memberId',
+                  extra: {'iid': 988908},
+                );
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 12,
+                  horizontal: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red.shade600, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.red.withOpacity(0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.pending_actions, color: Colors.red.shade600, size: 18),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        "Pending Gift",
+                        style: TextStyle(
+                          color: Colors.red.shade600,
+                          fontSize: fontSettings.fontSize,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // ── Top-right count badge ──
+            Positioned(
+              top: -10,
+              right: -10,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 26),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade600,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  '$_pendingGiftCount',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+
+      const SizedBox(width: 20),
+
+      // ── Issued Gift ──────────────────────────────────────
+      Expanded(
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            InkWell(
+              onTap: () {
+                if (memberId.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Please enter a Member ID")),
+                  );
+                  return;
+                }
+                context.push(
+                  '/gifts/special-gift-requests/prv-gifts/$memberId',
+                  extra: {'iid': 8888},
+                );
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 12,
+                  horizontal: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF00695C), width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.teal.withOpacity(0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.card_giftcard, color: Color(0xFF00695C), size: 18),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        "Issued Gift",
+                        style: TextStyle(
+                          color: const Color(0xFF00695C),
+                          fontSize: fontSettings.fontSize,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // ── Top-right count badge ──
+            Positioned(
+              top: -10,
+              right: 0,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 26),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00695C),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  '$_issuedGiftCount',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
   // ── Section builders ────────────────────────────────────────────────────────
 
   Widget _buildTopSection(FontSettings fs) {
@@ -627,7 +837,7 @@ final confirmed = await showDialog<bool>(
       return _reverseBtn(isRejected: false, fs: fs);
     }
 
-    if (!widget.isPending && !widget.isApproved && !widget.isChecked) {
+    if (!widget.isPending && !widget.isApproved && !widget.isChecked && !widget.isIssued) {
       if (!_canReverseRejected) return const SizedBox.shrink();
       return _reverseBtn(isRejected: true, fs: fs);
     }
@@ -773,7 +983,7 @@ final confirmed = await showDialog<bool>(
     }
 
     // ── Approved tab: Reverse button (bottom) + Pending/Issued Gift ────────
-    if (widget.isApproved) {
+    if (widget.isApproved ) {
       return Column(
         children: [
           if (_canReverseApproved) ...[
@@ -786,13 +996,24 @@ final confirmed = await showDialog<bool>(
     }
 
     // ── Rejected tab: Reverse button (bottom) + Pending/Issued Gift ────────
-    if (!widget.isPending && !widget.isApproved && !widget.isChecked) {
+    if (!widget.isPending && !widget.isApproved && !widget.isChecked && !widget.isIssued) {
       return Column(
         children: [
           if (_canReverseRejected) ...[
             _reverseBtn(isRejected: true, fs: fs),
             const SizedBox(height: 1),
           ],
+          _buildPendingIssuedGiftButtons(fs),
+        ],
+      );
+    }
+    if (!widget.isPending && !widget.isApproved && !widget.isChecked ) {
+      return Column(
+        children: [
+          // if (_canReverseRejected) ...[
+          //   _reverseBtn(isRejected: true, fs: fs),
+          //   const SizedBox(height: 1),
+          // ],
           _buildPendingIssuedGiftButtons(fs),
         ],
       );
@@ -843,6 +1064,8 @@ final confirmed = await showDialog<bool>(
                     ? const Color.fromARGB(255, 92, 17, 255)
                     : widget.isPending
                     ? Colors.orange
+                    : widget.isIssued
+                    ? Colors.teal
                     : Colors.red,
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -868,6 +1091,8 @@ final confirmed = await showDialog<bool>(
                         ? 'For Approval'
                         : widget.isPending
                         ? 'Pending & Checked'
+                        : widget.isIssued
+                        ? 'Issued'
                         : 'Rejected',
                     style: const TextStyle(
                       fontSize: 15,
@@ -1002,71 +1227,72 @@ final confirmed = await showDialog<bool>(
                               : const Icon(Icons.person_search, size: 25),
                         ),
                         const SizedBox(width: 5),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              final memberId =
-                                  _memberIdController.text.trim();
-                              if (memberId.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content:
-                                          Text("Please enter a Member ID")),
-                                );
-                                return;
-                              }
-                              context.push(
-                                '/gifts/special-gift-requests/prv-gifts/$memberId',
-                                extra: {'iid': 988908},
-                              );
-                            },
-                            label: Text("Pending Gift",
-                                style: TextStyle(
-                                    fontSize: fontSettings.fontSize,
-                                    fontWeight: fontSettings.fontWeight)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12)),
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 5),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              final memberId =
-                                  _memberIdController.text.trim();
-                              if (memberId.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content:
-                                          Text("Please enter a Member ID")),
-                                );
-                                return;
-                              }
-                              context.push(
-                                '/gifts/special-gift-requests/prv-gifts/$memberId',
-                                extra: {'iid': 8888},
-                              );
-                            },
-                            label: Text("Issued Gift",
-                                style: TextStyle(
-                                    fontSize: fontSettings.fontSize,
-                                    fontWeight: fontSettings.fontWeight)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12)),
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                          ),
-                        ),
+                        // Expanded(
+                        //   child: ElevatedButton.icon(
+                        //     onPressed: () {
+                        //       final memberId =
+                        //           _memberIdController.text.trim();
+                        //       if (memberId.isEmpty) {
+                        //         ScaffoldMessenger.of(context).showSnackBar(
+                        //           const SnackBar(
+                        //               content:
+                        //                   Text("Please enter a Member ID")),
+                        //         );
+                        //         return;
+                        //       }
+                        //       context.push(
+                        //         '/gifts/special-gift-requests/prv-gifts/$memberId',
+                        //         extra: {'iid': 988908},
+                        //       );
+                        //     },
+                        //     label: Text("Pending Gift",
+                        //         style: TextStyle(
+                        //             fontSize: fontSettings.fontSize,
+                        //             fontWeight: fontSettings.fontWeight)),
+                        //     style: ElevatedButton.styleFrom(
+                        //       backgroundColor: Colors.red,
+                        //       foregroundColor: Colors.white,
+                        //       shape: RoundedRectangleBorder(
+                        //           borderRadius: BorderRadius.circular(12)),
+                        //       padding:
+                        //           const EdgeInsets.symmetric(vertical: 12),
+                        //     ),
+                        //   ),
+                        // ),
+                       // const SizedBox(width: 5),
+                        // Expanded(
+                        //   child: ElevatedButton.icon(
+                        //     onPressed: () {
+                        //       final memberId =
+                        //           _memberIdController.text.trim();
+                        //       if (memberId.isEmpty) {
+                        //         ScaffoldMessenger.of(context).showSnackBar(
+                        //           const SnackBar(
+                        //               content:
+                        //                   Text("Please enter a Member ID")),
+                        //         );
+                        //         return;
+                        //       }
+                        //       context.push(
+                        //         '/gifts/special-gift-requests/prv-gifts/$memberId',
+                        //         extra: {'iid': 8888},
+                        //       );
+                        //     },
+                        //     label: Text("Issued Gift",
+                        //         style: TextStyle(
+                        //             fontSize: fontSettings.fontSize,
+                        //             fontWeight: fontSettings.fontWeight)),
+                        //     style: ElevatedButton.styleFrom(
+                        //       backgroundColor: Colors.green,
+                        //       foregroundColor: Colors.white,
+                        //       shape: RoundedRectangleBorder(
+                        //           borderRadius: BorderRadius.circular(12)),
+                        //       padding:
+                        //           const EdgeInsets.symmetric(vertical: 12),
+                        //     ),
+                        //   ),
+                        // ),
+                         Expanded(child: _buildPendingIssuedGiftButtons(fontSettings)),
                       ],
                     ),
 
@@ -1389,7 +1615,7 @@ final confirmed = await showDialog<bool>(
                       ),
                     ],
 // ── Approved Information Card ───────────────────────────────────────────
-if (widget.isApproved &&
+if (widget.isApproved || widget.isIssued &&
     widget.gift != null &&
     widget.gift!.firstAppBy != null &&
     widget.gift!.firstAppBy!.isNotEmpty) ...[
@@ -1518,6 +1744,195 @@ if (widget.isApproved &&
     ),
   ),
 ],
+
+//issued information card
+                            if (widget.isIssued &&
+                              widget.gift != null &&
+                              widget.gift!.firstAppBy != null &&
+                              widget.gift!.firstAppBy!.isNotEmpty) ...[
+                            const SizedBox(height: 16),
+                            Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.orange.withOpacity(0.10),
+                                    Colors.orange.withOpacity(0.03),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.orange.withOpacity(0.5),
+                                  width: 1.5,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.orange.withOpacity(0.08),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(14.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // ── Header ────────────────────────────────────────────────
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(6),
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange,
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: const Icon(
+                                            Icons.check_circle_outline,
+                                            color: Colors.white,
+                                            size: 18,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Text(
+                                          "Issued Information",
+                                          style: TextStyle(
+                                            fontSize: fontSettings.fontSize + 2,
+                                            fontWeight: FontWeight.bold,
+                                            color:  Colors.orange.shade700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Divider(
+                                      color: Colors.orange.withOpacity(0.35),
+                                      height: 1,
+                                    ),
+                                    const SizedBox(height: 12),
+
+                                    // ── Approved By ───────────────────────────────────────────
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.person_outline,
+                                          color:  Colors.orange.shade700,
+                                          size: 18,
+                                        ),
+                                        
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          "Issued By:",
+                                          style: TextStyle(
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            widget.gift!.lastAppBy!,
+                                            style: TextStyle(
+                                              fontSize:
+                                                  fontSettings.fontSize + 1,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.orange.shade700,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+ if (widget.gift!.lastsrNo != null &&
+                                        widget
+                                            .gift!
+                                            .lastsrNo!
+                                            .isNotEmpty) ...[
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.schedule,
+                                            color: Colors.orange.shade700,
+                                            size: 18,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            "Issued Serial No:",
+                                            style: TextStyle(
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              
+                                                widget.gift!.lastsrNo!,
+                                              
+                                              style: TextStyle(
+                                                fontSize: fontSettings.fontSize,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.orange.shade700,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                            ],
+                                    // ── Issued At ───────────────────────────────────────────
+                                    if (widget.gift!.lastAppTime != null &&
+                                        widget
+                                            .gift!
+                                            .lastAppTime!
+                                            .isNotEmpty) ...[
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.schedule,
+                                            color: Colors.orange.shade700,
+                                            size: 18,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            "Issued:",
+                                            style: TextStyle(
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              _formatDateandTime(
+                                                widget.gift!.firstAppTime,
+                                              ),
+                                              style: TextStyle(
+                                                fontSize: fontSettings.fontSize,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.orange.shade700,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                     // ── Previous Gift Amount ────────────────────────────────
                     const SizedBox(height: 16),
                     TextFormField(

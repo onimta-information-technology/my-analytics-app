@@ -1039,6 +1039,7 @@ class AppNavigation {
                               extra['isApproved'] as bool? ?? false;
                           final isChecked =
                               extra['isChecked'] as bool? ?? false; // ← fixed
+                          final isIssued = extra['isIssued'] as bool? ?? false; 
                           return ViewBirthdayGiftRequest(
                             giftsRepository: GiftsRepository(
                               ApiService(const FlutterSecureStorage()),
@@ -1047,6 +1048,7 @@ class AppNavigation {
                             isPending: isPending,
                             isApproved: isApproved,
                             isChecked: isChecked, // ← passed through
+                            isIssued: isIssued, 
                           );
                         },
                       ),

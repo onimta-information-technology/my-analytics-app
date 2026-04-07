@@ -683,12 +683,102 @@ class _SpecialGiftRequestScreenState
                                   child: Text(
                                     _formatDate(gift.firstAppTime),
                                     style: TextStyle(
-                                      color: const Color.fromARGB(
-                                        255,
-                                        92,
-                                        17,
-                                        255,
-                                      ),
+                                      color:  Colors.green,
+                                      fontSize: fontSettings.fontSize+1,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+ if (isIssued ||
+                              gift.lastAppBy != null &&
+                                  gift.lastAppBy!.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                             Row(
+                              children: [
+                                const Icon(
+                                  Icons.person,
+                                  color: Color.fromARGB(255, 92, 17, 255),
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Issued Serial No: ',
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize+2,
+                                    fontWeight: fontSettings.fontWeight,
+                                        color: Colors.black87,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    gift.lastsrNo!,
+                                    style: TextStyle(
+                                       color: Colors.black87,
+                                      fontSize: fontSettings.fontSize+1,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                              const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.person,
+                                  color: Color.fromARGB(255, 92, 17, 255),
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Issued By: ',
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize+2,
+                                    fontWeight: fontSettings.fontWeight,
+                                        color: Colors.black87,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    gift.lastAppBy!,
+                                    style: TextStyle(
+                                       color: Colors.black87,
+                                      fontSize: fontSettings.fontSize+1,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                              const SizedBox(height: 6),
+                              Row(
+                              children: [
+                                const Icon(
+                                  Icons.schedule,
+                                  color: Color.fromARGB(255, 92, 17, 255),
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Issued: ',
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize+2,
+                                    fontWeight: fontSettings.fontWeight,
+                                        color: Colors.black87,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(                         
+                                      _formatDate(gift.lastAppTime),
+                                    style: TextStyle(
+                                       color: Colors.black87,
+                                      
                                       fontSize: fontSettings.fontSize+1,
                                       fontWeight: fontSettings.fontWeight,
                                     ),

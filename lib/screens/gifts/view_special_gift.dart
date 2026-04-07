@@ -1438,7 +1438,7 @@ Row(
                             ),
                           ],
                           // ── Approved Information Card ───────────────────────────────────────────
-                          if (widget.isApproved &&
+                          if (widget.isApproved || widget.isIssued &&
                               widget.gift != null &&
                               widget.gift!.firstAppBy != null &&
                               widget.gift!.firstAppBy!.isNotEmpty) ...[
@@ -1555,7 +1555,7 @@ Row(
                                           ),
                                           const SizedBox(width: 8),
                                           Text(
-                                            "Approved At:",
+                                            "Approved:",
                                             style: TextStyle(
                                               fontSize: fontSettings.fontSize,
                                               fontWeight:
@@ -1573,6 +1573,194 @@ Row(
                                                 fontSize: fontSettings.fontSize,
                                                 fontWeight: FontWeight.bold,
                                                 color: Colors.green.shade700,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+//issued information card
+                            if (widget.isIssued &&
+                              widget.gift != null &&
+                              widget.gift!.firstAppBy != null &&
+                              widget.gift!.firstAppBy!.isNotEmpty) ...[
+                            const SizedBox(height: 16),
+                            Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.orange.withOpacity(0.10),
+                                    Colors.orange.withOpacity(0.03),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.orange.withOpacity(0.5),
+                                  width: 1.5,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.orange.withOpacity(0.08),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(14.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // ── Header ────────────────────────────────────────────────
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(6),
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange,
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: const Icon(
+                                            Icons.check_circle_outline,
+                                            color: Colors.white,
+                                            size: 18,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Text(
+                                          "Issued Information",
+                                          style: TextStyle(
+                                            fontSize: fontSettings.fontSize + 2,
+                                            fontWeight: FontWeight.bold,
+                                            color:  Colors.orange.shade700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Divider(
+                                      color: Colors.orange.withOpacity(0.35),
+                                      height: 1,
+                                    ),
+                                    const SizedBox(height: 12),
+
+                                    // ── Approved By ───────────────────────────────────────────
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.person_outline,
+                                          color:  Colors.orange.shade700,
+                                          size: 18,
+                                        ),
+                                        
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          "Issued By:",
+                                          style: TextStyle(
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            widget.gift!.lastAppBy!,
+                                            style: TextStyle(
+                                              fontSize:
+                                                  fontSettings.fontSize + 1,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.orange.shade700,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+ if (widget.gift!.lastsrNo != null &&
+                                        widget
+                                            .gift!
+                                            .lastsrNo!
+                                            .isNotEmpty) ...[
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.schedule,
+                                            color: Colors.orange.shade700,
+                                            size: 18,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            "Issued Serial No:",
+                                            style: TextStyle(
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              
+                                                widget.gift!.lastsrNo!,
+                                              
+                                              style: TextStyle(
+                                                fontSize: fontSettings.fontSize,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.orange.shade700,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                            ],
+                                    // ── Issued At ───────────────────────────────────────────
+                                    if (widget.gift!.lastAppTime != null &&
+                                        widget
+                                            .gift!
+                                            .lastAppTime!
+                                            .isNotEmpty) ...[
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.schedule,
+                                            color: Colors.orange.shade700,
+                                            size: 18,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            "Issued:",
+                                            style: TextStyle(
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              _formatDateandTime(
+                                                widget.gift!.firstAppTime,
+                                              ),
+                                              style: TextStyle(
+                                                fontSize: fontSettings.fontSize,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.orange.shade700,
                                               ),
                                               overflow: TextOverflow.ellipsis,
                                             ),

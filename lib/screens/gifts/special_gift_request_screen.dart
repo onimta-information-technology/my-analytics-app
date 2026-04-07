@@ -40,6 +40,8 @@ class _SpecialGiftRequestScreenState
         return Colors.red;
       case 'Checked':
         return const Color.fromARGB(255, 92, 17, 255);
+      case 'Issued':
+        return Colors.teal;
       default:
         return Colors.orange;
     }
@@ -53,6 +55,8 @@ class _SpecialGiftRequestScreenState
         return Icons.cancel;
       case 'Checked':
         return Icons.rule_rounded;
+      case 'Issued':
+        return Icons.card_giftcard;
       default:
         return Icons.hourglass_bottom;
     }
@@ -89,6 +93,7 @@ class _SpecialGiftRequestScreenState
     required bool isPending,
     required bool isApproved,
     required bool isChecked,
+    required bool isIssued,
   }) async {
     final salesCode = await StorageUtil.getSalesCode();
 
@@ -104,13 +109,11 @@ class _SpecialGiftRequestScreenState
     final rejectedBy = (gift.deleteUser ?? '').trim().toLowerCase();
 
     if (isPending) {
-      // Pending: otgiChk == true OR loginUser == reqBy
       final otgiChk = await StorageUtil.getOtgiChk();
       return otgiChk == true || currentUserName == reqBy;
     }
 
     if (isChecked) {
-      // Checked: otgiApp == true OR loginUser == reqBy OR loginUser == checkedBy
       final otgiApp = await StorageUtil.getOtgiApp();
       return otgiApp == true ||
           currentUserName == reqBy ||
@@ -118,14 +121,19 @@ class _SpecialGiftRequestScreenState
     }
 
     if (isApproved) {
-      // Approved: otgiApp == true OR loginUser == reqBy OR loginUser == approvedBy
       final otgiApp = await StorageUtil.getOtgiApp();
       return otgiApp == true ||
           currentUserName == reqBy ||
           currentUserName == approvedBy;
     }
 
-    // Rejected: loginUser == reqBy OR loginUser == rejectedBy
+    if (isIssued) {
+      final otgiApp = await StorageUtil.getOtgiApp();
+      final otgiChk = await StorageUtil.getOtgiChk();
+      return otgiApp == true || otgiChk == true || currentUserName == reqBy;
+    }
+
+    // Rejected
     return currentUserName == reqBy || currentUserName == rejectedBy;
   }
 
@@ -138,6 +146,7 @@ class _SpecialGiftRequestScreenState
       return amount;
     }
   }
+
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   @override
@@ -188,22 +197,14 @@ class _SpecialGiftRequestScreenState
           .getSpecialGiftData(88790, salesCode);
       await ref.read(giftProvider.notifier).getSpecialGiftData(8891, salesCode);
       await ref.read(giftProvider.notifier).getSpecialGiftData(8893, salesCode);
-      await ref.read(giftProvider.notifier).getSpecialGiftData(88891, salesCode);
+      await ref
+          .read(giftProvider.notifier)
+          .getSpecialGiftData(88891, salesCode);
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
-  // ── Assets ─────────────────────────────────────────────────────────────────
-
-  // final Map<String, String> ratingImageMap = {
-  //   "CLASSIC": "assets/images/ratings/CLASSIC.png",
-  //   "DIAMOND": "assets/images/ratings/DIAMOND.png",
-  //   "GOLD": "assets/images/ratings/GOLD.png",
-  //   "INFINITY": "assets/images/ratings/INFINITY.png",
-  //   "PLATINUM": "assets/images/ratings/PLATINUM.png",
-  //   "SILVER": "assets/images/ratings/SILVER.png",
-  // };
   Color _getRatingColor(String? rating) {
     switch ((rating ?? '').toUpperCase()) {
       case 'GOLD':
@@ -226,6 +227,7 @@ class _SpecialGiftRequestScreenState
         return Constants.kPrimaryColor;
     }
   }
+
   // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
@@ -250,8 +252,8 @@ class _SpecialGiftRequestScreenState
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.pink,
-          isScrollable: true, // ✅ FIX: prevents overflow
-          tabAlignment: TabAlignment.center, // ✅ valid with isScrollable: true
+          isScrollable: true,
+          tabAlignment: TabAlignment.center,
           tabs: [
             _buildTab(
               'Pending & Checked',
@@ -264,7 +266,7 @@ class _SpecialGiftRequestScreenState
               const Color.fromARGB(255, 92, 17, 255),
             ),
             _buildTab('Approved', giftsp.approvedgift.length, Colors.green),
-            _buildTab('Issued', giftsp.issuedgift.length, Colors.green),
+            _buildTab('Issued', giftsp.issuedgift.length, Colors.teal),
             _buildTab('Rejected', giftsp.rejectgift.length, Colors.red),
           ],
         ),
@@ -279,30 +281,35 @@ class _SpecialGiftRequestScreenState
                 isPending: true,
                 isApproved: false,
                 isChecked: false,
+                isIssued: false,
               ),
               _buildGiftList(
                 giftsp.chekbygift,
                 isPending: false,
                 isApproved: false,
                 isChecked: true,
+                isIssued: false,
               ),
               _buildGiftList(
                 giftsp.approvedgift,
                 isPending: false,
                 isApproved: true,
                 isChecked: false,
+                isIssued: false,
               ),
-               _buildGiftList(
+              _buildGiftList(
                 giftsp.issuedgift,
                 isPending: false,
                 isApproved: false,
                 isChecked: false,
+                isIssued: true,
               ),
               _buildGiftList(
                 giftsp.rejectgift,
                 isPending: false,
                 isApproved: false,
                 isChecked: false,
+                isIssued: false,
               ),
             ],
           ),
@@ -319,7 +326,6 @@ class _SpecialGiftRequestScreenState
                 ),
               ),
             ),
-          //  const Watermark(),
         ],
       ),
       floatingActionButton: widget.hideAddButton
@@ -343,7 +349,7 @@ class _SpecialGiftRequestScreenState
     );
   }
 
-  // ── Tab (original Row layout — fully preserved) ────────────────────────────
+  // ── Tab ────────────────────────────────────────────────────────────────────
 
   Widget _buildTab(String title, int count, Color color) {
     return Tab(
@@ -372,6 +378,7 @@ class _SpecialGiftRequestScreenState
     required bool isPending,
     required bool isApproved,
     required bool isChecked,
+    required bool isIssued,
   }) {
     final fontSettings = ref.watch(fontSettingsProvider);
 
@@ -381,6 +388,8 @@ class _SpecialGiftRequestScreenState
         ? 'Checked'
         : isPending
         ? 'Pending'
+        : isIssued
+        ? 'Issued'
         : 'Rejected';
 
     return FutureBuilder<List<SpecialGiftRequest>>(
@@ -409,7 +418,6 @@ class _SpecialGiftRequestScreenState
             String? actionBy;
             String? actionLabel;
             Color? actionColor;
-
             String? checkedBy;
 
             if (!isPending && !isChecked) {
@@ -441,6 +449,7 @@ class _SpecialGiftRequestScreenState
                       isPending: isPending,
                       isApproved: isApproved,
                       isChecked: isChecked,
+                      isIssued: isIssued,
                     );
                     if (!canAccess) {
                       if (mounted) _showAccessDeniedDialog();
@@ -454,6 +463,7 @@ class _SpecialGiftRequestScreenState
                         'isPending': isPending,
                         'isApproved': isApproved,
                         'isChecked': isChecked,
+                        'isIssued': isIssued,
                       },
                     );
                     if (result == true) {
@@ -511,25 +521,7 @@ class _SpecialGiftRequestScreenState
                           ),
                           const SizedBox(height: 6),
 
-                          // Insert date
-                          // Row(
-                          //   children: [
-                          //     const Icon(
-                          //       Icons.access_time,
-                          //       color: Color.fromARGB(255, 0, 0, 0),
-                          //       size: 16,
-                          //     ),
-                          //     const SizedBox(width: 6),
-                          //     Text(
-                          //       _formatDate(gift.insertDate),
-                          //       style: TextStyle(
-                          //         color: const Color.fromARGB(255, 2, 2, 2),
-                          //         fontSize: fontSettings.fontSize - 1,
-                          //         fontWeight: fontSettings.fontWeight,
-                          //       ),
-                          //     ),
-                          //   ],
-                          // ),
+                          // Amount
                           Row(
                             children: [
                               const Icon(
@@ -548,7 +540,6 @@ class _SpecialGiftRequestScreenState
                               ),
                               Expanded(
                                 child: Text(
-                                  // AFTER
                                   gift.giftDesc.isNotEmpty
                                       ? _formatAmount(gift.giftDesc)
                                       : 'N/A',
@@ -567,6 +558,8 @@ class _SpecialGiftRequestScreenState
                               ),
                             ],
                           ),
+
+                          // Requested date
                           Row(
                             children: [
                               const Icon(
@@ -596,7 +589,6 @@ class _SpecialGiftRequestScreenState
                               ),
                             ],
                           ),
-
                           const SizedBox(height: 6),
 
                           // Requested By
@@ -630,7 +622,6 @@ class _SpecialGiftRequestScreenState
                             ],
                           ),
 
-                          // Checked By / Approved By / Rejected By
                           // Approved By / Rejected By
                           if (actionBy != null && actionLabel != null) ...[
                             const SizedBox(height: 6),
@@ -649,6 +640,7 @@ class _SpecialGiftRequestScreenState
                                   style: TextStyle(
                                     fontSize: fontSettings.fontSize + 2,
                                     fontWeight: fontSettings.fontWeight,
+                                        color: Colors.black87,
                                   ),
                                 ),
                                 Expanded(
@@ -665,6 +657,8 @@ class _SpecialGiftRequestScreenState
                               ],
                             ),
                           ],
+
+                          // Approved Time
                           if (isApproved ||
                               gift.firstAppTime != null &&
                                   gift.firstAppTime!.isNotEmpty) ...[
@@ -678,10 +672,11 @@ class _SpecialGiftRequestScreenState
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  'Approved Time: ',
+                                  'Approved: ',
                                   style: TextStyle(
-                                    fontSize: fontSettings.fontSize,
+                                    fontSize: fontSettings.fontSize+2,
                                     fontWeight: fontSettings.fontWeight,
+                                        color: Colors.black87,
                                   ),
                                 ),
                                 Expanded(
@@ -694,7 +689,7 @@ class _SpecialGiftRequestScreenState
                                         17,
                                         255,
                                       ),
-                                      fontSize: fontSettings.fontSize,
+                                      fontSize: fontSettings.fontSize+1,
                                       fontWeight: fontSettings.fontWeight,
                                     ),
                                     overflow: TextOverflow.ellipsis,
@@ -703,7 +698,8 @@ class _SpecialGiftRequestScreenState
                               ],
                             ),
                           ],
-                          // Checked By (shown in both Checked and Approved tabs)
+
+                          // Checked By
                           if (checkedBy != null) ...[
                             const SizedBox(height: 6),
                             Row(
@@ -719,6 +715,7 @@ class _SpecialGiftRequestScreenState
                                   style: TextStyle(
                                     fontSize: fontSettings.fontSize + 2,
                                     fontWeight: fontSettings.fontWeight,
+                                        color: Colors.black87,
                                   ),
                                 ),
                                 Expanded(
@@ -741,7 +738,7 @@ class _SpecialGiftRequestScreenState
                             ),
                           ],
 
-                          // Check Time (Checked tab only)
+                          // Check Time
                           if (isApproved ||
                               isChecked &&
                                   gift.checkAppByTime != null &&
@@ -756,10 +753,11 @@ class _SpecialGiftRequestScreenState
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  'Check Time: ',
+                                  'Checked: ',
                                   style: TextStyle(
-                                    fontSize: fontSettings.fontSize,
+                                    fontSize: fontSettings.fontSize + 2,
                                     fontWeight: fontSettings.fontWeight,
+                                        color: Colors.black87,
                                   ),
                                 ),
                                 Expanded(
@@ -772,7 +770,7 @@ class _SpecialGiftRequestScreenState
                                         17,
                                         255,
                                       ),
-                                      fontSize: fontSettings.fontSize,
+                                      fontSize: fontSettings.fontSize+1,
                                       fontWeight: fontSettings.fontWeight,
                                     ),
                                     overflow: TextOverflow.ellipsis,
@@ -781,6 +779,8 @@ class _SpecialGiftRequestScreenState
                               ],
                             ),
                           ],
+
+                          // Rejected At
                           if (gift.deleteTime != null &&
                               gift.deleteTime!.isNotEmpty) ...[
                             const SizedBox(height: 6),
@@ -793,10 +793,11 @@ class _SpecialGiftRequestScreenState
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  'Rejected At: ',
+                                  'Rejected: ',
                                   style: TextStyle(
-                                    fontSize: fontSettings.fontSize - 2,
+                                    fontSize: fontSettings.fontSize + 2,
                                     fontWeight: fontSettings.fontWeight,
+                                        color: Colors.black87,
                                   ),
                                 ),
                                 Expanded(
@@ -809,7 +810,7 @@ class _SpecialGiftRequestScreenState
                                         17,
                                         17,
                                       ),
-                                      fontSize: fontSettings.fontSize,
+                                      fontSize: fontSettings.fontSize+1,
                                       fontWeight: fontSettings.fontWeight,
                                     ),
                                     overflow: TextOverflow.ellipsis,
@@ -819,7 +820,7 @@ class _SpecialGiftRequestScreenState
                             ),
                           ],
 
-                          // Valid Days (Checked or Approved tab)
+                          // Valid Days
                           if ((isChecked || isApproved) &&
                               gift.validDates != null &&
                               gift.validDates!.isNotEmpty) ...[
@@ -837,6 +838,7 @@ class _SpecialGiftRequestScreenState
                                   style: TextStyle(
                                     fontSize: fontSettings.fontSize,
                                     fontWeight: FontWeight.bold,
+                                        color: Colors.black87,
                                   ),
                                 ),
                                 Expanded(
@@ -854,7 +856,7 @@ class _SpecialGiftRequestScreenState
                             ),
                           ],
 
-                          // ── Status Badge ───────────────────────────────────
+                          // Status Badge
                           const SizedBox(height: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -891,48 +893,38 @@ class _SpecialGiftRequestScreenState
                   ),
                 ),
 
-                // Rating image badge
+                // Rating badge
                 Positioned(
                   top: 10,
                   right: 15,
-                  child:
-                      // SizedBox(
-                      //   width: 90,
-                      //   height: 30,
-                      //   child: Image.asset(
-                      //     ratingImageMap[gift.gRating] ??
-                      //         "assets/images/ratings/CLASSIC.png",
-                      //     fit: BoxFit.contain,
-                      //   ),
-                      // ),
-                      Hero(
-                        tag: "rating-image-${gift.mid}",
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
+                  child: Hero(
+                    tag: "rating-image-${gift.mid}",
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _getRatingColor(gift.gRating),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.25),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
                           ),
-                          decoration: BoxDecoration(
-                            color: _getRatingColor(gift.gRating),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.25),
-                                blurRadius: 6,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Text(
-                            gift.gRating ?? 'N/A',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                        ],
+                      ),
+                      child: Text(
+                        gift.gRating ?? 'N/A',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
+                    ),
+                  ),
                 ),
               ],
             );

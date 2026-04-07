@@ -26,18 +26,20 @@ import 'package:flutter_easyloading/flutter_easyloading.dart';
 class ViewSpecificGiftRequest extends ConsumerStatefulWidget {
   final GiftsRepository giftsRepository;
   final SpecialGiftRequest? gift;
-  final bool isPending;
-  final bool isApproved;
-  final bool isChecked;
+final bool isPending;
+final bool isApproved;
+final bool isChecked;
+final bool isIssued;
 
-  const ViewSpecificGiftRequest({
-    super.key,
-    required this.giftsRepository,
-    this.gift,
-    this.isPending = false,
-    this.isApproved = false,
-    this.isChecked = false,
-  });
+const ViewSpecificGiftRequest({
+  super.key,
+  required this.giftsRepository,
+  this.gift,
+  this.isPending = false,
+  this.isApproved = false,
+  this.isChecked = false,
+  this.isIssued = false,
+});
 
   @override
   ConsumerState<ViewSpecificGiftRequest> createState() =>
@@ -74,7 +76,8 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
   double flushactdrop = 0.0;
   double avgbet = 0.0;
   int? _selectedValidDays;
-
+int _pendingGiftCount = 0;
+int _issuedGiftCount = 0;
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _isEditable = false;
@@ -120,6 +123,7 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _loadGuestDataForCard();
         _loadWhatsAppNumber();
+          _loadGiftCounts(); 
       });
     }
 
@@ -142,7 +146,26 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
     _whatsappNumberController.dispose();
     super.dispose();
   }
+Future<void> _loadGiftCounts() async {
+  final memberId = _memberIdController.text.trim();
+  if (memberId.isEmpty) return;
+  try {
+    await ref.read(giftProvider.notifier).getprvGift(memberId, 88940);
+    final pendingCount = ref.read(giftProvider).prvgiftList.length;
 
+    await ref.read(giftProvider.notifier).getprvGift(memberId, 8888);
+    final issuedCount = ref.read(giftProvider).prvgiftList.length;
+
+    if (mounted) {
+      setState(() {
+        _pendingGiftCount = pendingCount;
+        _issuedGiftCount = issuedCount;
+      });
+    }
+  } catch (e) {
+    debugPrint('Error loading gift counts: $e');
+  }
+}
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
   String _formatDate(String? dateString) {
@@ -529,84 +552,193 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
   // ── Pending Gift & Issued Gift buttons (reusable) ────────────────────────
 
   /// Shared Pending Gift + Issued Gift button row used at multiple places.
-  Widget _buildPendingIssuedButtons(FontSettings fontSettings) {
-    return Row(
-      children: [
-        // Pending Gift button
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: () {
-              final memberId = _memberIdController.text.trim();
-              if (memberId.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Please enter a Member ID")),
-                );
-                return;
-              }
-              context.push(
-                '/gifts/special-gift-requests/prv-gifts/$memberId',
-                extra: {'iid': 88940},
-              );
-            },
-            icon: const Icon(Icons.pending_actions),
-            label: Text(
-              "Pending Gift",
-              style: TextStyle(
-                fontSize: fontSettings.fontSize,
-                fontWeight: fontSettings.fontWeight,
-              ),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        // Issued Gift button
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: () {
-              final memberId = _memberIdController.text.trim();
-              if (memberId.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Please enter a Member ID")),
-                );
-                return;
-              }
-              context.push(
-                '/gifts/special-gift-requests/prv-gifts/$memberId',
-                extra: {'iid': 8888},
-              );
-            },
-            icon: const Icon(Icons.card_giftcard),
-            label: Text(
-              "Issued Gift",
-              style: TextStyle(
-                fontSize: fontSettings.fontSize,
-                fontWeight: fontSettings.fontWeight,
-              ),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+Widget _buildPendingIssuedButtons(FontSettings fontSettings) {
+  final memberId = _memberIdController.text.trim();
 
-  // ── Build ───────────────────────────────────────────────────────────────────
+  return Row(
+    children: [
+      // ── Pending Gift ─────────────────────────────────────
+      Expanded(
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            InkWell(
+              onTap: () {
+                if (memberId.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Please enter a Member ID")),
+                  );
+                  return;
+                }
+                context.push(
+                  '/gifts/special-gift-requests/prv-gifts/$memberId',
+                  extra: {'iid': 88940},
+                );
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 12,
+                  horizontal: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red.shade600, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.red.withOpacity(0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.pending_actions, color: Colors.red.shade600, size: 18),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        "Pending Gift",
+                        style: TextStyle(
+                          color: Colors.red.shade600,
+                          fontSize: fontSettings.fontSize,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // ── Top-right count badge ──
+            Positioned(
+              top: -10,
+              right: -10,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 26),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade600,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  '$_pendingGiftCount',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
 
+      const SizedBox(width: 20),
+
+      // ── Issued Gift ──────────────────────────────────────
+      Expanded(
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            InkWell(
+              onTap: () {
+                if (memberId.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Please enter a Member ID")),
+                  );
+                  return;
+                }
+                context.push(
+                  '/gifts/special-gift-requests/prv-gifts/$memberId',
+                  extra: {'iid': 8888},
+                );
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 12,
+                  horizontal: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF00695C), width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.teal.withOpacity(0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.card_giftcard, color: Color(0xFF00695C), size: 18),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        "Issued Gift",
+                        style: TextStyle(
+                          color: const Color(0xFF00695C),
+                          fontSize: fontSettings.fontSize,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // ── Top-right count badge ──
+            Positioned(
+              top: -10,
+              right: 0,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 26),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00695C),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  '$_issuedGiftCount',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
   @override
   Widget build(BuildContext context) {
     final fontSettings = ref.watch(fontSettingsProvider);
@@ -621,8 +753,8 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
     final bool showPendingButtons = widget.isPending;
     final bool showCheckedButtons = widget.isChecked;
     final bool showApprovedSection = widget.isApproved;
-    final bool showRejectedReverse =
-        !widget.isApproved && !widget.isPending && !widget.isChecked;
+ final bool showRejectedReverse =
+    !widget.isApproved && !widget.isPending && !widget.isChecked && !widget.isIssued;
 
     final bool canEditFields =
         widget.isPending || widget.isChecked || _isEditable;
@@ -653,13 +785,15 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: widget.isApproved
-                    ? Colors.green
-                    : widget.isChecked
-                    ? const Color.fromARGB(255, 92, 17, 255)
-                    : widget.isPending
-                    ? Colors.orange
-                    : Colors.red,
+            color: widget.isApproved
+    ? Colors.green
+    : widget.isChecked
+    ? const Color.fromARGB(255, 92, 17, 255)
+    : widget.isPending
+    ? Colors.orange
+    : widget.isIssued
+    ? Colors.teal
+    : Colors.red,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
@@ -677,14 +811,16 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                   //   color: Colors.white,
                   // ),
                   // const SizedBox(width: 7),
-                  Text(
-                    widget.isApproved
-                        ? 'Approved'
-                        : widget.isChecked
-                        ? 'For Approval'
-                        : widget.isPending
-                        ? 'Pending & Checked'
-                        : 'Rejected',
+                Text(
+  widget.isApproved
+      ? 'Approved'
+      : widget.isChecked
+      ? 'For Approval'
+      : widget.isPending
+      ? 'Pending & Checked'
+      : widget.isIssued
+      ? 'Issued'
+      : 'Rejected',
                     style: const TextStyle(
                       fontSize: 16,
                       color: Colors.white,
@@ -778,191 +914,115 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
                       const SizedBox(height: 16.0),
 
                       // ── Action Row ────────────────────────────────────
-                      Row(
-                        children: [
-                          // Profile button
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.black,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
-                              ),
-                            ),
-                            onPressed: _isLoading
-                                ? null
-                                : () async {
-                                    final selectedGuest = ref.read(
-                                      selectedGuestProvider,
-                                    );
-                                    if (selectedGuest != null &&
-                                        selectedGuest.mid ==
-                                            _memberIdController.text) {
-                                      context.push('/home/profile');
-                                      return;
-                                    }
-                                    try {
-                                      setState(() => _isLoading = true);
-                                      GuestRepository guestRepository =
-                                          GuestRepository(
-                                            ApiService(
-                                              const FlutterSecureStorage(),
-                                            ),
-                                          );
-                                      List<GuestSearchResponse> guests =
-                                          await guestRepository.searchGuest(
-                                            9021,
-                                            _memberIdController.text,
-                                          );
-                                      setState(() => _isLoading = false);
-                                      if (guests.isNotEmpty) {
-                                        final guestResponse = guests.first;
-                                        ref
-                                            .read(
-                                              selectedGuestProvider.notifier,
-                                            )
-                                            .setSelectedGuest(
-                                              Guest(
-                                                mid:
-                                                    guestResponse.mid ??
-                                                    _memberIdController.text,
-                                                memberName:
-                                                    guestResponse.mName ??
-                                                    _memberNameController.text,
-                                                country: "",
-                                                lastVisitDate:
-                                                    guestResponse.lvd
-                                                        ?.toString() ??
-                                                    "",
-                                                age: 0,
-                                                gRating:
-                                                    guestResponse.gRating ?? "",
-                                                mGroup: guestResponse.mGroup,
-                                                gName:
-                                                    guestResponse.gName ?? "",
-                                                memImage2:
-                                                    guestResponse.memImage2,
-                                              ),
-                                            );
-                                        context.push('/home/profile');
-                                      } else {
-                                        ref
-                                            .read(
-                                              selectedGuestProvider.notifier,
-                                            )
-                                            .setSelectedGuest(
-                                              Guest(
-                                                mid: _memberIdController.text,
-                                                memberName:
-                                                    _memberNameController.text,
-                                                country: "",
-                                                lastVisitDate: "1990-01-01",
-                                                age: 0,
-                                                gRating: "",
-                                                mGroup: "",
-                                                gName: "",
-                                              ),
-                                            );
-                                        context.push('/home/profile');
-                                      }
-                                    } catch (e) {
-                                      setState(() => _isLoading = false);
-                                    }
-                                  },
-                            child: _isLoading
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Icon(Icons.person_search, size: 25),
-                          ),
-                          const SizedBox(width: 5),
-
-                          // Pending Gift button (middle action row)
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                final memberId = _memberIdController.text
-                                    .trim();
-                                if (memberId.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Please enter a Member ID"),
-                                    ),
-                                  );
-                                  return;
-                                }
-                                context.push(
-                                  '/gifts/special-gift-requests/prv-gifts/$memberId',
-                                  extra: {'iid': 88940},
-                                );
-                              },
-                              label: Text(
-                                "Pending Gift",
-                                style: TextStyle(
-                                  fontSize: fontSettings.fontSize,
-                                  fontWeight: fontSettings.fontWeight,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 5),
-
-                          // Issued Gift button (middle action row)
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                final memberId = _memberIdController.text
-                                    .trim();
-                                if (memberId.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Please enter a Member ID"),
-                                    ),
-                                  );
-                                  return;
-                                }
-                                context.push(
-                                  '/gifts/special-gift-requests/prv-gifts/$memberId',
-                                  extra: {'iid': 8888},
-                                );
-                              },
-                              label: Text(
-                                "Issued Gift",
-                                style: TextStyle(
-                                  fontSize: fontSettings.fontSize,
-                                  fontWeight: fontSettings.fontWeight,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                   // ── Action Row ────────────────────────────────────
+Row(
+  children: [
+    // Profile button
+    ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+      ),
+      onPressed: _isLoading
+          ? null
+          : () async {
+              final selectedGuest = ref.read(
+                selectedGuestProvider,
+              );
+              if (selectedGuest != null &&
+                  selectedGuest.mid ==
+                      _memberIdController.text) {
+                context.push('/home/profile');
+                return;
+              }
+              try {
+                setState(() => _isLoading = true);
+                GuestRepository guestRepository =
+                    GuestRepository(
+                      ApiService(
+                        const FlutterSecureStorage(),
                       ),
+                    );
+                List<GuestSearchResponse> guests =
+                    await guestRepository.searchGuest(
+                      9021,
+                      _memberIdController.text,
+                    );
+                setState(() => _isLoading = false);
+                if (guests.isNotEmpty) {
+                  final guestResponse = guests.first;
+                  ref
+                      .read(
+                        selectedGuestProvider.notifier,
+                      )
+                      .setSelectedGuest(
+                        Guest(
+                          mid:
+                              guestResponse.mid ??
+                              _memberIdController.text,
+                          memberName:
+                              guestResponse.mName ??
+                              _memberNameController.text,
+                          country: "",
+                          lastVisitDate:
+                              guestResponse.lvd
+                                  ?.toString() ??
+                              "",
+                          age: 0,
+                          gRating:
+                              guestResponse.gRating ?? "",
+                          mGroup: guestResponse.mGroup,
+                          gName:
+                              guestResponse.gName ?? "",
+                          memImage2:
+                              guestResponse.memImage2,
+                        ),
+                      );
+                  context.push('/home/profile');
+                } else {
+                  ref
+                      .read(
+                        selectedGuestProvider.notifier,
+                      )
+                      .setSelectedGuest(
+                        Guest(
+                          mid: _memberIdController.text,
+                          memberName:
+                              _memberNameController.text,
+                          country: "",
+                          lastVisitDate: "1990-01-01",
+                          age: 0,
+                          gRating: "",
+                          mGroup: "",
+                          gName: "",
+                        ),
+                      );
+                  context.push('/home/profile');
+                }
+              } catch (e) {
+                setState(() => _isLoading = false);
+              }
+            },
+      child: _isLoading
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : const Icon(Icons.person_search, size: 25),
+    ),
+    const SizedBox(width: 8),
+    // Pending + Issued buttons with badges
+    Expanded(child: _buildPendingIssuedButtons(fontSettings)),
+  ],
+),
 
                       const SizedBox(height: 10),
                       Align(

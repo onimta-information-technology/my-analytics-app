@@ -605,25 +605,27 @@ class AppNavigation {
                       );
                     },
                   ),
-                  GoRoute(
-                    path: 'view-specific-gift-request',
-                    builder: (context, state) {
-                      final extra = state.extra as Map<String, dynamic>? ?? {};
-                      final gift = extra['gift'] as SpecialGiftRequest?;
-                      final isPending = extra['isPending'] as bool? ?? false;
-                      final isApproved = extra['isApproved'] as bool? ?? false;
-                      final isChecked = extra['isChecked'] as bool? ?? false;
-                      return ViewSpecificGiftRequest(
-                        giftsRepository: GiftsRepository(
-                          ApiService(const FlutterSecureStorage()),
-                        ),
-                        gift: gift,
-                        isPending: isPending,
-                        isApproved: isApproved,
-                        isChecked: isChecked,
-                      );
-                    },
-                  ),
+                GoRoute(
+  path: 'view-specific-gift-request',
+  builder: (context, state) {
+    final extra = state.extra as Map<String, dynamic>? ?? {};
+    final gift = extra['gift'] as SpecialGiftRequest?;
+    final isPending = extra['isPending'] as bool? ?? false;
+    final isApproved = extra['isApproved'] as bool? ?? false;
+    final isChecked = extra['isChecked'] as bool? ?? false;
+    final isIssued = extra['isIssued'] as bool? ?? false;  // ← ADD THIS
+    return ViewSpecificGiftRequest(
+      giftsRepository: GiftsRepository(
+        ApiService(const FlutterSecureStorage()),
+      ),
+      gift: gift,
+      isPending: isPending,
+      isApproved: isApproved,
+      isChecked: isChecked,
+      isIssued: isIssued,  // ← ADD THIS
+    );
+  },
+),
                 ],
               ),
             ],
@@ -976,29 +978,27 @@ class AppNavigation {
                           );
                         },
                       ),
-                      GoRoute(
-                        path: 'view-specific-gift-request',
-                        builder: (context, state) {
-                          final extra =
-                              state.extra as Map<String, dynamic>? ?? {};
-                          final gift = extra['gift'] as SpecialGiftRequest?;
-                          final isPending =
-                              extra['isPending'] as bool? ?? false;
-                          final isApproved =
-                              extra['isApproved'] as bool? ?? false;
-                          final isChecked =
-                              extra['isChecked'] as bool? ?? false;
-                          return ViewSpecificGiftRequest(
-                            giftsRepository: GiftsRepository(
-                              ApiService(const FlutterSecureStorage()),
-                            ),
-                            gift: gift,
-                            isPending: isPending,
-                            isApproved: isApproved,
-                            isChecked: isChecked,
-                          );
-                        },
-                      ),
+                   GoRoute(
+  path: 'view-specific-gift-request',
+  builder: (context, state) {
+    final extra = state.extra as Map<String, dynamic>? ?? {};
+    final gift = extra['gift'] as SpecialGiftRequest?;
+    final isPending = extra['isPending'] as bool? ?? false;
+    final isApproved = extra['isApproved'] as bool? ?? false;
+    final isChecked = extra['isChecked'] as bool? ?? false;
+    final isIssued = extra['isIssued'] as bool? ?? false;  // ← ADD THIS
+    return ViewSpecificGiftRequest(
+      giftsRepository: GiftsRepository(
+        ApiService(const FlutterSecureStorage()),
+      ),
+      gift: gift,
+      isPending: isPending,
+      isApproved: isApproved,
+      isChecked: isChecked,
+      isIssued: isIssued,  // ← ADD THIS
+    );
+  },
+),
                     ],
                   ),
                   GoRoute(

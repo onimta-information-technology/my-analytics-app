@@ -1007,7 +1007,7 @@ Widget _buildPendingIssuedGiftButtons(FontSettings fontSettings) {
         ],
       );
     }
-    if (!widget.isPending && !widget.isApproved && !widget.isChecked ) {
+    if (widget.isIssued) {
       return Column(
         children: [
           // if (_canReverseRejected) ...[

@@ -582,6 +582,7 @@ class AppNavigation {
                       final String mid = state.pathParameters['mid']!;
                       final extra = state.extra as Map<String, dynamic>? ?? {};
                       final int iid = extra['iid'] as int? ?? 8888;
+                      final text2 = extra['text2'] as String? ?? "";
                       return CustomTransitionPage(
                         fullscreenDialog: false,
                         key: state.pageKey,
@@ -591,6 +592,7 @@ class AppNavigation {
                             ApiService(const FlutterSecureStorage()),
                           ),
                           iid: iid,
+                           text2: text2,
                         ),
                         transitionsBuilder:
                             (context, animation, secondaryAnimation, child) {
@@ -950,15 +952,18 @@ class AppNavigation {
                           final extra =
                               state.extra as Map<String, dynamic>? ?? {};
                           final int iid = extra['iid'] as int? ?? 8888;
+                          final text2 = extra['text2'] as String? ?? "";
                           return CustomTransitionPage(
                             fullscreenDialog: false,
                             key: state.pageKey,
                             child: PrvGiftScreen(
                               memberId: mid,
+
                               giftsRepository: GiftsRepository(
                                 ApiService(const FlutterSecureStorage()),
                               ),
                               iid: iid,
+                               text2: text2,
                             ),
                             transitionsBuilder:
                                 (
@@ -1059,6 +1064,7 @@ class AppNavigation {
                           final extra =
                               state.extra as Map<String, dynamic>? ?? {};
                           final int iid = extra['iid'] as int? ?? 8888;
+                           final text2 = extra['text2'] as String? ?? "";
                           return CustomTransitionPage(
                             fullscreenDialog: false,
                             key: state.pageKey,
@@ -1068,6 +1074,7 @@ class AppNavigation {
                                 ApiService(const FlutterSecureStorage()),
                               ),
                               iid: iid,
+                               text2: text2,
                             ),
                             transitionsBuilder:
                                 (

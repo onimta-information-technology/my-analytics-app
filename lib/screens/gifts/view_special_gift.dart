@@ -150,7 +150,7 @@ Future<void> _loadGiftCounts() async {
   final memberId = _memberIdController.text.trim();
   if (memberId.isEmpty) return;
   try {
-    await ref.read(giftProvider.notifier).getprvGift(memberId, 88940);
+    await ref.read(giftProvider.notifier).getprvGift(memberId, 88940,text2: widget.gift!.idNo.toString());
     final pendingCount = ref.read(giftProvider).prvgiftList.length;
 
     await ref.read(giftProvider.notifier).getprvGift(memberId, 8888);
@@ -572,7 +572,7 @@ Widget _buildPendingIssuedButtons(FontSettings fontSettings) {
                 }
                 context.push(
                   '/gifts/special-gift-requests/prv-gifts/$memberId',
-                  extra: {'iid': 88940},
+                  extra: {'iid': 88940, 'text2': widget.gift!.idNo.toString()},
                 );
               },
               borderRadius: BorderRadius.circular(12),

@@ -295,9 +295,20 @@ class GiftsRepository {
     }
   }
 
-  Future<List<PrevGift>> getPrvGiftList(String text1, {required int iid}) async {
-    print('getPrvGiftList called with text1: $text1, iid: $iid');
+  Future<List<PrevGift>> getPrvGiftList(String text1, {required int iid, String text2 = ""}) async {
+    print('getPrvGiftList called with text1: $text1, iid: $iid, text2: $text2');
     final deviceId = await DeviceId.get();
+      //  final reqidInt = text2.toInt();
+      // print('Converted reqid to int: $reqidInt');
+       String convertedText2 = text2;
+    if (text2.isNotEmpty) {
+      final parsed = double.tryParse(text2);
+      if (parsed != null) {
+        convertedText2 = parsed.toInt().toString();
+      }
+    }
+    
+    print('Converted text2: $convertedText2');
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -313,6 +324,13 @@ class GiftsRepository {
           "Para_Direction": "Input",
           "Para_Lenth": 5000,
           "Para_Name": "@Text1",
+          "Para_Type": "varchar",
+        },
+         {
+          "Para_Data": convertedText2,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text2",
           "Para_Type": "varchar",
         },
         {

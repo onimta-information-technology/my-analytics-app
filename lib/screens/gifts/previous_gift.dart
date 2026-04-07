@@ -13,11 +13,13 @@ class PrvGiftScreen extends ConsumerStatefulWidget {
   final String memberId;
   final GiftsRepository giftsRepository;
   final int iid;
+   final String text2;
   const PrvGiftScreen({
     super.key,
     required this.memberId,
     required this.giftsRepository,
     this.iid = 8888,
+     this.text2 = "",
   });
 
   @override
@@ -115,7 +117,7 @@ class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
       {"field": "Gift", "value": _parseString(gift.cashierPayType)},
       {"field": "Cashier Pay Type", "value": _parseString(gift.cashierPayType)},
       {"field": "Category", "value": _parseString(gift.giftCategory)},
-      {"field": "Gift Type", "value": _formatDate(gift.gType)},
+      // {"field": "Gift Type", "value": _formatDate(gift.gType)},
       {
         "field": "Chip Type",
         "value": _parseString(gift.chipType?.replaceAll("_", " ")),
@@ -127,6 +129,7 @@ class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
                 ? "N/A"
                 : _parseString(gift.giftDesc),
       },
+       {"field": "Gift Type", "value": _formatDate(gift.gType)},
       {"field": "Marketing Person", "value": _parseString(gift.mktPer)},
       {
         "field": "Gift Issue Time",
@@ -216,7 +219,7 @@ class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
           FutureBuilder(
             future: ref
                 .read(giftProvider.notifier)
-                .getprvGift(widget.memberId, widget.iid),
+                .getprvGift(widget.memberId, widget.iid, text2: widget.text2),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());

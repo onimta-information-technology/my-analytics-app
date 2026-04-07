@@ -139,7 +139,7 @@ Future<void> _loadGiftCounts() async {
   final memberId = _memberIdController.text.trim();
   if (memberId.isEmpty) return;
   try {
-    await ref.read(giftProvider.notifier).getprvGift(memberId, 88940);
+    await ref.read(giftProvider.notifier).getprvGift(memberId, 988908,text2: widget.gift!.idNo.toString());
     final pendingCount = ref.read(giftProvider).prvgiftList.length;
 
     await ref.read(giftProvider.notifier).getprvGift(memberId, 8888);

@@ -3,6 +3,7 @@
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/cdd/customer_due_diligence_model.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 
 class CustomerDueDiligenceRepository {
   final ApiService apiService;
@@ -17,11 +18,22 @@ class CustomerDueDiligenceRepository {
     required String natureOfBusiness,      
   }) async {
     final deviceId = await DeviceId.get();
+    final username = await StorageUtil.getUserName();
+    final selseCode = await StorageUtil.getSalesCode();
+    print('submitCDD called with:');
+    print('  passportOrNic: $passportOrNic');
+    print('  identificationNumber: $identificationNumber');
+    print('  sourceOfFunds: $sourceOfFunds');
+    print('  clientType: $clientType');
+    print('  natureOfBusiness: $natureOfBusiness');
+    print('  deviceId: $deviceId');
+    print('  username: $username');
+    print('  selseCode: $selseCode');
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
         {
-          "Para_Data": 123456,
+          "Para_Data": 10002,
           "Para_Direction": "Input",
           "Para_Lenth": 1,
           "Para_Name": "@Iid",
@@ -63,6 +75,13 @@ class CustomerDueDiligenceRepository {
           "Para_Name": "@Text5",
           "Para_Type": "varchar",
         },
+           {
+          "Para_Data": username,
+          "Para_Direction": "Input",
+          "Para_Lenth": 20,
+          "Para_Name": "@Text6",
+          "Para_Type": "varchar",
+        },
          {
           "Para_Data": deviceId,
           "Para_Direction": "Input",
@@ -74,7 +93,7 @@ class CustomerDueDiligenceRepository {
       "SpName": "sp_CRM_Common_API",
       "con": "1",
     });
-
+print('CDD API response: $response');
     if (response['CommonResult'] != null) {
       return CustomerDueDiligenceModel.fromJson(response['CommonResult']);
     } else {

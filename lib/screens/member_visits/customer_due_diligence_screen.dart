@@ -60,7 +60,7 @@ class _CustomerDueDiligenceScreenState
     _idController.addListener(() => setState(() {}));
     // Pre-select Passport when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(cddFormProvider.notifier).setIdType('PASSPORT');
+      ref.read(cddFormProvider.notifier).setIdType('1 - 1');
     });
   }
 
@@ -181,14 +181,14 @@ class _CustomerDueDiligenceScreenState
                           children: [
                             _RadioChip(
                               label: 'Passport',
-                              value: 'PASSPORT',
+                              value: '1 - 1',
                               groupValue: cddState.idType,
                               onChanged: notifier.setIdType,
                             ),
                             const SizedBox(width: 12),
                             _RadioChip(
                               label: 'NIC',
-                              value: 'NIC',
+                              value: '1 - 2',
                               groupValue: cddState.idType,
                               onChanged: notifier.setIdType,
                             ),
@@ -232,10 +232,13 @@ class _CustomerDueDiligenceScreenState
                   _buildSectionCard(
                     highlighted: true,
                     child: Column(
-                      children: _sourceOfFundsOptions.map((option) {
+                     // children: _sourceOfFundsOptions.map((option) {
+                     children: _sourceOfFundsOptions.asMap().entries.map((entry) {
+      final index = '2 - ${entry.key + 1}';
+      final label = entry.value;
                         return _RadioListItem(
-                          label: option,
-                          value: option,
+                          label: label,
+                          value: index,
                           groupValue: cddState.sourceOfFunds,
                           onChanged: notifier.setSourceOfFunds,
                           optionStyle: optionStyle,
@@ -250,17 +253,30 @@ class _CustomerDueDiligenceScreenState
                   const _SectionHeader(title: '3.1 Client Type'),
                   const SizedBox(height: 10),
                   _buildSectionCard(
+                    // child: Column(
+                    //   children: _clientTypeOptions.map((option) {
+                    //     return _RadioListItem(
+                    //       label: option,
+                    //       value: option,
+                    //       groupValue: cddState.clientType,
+                    //       onChanged: notifier.setClientType,
+                    //       optionStyle: optionStyle,
+                    //     );
+                    //   }).toList(),
+                    // ),
                     child: Column(
-                      children: _clientTypeOptions.map((option) {
-                        return _RadioListItem(
-                          label: option,
-                          value: option,
-                          groupValue: cddState.clientType,
-                          onChanged: notifier.setClientType,
-                          optionStyle: optionStyle,
-                        );
-                      }).toList(),
-                    ),
+  children: _clientTypeOptions.asMap().entries.map((entry) {
+    final index ='3.1 - ${entry.key + 1}';
+    final label = entry.value;
+    return _RadioListItem(
+      label: label,
+      value: index,
+      groupValue: cddState.clientType,
+      onChanged: notifier.setClientType,
+      optionStyle: optionStyle,
+    );
+  }).toList(),
+),
                   ),
 
                   const SizedBox(height: 20),
@@ -272,21 +288,37 @@ class _CustomerDueDiligenceScreenState
                   ),
                   const SizedBox(height: 10),
                   _buildSectionCard(
+                    // child: Column(
+                    //   children: _natureOfBusinessOptions.expand((entry) {
+                    //     final (value, label) = entry;
+                    //     return [
+                    //       _RadioListItem(
+                    //         label: label,
+                    //         value: value,
+                    //         groupValue: cddState.natureOfBusiness,
+                    //         onChanged: notifier.setNatureOfBusiness,
+                    //         optionStyle: optionStyle,
+                    //       ),
+                    //       const SizedBox(height: 13),
+                    //     ];
+                    //   }).toList(),
+                    // ),
                     child: Column(
-                      children: _natureOfBusinessOptions.expand((entry) {
-                        final (value, label) = entry;
-                        return [
-                          _RadioListItem(
-                            label: label,
-                            value: value,
-                            groupValue: cddState.natureOfBusiness,
-                            onChanged: notifier.setNatureOfBusiness,
-                            optionStyle: optionStyle,
-                          ),
-                          const SizedBox(height: 13),
-                        ];
-                      }).toList(),
-                    ),
+  children: _natureOfBusinessOptions.asMap().entries.expand((entry) {
+    final index = '3.2 - ${entry.key + 1}';
+    final (_, label) = entry.value;
+    return [
+      _RadioListItem(
+        label: label,
+        value: index,
+        groupValue: cddState.natureOfBusiness,
+        onChanged: notifier.setNatureOfBusiness,
+        optionStyle: optionStyle,
+      ),
+      const SizedBox(height: 13),
+    ];
+  }).toList(),
+),
                   ),
 
                   const SizedBox(height: 16),

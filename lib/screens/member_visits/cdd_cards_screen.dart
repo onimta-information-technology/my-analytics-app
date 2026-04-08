@@ -173,14 +173,14 @@ class _CddDetailCard extends StatelessWidget {
                 value: clientLabel,
               ),
 
-             // const SizedBox(height: 10),
+             const SizedBox(height: 10),
 
               // ── Nature of Business ──────────────────────────────────
-              // _InfoRow(
-              //   icon: Icons.business_center_outlined,
-              //   label: 'Nature of Business',
-              //   value: businessLabel,
-              // ),
+              _InfoRow(
+                icon: Icons.business_center_outlined,
+                label: 'Nature of Business :',
+                value: businessLabel,
+              ),
             ],
           ),
         ),
@@ -213,9 +213,9 @@ class _InfoRow extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 20,
                   color: const Color.fromARGB(255, 0, 0, 0),
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
               const SizedBox(width: 5),
@@ -225,9 +225,9 @@ class _InfoRow extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 20,
                     color: const Color.fromARGB(255, 0, 0, 0),
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),

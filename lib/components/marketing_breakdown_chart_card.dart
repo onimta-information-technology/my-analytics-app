@@ -1060,7 +1060,7 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> {
                                 ],
                               ),
                               child: Text(
-                                guest.gRating ?? 'CLASSIC',
+                                guest.gRating ?? 'N/A',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 12,

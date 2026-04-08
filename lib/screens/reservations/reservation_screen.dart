@@ -645,7 +645,7 @@ String _formatDateTime(DateTime dt) {
         vertical: 6,
       ),
       decoration: BoxDecoration(
-        color: _getRatingColor(reservation.gRating ?? 'CLASSIC'),
+        color: _getRatingColor(reservation.gRating ?? 'N/A'),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(

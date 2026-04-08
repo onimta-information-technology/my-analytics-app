@@ -1,6 +1,7 @@
 // lib/screens/member/customer_due_diligence_screen.dart
 
 import 'package:ballys_reservation_app/core/constants.dart';
+import 'package:ballys_reservation_app/providers/cdd_history_provider.dart';
 import 'package:ballys_reservation_app/providers/customer_due_diligence_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:flutter/material.dart';
@@ -89,7 +90,7 @@ class _CustomerDueDiligenceScreenState
 
     if (!mounted) return;
 
-    if (success) {
+    if (false == success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Customer Due Diligence submitted successfully.'),
@@ -98,6 +99,7 @@ class _CustomerDueDiligenceScreenState
       );
       notifier.reset();
       _idController.clear();
+      ref.read(cddHistoryProvider.notifier).refresh();
       if (context.canPop()) context.pop();
     }
   }

@@ -24,7 +24,7 @@ class CddNamesScreen extends ConsumerWidget {
         title: const Text('Customer Due Diligence'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh,size: 30,),
             onPressed: () =>
                 ref.read(cddHistoryProvider.notifier).refresh(),
           ),

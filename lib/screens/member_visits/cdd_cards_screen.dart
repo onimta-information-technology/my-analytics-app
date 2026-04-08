@@ -219,12 +219,16 @@ class _InfoRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 5),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 18,
-                  color: const Color.fromARGB(255, 0, 0, 0),
-                  fontWeight: FontWeight.w500,
+              Expanded(
+                child: Text(
+                  value,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    color: const Color.fromARGB(255, 0, 0, 0),
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ],

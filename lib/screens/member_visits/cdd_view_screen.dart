@@ -2,15 +2,16 @@
 
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/models/cdd/cdd_history_item.dart';
+import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-class CddViewScreen extends StatelessWidget {
+class CddViewScreen extends ConsumerWidget {
   final CddHistoryItem item;
   const CddViewScreen({super.key, required this.item});
 
-  // ── Same option lists as the submit form ─────────────────────────────────
   static const _sourceOfFundsOptions = [
     'Salary Receipts',
     'Business Income',
@@ -35,29 +36,6 @@ class CddViewScreen extends StatelessWidget {
     'OLR - Other low risk nature business profession',
   ];
 
-  // ── Resolve stored codes back to readable labels ─────────────────────────
-  String _resolveLabel(
-    String code,
-    List<String> options,
-    String prefix,
-  ) {
-    // code is like "2 - 3"
-    final parts = code.split(' - ');
-    if (parts.length == 2) {
-      final idx = int.tryParse(parts[1].trim());
-      if (idx != null && idx >= 1 && idx <= options.length) {
-        return options[idx - 1];
-      }
-    }
-    return code; // fallback: show raw code
-  }
-
-  String _idTypeLabel(String code) {
-    if (code == '1 - 1') return 'Passport';
-    if (code == '1 - 2') return 'NIC';
-    return code;
-  }
-
   String _formatDate(String raw) {
     try {
       final dt = DateTime.parse(raw);
@@ -68,13 +46,23 @@ class CddViewScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final sourceLabel = _resolveLabel(
-      item.text3, _sourceOfFundsOptions, '2');
-    final clientLabel = _resolveLabel(
-      item.text4, _clientTypeOptions, '3.1');
-    final businessLabel = _resolveLabel(
-      item.text5, _natureOfBusinessOptions, '3.2');
+  Widget build(BuildContext context, WidgetRef ref) {
+    final fontSettings = ref.watch(fontSettingsProvider);
+
+    final labelStyle = TextStyle(
+      fontSize: fontSettings.fontSize,
+      fontWeight: FontWeight.w600,
+      color: Colors.black87,
+    );
+    final optionStyle = TextStyle(
+      fontSize: fontSettings.fontSize,
+      fontWeight: fontSettings.fontWeight,
+      color: Colors.black87,
+    );
+    final subtitleStyle = TextStyle(
+      fontSize: fontSettings.fontSize - 1,
+      color: Colors.grey.shade700,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -103,10 +91,10 @@ class CddViewScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Customer Due Diligence',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: fontSettings.fontSize + 2,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
                     ),
@@ -114,10 +102,7 @@ class CddViewScreen extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     'Submitted by ${item.text6}  •  ${_formatDate(item.insertDate)}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade700,
-                    ),
+                    style: subtitleStyle,
                   ),
                 ],
               ),
@@ -132,28 +117,24 @@ class CddViewScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Passport / NIC No',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w600, color: Colors.black87),
-                  ),
+                  Text('Passport / NIC No', style: labelStyle),
                   const SizedBox(height: 8),
-                  // Show selected chip (read-only)
                   Row(
                     children: [
                       _ReadOnlyChip(
                         label: 'Passport',
                         isSelected: item.text1 == '1 - 1',
+                        fontSize: fontSettings.fontSize,
                       ),
                       const SizedBox(width: 12),
                       _ReadOnlyChip(
                         label: 'NIC',
                         isSelected: item.text1 == '1 - 2',
+                        fontSize: fontSettings.fontSize,
                       ),
                     ],
                   ),
                   const SizedBox(height: 10),
-                  // ID number display
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(
@@ -163,10 +144,7 @@ class CddViewScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(color: Colors.grey.shade300),
                     ),
-                    child: Text(
-                      item.text2,
-                      style: const TextStyle(fontSize: 15),
-                    ),
+                    child: Text(item.text2, style: optionStyle),
                   ),
                 ],
               ),
@@ -185,6 +163,7 @@ class CddViewScreen extends StatelessWidget {
                   return _ReadOnlyRadioItem(
                     label: e.value,
                     isSelected: item.text3 == code,
+                    optionStyle: optionStyle,
                   );
                 }).toList(),
               ),
@@ -202,6 +181,7 @@ class CddViewScreen extends StatelessWidget {
                   return _ReadOnlyRadioItem(
                     label: e.value,
                     isSelected: item.text4 == code,
+                    optionStyle: optionStyle,
                   );
                 }).toList(),
               ),
@@ -223,6 +203,7 @@ class CddViewScreen extends StatelessWidget {
                     _ReadOnlyRadioItem(
                       label: e.value,
                       isSelected: item.text5 == code,
+                      optionStyle: optionStyle,
                     ),
                     const SizedBox(height: 13),
                   ];
@@ -301,7 +282,12 @@ class _ViewCard extends StatelessWidget {
 class _ReadOnlyChip extends StatelessWidget {
   final String label;
   final bool isSelected;
-  const _ReadOnlyChip({required this.label, required this.isSelected});
+  final double fontSize;
+  const _ReadOnlyChip({
+    required this.label,
+    required this.isSelected,
+    required this.fontSize,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -312,9 +298,7 @@ class _ReadOnlyChip extends StatelessWidget {
         color: isSelected ? Constants.kPrimaryColor : Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isSelected
-              ? Constants.kPrimaryColor
-              : Colors.grey.shade400,
+          color: isSelected ? Constants.kPrimaryColor : Colors.grey.shade400,
           width: 1.5,
         ),
       ),
@@ -322,9 +306,7 @@ class _ReadOnlyChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            isSelected
-                ? Icons.radio_button_checked
-                : Icons.radio_button_off,
+            isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
             size: 18,
             color: isSelected ? Colors.white : Colors.grey.shade600,
           ),
@@ -333,9 +315,8 @@ class _ReadOnlyChip extends StatelessWidget {
             label,
             style: TextStyle(
               color: isSelected ? Colors.white : Colors.black87,
-              fontWeight:
-                  isSelected ? FontWeight.bold : FontWeight.normal,
-              fontSize: 14,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              fontSize: fontSize,
             ),
           ),
         ],
@@ -347,8 +328,12 @@ class _ReadOnlyChip extends StatelessWidget {
 class _ReadOnlyRadioItem extends StatelessWidget {
   final String label;
   final bool isSelected;
-  const _ReadOnlyRadioItem(
-      {required this.label, required this.isSelected});
+  final TextStyle optionStyle;
+  const _ReadOnlyRadioItem({
+    required this.label,
+    required this.isSelected,
+    required this.optionStyle,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -359,7 +344,7 @@ class _ReadOnlyRadioItem extends StatelessWidget {
           Radio<bool>(
             value: true,
             groupValue: isSelected ? true : null,
-            onChanged: null, // disabled = read-only
+            onChanged: null,
             activeColor: Constants.kPrimaryColor,
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             visualDensity: VisualDensity.compact,
@@ -368,13 +353,9 @@ class _ReadOnlyRadioItem extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: TextStyle(
-                fontWeight:
-                    isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected
-                    ? Constants.kPrimaryColor
-                    : Colors.black87,
-                fontSize: 14,
+              style: optionStyle.copyWith(
+                fontWeight: isSelected ? FontWeight.bold : optionStyle.fontWeight,
+                color: isSelected ? Constants.kPrimaryColor : Colors.black87,
               ),
             ),
           ),

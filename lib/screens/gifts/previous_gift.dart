@@ -65,7 +65,12 @@ class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
     final formatter = NumberFormat('#,##0');
     return formatter.format(value);
   }
-
+String _formatMillion(double? value) {
+  if (value == null || value == 0) return "0.00M";
+  final millions = value / 1000000;
+  final formatter = NumberFormat('#,##0.00', 'en_US');
+  return "${formatter.format(millions)}M";
+}
   String _formatDate(String? dateString) {
     if (dateString == null || dateString.isEmpty) return "N/A";
     try {
@@ -248,7 +253,7 @@ class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
           );
         }
 
-        return _buildHorizontalView(prvgifts, fontSettings);
+        return _buildHorizontalView(prvgifts,summaries, fontSettings);
       },
     ),
     const Watermark(),
@@ -478,7 +483,7 @@ Widget _buildSummaryBanner(List<dynamic> summaries) {
                 ),
               ),
               Text(
-                formatter.format(s['amount']),
+                 _formatMillion(s['amount'] as double),
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
@@ -495,6 +500,7 @@ Widget _buildSummaryBanner(List<dynamic> summaries) {
 }
   Widget _buildHorizontalView(
     List<dynamic> prvgifts,
+     List<dynamic> summaries,
     FontSettings fontSettings,
   ) {
     if (prvgifts.isEmpty) return const SizedBox();
@@ -655,32 +661,200 @@ Widget _buildSummaryBanner(List<dynamic> summaries) {
             ),
 
             // SCROLLABLE DATA ROWS
-            Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.vertical,
-                child: SingleChildScrollView(
-                  controller: _dataHorizontalScrollController,
-                  scrollDirection: Axis.horizontal,
-                  child: SizedBox(
-                    width: totalWidth,
-                    child: Column(
-                      children: allGiftData.map((giftData) {
-                        return Row(
-                          children: List.generate(
-                            giftData.length,
-                            (i) => buildDataCell(
-                              giftData[i]["field"]!,
-                              giftData[i]["value"]!,
-                              colWidths[i],
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
+            // Expanded(
+            //   child: SingleChildScrollView(
+            //     scrollDirection: Axis.vertical,
+            //     child: SingleChildScrollView(
+            //       controller: _dataHorizontalScrollController,
+            //       scrollDirection: Axis.horizontal,
+            //       child: SizedBox(
+            //         width: totalWidth,
+            //         child: Column(
+            //           children: allGiftData.map((giftData) {
+            //             return Row(
+            //               children: List.generate(
+            //                 giftData.length,
+            //                 (i) => buildDataCell(
+            //                   giftData[i]["field"]!,
+            //                   giftData[i]["value"]!,
+            //                   colWidths[i],
+            //                 ),
+            //               ),
+            //             );
+            //           }).toList(),
+            //         ),
+            //       ),
+            //     ),
+            //   ),
+            // ),
+            // SCROLLABLE DATA ROWS
+Expanded(
+  child: SingleChildScrollView(
+    scrollDirection: Axis.vertical,
+    child: SingleChildScrollView(
+      controller: _dataHorizontalScrollController,
+      scrollDirection: Axis.horizontal,
+      child: SizedBox(
+        width: totalWidth,
+        child: Column(
+          children: [
+            // Normal data rows
+            ...allGiftData.map((giftData) {
+              return Row(
+                children: List.generate(
+                  giftData.length,
+                  (i) => buildDataCell(
+                    giftData[i]["field"]!,
+                    giftData[i]["value"]!,
+                    colWidths[i],
                   ),
                 ),
+              );
+            }),
+
+            // ── SUMMARY ROW (Chip Type & Amount filled, rest N/A) ──
+            // if (summaries.isNotEmpty)
+            //   ...summaries.map<Widget>((s) {
+            //     final chipType = (s.chipType as String)
+            //         .replaceAll('_', ' ')
+            //         .trim();
+            //     final amount = _formatMillion(
+            //       (s.amount as num).toDouble(),
+            //     );
+
+            //     return Container(
+            //       decoration: BoxDecoration(
+            //         color: const Color(0xFFCCFFCC),
+            //         border: Border(
+            //           top: BorderSide(color: Colors.green.shade600, width: 2),
+            //         ),
+            //       ),
+            //       child: Row(
+            //         children: List.generate(fieldNames.length, (i) {
+            //           final field = fieldNames[i];
+            //           String cellValue = "N/A";
+
+            //           if (field == "Chip Type") {
+            //             cellValue = chipType.isEmpty ? "N/A" : chipType;
+            //           } else if (field == "Amount") {
+            //             cellValue = amount;
+            //           }
+
+            //           final isSummaryHighlight =
+            //               field == "Chip Type" || field == "Amount";
+
+            //           return Container(
+            //             width: colWidths[i],
+            //             height: rowHeight,
+            //             decoration: BoxDecoration(
+            //               color: isSummaryHighlight
+            //                   ? const Color(0xFF99FF99)
+            //                   : const Color(0xFFEEFFEE),
+            //               border: Border.all(color: Colors.green.shade400),
+            //             ),
+            //             padding: const EdgeInsets.all(8.0),
+            //             child: Text(
+            //               cellValue,
+            //               textAlign: TextAlign.center,
+            //               overflow: TextOverflow.ellipsis,
+            //               maxLines: 2,
+            //               style: TextStyle(
+            //                 fontSize: isSummaryHighlight
+            //                     ? fontSettings.fontSize + 3
+            //                     : fontSettings.fontSize,
+            //                 fontWeight: isSummaryHighlight
+            //                     ? FontWeight.bold
+            //                     : FontWeight.bold,
+            //                 color: Colors.black87,
+            //                 fontFamily: 'monospace',
+            //                 fontFeatures: const [FontFeature.tabularFigures()],
+            //                 height: 1.0,
+            //               ),
+            //             ),
+            //           );
+            //         }),
+            //       ),
+            //     );
+            //   }),
+            // ── SUMMARY ROWS (normalized — always OTP CHIPS & NC CHIPS) ──
+if (summaries.isNotEmpty)
+  ...() {
+    const expectedChipTypes = ['OTP_CHIPS', 'NC_CHIPS'];
+    final Map<String, double> amountMap = {};
+    for (final s in summaries) {
+      final chipType = (s.chipType as String).toUpperCase().trim();
+      amountMap[chipType] = (s.amount as num).toDouble();
+    }
+    final normalizedSummaries = expectedChipTypes.map((type) => {
+      'chipType': type,
+      'amount': amountMap[type] ?? 0.0,
+    }).toList();
+
+    return normalizedSummaries.map<Widget>((s) {
+      final chipType = (s['chipType'] as String)
+          .replaceAll('_', ' ')
+          .trim();
+      final amount = _formatMillion(s['amount'] as double);
+
+      return Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFCCFFCC),
+          border: Border(
+            top: BorderSide(color: Colors.green.shade600, width: 2),
+          ),
+        ),
+        child: Row(
+          children: List.generate(fieldNames.length, (i) {
+            final field = fieldNames[i];
+            String cellValue = "N/A";
+
+            if (field == "Chip Type") {
+              cellValue = chipType.isEmpty ? "N/A" : chipType;
+            } else if (field == "Amount") {
+              cellValue = amount;
+            }
+
+            final isSummaryHighlight =
+                field == "Chip Type" || field == "Amount";
+
+            return Container(
+              width: colWidths[i],
+              height: rowHeight,
+              decoration: BoxDecoration(
+                color: isSummaryHighlight
+                    ? const Color(0xFF99FF99)
+                    : const Color(0xFFEEFFEE),
+                border: Border.all(color: Colors.green.shade400),
               ),
-            ),
+              padding: const EdgeInsets.all(8.0),
+              child: Text(
+                cellValue,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+                style: TextStyle(
+                  fontSize: isSummaryHighlight
+                      ? fontSettings.fontSize + 3
+                      : fontSettings.fontSize,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                  fontFamily: 'monospace',
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                  height: 1.0,
+                ),
+              ),
+            );
+          }),
+        ),
+      );
+    }).toList();
+  }(),
+          ],
+        ),
+      ),
+    ),
+  ),
+),
           ],
         ),
       ),

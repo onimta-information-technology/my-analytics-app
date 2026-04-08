@@ -7,6 +7,9 @@ import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/main.dart';
 import 'package:ballys_reservation_app/models/Guest/guest_booking.dart';
 import 'package:ballys_reservation_app/models/birthday.dart';
+import 'package:ballys_reservation_app/screens/member_visits/cdd_cards_screen.dart';
+import 'package:ballys_reservation_app/models/cdd/cdd_history_item.dart';
+import 'package:ballys_reservation_app/screens/member_visits/cdd_names_screen.dart';
 import 'package:ballys_reservation_app/models/gift/birthday_gift_request.dart';
 import 'package:ballys_reservation_app/models/gift/special_gift_request.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
@@ -30,6 +33,7 @@ import 'package:ballys_reservation_app/screens/guest_booking_screen.dart';
 import 'package:ballys_reservation_app/screens/home_screen.dart';
 import 'package:ballys_reservation_app/screens/inactive_members.dart';
 import 'package:ballys_reservation_app/screens/member_visits.dart';
+import 'package:ballys_reservation_app/screens/member_visits/cdd_view_screen.dart';
 import 'package:ballys_reservation_app/screens/member_visits/customer_due_diligence_screen.dart';
 import 'package:ballys_reservation_app/screens/member_visits/sales_persons.dart';
 import 'package:ballys_reservation_app/screens/membersMainScreen.dart';
@@ -695,6 +699,75 @@ class AppNavigation {
                       },
                 ),
               ),
+              // Inside the routes: [ ... ] of GoRoute(path: '/memberMain', ...)
+
+// Inside routes: [ ... ] of GoRoute(path: '/memberMain', ...)
+// REPLACE the old /cdd-history routes with these:
+
+GoRoute(
+  path: '/cdd',
+  redirect: (_, __) => '/memberMain/cdd/names',
+),
+
+GoRoute(
+  path: '/cdd/names',
+  pageBuilder: (context, state) => CustomTransitionPage(
+    fullscreenDialog: true,
+    key: state.pageKey,
+    child: const CddNamesScreen(),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+        FadeTransition(
+          opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+          child: child,
+        ),
+  ),
+),
+
+GoRoute(
+  path: '/cdd/cards',
+  pageBuilder: (context, state) {
+    final items = state.extra as List<CddHistoryItem>;
+    return CustomTransitionPage(
+      key: state.pageKey,
+      child: CddCardsScreen(items: items),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+          FadeTransition(
+            opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+            child: child,
+          ),
+    );
+  },
+),
+
+GoRoute(
+  path: '/cdd/view',
+  pageBuilder: (context, state) {
+    final item = state.extra as CddHistoryItem;
+    return CustomTransitionPage(
+      key: state.pageKey,
+      child: CddViewScreen(item: item),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+          FadeTransition(
+            opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+            child: child,
+          ),
+    );
+  },
+),
+
+GoRoute(
+  path: '/cdd/new',
+  pageBuilder: (context, state) => CustomTransitionPage(
+    fullscreenDialog: true,
+    key: state.pageKey,
+    child: const CustomerDueDiligenceScreen(),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+        FadeTransition(
+          opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+          child: child,
+        ),
+  ),
+),
             ],
           ),
           GoRoute(

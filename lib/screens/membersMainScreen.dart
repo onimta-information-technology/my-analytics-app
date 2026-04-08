@@ -87,7 +87,7 @@ class _MemberMainScreenState extends ConsumerState<MemberMainScreen> {
                     Expanded(
                       child: GestureDetector(
                         onTap: () {
-                          context.go('/memberMain/new_guest');
+                          context.go('/memberMain/cdd/names');
                         },
                         child: Card(
                           child: Container(

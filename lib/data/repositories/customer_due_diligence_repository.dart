@@ -107,7 +107,13 @@ Future<List<CddHistoryItem>> fetchCDDHistory({
   required String username,
   required String deviceId,
 }) async {
-  final salseCode = await StorageUtil.getSalesCode();
+  final salesCode = await StorageUtil.getSalesCode();
+   final marketingCode = await StorageUtil.getMarketingCode();
+    final text7Value = (salesCode == 'AD001') ? salesCode : marketingCode;
+    print('fetchCDDHistory called with:');
+    print('  username: $username');
+    print('  deviceId: $deviceId');
+    print('  text7Value: $text7Value');
   final response = await apiService.post('CommonExecute', {
     "HasReturnData": "T",
     "Parameters": [
@@ -119,7 +125,7 @@ Future<List<CddHistoryItem>> fetchCDDHistory({
         "Para_Type": "int",
       },
       {
-        "Para_Data": salseCode,
+        "Para_Data": text7Value,
         "Para_Direction": "Input",
         "Para_Lenth": 50,
         "Para_Name": "@Text7",

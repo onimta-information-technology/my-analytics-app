@@ -469,6 +469,52 @@ class _GiftsMainScreenState extends ConsumerState<GiftsMainScreen> {
                     ),
                   ],
                 ),
+                 Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                         // context.go('/gifts/event-gifts');
+                        },
+                        child: Card(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10.0),
+                              gradient: const LinearGradient(
+                                colors: [
+                              Color.fromARGB(255, 2, 235, 235),
+                                  Color.fromARGB(192, 29, 84, 83),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                            ),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 30),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                   Icons.card_giftcard_rounded,
+                                    size: 65,
+                                    color: Colors.white,
+                                  ),
+                                  SizedBox(height: 10),
+                                  Text(
+                                    'Gifts History',
+                                    style: TextStyle(
+                                      fontSize: 16.0,
+                                      fontWeight: FontWeight.normal,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ] ),
               ],
             ),
           ),

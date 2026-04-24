@@ -1004,6 +1004,7 @@ if (isIssued ||
                                   style: TextStyle(
                                     fontSize: fontSettings.fontSize + 2,
                                     fontWeight: fontSettings.fontWeight,
+                                       color: Colors.black87,
                                   ),
                                 ),
                                 Expanded(
@@ -1013,6 +1014,7 @@ if (isIssued ||
                                       color: Colors.deepPurple,
                                       fontSize: fontSettings.fontSize + 2,
                                       fontWeight: fontSettings.fontWeight,
+                                      
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -1020,7 +1022,36 @@ if (isIssued ||
                               ],
                             ),
                           ],
-
+                            const SizedBox(height: 6),
+ Row(
+                              children: [
+                                const Icon(
+                                  Icons.note_alt_outlined,
+                                  color: Colors.deepPurple,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Remark: ',
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize + 2,
+                                    fontWeight: fontSettings.fontWeight,
+                                       color: Colors.black87,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                   gift.giftCategory.isEmpty ? 'N/A' : gift.giftCategory,
+                                    style: TextStyle(
+                                   color: Colors.black87,
+                                      fontSize: fontSettings.fontSize + 2,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
                           // ── Status Badge ───────────────────────────────────
                           const SizedBox(height: 8),
                           Container(

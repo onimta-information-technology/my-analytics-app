@@ -945,7 +945,36 @@ class _SpecialGiftRequestScreenState
                               ],
                             ),
                           ],
-
+ const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.note_alt_outlined,
+                                  color: Colors.deepPurple,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Remark: ',
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize,
+                                    fontWeight: FontWeight.bold,
+                                        color: Colors.black87,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                     gift.giftCategory.isEmpty ? 'N/A' : gift.giftCategory,
+                                    style: TextStyle(
+                                  color: Colors.black87,
+                                      fontSize: fontSettings.fontSize + 2,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
                           // Status Badge
                           const SizedBox(height: 8),
                           Container(

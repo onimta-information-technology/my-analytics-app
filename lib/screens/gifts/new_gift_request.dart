@@ -5,11 +5,13 @@ import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
+import 'package:ballys_reservation_app/models/gift/special_gift_request.dart';
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/member_search_provider.dart';
 import 'package:ballys_reservation_app/providers/new_reservation_provider.dart';
 import 'package:ballys_reservation_app/providers/special_gift_provider.dart';
+import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/formatter.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/cupertino.dart';
@@ -1439,68 +1441,211 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                       final currentGiftState = ref.read(giftProvider);
 final returnSerial = currentGiftState.lastReturnSerial;
 if (!ok && returnSerial == "0") {
-   final mid = _memberIdController.text.trim();
-  // Already has a pending gift
+  final mid = _memberIdController.text.trim();
+  
   await showDialog(
     context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
-            SizedBox(width: 8),
-            Text('Pending Gift Exists'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'This member already has a pending special gift request.',
-              style: TextStyle(fontSize: 15),
+    builder: (BuildContext dialogContext) {
+      bool isLoadingGift = false;
+      
+      return StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+                SizedBox(width: 8),
+                Text('Pending Gift Exists'),
+              ],
             ),
-            SizedBox(height: 12),
-            Container(
-              padding: EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange.shade200),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline, color: Colors.orange, size: 18),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Please wait for the existing request to be processed before submitting a new one.',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.orange.shade800,
-                      ),
-                    ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+               
+                SizedBox(height: 12),
+                Container(
+                  padding: EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade200),
                   ),
-                ],
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.orange, size: 18),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child:  Text(
+                  'This member already has a pending special gift request.',
+                  style: TextStyle(fontSize: 20),
+                
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              if (isLoadingGift)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: SizedBox(
+                    width: 20, height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              // TextButton(
+              //   onPressed: isLoadingGift ? null : () => Navigator.of(context).pop(),
+              //   child: Text('OK'),
+               
+              // ),
+              ElevatedButton.icon(
+  onPressed: isLoadingGift ? null : () => Navigator.of(context).pop(),
+  icon: Icon(Icons.close, size: 18),
+  label: Text('OK'),
+  style: ElevatedButton.styleFrom(
+    backgroundColor: const Color.fromARGB(255, 255, 0, 0),
+    foregroundColor: Colors.white,
+  ),
+),
+              ElevatedButton.icon(
+                onPressed: isLoadingGift
+                    ? null
+                    : () async {
+                        setDialogState(() => isLoadingGift = true);
+                        try {
+                          // Call API 8889991
+                          final deviceId = await DeviceId.get();
+                          final resp = await widget.giftsRepository.apiService.post(
+                            'CommonExecute',
+                            {
+                              "HasReturnData": "T",
+                              "Parameters": [
+                                {
+                                  "Para_Data": 8889991,
+                                  "Para_Direction": "Input",
+                                  "Para_Lenth": 1,
+                                  "Para_Name": "@Iid",
+                                  "Para_Type": "int",
+                                },
+                                {
+                                  "Para_Data": mid,
+                                  "Para_Direction": "Input",
+                                  "Para_Lenth": 100,
+                                  "Para_Name": "@Text1",
+                                  "Para_Type": "varchar",
+                                },
+                                {
+                                  "Para_Data": deviceId,
+                                  "Para_Direction": "Input",
+                                  "Para_Lenth": 100,
+                                  "Para_Name": "@Text30",
+                                  "Para_Type": "varchar",
+                                },
+                              ],
+                              "SpName": "sp_CRM_Common_API",
+                              "con": "1",
+                            },
+                          );
+
+                          SpecialGiftRequest? foundGift;
+
+                          if (resp['CommonResult'] != null &&
+                              resp['CommonResult']['Table'] is List &&
+                              (resp['CommonResult']['Table'] as List).isNotEmpty) {
+                            final row = Map<String, dynamic>.from(
+                                (resp['CommonResult']['Table'] as List).first);
+                            final idNoRaw = row['Id_No'];
+                            if (idNoRaw != null) {
+                              final idNo = (idNoRaw is num)
+                                  ? idNoRaw.toDouble()
+                                  : double.tryParse(idNoRaw.toString()) ?? 0;
+
+                              // Search in already-loaded pending gifts
+                              final pendingGifts = ref.read(giftProvider).pendinggift;
+                              try {
+                                foundGift = pendingGifts.firstWhere(
+                                  (g) => g.idNo == idNo,
+                                );
+                              } catch (_) {
+                                foundGift = null;
+                              }
+
+                              // If not found in state, fetch from API
+                              if (foundGift == null) {
+                                final salesCode = await StorageUtil.getSalesCode();
+                                if (salesCode != null) {
+                                  await ref
+                                      .read(giftProvider.notifier)
+                                      .getSpecialGiftData(8890, salesCode);
+                                  final refreshed = ref.read(giftProvider).pendinggift;
+                                  try {
+                                    foundGift = refreshed.firstWhere(
+                                      (g) => g.idNo == idNo,
+                                    );
+                                  } catch (_) {
+                                    foundGift = null;
+                                  }
+                                }
+                              }
+                            }
+                          }
+
+                          setDialogState(() => isLoadingGift = false);
+                          if (!mounted) return;
+                          Navigator.of(context).pop(); // close dialog
+
+                          if (foundGift != null) {
+                            await context.push(
+                              '/gifts/special-gift-requests/view-specific-gift-request',
+                              extra: {
+                                'gift': foundGift,
+                                'isPending': false,
+                                'isApproved': false,
+                                'isChecked': false,
+                                'isIssued': false,
+                                'isViewOnly': true,
+                              },
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Could not load gift details'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          setDialogState(() => isLoadingGift = false);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                icon: Icon(Icons.visibility, size: 18),
+                label: Text('Show'),
+               
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  
+                ),
               ),
-            ),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
-            ),
-            child: Text('OK'),
-          ),
-        ],
+            ],
+          );
+        },
       );
     },
   );
   ref.read(giftProvider.notifier).clearLastApiResponse();
-  return; // ← stop here, don't proceed
+  return;
 }
 
 

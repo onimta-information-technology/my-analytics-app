@@ -1661,4 +1661,132 @@ Future<bool> checkbirthdayGiftPriceIncreesRequest({
     return false;
   }
 }
+Future<SpecialGiftRequest?> getSpecialGiftById(String mid) async {
+  final deviceId = await DeviceId.get();
+  final response = await apiService.post('CommonExecute', {
+    "HasReturnData": "T",
+    "Parameters": [
+      {
+        "Para_Data": 8889991,
+        "Para_Direction": "Input",
+        "Para_Lenth": 1,
+        "Para_Name": "@Iid",
+        "Para_Type": "int",
+      },
+      {
+        "Para_Data": mid,
+        "Para_Direction": "Input",
+        "Para_Lenth": 100,
+        "Para_Name": "@Text1",
+        "Para_Type": "varchar",
+      },
+      {
+        "Para_Data": deviceId,
+        "Para_Direction": "Input",
+        "Para_Lenth": 100,
+        "Para_Name": "@Text30",
+        "Para_Type": "varchar",
+      },
+    ],
+    "SpName": "sp_CRM_Common_API",
+    "con": "1",
+  });
+
+  if (response['CommonResult'] != null &&
+      response['CommonResult']['Table'] is List &&
+      (response['CommonResult']['Table'] as List).isNotEmpty) {
+    final item = (response['CommonResult']['Table'] as List).first;
+    // Returns Id_No and MID — we need to fetch full gift details
+    // using the existing pending list and match by Id_No
+    return null; // handled below
+  }
+  return null;
+}
+
+Future<SpecialGiftRequest?> getPendingGiftByMid(String mid) async {
+  final deviceId = await DeviceId.get();
+  final salesCode = await StorageUtil.getSalesCode();
+  
+  // Step 1: get the Id_No from the new API
+  final response = await apiService.post('CommonExecute', {
+    "HasReturnData": "T",
+    "Parameters": [
+      {
+        "Para_Data": 8889991,
+        "Para_Direction": "Input",
+        "Para_Lenth": 1,
+        "Para_Name": "@Iid",
+        "Para_Type": "int",
+      },
+      {
+        "Para_Data": mid,
+        "Para_Direction": "Input",
+        "Para_Lenth": 100,
+        "Para_Name": "@Text1",
+        "Para_Type": "varchar",
+      },
+      {
+        "Para_Data": deviceId,
+        "Para_Direction": "Input",
+        "Para_Lenth": 100,
+        "Para_Name": "@Text30",
+        "Para_Type": "varchar",
+      },
+    ],
+    "SpName": "sp_CRM_Common_API",
+    "con": "1",
+  });
+
+  if (response['CommonResult'] != null &&
+      response['CommonResult']['Table'] is List &&
+      (response['CommonResult']['Table'] as List).isNotEmpty) {
+    final item = Map<String, dynamic>.from(
+        (response['CommonResult']['Table'] as List).first);
+    final idNo = item['Id_No'];
+    if (idNo == null) return null;
+
+    // Step 2: fetch pending gifts and find matching Id_No
+    if (salesCode == null) return null;
+    final pendingResponse = await apiService.post('CommonExecute', {
+      "HasReturnData": "T",
+      "Parameters": [
+        {
+          "Para_Data": 8890,
+          "Para_Direction": "Input",
+          "Para_Lenth": 1,
+          "Para_Name": "@Iid",
+          "Para_Type": "int",
+        },
+        {
+          "Para_Data": salesCode,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text1",
+          "Para_Type": "varchar",
+        },
+        {
+          "Para_Data": deviceId,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text30",
+          "Para_Type": "varchar",
+        },
+      ],
+      "SpName": "sp_CRM_Common_API",
+      "con": "1",
+    });
+
+    if (pendingResponse['CommonResult'] != null &&
+        pendingResponse['CommonResult']['Table'] is List) {
+      final tableData = pendingResponse['CommonResult']['Table'] as List;
+      for (var row in tableData) {
+        final gift = SpecialGiftRequest.fromJson(Map<String, dynamic>.from(row));
+        if (gift.idNo == idNo || gift.idNo.toInt() == idNo.toInt()) {
+          return gift;
+        }
+      }
+    }
+  }
+  return null;
+}
 }

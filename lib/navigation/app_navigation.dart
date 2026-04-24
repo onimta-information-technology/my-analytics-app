@@ -620,6 +620,7 @@ class AppNavigation {
     final isApproved = extra['isApproved'] as bool? ?? false;
     final isChecked = extra['isChecked'] as bool? ?? false;
     final isIssued = extra['isIssued'] as bool? ?? false;  // ← ADD THIS
+    final isViewOnly = extra['isViewOnly'] as bool? ?? false;
     return ViewSpecificGiftRequest(
       giftsRepository: GiftsRepository(
         ApiService(const FlutterSecureStorage()),
@@ -629,6 +630,7 @@ class AppNavigation {
       isApproved: isApproved,
       isChecked: isChecked,
       isIssued: isIssued,  // ← ADD THIS
+      isViewOnly: isViewOnly,
     );
   },
 ),
@@ -1065,6 +1067,7 @@ GoRoute(
     final isApproved = extra['isApproved'] as bool? ?? false;
     final isChecked = extra['isChecked'] as bool? ?? false;
     final isIssued = extra['isIssued'] as bool? ?? false;  // ← ADD THIS
+    final isViewOnly = extra['isViewOnly'] as bool? ?? false;
     return ViewSpecificGiftRequest(
       giftsRepository: GiftsRepository(
         ApiService(const FlutterSecureStorage()),
@@ -1074,6 +1077,7 @@ GoRoute(
       isApproved: isApproved,
       isChecked: isChecked,
       isIssued: isIssued,  // ← ADD THIS
+      isViewOnly: isViewOnly,
     );
   },
 ),

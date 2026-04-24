@@ -30,6 +30,7 @@ final bool isPending;
 final bool isApproved;
 final bool isChecked;
 final bool isIssued;
+final bool isViewOnly;
 
 const ViewSpecificGiftRequest({
   super.key,
@@ -39,6 +40,7 @@ const ViewSpecificGiftRequest({
   this.isApproved = false,
   this.isChecked = false,
   this.isIssued = false,
+  this.isViewOnly = false,
 });
 
   @override
@@ -751,11 +753,11 @@ Widget _buildPendingIssuedButtons(FontSettings fontSettings) {
       _memberNameController.text = newReservation.memberName;
     }
 
-    final bool showPendingButtons = widget.isPending;
-    final bool showCheckedButtons = widget.isChecked;
-    final bool showApprovedSection = widget.isApproved;
+    final bool showPendingButtons = widget.isPending && !widget.isViewOnly;
+    final bool showCheckedButtons = widget.isChecked && !widget.isViewOnly;
+    final bool showApprovedSection = widget.isApproved && !widget.isViewOnly;
  final bool showRejectedReverse =
-    !widget.isApproved && !widget.isPending && !widget.isChecked && !widget.isIssued;
+    !widget.isApproved && !widget.isPending && !widget.isChecked && !widget.isIssued && !widget.isViewOnly;
 
     final bool canEditFields =
         widget.isPending || widget.isChecked || _isEditable;
@@ -821,6 +823,8 @@ Widget _buildPendingIssuedButtons(FontSettings fontSettings) {
       ? 'Pending & Checked'
       : widget.isIssued
       ? 'Issued'
+      :widget.isViewOnly
+      ? 'Pending & Checked'
       : 'Rejected',
                     style: const TextStyle(
                       fontSize: 16,
@@ -1783,7 +1787,7 @@ Row(
                             ),
                           ],
                           // ── Edit Toggle (Pending tab) ─────────────────
-                          if (widget.isPending)
+                          if (widget.isPending && !widget.isViewOnly)
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -1807,7 +1811,7 @@ Row(
                             ),
 
                           // ── Edit Toggle (Checked tab) ─────────────────
-                          if (widget.isChecked)
+                          if (widget.isChecked && !widget.isViewOnly)
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [

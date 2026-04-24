@@ -659,7 +659,8 @@ class GiftsRepository {
         "HasReturnData": "T",
         "Parameters": [
           {
-            "Para_Data": 98889,
+            // "Para_Data": 98889,
+            "Para_Data": 888998,
             "Para_Direction": "Input",
             "Para_Lenth": 1,
             "Para_Name": "@Iid",
@@ -1788,5 +1789,36 @@ Future<SpecialGiftRequest?> getPendingGiftByMid(String mid) async {
     }
   }
   return null;
+}
+Future<Map<String, dynamic>> getPendingBirthdayGiftIdByMember(String mid) async {
+  final deviceId = await DeviceId.get();
+  return await apiService.post('CommonExecute', {
+    "HasReturnData": "T",
+    "Parameters": [
+      {
+        "Para_Data": 8889992,
+        "Para_Direction": "Input",
+        "Para_Lenth": 1,
+        "Para_Name": "@Iid",
+        "Para_Type": "int",
+      },
+      {
+        "Para_Data": mid,
+        "Para_Direction": "Input",
+        "Para_Lenth": 100,
+        "Para_Name": "@Text1",
+        "Para_Type": "varchar",
+      },
+      {
+        "Para_Data": deviceId,
+        "Para_Direction": "Input",
+        "Para_Lenth": 100,
+        "Para_Name": "@Text30",
+        "Para_Type": "varchar",
+      },
+    ],
+    "SpName": "sp_CRM_Common_API",
+    "con": "1",
+  });
 }
 }

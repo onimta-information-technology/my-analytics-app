@@ -30,6 +30,7 @@ class ViewBirthdayGiftRequest extends ConsumerStatefulWidget {
   final bool isApproved;
   final bool isChecked;
   final bool isIssued;
+  final bool isViewOnly;
 
   const ViewBirthdayGiftRequest({
     super.key,
@@ -39,6 +40,7 @@ class ViewBirthdayGiftRequest extends ConsumerStatefulWidget {
     this.isApproved = false,
     this.isChecked = false,
     this.isIssued = false,
+    this.isViewOnly = false,
   });
 
   @override
@@ -832,6 +834,7 @@ Widget _buildPendingIssuedGiftButtons(FontSettings fontSettings) {
   // ── Section builders ────────────────────────────────────────────────────────
 
   Widget _buildTopSection(FontSettings fs) {
+      if (widget.isViewOnly) return const SizedBox.shrink(); 
     if (widget.isApproved) {
       if (!_canReverseApproved) return const SizedBox.shrink();
       return _reverseBtn(isRejected: false, fs: fs);
@@ -869,6 +872,7 @@ Widget _buildPendingIssuedGiftButtons(FontSettings fontSettings) {
 
   Widget _buildBottomSection(FontSettings fs) {
     // ── Pending tab: Check & Reject + Pending/Issued Gift ──────────────────
+      if (widget.isViewOnly) return _buildPendingIssuedGiftButtons(fs);
     if (widget.isPending) {
       return Column(
         children: [
@@ -1093,6 +1097,8 @@ Widget _buildPendingIssuedGiftButtons(FontSettings fontSettings) {
                         ? 'Pending & Checked'
                         : widget.isIssued
                         ? 'Issued'
+                        : widget.isViewOnly
+                        ? 'Pending & Checked'
                         : 'Rejected',
                     style: const TextStyle(
                       fontSize: 15,

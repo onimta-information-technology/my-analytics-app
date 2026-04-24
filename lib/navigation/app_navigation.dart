@@ -1121,7 +1121,8 @@ GoRoute(
                               extra['isApproved'] as bool? ?? false;
                           final isChecked =
                               extra['isChecked'] as bool? ?? false; // ← fixed
-                          final isIssued = extra['isIssued'] as bool? ?? false; 
+                          final isIssued = extra['isIssued'] as bool? ?? false;
+                            final isViewOnly = extra['isViewOnly'] as bool? ?? false; 
                           return ViewBirthdayGiftRequest(
                             giftsRepository: GiftsRepository(
                               ApiService(const FlutterSecureStorage()),
@@ -1131,6 +1132,7 @@ GoRoute(
                             isApproved: isApproved,
                             isChecked: isChecked, // ← passed through
                             isIssued: isIssued, 
+                            isViewOnly: isViewOnly,
                           );
                         },
                       ),

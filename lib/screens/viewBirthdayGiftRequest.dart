@@ -127,7 +127,12 @@ int _issuedGiftCount = 0;
       tcoupon = g.mCoupon + g.flushCoupon;
       flushactdrop = g.flushActDrop;
       avgbet = g.avebet;
-
+if (g.validDates != null && g.validDates!.isNotEmpty) {
+    final parsed = int.tryParse(g.validDates!);
+    if (parsed != null) {
+      _selectedValidDays = parsed;
+    }
+  }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _loadGuestDataForCard();
         _loadWhatsAppNumber();

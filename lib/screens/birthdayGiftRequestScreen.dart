@@ -206,7 +206,15 @@ class _BirthdayGiftRequestScreenState
       return amount;
     }
   }
-
+String _formatDateOnly(String? dateStr) {
+  if (dateStr == null || dateStr.isEmpty) return "N/A";
+  try {
+    final dateTime = DateTime.parse(dateStr);
+    return DateFormat("yyyy-MM-dd").format(dateTime);
+  } catch (e) {
+    return dateStr;
+  }
+}
   Future<void> _loadBirthdayGiftData(String salesCode) async {
     setState(() => _isLoading = true);
     try {
@@ -554,7 +562,27 @@ Color _getRatingColor(String? rating) {
                             ],
                           ),
                           const SizedBox(height: 6),
-
+ Row(
+                            children: [
+                              const Icon(
+                                Icons.cake,
+                                color: Colors.teal,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                'Birthday Date: ${_formatDateOnly(gift.birthdate)}',
+                                  style: TextStyle(
+                                    color: Colors.teal,
+                                    fontSize: fontSettings.fontSize + 2,
+                                    fontWeight: fontSettings.fontWeight,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
                           // Insert Date
                           // Row(
                           //   children: [

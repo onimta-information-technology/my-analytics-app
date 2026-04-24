@@ -67,6 +67,7 @@ class BirthdayIncressGiftRequest {
    final String? lastAppBy;
   final String? lastAppTime;
   final String? lastsrNo;
+ final String? birthdate;
 
   BirthdayIncressGiftRequest({
     required this.idNo,
@@ -137,6 +138,7 @@ class BirthdayIncressGiftRequest {
       this.lastAppBy,
       this.lastAppTime,
       this.lastsrNo,
+      this.birthdate,
   });
 
   factory BirthdayIncressGiftRequest.fromJson(Map<String, dynamic> json) {
@@ -215,6 +217,7 @@ class BirthdayIncressGiftRequest {
       lastAppBy: json['Last_CreateBy']?.toString(),
       lastAppTime: json['Last_Create_Time']?.toString(),
       lastsrNo: json['Last_Create_Sr_No']?.toString(),
+      birthdate: json['B_Date'] ?? '',
     );
   }
 
@@ -288,6 +291,7 @@ class BirthdayIncressGiftRequest {
       'Last_CreateBy': lastAppBy,
       'Last_Create_Time': lastAppTime,
       'Last_Create_Sr_No': lastsrNo,
+      'B_Date': birthdate,
     };
   }
 }

@@ -104,7 +104,13 @@ class GiftNotifier extends StateNotifier<GiftState> {
       state = state.copyWith(giftForList: []);
     }
   }
-
+// Add this new method to GiftNotifier
+String? getGiftInsertStatus() {
+  final serial = state.lastReturnSerial;
+  if (serial == null) return null;
+  if (serial == "0") return "pending"; // already has pending gift
+  return "success";
+}
   Future<bool> sendSpecialGiftFromUI({
     required String mid,
     required String memberName,
@@ -348,8 +354,17 @@ Future<String> sendSpecialGiftWhatsapp({
         print('Table found with ${table.length} entries');
         
         if (table.isNotEmpty) {
-          print('Table has data - considering this a success');
-          return true;
+            final firstEntry = table[0];
+  if (firstEntry is Map<String, dynamic> && 
+      firstEntry.containsKey('Return_Serial')) {
+    final serial = firstEntry['Return_Serial'].toString();
+    // Return_Serial 0 means already has a pending gift
+    if (serial == '0') {
+      print('Return_Serial is 0 - already has pending gift');
+      return false; // ← treat as failure
+    }
+  }
+  return true;
         }
       }
     }

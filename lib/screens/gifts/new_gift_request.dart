@@ -1436,6 +1436,74 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                       setState(() => _isLoading = false);
 
                                       if (!mounted) return;
+                                      final currentGiftState = ref.read(giftProvider);
+final returnSerial = currentGiftState.lastReturnSerial;
+if (!ok && returnSerial == "0") {
+   final mid = _memberIdController.text.trim();
+  // Already has a pending gift
+  await showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+            SizedBox(width: 8),
+            Text('Pending Gift Exists'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This member already has a pending special gift request.',
+              style: TextStyle(fontSize: 15),
+            ),
+            SizedBox(height: 12),
+            Container(
+              padding: EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.orange, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Please wait for the existing request to be processed before submitting a new one.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.orange.shade800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('OK'),
+          ),
+        ],
+      );
+    },
+  );
+  ref.read(giftProvider.notifier).clearLastApiResponse();
+  return; // ← stop here, don't proceed
+}
+
+
                                       if (ok) {
                                         ScaffoldMessenger.of(context)
                                             .showSnackBar(

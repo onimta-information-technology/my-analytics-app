@@ -5,8 +5,10 @@ import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
+import 'package:ballys_reservation_app/models/gift/birthday_gift_request.dart';
 import 'package:ballys_reservation_app/models/gift/special_gift_request.dart';
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
+import 'package:ballys_reservation_app/providers/BirthdayGiftIncreesNotifier.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/member_search_provider.dart';
 import 'package:ballys_reservation_app/providers/new_reservation_provider.dart';
@@ -1440,7 +1442,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                       if (!mounted) return;
                                       final currentGiftState = ref.read(giftProvider);
 final returnSerial = currentGiftState.lastReturnSerial;
-if (!ok && returnSerial == "0") {
+if (returnSerial == "0") {
   final mid = _memberIdController.text.trim();
   
   await showDialog(
@@ -1636,6 +1638,194 @@ if (!ok && returnSerial == "0") {
                   backgroundColor: Colors.orange,
                   foregroundColor: Colors.white,
                   
+                ),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+  ref.read(giftProvider.notifier).clearLastApiResponse();
+  return;
+}
+if (returnSerial  == "-1") {
+  final mid = _memberIdController.text.trim();
+
+  await showDialog(
+    context: context,
+    builder: (BuildContext dialogContext) {
+      bool isLoadingGift = false;
+
+      return StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded,
+                    color: Colors.orange, size: 28),
+                SizedBox(width: 8),
+                Text('Pending Gift Exists'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                
+                SizedBox(height: 12),
+                Container(
+                  padding: EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline,
+                          color: Colors.orange, size: 18),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                  'This member already has a pending birthday gift price increase request.',
+                  style: TextStyle(fontSize: 20),
+                ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              if (isLoadingGift)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              // ── OK button ────────────────────────────────────────
+              ElevatedButton.icon(
+                onPressed: isLoadingGift
+                    ? null
+                    : () => Navigator.of(context).pop(),
+                icon: Icon(Icons.close, size: 18),
+                label: Text('OK'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color.fromARGB(255, 255, 0, 0),
+                  foregroundColor: Colors.white,
+                ),
+              ),
+              // ── Show button ──────────────────────────────────────
+              ElevatedButton.icon(
+                onPressed: isLoadingGift
+                    ? null
+                    : () async {
+                        setDialogState(() => isLoadingGift = true);
+                        try {
+                          final resp = await widget.giftsRepository
+                              .getPendingBirthdayGiftIdByMember(mid);
+
+                          BirthdayIncressGiftRequest? foundGift;
+
+                          if (resp['CommonResult'] != null &&
+                              resp['CommonResult']['Table'] is List &&
+                              (resp['CommonResult']['Table'] as List)
+                                  .isNotEmpty) {
+                            final row = Map<String, dynamic>.from(
+                                (resp['CommonResult']['Table'] as List)
+                                    .first);
+                            final idNoRaw = row['Id_No'];
+                            if (idNoRaw != null) {
+                              final idNo = (idNoRaw is num)
+                                  ? idNoRaw.toDouble()
+                                  : double.tryParse(
+                                          idNoRaw.toString()) ??
+                                      0;
+
+                              // Search in already-loaded pending gifts
+                              final pendingGifts = ref
+                                  .read(birthdayGiftIncreesProvider)
+                                  .pendingBirthdayGift;
+                              try {
+                                foundGift = pendingGifts.firstWhere(
+                                  (g) => g.idNo == idNo,
+                                );
+                              } catch (_) {
+                                foundGift = null;
+                              }
+
+                              // If not found, refresh from API then retry
+                              if (foundGift == null) {
+                                final salesCode =
+                                    await StorageUtil.getSalesCode();
+                                if (salesCode != null) {
+                                  await ref
+                                      .read(birthdayGiftIncreesProvider
+                                          .notifier)
+                                      .getBirthdayGiftData(
+                                          98890, salesCode);
+                                  final refreshed = ref
+                                      .read(birthdayGiftIncreesProvider)
+                                      .pendingBirthdayGift;
+                                  try {
+                                    foundGift = refreshed.firstWhere(
+                                      (g) => g.idNo == idNo,
+                                    );
+                                  } catch (_) {
+                                    foundGift = null;
+                                  }
+                                }
+                              }
+                            }
+                          }
+
+                          setDialogState(() => isLoadingGift = false);
+                          if (!mounted) return;
+                          Navigator.of(context).pop(); // close dialog
+
+                          if (foundGift != null) {
+                            await context.push(
+                              '/menu/approve-reject/birthday-gifts/view-birthday-gift-request',
+                              extra: {
+                                'gift': foundGift,
+                                'isPending': false,
+                                'isApproved': false,
+                                'isChecked': false,
+                                'isIssued': false,
+                                'isViewOnly': true,
+                              },
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content:
+                                    Text('Could not load gift details'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          setDialogState(() => isLoadingGift = false);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                icon: Icon(Icons.visibility, size: 18),
+                label: Text('Show'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
                 ),
               ),
             ],

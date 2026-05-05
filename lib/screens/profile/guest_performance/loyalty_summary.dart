@@ -1,5 +1,7 @@
+import 'package:ballys_reservation_app/data/services/device_config_service.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/loyalty_summary_provider.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -35,6 +37,14 @@ class LoyaltySummaryWidget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final fontSettings = ref.watch(fontSettingsProvider);
     final loyaltySummary = ref.watch(loyaltySummaryProvider);
+      return FutureBuilder<LocationConfig?>(
+    future: StorageUtil.getCurrentLocation(),
+    builder: (context, snapshot) {
+      // Extract first word of location_name, fallback to "Ballys"
+      final brandName = snapshot.hasData && snapshot.data != null
+          ? snapshot.data!.name.trim().split(' ').first
+          : "Ballys";
+
     return Center(
       child: Column(
         children: [
@@ -82,7 +92,7 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        "Ballys Rupees (Est):",
+                        "$brandName Rupees (Est):",
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
@@ -106,7 +116,7 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Ballys Rupees Expire:",
+                        "$brandName Rupees Expire:",
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
@@ -149,7 +159,7 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        "Ballys Coins:",
+                        "$brandName Coins:",
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
@@ -172,7 +182,7 @@ class LoyaltySummaryWidget extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        "Ballys Coins Expire:",
+                        "$brandName Coins Expire:",
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: fontSettings.fontSize,
@@ -330,5 +340,7 @@ class LoyaltySummaryWidget extends ConsumerWidget {
         ],
       ),
     );
-  }
+  },
+      );
+}
 }

@@ -1,6 +1,7 @@
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/birthday_gift_model.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 
 class BirthdayGiftRepository {
   final ApiService apiService;
@@ -9,7 +10,7 @@ class BirthdayGiftRepository {
 
   Future<BirthdayGiftResponse?> getBirthdayGift(String memberId) async {
  //   final deviceId = await DeviceId.get();
-
+  final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -28,7 +29,7 @@ class BirthdayGiftRepository {
           "Para_Type": "varchar",
         }
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     });
 

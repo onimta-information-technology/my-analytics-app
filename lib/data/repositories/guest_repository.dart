@@ -216,6 +216,7 @@ class GuestRepository {
   Future<List<Guest>> getGuestData(int iid, String text1) async {
     final deviceId = await DeviceId.get();
     final spName = await StorageUtil.getStoredProcedureName();
+    print("iid is $iid and text1 is $text1");
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -244,7 +245,7 @@ class GuestRepository {
       "SpName": spName,
       "con": "1",
     });
-
+print("getGuestData response: $response");
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List &&
         response['CommonResult']['Table'].isNotEmpty) {
@@ -262,6 +263,7 @@ class GuestRepository {
   Future<String?> fetchGuestImage(int iid, String text1) async {
     final deviceId = await DeviceId.get();
     final spName = await StorageUtil.getStoredProcedureName();
+    print('Fetching guest image with IID: $iid, Text1: $text1, DeviceId: $deviceId, SpName: $spName');
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -290,7 +292,7 @@ class GuestRepository {
       "SpName": spName,
       "con": "1",
     });
-
+print('API response for guest image: $response');
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List &&
         response['CommonResult']['Table'].isNotEmpty) {

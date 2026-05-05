@@ -101,7 +101,7 @@ class _GuestDisplayCardByIdState extends ConsumerState<GuestDisplayCardById> {
     await Future.delayed(const Duration(milliseconds: 100));
     
     final guest = ref.read(selectedGuestProvider);
-    
+
     print('Guest data received: ${guest?.mid}');
     print('Guest name: ${guest?.memberName}');
     print('Has image: ${guest?.memImage2 != null}');

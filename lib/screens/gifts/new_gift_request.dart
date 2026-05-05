@@ -1520,6 +1520,7 @@ if (returnSerial == "0") {
                         try {
                           // Call API 8889991
                           final deviceId = await DeviceId.get();
+                          final spName = await StorageUtil.getStoredProcedureName();
                           final resp = await widget.giftsRepository.apiService.post(
                             'CommonExecute',
                             {
@@ -1547,7 +1548,7 @@ if (returnSerial == "0") {
                                   "Para_Type": "varchar",
                                 },
                               ],
-                              "SpName": "sp_CRM_Common_API",
+                              "SpName": spName,
                               "con": "1",
                             },
                           );

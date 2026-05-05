@@ -20,6 +20,7 @@ class CustomerDueDiligenceRepository {
   }) async {
     final deviceId = await DeviceId.get();
     final username = await StorageUtil.getUserName();
+    final spName = await StorageUtil.getStoredProcedureName();
     print('submitCDD called with:');
     print('  passportOrNic: $passportOrNic');
     print('  identificationNumber: $identificationNumber');
@@ -90,7 +91,7 @@ class CustomerDueDiligenceRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     });
 print('CDD API response: $response');
@@ -114,6 +115,7 @@ Future<List<CddHistoryItem>> fetchCDDHistory({
     print('  username: $username');
     print('  deviceId: $deviceId');
     print('  text7Value: $text7Value');
+    final spName = await StorageUtil.getStoredProcedureName();
   final response = await apiService.post('CommonExecute', {
     "HasReturnData": "T",
     "Parameters": [
@@ -139,7 +141,7 @@ Future<List<CddHistoryItem>> fetchCDDHistory({
         "Para_Type": "varchar",
       },
     ],
-    "SpName": "sp_CRM_Common_API",
+    "SpName": spName,
     "con": "1",
   });
 print('fetchCDDHistory API response: $response');

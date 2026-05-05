@@ -21,7 +21,7 @@ class AirTicketRepository {
   Future<List<AirTicket>> _fetchAirTickets({required int iid}) async {
     final salesCode = await StorageUtil.getSalesCode();
     final deviceId = await DeviceId.get();
-
+  final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -47,7 +47,7 @@ class AirTicketRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     });
 

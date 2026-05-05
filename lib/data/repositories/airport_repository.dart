@@ -5,6 +5,7 @@ import 'package:ballys_reservation_app/models/reservation/hotel_response.dart';
 import 'package:ballys_reservation_app/models/reservation/room_category_response.dart';
 import 'package:ballys_reservation_app/models/reservation/room_type_response.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 
 class AirportRepository {
   final ApiService apiService;
@@ -13,6 +14,7 @@ class AirportRepository {
 
   Future<List<Airport>> getAllAirports() async {
      final deviceId = await DeviceId.get();
+      final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -31,7 +33,7 @@ class AirportRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1"
     });
 
@@ -61,6 +63,7 @@ class AirportRepository {
 
   Future<List<HotelResponse>> getAllHotels() async {
      final deviceId = await DeviceId.get();
+     final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -79,7 +82,7 @@ class AirportRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1"
     });
 
@@ -108,6 +111,7 @@ class AirportRepository {
   Future<List<RoomCategoryResponse>> getSelectedHotelRoomCategories(
       double hotelId) async {
          final deviceId = await DeviceId.get();
+          final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -133,7 +137,7 @@ class AirportRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1"
     });
 
@@ -162,6 +166,7 @@ class AirportRepository {
   Future<List<RoomTypeResponse>> getSelectedHotelCategoryRoomTypes(
       double hotelId, int categoryId) async {
          final deviceId = await DeviceId.get();
+         final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -194,7 +199,7 @@ class AirportRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1"
     });
 
@@ -224,6 +229,7 @@ class AirportRepository {
       required String departureTo,
       required String returnTo}) async {
          final deviceId = await DeviceId.get();
+          final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -262,7 +268,7 @@ class AirportRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1"
     });
 

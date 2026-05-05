@@ -4,6 +4,7 @@ import 'package:ballys_reservation_app/models/reservation/hotel_response.dart';
 import 'package:ballys_reservation_app/models/reservation/room_category_response.dart';
 import 'package:ballys_reservation_app/models/reservation/room_type_response.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 
 class HotelRepository {
   final ApiService apiService;
@@ -12,6 +13,7 @@ class HotelRepository {
 
   Future<List<HotelResponse>> getAllHotels() async {
      final deviceId = await DeviceId.get();
+      final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -30,7 +32,7 @@ class HotelRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1"
     });
 
@@ -59,6 +61,7 @@ class HotelRepository {
   Future<List<RoomCategoryResponse>> getSelectedHotelRoomCategories(
       double hotelId) async {
          final deviceId = await DeviceId.get();
+          final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -83,7 +86,7 @@ class HotelRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1"
     });
 
@@ -112,6 +115,7 @@ class HotelRepository {
   Future<List<RoomTypeResponse>> getSelectedHotelCategoryRoomTypes(
       double hotelId, int categoryId) async {
          final deviceId = await DeviceId.get();
+          final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -143,7 +147,7 @@ class HotelRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1"
     });
 
@@ -174,6 +178,8 @@ class HotelRepository {
       required String roomType,
       required String mealPlan}) async {
          final deviceId = await DeviceId.get();
+          final spName = await StorageUtil.getStoredProcedureName();
+          print('Fetching hotel costs with parameters: hotelName=$hotelName, roomCategory=$roomCategory, roomType=$roomType, mealPlan=$mealPlan, deviceId=$deviceId');
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -219,10 +225,10 @@ class HotelRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1"
     });
-
+print('API response for hotel costs: $response');
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List &&
         response['CommonResult']['Table'].isNotEmpty) {

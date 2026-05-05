@@ -24,6 +24,8 @@ class ReservationRepository {
 
   Future<Map<String, List<Reservation>>> getReservations() async {
     final deviceId = await DeviceId.get();
+      final spName = await StorageUtil.getStoredProcedureName();
+     print('Using stored procedure: $spName');
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -42,7 +44,7 @@ class ReservationRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     });
 print('Response from getReservations API: $response');
@@ -89,6 +91,7 @@ print('Response from getReservations API: $response');
     final salesCode = await StorageUtil.getSalesCode();
     final userName = await StorageUtil.getUserName();
     final deviceId = await DeviceId.get();
+     final spName = await StorageUtil.getStoredProcedureName();
     final requestBody = {
       "HasReturnData": "T",
       "Parameters": [
@@ -195,7 +198,7 @@ print('Response from getReservations API: $response');
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     };
 
@@ -225,6 +228,7 @@ print('Response from getReservations API: $response');
     final salesCode = await StorageUtil.getSalesCode();
     final userName = await StorageUtil.getUserName();
     final deviceId = await DeviceId.get();
+     final spName = await StorageUtil.getStoredProcedureName();
     final requestBody = {
       "HasReturnData": "T",
       "Parameters": [
@@ -338,7 +342,7 @@ print('Response from getReservations API: $response');
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     };
 
@@ -374,6 +378,7 @@ print('Response from getReservations API: $response');
 
   }) async {
     final deviceId = await DeviceId.get();
+    final spName = await StorageUtil.getStoredProcedureName();
 print('Approving/Rejecting reservation with status: $status');
 print('Member ID: $memberID, Reservation No: $reservationNo, Current User: $currentUName, Remarks: $remarks');
     final requestBody = {
@@ -429,7 +434,7 @@ print('Member ID: $memberID, Reservation No: $reservationNo, Current User: $curr
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     };
 

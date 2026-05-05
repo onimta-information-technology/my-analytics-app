@@ -25,6 +25,7 @@ class GiftsRepository {
   Future<List<Guest>> getGiftMembers() async {
     final salesCode = await StorageUtil.getSalesCode();
     final deviceId = await DeviceId.get();
+    final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -50,7 +51,7 @@ class GiftsRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     });
 
@@ -80,6 +81,7 @@ class GiftsRepository {
   Future<List<GuestGift>> getGuestGifts(String mid) async {
     print('getGuestGifts called with mid: $mid');
     final deviceId = await DeviceId.get();
+    final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -105,7 +107,7 @@ class GiftsRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     });
 
@@ -132,6 +134,7 @@ class GiftsRepository {
 
   Future<List<SpecialGiftRequest>> getSpecialGift(int iid, String text1) async {
     final deviceId = await DeviceId.get();
+    final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -157,7 +160,7 @@ class GiftsRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     });
 
@@ -187,6 +190,7 @@ class GiftsRepository {
   ) async {
     print('getgestgiftGift called with iid: $iid, text1: $text1, text2: $text2, text3: $text3, text4: $text4, text5: $text5');
     final deviceId = await DeviceId.get();
+     final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -240,7 +244,7 @@ class GiftsRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     });
 
@@ -261,6 +265,7 @@ class GiftsRepository {
 
   Future<List<GiftType>> getGiftForList() async {
     final deviceId = await DeviceId.get();
+    final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -279,7 +284,7 @@ class GiftsRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     });
 
@@ -310,6 +315,7 @@ class GiftsRepository {
     }
     
     print('Converted text2: $convertedText2');
+    final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -342,7 +348,7 @@ class GiftsRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     });
     
@@ -414,7 +420,7 @@ class GiftsRepository {
       String decStr(num? v) => (v == null) ? "0" : v.toString();
 
       print('Inserting special gift request for MID: $mid, Member Name: $memberName, Amount: $amount');
-      
+      final spName = await StorageUtil.getStoredProcedureName();
       final payload = {
         "HasReturnData": "T",
         "Parameters": [
@@ -609,7 +615,7 @@ class GiftsRepository {
             "Para_Type": "varchar",
           },
         ],
-        "SpName": "sp_CRM_Common_API",
+        "SpName": spName,
         "con": "1",
       };
 
@@ -654,7 +660,7 @@ class GiftsRepository {
       String decStr(num? v) => (v == null) ? "0" : v.toString();
 
       print('Inserting birthday gift price increase request for MID: $mid, Member Name: $memberName, New Amount: $amount, Previous Amount: $previousGiftPrice, fromDateTime: $fromDateTime, toDateTime: $toDateTime, guestDrop: $guestDrop, tmpCashout: $tmpCashout, res: $res, guestCoupon: $guestCoupon, tmpAvgBet: $tmpAvgBet, tmpPoint: $tmpPoint, tmphh: $tmphh, tmpCommpaid: $tmpCommpaid, grt: $grt,userName: $userName, deviceId: $deviceId, arrivalDate: $arrivalDate, departureDate: $departureDate,act: $actD,flushActDrop: $flushActDrop,flushCoupon: $flushCoupon,chipTypeCode: $chipTypeCode,giftForCode: $giftForCode' );
-      
+      final spName = await StorageUtil.getStoredProcedureName();
       final payload = {
         "HasReturnData": "T",
         "Parameters": [
@@ -856,7 +862,7 @@ class GiftsRepository {
             "Para_Type": "varchar",
           },
         ],
-        "SpName": "sp_CRM_Common_API",
+        "SpName": spName,
         "con": "1",
       };
 
@@ -1664,6 +1670,7 @@ Future<bool> checkbirthdayGiftPriceIncreesRequest({
 }
 Future<SpecialGiftRequest?> getSpecialGiftById(String mid) async {
   final deviceId = await DeviceId.get();
+  final spName = await StorageUtil.getStoredProcedureName();
   final response = await apiService.post('CommonExecute', {
     "HasReturnData": "T",
     "Parameters": [
@@ -1689,7 +1696,7 @@ Future<SpecialGiftRequest?> getSpecialGiftById(String mid) async {
         "Para_Type": "varchar",
       },
     ],
-    "SpName": "sp_CRM_Common_API",
+    "SpName": spName,
     "con": "1",
   });
 
@@ -1707,7 +1714,7 @@ Future<SpecialGiftRequest?> getSpecialGiftById(String mid) async {
 Future<SpecialGiftRequest?> getPendingGiftByMid(String mid) async {
   final deviceId = await DeviceId.get();
   final salesCode = await StorageUtil.getSalesCode();
-  
+  final spName = await StorageUtil.getStoredProcedureName();
   // Step 1: get the Id_No from the new API
   final response = await apiService.post('CommonExecute', {
     "HasReturnData": "T",
@@ -1734,7 +1741,7 @@ Future<SpecialGiftRequest?> getPendingGiftByMid(String mid) async {
         "Para_Type": "varchar",
       },
     ],
-    "SpName": "sp_CRM_Common_API",
+    "SpName": spName,
     "con": "1",
   });
 
@@ -1748,6 +1755,7 @@ Future<SpecialGiftRequest?> getPendingGiftByMid(String mid) async {
 
     // Step 2: fetch pending gifts and find matching Id_No
     if (salesCode == null) return null;
+    final spName = await StorageUtil.getStoredProcedureName();
     final pendingResponse = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -1773,7 +1781,7 @@ Future<SpecialGiftRequest?> getPendingGiftByMid(String mid) async {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     });
 
@@ -1792,6 +1800,7 @@ Future<SpecialGiftRequest?> getPendingGiftByMid(String mid) async {
 }
 Future<Map<String, dynamic>> getPendingBirthdayGiftIdByMember(String mid) async {
   final deviceId = await DeviceId.get();
+  final spName = await StorageUtil.getStoredProcedureName();
   return await apiService.post('CommonExecute', {
     "HasReturnData": "T",
     "Parameters": [
@@ -1817,7 +1826,7 @@ Future<Map<String, dynamic>> getPendingBirthdayGiftIdByMember(String mid) async 
         "Para_Type": "varchar",
       },
     ],
-    "SpName": "sp_CRM_Common_API",
+    "SpName": spName,
     "con": "1",
   });
 }

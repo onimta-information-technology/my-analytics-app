@@ -19,6 +19,7 @@ class BirthdayRepository {
   Future<Map<String, List<Birthday>>> getBirthdays() async {
     final salesCode = await StorageUtil.getSalesCode();
     final deviceId = await DeviceId.get();
+     final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -44,7 +45,7 @@ class BirthdayRepository {
         },
         
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     });
 
@@ -155,6 +156,7 @@ class BirthdayRepository {
     required String mCode,
   }) async {
     try {
+       final spName = await StorageUtil.getStoredProcedureName();
       print('salesCode: $salesCode, memberName: $memberName, memberMobile: $memberMobile, whatsappNumber: $whatsappNumber, giftValue: $giftValue, deviceId: $deviceId, userName: $userName, mid: $mid , mcode: $mCode' );
       await apiService.post('CommonExecute', {
         "HasReturnData": "T",
@@ -230,7 +232,7 @@ class BirthdayRepository {
             "Para_Type": "varchar",
           },
         ],
-        "SpName": "sp_CRM_Common_API",
+        "SpName": spName,
         "con": "1",
       });
       // No need to check response, just call the API

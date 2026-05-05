@@ -14,6 +14,7 @@ class InactiveMembersRepository {
     String salesCode) async {
     final salesCode = await StorageUtil.getSalesCode();
     final deviceId = await DeviceId.get();
+    final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -52,7 +53,7 @@ class InactiveMembersRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1"
     });
     print("hiii");

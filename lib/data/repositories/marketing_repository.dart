@@ -31,7 +31,8 @@ class MarketingRepository {
     final actualSalesCode = await StorageUtil.getSalesCode();
     final deviceId = await DeviceId.get();
     print('Marketing Repository - IID: $iid, Sales Code: $actualSalesCode, Device ID: $deviceId');
-    
+     final spName = await StorageUtil.getStoredProcedureName();
+     print('Using stored procedure: $spName');
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -57,7 +58,7 @@ class MarketingRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     });
 

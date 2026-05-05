@@ -195,7 +195,7 @@ Future<bool> deleteAccount() async {
     final deviceId = await DeviceId.get();
     final username = await StorageUtil.getUserName();
     print('username delete account: $username');
-    
+     final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -221,7 +221,7 @@ Future<bool> deleteAccount() async {
           "Para_Type": "varchar",
         }
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     });
 

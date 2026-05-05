@@ -60,7 +60,7 @@ class PrimaryContactRepository {
   }) async {
     final deviceId = await DeviceId.get();
     final name = await StorageUtil.getUserName();
-
+ final spName = await StorageUtil.getStoredProcedureName();
     final requestBody = {
       "HasReturnData": "T",
       "Parameters": [
@@ -107,7 +107,7 @@ class PrimaryContactRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     };
 

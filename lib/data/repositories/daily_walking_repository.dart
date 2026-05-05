@@ -1,6 +1,7 @@
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/Guest/daily_walking_guest.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 
 
 class DailyWalkingGuestRepository {
@@ -12,6 +13,7 @@ class DailyWalkingGuestRepository {
 
   Future<List<DailyWalkingGuest>> getAllgest() async {
      final deviceId = await DeviceId.get();
+      final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -30,7 +32,7 @@ class DailyWalkingGuestRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1"
     });
 

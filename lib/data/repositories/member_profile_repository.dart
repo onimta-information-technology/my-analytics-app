@@ -282,7 +282,7 @@ Future<List<TripHistory>> getTripHistory2({
 }) async {
   print('getMemberSummary called with playerId: $playerId, dateFrom: $dateFrom, dateTo: $dateTo');
   final deviceId = await DeviceId.get();
-
+ final spName = await StorageUtil.getStoredProcedureName();
   final response = await apiService.post('CommonExecute', {
     "HasReturnData": "T",
     "Parameters": [
@@ -322,7 +322,7 @@ Future<List<TripHistory>> getTripHistory2({
         "Para_Type": "varchar",
       },
     ],
-    "SpName": "sp_CRM_Common_API",
+    "SpName": spName,
     "con": "1",
   });
 

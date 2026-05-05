@@ -18,6 +18,7 @@ class EmailRepository {
   }) async {
     final deviceId = await DeviceId.get();
     final name = await StorageUtil.getUserName();
+     final spName = await StorageUtil.getStoredProcedureName();
     // Determine Iid based on emailType
     int iid;
     switch (emailType) {
@@ -63,7 +64,7 @@ class EmailRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     };
 

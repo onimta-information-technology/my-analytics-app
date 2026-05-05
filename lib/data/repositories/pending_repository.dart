@@ -1,5 +1,6 @@
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/pendingCounts.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 
 class PendingCountRepository {
   final ApiService apiService;
@@ -8,6 +9,7 @@ class PendingCountRepository {
 
   Future<PendingCounts> getPendingCounts() async {
     print('Fetching pending counts from API...');
+     final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -19,7 +21,7 @@ class PendingCountRepository {
           "Para_Type": "int",
         }
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     });
 print('API response for pending counts: $response');

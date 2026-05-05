@@ -885,6 +885,7 @@ class GiftsRepository {
     print('Approving special gift request: reqid=$reqid, remarks=$remarks, amount=$amount, userName=$userName, validDates=$validDates'); 
 
     try {
+       final spName = await StorageUtil.getStoredProcedureName();
       final deviceId = await DeviceId.get();
       final reqidInt = reqid.toInt();
       print('Converted reqid to int: $reqidInt');
@@ -942,7 +943,7 @@ class GiftsRepository {
             "Para_Type": "varchar",
           },
         ],
-        "SpName": "sp_CRM_Common_API",
+        "SpName": spName,
         "con": "1",
       };
 
@@ -963,7 +964,7 @@ class GiftsRepository {
       print('Rejecting special gift request: reqid=$reqid, userName=$userName');
       final deviceId = await DeviceId.get();
       final reqidInt = reqid.toInt();
-      
+       final spName = await StorageUtil.getStoredProcedureName();
       final payload = {
         "HasReturnData": "T",
         "Parameters": [
@@ -996,7 +997,7 @@ class GiftsRepository {
             "Para_Type": "varchar",
           },
         ],
-        "SpName": "sp_CRM_Common_API",
+        "SpName": spName,
         "con": "1",
       };
 
@@ -1018,7 +1019,7 @@ class GiftsRepository {
       
       final reqidInt = reqid.toInt();
       print('Converted reqid to int: $reqidInt');
-      
+       final spName = await StorageUtil.getStoredProcedureName();
       final payload = {
         "HasReturnData": "T",
         "Parameters": [
@@ -1044,7 +1045,7 @@ class GiftsRepository {
             "Para_Type": "varchar",
           },
         ],
-        "SpName": "sp_CRM_Common_API",
+        "SpName": spName,
         "con": "1",
       };
 
@@ -1066,7 +1067,7 @@ class GiftsRepository {
       
       final reqidInt = reqid.toInt();
       print('Converted reqid to int: $reqidInt');
-      
+       final spName = await StorageUtil.getStoredProcedureName();
       final payload = {
         "HasReturnData": "T",
         "Parameters": [
@@ -1092,7 +1093,7 @@ class GiftsRepository {
             "Para_Type": "varchar",
           },
         ],
-        "SpName": "sp_CRM_Common_API",
+        "SpName": spName,
         "con": "1",
       };
 
@@ -1109,6 +1110,7 @@ class GiftsRepository {
  Future<List<BirthdayIncressGiftRequest>> getBirthdayIncressGift(int iid, String text1) async {
   print('getBirthdayIncressGift called with iid: $iid, text1: $text1');
     final deviceId = await DeviceId.get();
+     final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -1134,7 +1136,7 @@ class GiftsRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     });
 
@@ -1166,7 +1168,7 @@ Future<bool> approvedBirthdayGiftRequest({
     final deviceId = await DeviceId.get();
     final reqidInt = reqid.toInt();
     print('Converted reqid to int: $reqidInt');
-    
+     final spName = await StorageUtil.getStoredProcedureName();
     final payload = {
       "HasReturnData": "T",
       "Parameters": [
@@ -1220,7 +1222,7 @@ Future<bool> approvedBirthdayGiftRequest({
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     };
 
@@ -1241,7 +1243,7 @@ Future<bool> rejectBirthdayGiftRequest({
     print('Rejecting birthday gift request: reqid=$reqid, userName=$userName');
     final deviceId = await DeviceId.get();
     final reqidInt = reqid.toInt();
-    
+     final spName = await StorageUtil.getStoredProcedureName();
     final payload = {
       "HasReturnData": "T",
       "Parameters": [
@@ -1274,7 +1276,7 @@ Future<bool> rejectBirthdayGiftRequest({
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     };
 
@@ -1293,7 +1295,7 @@ Future<bool> reverseBirthdayGiftRequest({
 }) async {
   try {
     print('Approve Reversing birthday gift request: reqid=$reqid, userName=$userName');
-    
+     final spName = await StorageUtil.getStoredProcedureName();
     final reqidInt = reqid.toInt();
     print('Converted reqid to int: $reqidInt');
     
@@ -1322,7 +1324,7 @@ Future<bool> reverseBirthdayGiftRequest({
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     };
 
@@ -1341,7 +1343,7 @@ Future<bool> reverseBirthdayGiftRequestRejected({
 }) async {
   try {
     print('Reject Reversing birthday gift request: reqid=$reqid, userName=$userName');
-    
+     final spName = await StorageUtil.getStoredProcedureName();
     final reqidInt = reqid.toInt();
     print('Converted reqid to int: $reqidInt');
     
@@ -1370,7 +1372,7 @@ Future<bool> reverseBirthdayGiftRequestRejected({
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     };
 
@@ -1524,7 +1526,7 @@ Future<bool> checkSpecialGiftRequest({
   try {
     final deviceId = await DeviceId.get();
     final reqidInt = reqid.toInt();
-
+ final spName = await StorageUtil.getStoredProcedureName();
     final payload = {
       "HasReturnData": "T",
       "Parameters": [
@@ -1578,7 +1580,7 @@ Future<bool> checkSpecialGiftRequest({
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     };
 
@@ -1602,7 +1604,7 @@ Future<bool> checkbirthdayGiftPriceIncreesRequest({
   try {
     final deviceId = await DeviceId.get();
     final reqidInt = reqid.toInt();
-
+ final spName = await StorageUtil.getStoredProcedureName();
     final payload = {
       "HasReturnData": "T",
       "Parameters": [
@@ -1656,7 +1658,7 @@ Future<bool> checkbirthdayGiftPriceIncreesRequest({
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     };
 

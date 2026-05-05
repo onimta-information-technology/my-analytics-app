@@ -18,6 +18,7 @@ class WhatsappNumberRepository {
   }) async {
     final deviceId = await DeviceId.get();
      final name = await StorageUtil.getUserName();
+      final spName = await StorageUtil.getStoredProcedureName();
     // Determine Iid based on phoneType
     int iid;
     switch (phoneType) {
@@ -66,7 +67,7 @@ class WhatsappNumberRepository {
           "Para_Type": "varchar",
         },
       ],
-      "SpName": "sp_CRM_Common_API",
+      "SpName": spName,
       "con": "1",
     };
 

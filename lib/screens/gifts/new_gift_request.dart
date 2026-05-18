@@ -59,16 +59,28 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
   bool _isMemberSelected = false;
 
   String _selectedPrefix = "BM";
+bool _isNumericOnlyLocation = false;
 
   @override
   void initState() {
     super.initState();
     _loadUserCredentials();
+     _loadLocationPrefix();
     Future.microtask(() {
       ref.read(giftProvider.notifier).getGiftForList();
     });
   }
-
+Future<void> _loadLocationPrefix() async {
+  final location = await StorageUtil.getCurrentLocation();
+  if (location != null) {
+    final code = location.code.split('_').first;
+    final isNumeric = code == "BELLAGIO";
+    setState(() {
+      _isNumericOnlyLocation = isNumeric;
+      _selectedPrefix = isNumeric ? "" : "BM";
+    });
+  }
+}
   Future<void> _loadUserCredentials() async {
     final name = await StorageUtil.getUserName();
     setState(() {
@@ -195,9 +207,18 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
   }
 
   void _updateMemberIdFields(String fullMemberId) {
+    
     if (fullMemberId.isNotEmpty) {
-      String prefix = '';
-      String numberPart = '';
+      if (_isNumericOnlyLocation) {
+      setState(() {
+        _memberIdNumberController.text = fullMemberId;
+        _memberIdController.text = fullMemberId;
+      });
+      return;
+    }
+
+    String prefix = 'BM';
+    String numberPart = fullMemberId;
 
       if (fullMemberId.startsWith('BM')) {
         prefix = 'BM';
@@ -210,7 +231,7 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
         numberPart = fullMemberId.substring(2);
       } else {
         prefix = 'BM';
-        numberPart = fullMemberId;
+          numberPart = fullMemberId.substring(2);
       }
 
       setState(() {
@@ -807,7 +828,8 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                     horizontal: 12.0,
                                     vertical: -5.0,
                                   ),
-                                  prefixIcon: Padding(
+                                  prefixIcon: _isNumericOnlyLocation ? null 
+                                  : Padding(
                                     padding: const EdgeInsets.only(
                                       left: 12,
                                       right: 4,
@@ -847,8 +869,9 @@ class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
                                     onPressed: () {
                                       _dismissKeyboard();
                                       FocusScope.of(context).unfocus();
-                                      _memberIdController.text =
-                                          '$_selectedPrefix${_memberIdNumberController.text}';
+                                      _memberIdController.text =_isNumericOnlyLocation
+        ? _memberIdNumberController.text
+        : '$_selectedPrefix${_memberIdNumberController.text}';
                                       _openMemberSearchBottomSheet(8002);
                                     },
                                   ),

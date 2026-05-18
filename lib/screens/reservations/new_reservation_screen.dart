@@ -27,6 +27,7 @@ import 'package:ballys_reservation_app/providers/selected_flight_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_hotel_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_reservation_provider.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -71,11 +72,13 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
   bool hasError = false;
   String? _hotelError;
   String? _airTicketError;
-
+bool _isNumericOnlyLocation = false;
+List<String> _prefixes = ["BM", "BL", "BN"];
   @override
   void initState() {
     super.initState();
     _getHotels();
+     _loadLocationPrefix(); 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       FocusScope.of(context).requestFocus(FocusNode());
       final selectedReservation = ref.watch(selectedReservationProvider);
@@ -86,7 +89,18 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
       }
     });
   }
-
+Future<void> _loadLocationPrefix() async {
+  final location = await StorageUtil.getCurrentLocation();
+  if (location != null) {
+    final code = location.code.split('_').first; // "BELLAGIO"
+    final isNumeric = code == "BELLAGIO";
+    setState(() {
+      _isNumericOnlyLocation = isNumeric;
+      _prefixes = isNumeric ? [] : ["BM", "BL", "BN"];
+      _selectedPrefix = isNumeric ? "" : "BM";
+    });
+  }
+}
   @override
   void dispose() {
     _reservationNoController.dispose();
@@ -105,6 +119,13 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen> {
 
   void _updateMemberIdFields(String fullMemberId) {
     if (fullMemberId.isNotEmpty) {
+      if (_isNumericOnlyLocation) {
+      setState(() {
+        _memberIdNumberController.text = fullMemberId;
+        _memberIdController.text = fullMemberId;
+      });
+      return;
+    }
       String prefix = 'BM';
       String numberPart = fullMemberId;
 
@@ -897,7 +918,8 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                           horizontal: 12.0,
                                           vertical: -5.0,
                                         ),
-                                        prefixIcon: Padding(
+                                        prefixIcon: 
+                                         _isNumericOnlyLocation ?  null : Padding(
                                           padding: const EdgeInsets.only(
                                             left: 12,
                                             right: 4,
@@ -913,7 +935,7 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                                     .fontWeight,
                                                 color: Colors.black,
                                               ),
-                                              items: ["BM", "BL", "BN"]
+                                              items: _prefixes
                                                   .map((prefix) {
                                                 return DropdownMenuItem(
                                                   value: prefix,
@@ -942,7 +964,9 @@ Future<void> _selectDepartureDate(BuildContext context) async {
                                             FocusScope.of(context)
                                                 .unfocus();
                                             _memberIdController.text =
-                                                '$_selectedPrefix${_memberIdNumberController.text}';
+                                                _isNumericOnlyLocation
+        ? _memberIdNumberController.text
+        : '$_selectedPrefix${_memberIdNumberController.text}';
                                             _openMemberSearchBottomSheet(
                                                 8002);
                                           },

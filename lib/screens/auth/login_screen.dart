@@ -522,6 +522,7 @@ void dispose() {
                             ),
 
                           TextFormField(
+                             maxLength: 20,       
                             decoration: InputDecoration(
                               hintText: 'Username',
                               prefixIcon: const Icon(
@@ -545,6 +546,7 @@ void dispose() {
                           ),
                           const SizedBox(height: 20),
                           TextFormField(
+                             maxLength: 20, 
                             obscureText: !_showPassword,
                             decoration: InputDecoration(
                               hintText: 'Password',

@@ -531,6 +531,7 @@ void dispose() {
                               ),
                               filled: true,
                               fillColor: Colors.grey[200],
+                                counterText: '',  
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide.none,
@@ -554,6 +555,7 @@ void dispose() {
                                 Icons.lock,
                                 color: Colors.grey,
                               ),
+                               counterText: '',   
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _showPassword

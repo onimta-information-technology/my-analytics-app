@@ -572,7 +572,7 @@ Color _getRatingColor(String? rating) {
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
-                                'Birthday Date: ${_formatDateOnly(gift.birthdate)}',
+                                'Date of Birth: ${_formatDateOnly(gift.birthdate)}',
                                   style: TextStyle(
                                     color: Colors.teal,
                                     fontSize: fontSettings.fontSize + 2,

@@ -29,12 +29,22 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
   bool _isLoading = false;
   bool _isRefreshing = false;
 
+  // Search state
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  bool _isSearching = false;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this, initialIndex: 1);
     _tabController.addListener(() {
       setState(() {});
+    });
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.trim().toLowerCase();
+      });
     });
     _fetchBirthdays();
   }
@@ -90,14 +100,31 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
     });
   }
 
-  // final Map<String, String> ratingImageMap = {
-  //   "CLASSIC": "assets/images/ratings/CLASSIC.png",
-  //   "DIAMOND": "assets/images/ratings/DIAMOND.png",
-  //   "GOLD": "assets/images/ratings/GOLD.png",
-  //   "INFINITY": "assets/images/ratings/INFINITY.png",
-  //   "PLATINUM": "assets/images/ratings/PLATINUM.png",
-  //   "SILVER": "assets/images/ratings/SILVER.png",
-  // };
+  void _startSearch() {
+    setState(() {
+      _isSearching = true;
+    });
+  }
+
+  void _stopSearch() {
+    setState(() {
+      _isSearching = false;
+      _searchQuery = '';
+      _searchController.clear();
+    });
+  }
+
+  List<Birthday> _filterBirthdays(List<Birthday> birthdays) {
+    if (_searchQuery.isEmpty) return birthdays;
+    return birthdays.where((b) {
+      return b.mname.toLowerCase().contains(_searchQuery) ||
+          b.mid.toLowerCase().contains(_searchQuery) ||
+          (b.mobile ?? '').toLowerCase().contains(_searchQuery) ||
+            (b.bDate ?? '').toString().contains(_searchQuery) ||
+          (b.gRating ?? '').toLowerCase().contains(_searchQuery);
+    }).toList();
+  }
+
   Color _getRatingColorBallys(String? rating) {
     switch ((rating ?? '').toUpperCase()) {
       case 'GOLD':
@@ -124,6 +151,7 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -131,33 +159,60 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/menu');
-            }
-          },
-        ),
-        title: const Text('Birthdays', style: TextStyle(fontSize: 20.0)),
+        leading: _isSearching
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: _stopSearch,
+              )
+            : IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/menu');
+                  }
+                },
+              ),
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  hintText: 'Search by name,Date,ID, mobile...',
+                  border: InputBorder.none,
+                  hintStyle: TextStyle(color: Color.fromARGB(153, 0, 0, 0)),
+                ),
+                style: const TextStyle(color: Color.fromARGB(255, 0, 0, 0), fontSize: 18.0,fontWeight: FontWeight.bold),
+              )
+            : const Text('Birthdays', style: TextStyle(fontSize: 20.0)),
         actions: [
-          IconButton(
-            icon: _isRefreshing
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.0,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Color.fromARGB(255, 114, 6, 100),
+          if (_isSearching)
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: _stopSearch,
+            )
+          else ...[
+            IconButton(
+              icon: const Icon(Icons.search, size: 28),
+              onPressed: _startSearch,
+            ),
+            IconButton(
+              icon: _isRefreshing
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.0,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Color.fromARGB(255, 114, 6, 100),
+                        ),
                       ),
-                    ),
-                  )
-                : const Icon(Icons.refresh, size: 30),
-            onPressed: _isRefreshing ? null : _refreshBirthdays,
-          ),
+                    )
+                  : const Icon(Icons.refresh, size: 30),
+              onPressed: _isRefreshing ? null : _refreshBirthdays,
+            ),
+          ],
         ],
         bottom: TabBar(
           controller: _tabController,
@@ -174,12 +229,16 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
           TabBarView(
             controller: _tabController,
             children: [
-              _buildBirthdayList(ref.read(birthdayProvider)['past']!),
-              _buildBirthdayList(_recentBirthdays),
-              _buildBirthdayList(ref.read(birthdayProvider)['upcoming']!),
+              _buildBirthdayList(
+                _filterBirthdays(ref.read(birthdayProvider)['past']!),
+              ),
+              _buildBirthdayList(_filterBirthdays(_recentBirthdays)),
+              _buildBirthdayList(
+                _filterBirthdays(ref.read(birthdayProvider)['upcoming']!),
+              ),
             ],
           ),
-          if (_tabController.index == 1)
+          if (_tabController.index == 1 && !_isSearching)
             Positioned(
               top: 5.0,
               right: 5.0,
@@ -236,10 +295,10 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
   Widget _buildBirthdayList(List<Birthday> birthdays) {
     final fontSettings = ref.watch(fontSettingsProvider);
     if (birthdays.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
-          'No birthdays found',
-          style: TextStyle(fontSize: 18.0, color: Colors.grey),
+          _searchQuery.isEmpty ? 'No birthdays found' : 'No results for "$_searchQuery"',
+          style: const TextStyle(fontSize: 18.0, color: Color.fromARGB(255, 0, 0, 0),fontWeight: FontWeight.bold),
         ),
       );
     }
@@ -366,12 +425,10 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                       ],
                     ),
                     const SizedBox(height: 8.0),
-                    // Updated Button for Price Increase Request using go_router
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          // Navigate using go_router with birthday object passed as extra
                           context.push(
                             '/birthdays/gift-price-increase',
                             extra: birthday,
@@ -407,57 +464,34 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child:
-                      // Padding(
-                      //   padding: const EdgeInsets.all(0),
-                      //   child: SizedBox(
-                      //     width: 100,
-                      //     height: 35,
-                      //     child: ratingImageMap[birthday.gRating] != null
-                      //         ? Hero(
-                      //             tag: "rating-image-${birthday.mid}",
-                      //             child: Image.asset(
-                      //               ratingImageMap[birthday.gRating]!,
-                      //               fit: BoxFit.contain,
-                      //             ),
-                      //           )
-                      //         : Hero(
-                      //             tag: "rating-image-${birthday.mid}",
-                      //             child: Image.asset(
-                      //               "assets/images/ratings/CLASSIC.png",
-                      //               fit: BoxFit.contain,
-                      //             ),
-                      //           ),
-                      //   ),
-                      // ),
-                      Hero(
-                        tag: "rating-image-${birthday.mid}",
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
+                  child: Hero(
+                    tag: "rating-image-${birthday.mid}",
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _getRatingColorBallys(birthday.gRating),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.25),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
                           ),
-                          decoration: BoxDecoration(
-                            color: _getRatingColorBallys(birthday.gRating),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.25),
-                                blurRadius: 6,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Text(
-                            birthday.gRating ?? 'N/A',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                        ],
+                      ),
+                      child: Text(
+                        birthday.gRating ?? 'N/A',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
+                    ),
+                  ),
                 ),
               ),
             ],

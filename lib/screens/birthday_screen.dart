@@ -316,9 +316,9 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Price: ${birthday.gift}',
+                      'Price : ${birthday.gift}',
                       style:  TextStyle(
-                           fontSize: fontSettings.fontSize+2,
+                           fontSize: fontSettings.fontSize+4,
                         fontWeight: fontSettings.fontWeight,
                         color: const Color.fromARGB(255, 255, 0, 0),
                       ),

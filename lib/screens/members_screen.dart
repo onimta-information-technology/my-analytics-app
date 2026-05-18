@@ -9,6 +9,7 @@ import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -30,19 +31,33 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
   List<GuestSearchResponse> guests = [];
 
   final TextEditingController _memberIdController = TextEditingController();
-  String _selectedPrefix = "BM"; // Default prefix
+  //String _selectedPrefix = "BM"; // Default prefix
 
   // List of available prefixes
-  final List<String> _prefixes = ["BM", "BL", "BN"];
+  //final List<String> _prefixes = ["BM", "BL", "BN"];
+String _selectedPrefix = "";
+List<String> _prefixes = [];
 
   List<Guest> originalMembers = [];
   List<Guest> inactiveMembers = [];
-
+bool _isNumericOnlyLocation = false;
   @override
   void initState() {
     super.initState();
+    _loadLocationPrefix();
   }
-
+Future<void> _loadLocationPrefix() async {
+  final location = await StorageUtil.getCurrentLocation();
+  if (location != null) {
+    final code = location.code.split('_').first; // "BELLAGIO"
+    final isNumeric = ["BELLAGIO"].contains(code);
+    setState(() {
+      _prefixes = isNumeric ? [] : ["BM", "BL", "BN"]; // or load from API
+      _selectedPrefix = isNumeric ? "" : "BM";
+      _isNumericOnlyLocation = isNumeric;
+    });
+  }
+}
   void _applyFilter() async {
     setState(() {
       _isLoading = true;
@@ -96,50 +111,79 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
     );
   }
 
-  Future<void> _openMemberSearchBottomSheet(int iid) async {
-    GuestRepository guestRepository = GuestRepository(
-      ApiService(const FlutterSecureStorage()),
-    );
+  // Future<void> _openMemberSearchBottomSheet(int iid) async {
+  //   GuestRepository guestRepository = GuestRepository(
+  //     ApiService(const FlutterSecureStorage()),
+  //   );
 
-    String searchTerm = "";
+  //   String searchTerm = "";
 
-    // Combine prefix with the typed number
-    String fullMemberId = "$_selectedPrefix ${_memberIdController.text}";
-    searchTerm = fullMemberId;
+  //   // Combine prefix with the typed number
+  // String fullMemberId = isNumericOnly 
+  //   ? _memberIdController.text 
+  //   : "$_selectedPrefix ${_memberIdController.text}";
+  //   searchTerm = fullMemberId;
 
-    if (_memberIdController.text.isEmpty) return;
+  //   if (_memberIdController.text.isEmpty) return;
+
+  //   setState(() {
+  //     _isLoading = true;
+  //   });
+
+  //   try {
+   
+  //     guests = await guestRepository.searchGuest(iid, searchTerm);
+
+  //     setState(() {
+  //       _isLoading = false;
+  //     });
+
+  //     // showModalBottomSheet(
+  //     //   context: context,
+  //     //   isScrollControlled: true,
+  //     //   shape: const RoundedRectangleBorder(
+  //     //     borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+  //     //   ),
+  //     //   builder: (BuildContext context) {
+  //     //     return MemberSearchBottomSheet(
+  //     //       guests: guests,
+  //     //       navigateToProfile: true,
+  //     //       profilePath: "/home/profile",
+  //     //     );
+  //     //   },
+  //     // );
+  //   } catch (e) {
+
+  //   }
+  // }
+Future<void> _openMemberSearchBottomSheet(int iid) async {
+  GuestRepository guestRepository = GuestRepository(
+    ApiService(const FlutterSecureStorage()),
+  );
+
+  if (_memberIdController.text.isEmpty) return;
+
+  // Bellagio = number only, Bally's = prefix + number
+  String searchTerm = _isNumericOnlyLocation
+      ? _memberIdController.text
+      : "$_selectedPrefix ${_memberIdController.text}";
+
+  setState(() {
+    _isLoading = true;
+  });
+
+  try {
+    guests = await guestRepository.searchGuest(iid, searchTerm);
 
     setState(() {
-      _isLoading = true;
+      _isLoading = false;
     });
-
-    try {
-   
-      guests = await guestRepository.searchGuest(iid, searchTerm);
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      // showModalBottomSheet(
-      //   context: context,
-      //   isScrollControlled: true,
-      //   shape: const RoundedRectangleBorder(
-      //     borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      //   ),
-      //   builder: (BuildContext context) {
-      //     return MemberSearchBottomSheet(
-      //       guests: guests,
-      //       navigateToProfile: true,
-      //       profilePath: "/home/profile",
-      //     );
-      //   },
-      // );
-    } catch (e) {
-
-    }
+  } catch (e) {
+    setState(() {
+      _isLoading = false;
+    });
   }
-
+}
   final Map<String, String> ratingImageMap = {
     "CLASSIC": "assets/images/ratings/CLASSIC.png",
     "DIAMOND": "assets/images/ratings/DIAMOND.png",
@@ -150,13 +194,19 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
   };
 
   Widget _buildMemberIdInput() {
-    final FocusNode memberIdFocusNode = FocusNode();
+  final FocusNode memberIdFocusNode = FocusNode();
+  final bool showPrefix = _prefixes.isNotEmpty && 
+      !(_prefixes.length == 1 && RegExp(r'^\d').hasMatch(_selectedPrefix == "" ? "0" : "0"));
 
-    return Row(
-      children: [
-        // Prefix Dropdown
+  // Hide prefix for locations that use numeric-only IDs (like Bellagio)
+  final bool isNumericOnly = _selectedPrefix.isEmpty || 
+      ["BELLAGIO"].contains(_selectedPrefix);
+
+  return Row(
+    children: [
+      if (!isNumericOnly)
         Container(
-          height: 50, // Match TextFormField height
+          height: 50,
           decoration: BoxDecoration(
             border: Border.all(color: Colors.grey),
             borderRadius: const BorderRadius.only(
@@ -189,50 +239,44 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                   });
                 }
               },
-              icon: const Icon(Icons.arrow_drop_down),
-              iconSize: 24,
-              elevation: 8,
-              style: const TextStyle(color: Colors.black),
-              dropdownColor: Colors.white,
             ),
           ),
         ),
-        // Member ID Input Field
-        Expanded(
-          child: TextFormField(
-            keyboardType: const TextInputType.numberWithOptions(),
-            style: const TextStyle(fontSize: 22),
-            autofocus: false,
-            focusNode: memberIdFocusNode,
-            controller: _memberIdController,
-            decoration: InputDecoration(
-              labelText: "Member ID",
-             labelStyle: const TextStyle(fontSize: 18,color: Colors.black),
-              //hintText: "001, 003, 0002...",
-              border: const OutlineInputBorder(
-                borderRadius: BorderRadius.only(
-                  topRight: Radius.circular(4),
-                  bottomRight: Radius.circular(4),
-                ),
-              ),
-              contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 12.0,
-                                              vertical: -5.0,
-                                            ),
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.search),
-                onPressed: () {
-                  FocusScope.of(context).requestFocus(FocusNode());
-                  _openMemberSearchBottomSheet(8002);
-                },
-              ),
+      Expanded(
+        child: TextFormField(
+          keyboardType: const TextInputType.numberWithOptions(),
+          style: const TextStyle(fontSize: 22),
+          autofocus: false,
+          focusNode: memberIdFocusNode,
+          controller: _memberIdController,
+          decoration: InputDecoration(
+            labelText: "Member ID",
+            labelStyle: const TextStyle(fontSize: 18, color: Colors.black),
+            border: OutlineInputBorder(
+              borderRadius: isNumericOnly
+                  ? BorderRadius.circular(4)
+                  : const BorderRadius.only(
+                      topRight: Radius.circular(4),
+                      bottomRight: Radius.circular(4),
+                    ),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12.0,
+              vertical: -5.0,
+            ),
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () {
+                FocusScope.of(context).requestFocus(FocusNode());
+                _openMemberSearchBottomSheet(8002);
+              },
             ),
           ),
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
 
   @override
   Widget build(BuildContext context) {

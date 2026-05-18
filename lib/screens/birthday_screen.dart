@@ -189,12 +189,12 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
         actions: [
           if (_isSearching)
             IconButton(
-              icon: const Icon(Icons.close),
+              icon: const Icon(Icons.close,size: 30),
               onPressed: _stopSearch,
             )
           else ...[
             IconButton(
-              icon: const Icon(Icons.search, size: 28),
+              icon: const Icon(Icons.search, size: 30),
               onPressed: _startSearch,
             ),
             IconButton(
@@ -317,17 +317,18 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                   children: [
                     Text(
                       'Price: ${birthday.gift}',
-                      style: const TextStyle(
-                        fontSize: 18.0,
-                        fontWeight: FontWeight.bold,
+                      style:  TextStyle(
+                           fontSize: fontSettings.fontSize+2,
+                        fontWeight: fontSettings.fontWeight,
+                        color: const Color.fromARGB(255, 255, 0, 0),
                       ),
                     ),
                     const SizedBox(height: 3.0),
                     Text(
                       '${birthday.mid} - ${birthday.mname}',
                       style: TextStyle(
-                        color: Colors.black,
-                        fontSize: fontSettings.fontSize,
+                        color: const Color.fromARGB(255, 17, 0, 255),
+                        fontSize: fontSettings.fontSize+2,
                         fontWeight: fontSettings.fontWeight,
                       ),
                     ),
@@ -425,34 +426,67 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                       ],
                     ),
                     const SizedBox(height: 8.0),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          context.push(
-                            '/birthdays/gift-price-increase',
-                            extra: birthday,
-                          );
-                        },
-                        icon: const Icon(
-                          Icons.trending_up,
-                          color: Colors.white,
-                        ),
-                        label: const Text(
-                          'Request Gift Price Increase',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16.0,
-                            color: Colors.white,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 10.0),
-                        ),
-                      ),
-                    ),
+                    // SizedBox(
+                    //   width: double.infinity,
+                    //   child: ElevatedButton.icon(
+                    //     onPressed: () {
+                    //       context.push(
+                    //         '/birthdays/gift-price-increase',
+                    //         extra: birthday,
+                    //       );
+                    //     },
+                    //     icon: const Icon(
+                    //       Icons.trending_up,
+                    //       color: Colors.white,
+                    //     ),
+                    //     label: const Text(
+                    //       'Request Gift Price Increase',
+                    //       style: TextStyle(
+                    //         fontWeight: FontWeight.bold,
+                    //         fontSize: 16.0,
+                    //         color: Colors.white,
+                    //       ),
+                    //     ),
+                    //     style: ElevatedButton.styleFrom(
+                    //       backgroundColor: Colors.orange,
+                    //       foregroundColor: Colors.white,
+                    //       padding: const EdgeInsets.symmetric(vertical: 10.0),
+                    //     ),
+                    //   ),
+                    // ),
+                    Align(
+  alignment: Alignment.centerLeft,
+  child: ElevatedButton.icon(
+    onPressed: () {
+      context.push(
+        '/birthdays/gift-price-increase',
+        extra: birthday,
+      );
+    },
+    icon: const Icon(
+      Icons.trending_up,
+      color: Colors.white,
+      size: 16.0,
+    ),
+    label: const Text(
+      'Request Gift Price Increase',
+      style: TextStyle(
+        fontWeight: FontWeight.bold,
+        fontSize: 15.0,
+        color: Colors.white,
+      ),
+    ),
+    style: ElevatedButton.styleFrom(
+      backgroundColor: Colors.orange,
+      foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10.0,
+        vertical: 6.0,
+      ),
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    ),
+  ),
+),
                   ],
                 ),
               ),

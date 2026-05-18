@@ -21,7 +21,7 @@ class GuestBookingRepository {
     try {
       final deviceId = await DeviceId.get();
       final baseUrl = await _getBaseUrl();
-      final isBellagio = baseUrl == 'https://bty.world/api/Bellagio/CRM';
+    //  final isBellagio = baseUrl == 'https://bty.world/api/Bellagio/CRM';
       String? accessToken = await storage.read(key: 'access_token');
       print('Guest Booking url $baseUrl');
 
@@ -29,7 +29,7 @@ class GuestBookingRepository {
         Uri.parse('$baseUrl/CheckAllBookings'),
         headers: {
           'Content-Type': 'application/json',
-          if (!isBellagio && accessToken != null) 'Authorization': 'Bearer $accessToken',
+          if ( accessToken != null) 'Authorization': 'Bearer $accessToken',
         },
       );
 
@@ -61,7 +61,7 @@ class GuestBookingRepository {
   }) async {
     try {
       final baseUrl = await _getBaseUrl();
-      final isBellagio = baseUrl == 'https://bty.world/api/Bellagio/CRM';
+      //final isBellagio = baseUrl == 'https://bty.world/api/Bellagio/CRM';
       String? accessToken = await storage.read(key: 'access_token');
       final name = await StorageUtil.getUserName();
 
@@ -79,7 +79,7 @@ class GuestBookingRepository {
         Uri.parse('$baseUrl/AcceptMyBooking'),
         headers: {
           'Content-Type': 'application/json',
-          if (!isBellagio && accessToken != null) 'Authorization': 'Bearer $accessToken',
+          if (accessToken != null) 'Authorization': 'Bearer $accessToken',
         },
         body: jsonEncode(payload),
       );

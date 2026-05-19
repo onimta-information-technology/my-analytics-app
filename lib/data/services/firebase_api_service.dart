@@ -353,8 +353,9 @@ class FirebaseApiService {
   static Future<Map<String, dynamic>> fetchAllUsers() async {
     try {
       final deviceId = await DeviceId.get();
-      final url = '$domain${endpoints['fetchAllUsers']}/$deviceId';
-      print('Fetching users from URL: $url');
+      final location = await StorageUtil.getCurrentLocation();
+      final url = '$domain${endpoints['fetchAllUsers']}/$deviceId?location=${location?.code}';
+    print('Fetching users from URL: $url');
       final response = await getRequest(url);
       print('Fetch users response: $response');
       if (response['success'] == true) {

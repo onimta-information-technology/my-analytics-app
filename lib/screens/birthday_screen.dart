@@ -42,11 +42,14 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
     super.initState();
     _tabController = TabController(length: 3, vsync: this, initialIndex: 1);
     _tabController.addListener(() {
-      setState(() {});
+    setState(() {
+    _selectedMid = null;
+  });
     });
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text.trim().toLowerCase();
+        
       });
     });
     _fetchBirthdays();

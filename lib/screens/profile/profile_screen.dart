@@ -798,7 +798,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                     borderRadius: BorderRadius.circular(12),
                                     child: Container(
                                       color: Colors.white,
-                                      padding: const EdgeInsets.all(8),
+                                      padding: const EdgeInsets.all(4),
                                       child: Row(
                                         mainAxisAlignment:
                                             MainAxisAlignment.center,
@@ -808,12 +808,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                             width: 50,
                                             height: 50,
                                           ),
-                                          const SizedBox(width: 8),
+                                          const SizedBox(width: 20),
                                           Text(
                                             "${guest.gift}",
                                             textAlign: TextAlign.center,
                                             style: const TextStyle(
-                                              fontSize: 20,
+                                              fontSize: 25,
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),

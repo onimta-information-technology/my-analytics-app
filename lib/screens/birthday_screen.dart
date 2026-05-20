@@ -606,23 +606,64 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Price : ${birthday.gift}',
-                        style: TextStyle(
-                          fontSize: fontSettings.fontSize + 8,
-                          fontWeight: fontSettings.fontWeight,
-                          color: const Color.fromARGB(255, 255, 0, 0),
-                        ),
-                      ),
+                      // Text(
+                      //   'Price : ${birthday.gift}',
+                      //   style: TextStyle(
+                      //     fontSize: fontSettings.fontSize + 8,
+                      //     fontWeight: fontSettings.fontWeight,
+                      //     color: const Color.fromARGB(255, 255, 0, 0),
+                      //   ),
+                      // ),
+                      Container(
+  padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
+  decoration: BoxDecoration(
+    color: Colors.black,
+    borderRadius: BorderRadius.circular(4.0),
+  ),
+  child: Text(
+    'Price : ${birthday.gift}',
+    style: TextStyle(
+      fontSize: fontSettings.fontSize + 8,
+      fontWeight: fontSettings.fontWeight,
+      color: Colors.white,
+    ),
+  ),
+),
                       const SizedBox(height: 3.0),
-                      Text(
-                        '${birthday.mid} - ${birthday.mname}',
-                        style: TextStyle(
-                          color: const Color.fromARGB(255, 17, 0, 255),
-                          fontSize: fontSettings.fontSize + 2,
-                          fontWeight: fontSettings.fontWeight,
-                        ),
-                      ),
+                      // Text(
+                      //   '${birthday.mid} - ${birthday.mname}',
+                      //   style: TextStyle(
+                      //     color: const Color.fromARGB(255, 17, 0, 255),
+                      //     fontSize: fontSettings.fontSize + 2,
+                      //     fontWeight: fontSettings.fontWeight,
+                      //   ),
+                      // ),
+                      Container(
+  padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
+  decoration: BoxDecoration(
+    color: const Color.fromARGB(255, 255, 255, 255),
+    borderRadius: BorderRadius.circular(4.0),
+    // border: Border.all(
+    //   color: const Color.fromARGB(255, 17, 0, 255),
+    //   width: 1.0,
+    // ),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.blue.withOpacity(0.1),
+        blurRadius: 4,
+        offset: const Offset(0, 2),
+      ),
+    ],
+  ),
+  child: Text(
+    '${birthday.mid} - ${birthday.mname}',
+    style: TextStyle(
+      color: const Color.fromARGB(255, 17, 0, 255),
+      fontSize: fontSettings.fontSize + 2,
+      fontWeight: fontSettings.fontWeight,
+    ),
+  ),
+),
                       const SizedBox(height: 3.0),
                       Text(
                         'Last visit on - ${DateFormat('dd MMM yyyy').format(birthday.lvd)}',
@@ -668,78 +709,179 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                               ),
                             ),
                           ),
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              ref
-                                  .read(selectedGuestProvider.notifier)
-                                  .setSelectedGuest(
-                                    Guest(
-                                      mid: birthday.mid,
-                                      memberName: birthday.mname,
-                                      country: birthday.country,
-                                      lastVisitDate: birthday.lvd.toString(),
-                                      age: birthday.age,
-                                      gRating: birthday.gRating,
-                                      mGroup: birthday.mGroup,
-                                      gName: birthday.gName,
-                                      gift: birthday.gift,
-                                      mobile: birthday.mobile,
-                                    ),
-                                  );
-                              context.push('/home/profile');
-                            },
-                            icon: const Icon(Icons.card_giftcard,
-                                color: Colors.white),
-                            label: Text(
-                              'Request a gift',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: fontSettings.fontSize,
-                                color: Colors.white,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: birthday.age < 0
-                                  ? Colors.green
-                                  : Constants.kSecondaryColor,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(4.0),
-                              ),
-                            ),
-                          ),
+                          // ElevatedButton.icon(
+                          //   onPressed: () {
+                          //     ref
+                          //         .read(selectedGuestProvider.notifier)
+                          //         .setSelectedGuest(
+                          //           Guest(
+                          //             mid: birthday.mid,
+                          //             memberName: birthday.mname,
+                          //             country: birthday.country,
+                          //             lastVisitDate: birthday.lvd.toString(),
+                          //             age: birthday.age,
+                          //             gRating: birthday.gRating,
+                          //             mGroup: birthday.mGroup,
+                          //             gName: birthday.gName,
+                          //             gift: birthday.gift,
+                          //             mobile: birthday.mobile,
+                          //           ),
+                          //         );
+                          //     context.push('/home/profile');
+                          //   },
+                          //   icon: const Icon(Icons.card_giftcard,
+                          //       color: Colors.white),
+                          //   label: Text(
+                          //     'Request a gift',
+                          //     style: TextStyle(
+                          //       fontWeight: FontWeight.bold,
+                          //       fontSize: fontSettings.fontSize,
+                          //       color: Colors.white,
+                          //     ),
+                          //   ),
+                          //   style: ElevatedButton.styleFrom(
+                          //     // backgroundColor: birthday.age < 0
+                          //     //     ? Colors.green
+                          //     //     : Constants.kSecondaryColor,
+                          //     backgroundColor: const Color.fromARGB(255, 0, 0, 0),
+                          //     foregroundColor: Colors.white,
+                          //     shape: RoundedRectangleBorder(
+                          //       borderRadius: BorderRadius.circular(4.0),
+                          //     ),
+                          //   ),
+                          // ),
+                          InkWell(
+  onTap: () {
+    ref
+        .read(selectedGuestProvider.notifier)
+        .setSelectedGuest(
+          Guest(
+            mid: birthday.mid,
+            memberName: birthday.mname,
+            country: birthday.country,
+            lastVisitDate: birthday.lvd.toString(),
+            age: birthday.age,
+            gRating: birthday.gRating,
+            mGroup: birthday.mGroup,
+            gName: birthday.gName,
+            gift: birthday.gift,
+            mobile: birthday.mobile,
+          ),
+        );
+    context.push('/home/profile');
+  },
+  borderRadius: BorderRadius.circular(12),
+  child: Container(
+    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+    decoration: BoxDecoration(
+      color:  const Color.fromARGB(255, 235, 232, 232),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(
+        color: birthday.age < 0 ? Colors.green : Constants.kSecondaryColor,
+        width: 2,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: (birthday.age < 0 ? Colors.green : Constants.kSecondaryColor)
+              .withOpacity(0.15),
+          blurRadius: 8,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          Icons.card_giftcard,
+          color: birthday.age < 0 ? Colors.green : Constants.kSecondaryColor,
+          size: 18,
+        ),
+        const SizedBox(width: 6),
+        Text(
+          'Request a gift',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: fontSettings.fontSize,
+            color: birthday.age < 0 ? Colors.green : Constants.kSecondaryColor,
+          ),
+        ),
+      ],
+    ),
+  ),
+),
                         ],
                       ),
                       const SizedBox(height: 8.0),
                       Align(
                         alignment: Alignment.centerLeft,
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            context.push(
-                              '/birthdays/gift-price-increase',
-                              extra: birthday,
-                            );
-                          },
-                          icon: const Icon(Icons.trending_up,
-                              color: Colors.white, size: 16.0),
-                          label: const Text(
-                            'Request Gift Price Increase',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15.0,
-                                color: Colors.white),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10.0, vertical: 6.0),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4.0),
-                            ),
-                          ),
-                        ),
+                        // child: ElevatedButton.icon(
+                        //   onPressed: () {
+                        //     context.push(
+                        //       '/birthdays/gift-price-increase',
+                        //       extra: birthday,
+                        //     );
+                        //   },
+                        //   icon: const Icon(Icons.trending_up,
+                        //       color: Colors.white, size: 16.0),
+                        //   label: const Text(
+                        //     'Request Gift Price Increase',
+                        //     style: TextStyle(
+                        //         fontWeight: FontWeight.bold,
+                        //         fontSize: 15.0,
+                        //         color: Colors.white),
+                        //   ),
+                        //   style: ElevatedButton.styleFrom(
+                        //     backgroundColor: const Color.fromARGB(255, 0, 0, 0),
+                        //     foregroundColor: Colors.white,
+                        //     padding: const EdgeInsets.symmetric(
+                        //         horizontal: 10.0, vertical: 6.0),
+                        //     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        //     shape: RoundedRectangleBorder(
+                        //       borderRadius: BorderRadius.circular(4.0),
+                        //     ),
+                        //   ),
+                        // ),
+                     child: InkWell(
+  onTap: () {
+    context.push(
+      '/birthdays/gift-price-increase',
+      extra: birthday,
+    );
+  },
+  borderRadius: BorderRadius.circular(12),
+  child: Container(
+    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+    decoration: BoxDecoration(
+      color: const Color.fromARGB(255, 235, 232, 232),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: Colors.orange, width: 2),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.orange.withOpacity(0.15),
+          blurRadius: 8,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+       // const Icon(Icons.trending_up, color: Colors.orange, size: 18),
+        const SizedBox(width: 6),
+        Text(
+          'Request Gift Price Increase',
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: fontSettings.fontSize,
+            color: Colors.orange,
+          ),
+        ),
+      ],
+    ),
+  ),
+),
                       ),
                     ],
                   ),

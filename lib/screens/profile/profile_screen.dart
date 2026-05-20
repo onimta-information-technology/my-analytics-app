@@ -813,7 +813,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                             "${guest.gift}",
                                             textAlign: TextAlign.center,
                                             style: const TextStyle(
-                                              fontSize: 25,
+                                              fontSize: 34,
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),

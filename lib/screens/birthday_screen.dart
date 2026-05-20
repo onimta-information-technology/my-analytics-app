@@ -48,11 +48,7 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
 
   // ── KEY-BASED approach: one GlobalKey per card per tab ──────────────────
   // _itemKeys[tabIndex][listIndex] = GlobalKey
-  final List<Map<int, GlobalKey>> _itemKeys = [
-    {},
-    {},
-    {},
-  ];
+  final List<Map<int, GlobalKey>> _itemKeys = [{}, {}, {}];
   // ────────────────────────────────────────────────────────────────────────
 
   @override
@@ -138,8 +134,8 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
     final raw = tabIndex == 0
         ? birthdayData['past']!
         : tabIndex == 1
-            ? _recentBirthdays
-            : birthdayData['upcoming']!;
+        ? _recentBirthdays
+        : birthdayData['upcoming']!;
     return _filterBirthdays(applyMidFilter(raw, _getAllBirthdays()));
   }
 
@@ -148,8 +144,8 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
     return tabIndex == 0
         ? birthdayData['past']!
         : tabIndex == 1
-            ? _recentBirthdays
-            : birthdayData['upcoming']!;
+        ? _recentBirthdays
+        : birthdayData['upcoming']!;
   }
 
   void _scrollStripToKey(String key, List<Birthday> tabBirthdays) {
@@ -166,19 +162,21 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
       return seen.add(k);
     }).toList();
 
-    final chipIndex =
-        unique.indexWhere((b) => '${b.bDate.day}-${b.bDate.month}' == key);
+    final chipIndex = unique.indexWhere(
+      (b) => '${b.bDate.day}-${b.bDate.month}' == key,
+    );
     if (chipIndex == -1) return;
 
     const double chipWidth = 90.0;
     const double allButtonWidth = 60.0;
-    final double targetOffset =
-        allButtonWidth + chipIndex * chipWidth - 8;
+    final double targetOffset = allButtonWidth + chipIndex * chipWidth - 8;
 
     if (_stripScrollController.hasClients) {
       _stripScrollController.animateTo(
         targetOffset.clamp(
-            0.0, _stripScrollController.position.maxScrollExtent),
+          0.0,
+          _stripScrollController.position.maxScrollExtent,
+        ),
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
@@ -199,8 +197,9 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
     if (birthdayData['recentUpcoming']!.isEmpty &&
         birthdayData['recentPast']!.isEmpty) {
       setState(() => _isLoading = true);
-      final birthdays =
-          await ref.read(birthdayProvider.notifier).getBirthdays();
+      final birthdays = await ref
+          .read(birthdayProvider.notifier)
+          .getBirthdays();
       setState(() {
         _isLoading = false;
         _recentBirthdays = birthdays['recentUpcoming']!;
@@ -215,8 +214,9 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
   Future<void> _refreshBirthdays() async {
     setState(() => _isRefreshing = true);
     try {
-      final birthdays =
-          await ref.read(birthdayProvider.notifier).getBirthdays();
+      final birthdays = await ref
+          .read(birthdayProvider.notifier)
+          .getBirthdays();
       setState(() {
         _recentBirthdays = _showRecentUpcoming
             ? birthdays['recentUpcoming']!
@@ -253,22 +253,25 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
           b.mid.toLowerCase().contains(_searchQuery) ||
           (b.mobile ?? '').toLowerCase().contains(_searchQuery) ||
           (b.bDate).toString().contains(_searchQuery) ||
-          DateFormat('dd MMM yyyy')
-              .format(b.bDate)
-              .toString()
-              .contains(_searchQuery) ||
+          DateFormat(
+            'dd MMM yyyy',
+          ).format(b.bDate).toString().contains(_searchQuery) ||
           (b.gRating ?? '').toLowerCase().contains(_searchQuery);
     }).toList();
   }
 
   List<Birthday> applyMidFilter(
-      List<Birthday> list, List<Birthday> allBirthdays) {
+    List<Birthday> list,
+    List<Birthday> allBirthdays,
+  ) {
     if (_selectedMid == null) return list;
     final selected = allBirthdays.firstWhere((b) => b.mid == _selectedMid);
     return list
-        .where((b) =>
-            b.bDate.day == selected.bDate.day &&
-            b.bDate.month == selected.bDate.month)
+        .where(
+          (b) =>
+              b.bDate.day == selected.bDate.day &&
+              b.bDate.month == selected.bDate.month,
+        )
         .toList();
   }
 
@@ -328,8 +331,10 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
                 margin: const EdgeInsets.only(right: 6),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: isAll ? const Color(0xFF534AB7) : Colors.white,
                   border: Border.all(
@@ -366,8 +371,7 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 150),
               margin: const EdgeInsets.only(right: 6),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: isActive ? Colors.black : Colors.white,
                 border: Border.all(
@@ -434,9 +438,10 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                   hintStyle: TextStyle(color: Color.fromARGB(153, 0, 0, 0)),
                 ),
                 style: const TextStyle(
-                    color: Color.fromARGB(255, 0, 0, 0),
-                    fontSize: 18.0,
-                    fontWeight: FontWeight.bold),
+                  color: Color.fromARGB(255, 0, 0, 0),
+                  fontSize: 18.0,
+                  fontWeight: FontWeight.bold,
+                ),
               )
             : const Text('Birthdays', style: TextStyle(fontSize: 20.0)),
         actions: [
@@ -485,8 +490,8 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                 _tabController.index == 0
                     ? birthdayData['past']!
                     : _tabController.index == 1
-                        ? _recentBirthdays
-                        : birthdayData['upcoming']!,
+                    ? _recentBirthdays
+                    : birthdayData['upcoming']!,
               ),
               Expanded(
                 child: TabBarView(
@@ -494,18 +499,20 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                   children: [
                     _buildBirthdayList(
                       _filterBirthdays(
-                          applyMidFilter(birthdayData['past']!, allBirthdays)),
+                        applyMidFilter(birthdayData['past']!, allBirthdays),
+                      ),
                       tabIndex: 0,
                     ),
                     _buildBirthdayList(
                       _filterBirthdays(
-                          applyMidFilter(_recentBirthdays, allBirthdays)),
+                        applyMidFilter(_recentBirthdays, allBirthdays),
+                      ),
                       tabIndex: 1,
                     ),
                     _buildBirthdayList(
                       _filterBirthdays(
-                          applyMidFilter(
-                              birthdayData['upcoming']!, allBirthdays)),
+                        applyMidFilter(birthdayData['upcoming']!, allBirthdays),
+                      ),
                       tabIndex: 2,
                     ),
                   ],
@@ -525,8 +532,10 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                     backgroundColor: Colors.green,
                     mini: true,
                     heroTag: 'recentUpcoming',
-                    child: const Icon(Icons.arrow_outward_sharp,
-                        color: Colors.white),
+                    child: const Icon(
+                      Icons.arrow_outward_sharp,
+                      color: Colors.white,
+                    ),
                   ),
                   FloatingActionButton(
                     onPressed: () => _toggleRecentBirthdays(false),
@@ -535,8 +544,10 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                     heroTag: 'recentPast',
                     child: Transform.rotate(
                       angle: -135 * 3.1415926535897932 / 180,
-                      child: const Icon(Icons.arrow_back_sharp,
-                          color: Colors.white),
+                      child: const Icon(
+                        Icons.arrow_back_sharp,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ],
@@ -563,8 +574,7 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
     );
   }
 
-  Widget _buildBirthdayList(List<Birthday> birthdays,
-      {required int tabIndex}) {
+  Widget _buildBirthdayList(List<Birthday> birthdays, {required int tabIndex}) {
     final fontSettings = ref.watch(fontSettingsProvider);
 
     if (birthdays.isEmpty) {
@@ -574,9 +584,10 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
               ? 'No birthdays found'
               : 'No results for "$_searchQuery"',
           style: const TextStyle(
-              fontSize: 18.0,
-              color: Color.fromARGB(255, 0, 0, 0),
-              fontWeight: FontWeight.bold),
+            fontSize: 18.0,
+            color: Color.fromARGB(255, 0, 0, 0),
+            fontWeight: FontWeight.bold,
+          ),
         ),
       );
     }
@@ -592,13 +603,16 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
       itemBuilder: (context, index) {
         final birthday = birthdays[index];
         // Assign the GlobalKey to this card's container
-        final itemKey = _itemKeys[tabIndex].putIfAbsent(index, () => GlobalKey());
+        final itemKey = _itemKeys[tabIndex].putIfAbsent(
+          index,
+          () => GlobalKey(),
+        );
 
         return Container(
           key: itemKey,
           child: Card(
-            margin:
-                const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+            color: Colors.white,
+            margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
             child: Stack(
               children: [
                 Padding(
@@ -615,55 +629,61 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                       //   ),
                       // ),
                       Container(
-  padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
-  decoration: BoxDecoration(
-    color: Colors.black,
-    borderRadius: BorderRadius.circular(4.0),
-  ),
-  child: Text(
-    'Price : ${birthday.gift}',
-    style: TextStyle(
-      fontSize: fontSettings.fontSize + 8,
-      fontWeight: fontSettings.fontWeight,
-      color: Colors.white,
-    ),
-  ),
-),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10.0,
+                          vertical: 4.0,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(4.0),
+                        ),
+                        child: Text(
+                          'Price : ${birthday.gift}',
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize + 8,
+                            fontWeight: fontSettings.fontWeight,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 3.0),
-                      // Text(
-                      //   '${birthday.mid} - ${birthday.mname}',
-                      //   style: TextStyle(
-                      //     color: const Color.fromARGB(255, 17, 0, 255),
-                      //     fontSize: fontSettings.fontSize + 2,
-                      //     fontWeight: fontSettings.fontWeight,
+                      Text(
+                        '${birthday.mid} - ${birthday.mname}',
+                        style: TextStyle(
+                          color: const Color.fromARGB(255, 17, 0, 255),
+                          fontSize: fontSettings.fontSize + 2,
+                          fontWeight: fontSettings.fontWeight,
+                        ),
+                      ),
+                      // Container(
+                      //   padding: const EdgeInsets.symmetric(
+                      //     horizontal: 10.0,
+                      //     vertical: 4.0,
+                      //   ),
+                      //   decoration: BoxDecoration(
+                      //     color: const Color.fromARGB(255, 255, 255, 255),
+                      //     borderRadius: BorderRadius.circular(4.0),
+                      //     // border: Border.all(
+                      //     //   color: const Color.fromARGB(255, 17, 0, 255),
+                      //     //   width: 1.0,
+                      //     // ),
+                      //     boxShadow: [
+                      //       BoxShadow(
+                      //         color: Colors.blue.withOpacity(0.1),
+                      //         blurRadius: 4,
+                      //         offset: const Offset(0, 2),
+                      //       ),
+                      //     ],
+                      //   ),
+                      //   child: Text(
+                      //     '${birthday.mid} - ${birthday.mname}',
+                      //     style: TextStyle(
+                      //       color: const Color.fromARGB(255, 17, 0, 255),
+                      //       fontSize: fontSettings.fontSize + 2,
+                      //       fontWeight: fontSettings.fontWeight,
+                      //     ),
                       //   ),
                       // ),
-                      Container(
-  padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
-  decoration: BoxDecoration(
-    color: const Color.fromARGB(255, 255, 255, 255),
-    borderRadius: BorderRadius.circular(4.0),
-    // border: Border.all(
-    //   color: const Color.fromARGB(255, 17, 0, 255),
-    //   width: 1.0,
-    // ),
-    boxShadow: [
-      BoxShadow(
-        color: Colors.blue.withOpacity(0.1),
-        blurRadius: 4,
-        offset: const Offset(0, 2),
-      ),
-    ],
-  ),
-  child: Text(
-    '${birthday.mid} - ${birthday.mname}',
-    style: TextStyle(
-      color: const Color.fromARGB(255, 17, 0, 255),
-      fontSize: fontSettings.fontSize + 2,
-      fontWeight: fontSettings.fontWeight,
-    ),
-  ),
-),
                       const SizedBox(height: 3.0),
                       Text(
                         'Last visit on - ${DateFormat('dd MMM yyyy').format(birthday.lvd)}',
@@ -674,41 +694,86 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                         ),
                       ),
                       const SizedBox(height: 3.0),
-                      Row(
-                        children: [
-                          const Icon(Icons.cake, color: Colors.pink),
-                          const SizedBox(width: 8.0),
-                          Text(
-                            DateFormat('dd MMM yyyy').format(birthday.bDate),
-                            style: TextStyle(
-                              fontSize: fontSettings.fontSize,
-                              fontWeight: fontSettings.fontWeight,
-                            ),
-                          ),
-                        ],
-                      ),
+                      // Row(
+                      //   children: [
+                      //     const Icon(Icons.cake, color: Colors.pink),
+                      //     const SizedBox(width: 8.0),
+                      //     Text(
+                      //       DateFormat('dd MMM yyyy').format(birthday.bDate),
+                      //       style: TextStyle(
+                      //         fontSize: fontSettings.fontSize,
+                      //         fontWeight: fontSettings.fontWeight,
+                      //       ),
+                      //     ),
+                      //   ],
+                      // ),
+                    Row(
+  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  children: [
+    Row(
+      children: [
+        const Icon(Icons.cake, color: Colors.pink),
+        const SizedBox(width: 8.0),
+        Text(
+          DateFormat('dd MMM yyyy').format(birthday.bDate),
+          style: TextStyle(
+            fontSize: fontSettings.fontSize,
+            fontWeight: fontSettings.fontWeight,
+          ),
+        ),
+      ],
+    ),
+ 
+    Container(
+      alignment: Alignment.centerRight,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8.0,
+        vertical: 4.0,
+      ),
+      decoration: BoxDecoration(
+        color: birthday.age <= 0
+            ? Colors.green
+            : Constants.kSecondaryColor,
+        borderRadius: BorderRadius.circular(4.0),
+      ),
+      child: Text(
+        '${birthday.age.abs()} ${birthday.age == -1
+            ? 'Day from now'
+            : birthday.age <= 0
+            ? 'Days from now'
+            : birthday.age == 1
+            ? 'Day ago'
+            : 'Days ago'}',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: fontSettings.fontSize,
+          fontWeight: fontSettings.fontWeight,
+        ),
+      ),
+    ),
+  ],
+),
                       const SizedBox(height: 3.0),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8.0, vertical: 4.0),
-                            decoration: BoxDecoration(
-                              color: birthday.age <= 0
-                                  ? Colors.green
-                                  : Constants.kSecondaryColor,
-                              borderRadius: BorderRadius.circular(4.0),
-                            ),
-                            child: Text(
-                              '${birthday.age.abs()} ${birthday.age == -1 ? 'Day from now' : birthday.age <= 0 ? 'Days from now' : birthday.age == 1 ? 'Day ago' : 'Days ago'}',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: fontSettings.fontSize,
-                                fontWeight: fontSettings.fontWeight,
-                              ),
-                            ),
-                          ),
+                          // Container(
+                          //   padding: const EdgeInsets.symmetric(
+                          //       horizontal: 8.0, vertical: 4.0),
+                          //   decoration: BoxDecoration(
+                          //     color: birthday.age <= 0
+                          //         ? Colors.green
+                          //         : Constants.kSecondaryColor,
+                          //     borderRadius: BorderRadius.circular(4.0),
+                          //   ),
+                          //   child: Text(
+                          //     '${birthday.age.abs()} ${birthday.age == -1 ? 'Day from now' : birthday.age <= 0 ? 'Days from now' : birthday.age == 1 ? 'Day ago' : 'Days ago'}',
+                          //     style: TextStyle(
+                          //       color: Colors.white,
+                          //       fontSize: fontSettings.fontSize,
+                          //       fontWeight: fontSettings.fontWeight,
+                          //     ),
+                          //   ),
+                          // ),
                           // ElevatedButton.icon(
                           //   onPressed: () {
                           //     ref
@@ -751,66 +816,78 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                           //   ),
                           // ),
                           InkWell(
-  onTap: () {
-    ref
-        .read(selectedGuestProvider.notifier)
-        .setSelectedGuest(
-          Guest(
-            mid: birthday.mid,
-            memberName: birthday.mname,
-            country: birthday.country,
-            lastVisitDate: birthday.lvd.toString(),
-            age: birthday.age,
-            gRating: birthday.gRating,
-            mGroup: birthday.mGroup,
-            gName: birthday.gName,
-            gift: birthday.gift,
-            mobile: birthday.mobile,
-          ),
-        );
-    context.push('/home/profile');
-  },
-  borderRadius: BorderRadius.circular(12),
-  child: Container(
-    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-    decoration: BoxDecoration(
-      color:  const Color.fromARGB(255, 235, 232, 232),
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(
-        color: birthday.age < 0 ? Colors.green : Constants.kSecondaryColor,
-        width: 2,
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: (birthday.age < 0 ? Colors.green : Constants.kSecondaryColor)
-              .withOpacity(0.15),
-          blurRadius: 8,
-          offset: const Offset(0, 3),
-        ),
-      ],
-    ),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          Icons.card_giftcard,
-          color: birthday.age < 0 ? Colors.green : Constants.kSecondaryColor,
-          size: 18,
-        ),
-        const SizedBox(width: 6),
-        Text(
-          'Request a gift',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: fontSettings.fontSize,
-            color: birthday.age < 0 ? Colors.green : Constants.kSecondaryColor,
-          ),
-        ),
-      ],
-    ),
-  ),
-),
+                            onTap: () {
+                              ref
+                                  .read(selectedGuestProvider.notifier)
+                                  .setSelectedGuest(
+                                    Guest(
+                                      mid: birthday.mid,
+                                      memberName: birthday.mname,
+                                      country: birthday.country,
+                                      lastVisitDate: birthday.lvd.toString(),
+                                      age: birthday.age,
+                                      gRating: birthday.gRating,
+                                      mGroup: birthday.mGroup,
+                                      gName: birthday.gName,
+                                      gift: birthday.gift,
+                                      mobile: birthday.mobile,
+                                    ),
+                                  );
+                              context.push('/home/profile');
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 10,
+                                horizontal: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color.fromARGB(255, 255, 255, 255),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: birthday.age < 0
+                                      ? Colors.green
+                                      : Constants.kSecondaryColor,
+                                  width: 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color:
+                                        (birthday.age < 0
+                                                ? Colors.green
+                                                : Constants.kSecondaryColor)
+                                            .withOpacity(0.15),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.card_giftcard,
+                                    color: birthday.age < 0
+                                        ? Colors.green
+                                        : Constants.kSecondaryColor,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Request a gift',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: fontSettings.fontSize,
+                                      color: birthday.age < 0
+                                          ? Colors.green
+                                          : Constants.kSecondaryColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 8.0),
@@ -843,45 +920,51 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                         //     ),
                         //   ),
                         // ),
-                     child: InkWell(
-  onTap: () {
-    context.push(
-      '/birthdays/gift-price-increase',
-      extra: birthday,
-    );
-  },
-  borderRadius: BorderRadius.circular(12),
-  child: Container(
-    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-    decoration: BoxDecoration(
-      color: const Color.fromARGB(255, 235, 232, 232),
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: Colors.orange, width: 2),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.orange.withOpacity(0.15),
-          blurRadius: 8,
-          offset: const Offset(0, 3),
-        ),
-      ],
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-       // const Icon(Icons.trending_up, color: Colors.orange, size: 18),
-        const SizedBox(width: 6),
-        Text(
-          'Request Gift Price Increase',
-          style: TextStyle(
-            fontWeight: FontWeight.w900,
-            fontSize: fontSettings.fontSize,
-            color: Colors.orange,
-          ),
-        ),
-      ],
-    ),
-  ),
-),
+                        child: InkWell(
+                          onTap: () {
+                            context.push(
+                              '/birthdays/gift-price-increase',
+                              extra: birthday,
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 10,
+                              horizontal: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color.fromARGB(255, 255, 255, 255),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.orange,
+                                width: 2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.orange.withOpacity(0.15),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // const Icon(Icons.trending_up, color: Colors.orange, size: 18),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Request Gift Price Increase',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: fontSettings.fontSize,
+                                    color: Colors.orange,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -892,12 +975,15 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                   child: Card(
                     elevation: 5,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: Hero(
                       tag: "rating-image-${birthday.mid}",
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: _getRatingColorBallys(birthday.gRating),
                           borderRadius: BorderRadius.circular(12),

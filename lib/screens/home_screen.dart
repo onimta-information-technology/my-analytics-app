@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:ballys_reservation_app/components/Event/events.dart';
 import 'package:ballys_reservation_app/components/location_selector_widget.dart';
 import 'package:ballys_reservation_app/components/marketing_breakdown_chart_card.dart';
@@ -38,19 +40,19 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen>
-    with AutomaticKeepAliveClientMixin , WidgetsBindingObserver{
+    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   String? userName;
   bool _isLoadingData = false;
-String? locationLogo;
+  String? locationLogo;
   @override
   bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
-      WidgetsBinding.instance.addObserver(this); 
+    WidgetsBinding.instance.addObserver(this);
     _loadUserName();
- _loadLocationLogo();
+    _loadLocationLogo();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // 🔹 Fetch server run date via provider
       ref.read(runDateProvider.notifier).getRunDate();
@@ -76,20 +78,40 @@ String? locationLogo;
         _loadGuestData();
         _checkAndShowEvent();
       } else {
-        final guestsState = ref.read(guestsProvider);
-        if (guestsState.todayGuests.isEmpty &&
-            guestsState.yesterdayGuests.isEmpty &&
-            guestsState.monthlyGuests.isEmpty) {
-          _loadGuestData();
-        }
-      }
+    final guestsState = ref.read(guestsProvider);
+
+    // ✅ Restore whatever counts are already in guestsProvider immediately
+    ref.read(guestCountsProvider.notifier).state = {
+      "today": guestsState.todayGuests.isEmpty
+          ? null
+          : guestsState.todayGuests.where((g) => g.mid.isNotEmpty).length,
+      "yesterday": guestsState.yesterdayGuests.isEmpty
+          ? null
+          : guestsState.yesterdayGuests.where((g) => g.mid.isNotEmpty).length,
+      "monthly": guestsState.monthlyGuests.isEmpty
+          ? null
+          : guestsState.monthlyGuests.where((g) => g.mid.isNotEmpty).length,
+    };
+
+    // ✅ Only reload keys that are genuinely missing
+    final bool anyMissing =
+        guestsState.todayGuests.isEmpty ||
+        guestsState.yesterdayGuests.isEmpty ||
+        guestsState.monthlyGuests.isEmpty;
+
+    if (anyMissing) {
+      _loadMissingData(guestsState);
+    }
+  }
     });
   }
-@override
-void dispose() {
-  WidgetsBinding.instance.removeObserver(this);  // 👈 Add this
-  super.dispose();
-}
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this); // 👈 Add this
+    super.dispose();
+  }
+
   /// 🎉 Unified event checking method
   void _checkAndShowEvent() {
     final now = DateTime.now();
@@ -204,12 +226,30 @@ void dispose() {
   void didChangeDependencies() {
     super.didChangeDependencies();
   }
-@override
-void didChangeAppLifecycleState(AppLifecycleState state) {
-  super.didChangeAppLifecycleState(state);
-  if (state == AppLifecycleState.resumed) {
-    ref.read(runDateProvider.notifier).reset();
-    ref.read(runDateProvider.notifier).getRunDate();
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      ref.read(runDateProvider.notifier).reset();
+      ref.read(runDateProvider.notifier).getRunDate();
+    }
+  }
+Future<void> _loadMissingData(GuestsState guestsState) async {
+  String? salesCode = await StorageUtil.getSalesCode();
+  if (salesCode == null || salesCode.isEmpty) return;
+
+  final currentMode = ref.read(appmodeSettingsProvider).appMode;
+
+  // Fire only the calls that are missing — don't touch already-loaded data
+  if (guestsState.todayGuests.isEmpty) {
+    unawaited(_fetchAndUpdateCount(9009, "today", salesCode, currentMode));
+  }
+  if (guestsState.yesterdayGuests.isEmpty) {
+    unawaited(_fetchAndUpdateCount(9010, "yesterday", salesCode, currentMode));
+  }
+  if (guestsState.monthlyGuests.isEmpty) {
+    unawaited(_fetchAndUpdateCount(9011, "monthly", salesCode, currentMode));
   }
 }
   Future<void> _initializeAppMode() async {
@@ -232,62 +272,124 @@ void didChangeAppLifecycleState(AppLifecycleState state) {
     }
   }
 
-  Future<void> _loadGuestData() async {
-    if (_isLoadingData) return;
-    _isLoadingData = true;
+  // Future<void> _loadGuestData() async {
+  //   if (_isLoadingData) return;
+  //   _isLoadingData = true;
 
-    String? salesCode = await StorageUtil.getSalesCode();
-    if (salesCode == null || salesCode.isEmpty) {
-      _isLoadingData = false;
-      return;
-    }
+  //   String? salesCode = await StorageUtil.getSalesCode();
+  //   if (salesCode == null || salesCode.isEmpty) {
+  //     _isLoadingData = false;
+  //     return;
+  //   }
 
-    try {
-      ref.read(guestCountsProvider.notifier).state = {
-        "today": null,
-        "yesterday": null,
-        "monthly": null,
-      };
+  //   try {
+  //     ref.read(guestCountsProvider.notifier).state = {
+  //       "today": null,
+  //       "yesterday": null,
+  //       "monthly": null,
+  //     };
 
-      final currentMode = ref.read(appmodeSettingsProvider).appMode;
-      ref.read(guestsProvider.notifier).resetData();
+  //     final currentMode = ref.read(appmodeSettingsProvider).appMode;
+  //     ref.read(guestsProvider.notifier).resetData();
 
-// AFTER — staggered to avoid server collision
-await ref.read(guestsProvider.notifier).getGuestData(9009, salesCode, currentMode);
-await Future.delayed(const Duration(milliseconds: 300));
-await ref.read(guestsProvider.notifier).getGuestData(9010, salesCode, currentMode);
-await Future.delayed(const Duration(milliseconds: 300));
-await ref.read(guestsProvider.notifier).getGuestData(9011, salesCode, currentMode);
+  //     // AFTER — staggered to avoid server collision
+  //     await ref
+  //         .read(guestsProvider.notifier)
+  //         .getGuestData(9009, salesCode, currentMode);
+  //     await Future.delayed(const Duration(milliseconds: 300));
+  //     await ref
+  //         .read(guestsProvider.notifier)
+  //         .getGuestData(9010, salesCode, currentMode);
+  //     await Future.delayed(const Duration(milliseconds: 300));
+  //     await ref
+  //         .read(guestsProvider.notifier)
+  //         .getGuestData(9011, salesCode, currentMode);
 
-      final guestsState = ref.read(guestsProvider);
-      final finalMode = ref.read(appmodeSettingsProvider).appMode;
+  //     final guestsState = ref.read(guestsProvider);
+  //     final finalMode = ref.read(appmodeSettingsProvider).appMode;
 
-      if (currentMode != finalMode) {
-        _isLoadingData = false;
-        _loadGuestData();
-        return;
-      }
+  //     if (currentMode != finalMode) {
+  //       _isLoadingData = false;
+  //       _loadGuestData();
+  //       return;
+  //     }
 
-      ref.read(guestCountsProvider.notifier).state = {
-        "today": guestsState.todayGuests.where((g) => g.mid.isNotEmpty).length,
-        "yesterday": guestsState.yesterdayGuests
-            .where((g) => g.mid.isNotEmpty)
-            .length,
-        "monthly": guestsState.monthlyGuests
-            .where((g) => g.mid.isNotEmpty)
-            .length,
-      };
-    } catch (e) {
-      ref.read(guestCountsProvider.notifier).state = {
-        "today": 0,
-        "yesterday": 0,
-        "monthly": 0,
-      };
-    } finally {
-      _isLoadingData = false;
-    }
+  //     ref.read(guestCountsProvider.notifier).state = {
+  //       "today": guestsState.todayGuests.where((g) => g.mid.isNotEmpty).length,
+  //       "yesterday": guestsState.yesterdayGuests
+  //           .where((g) => g.mid.isNotEmpty)
+  //           .length,
+  //       "monthly": guestsState.monthlyGuests
+  //           .where((g) => g.mid.isNotEmpty)
+  //           .length,
+  //     };
+  //   } catch (e) {
+  //     ref.read(guestCountsProvider.notifier).state = {
+  //       "today": 0,
+  //       "yesterday": 0,
+  //       "monthly": 0,
+  //     };
+  //   } finally {
+  //     _isLoadingData = false;
+  //   }
+  // }
+Future<void> _loadGuestData() async {
+  if (_isLoadingData) return;
+  _isLoadingData = true;
+
+  String? salesCode = await StorageUtil.getSalesCode();
+  if (salesCode == null || salesCode.isEmpty) {
+    _isLoadingData = false;
+    return;
   }
 
+  final currentMode = ref.read(appmodeSettingsProvider).appMode;
+  ref.read(guestsProvider.notifier).resetData();
+  ref.read(guestCountsProvider.notifier).state = {
+    "today": null,
+    "yesterday": null,
+    "monthly": null,
+  };
+
+  // 🔥 Fire all 3 in background — no await, does NOT block navigation
+  unawaited(_fetchAndUpdateCount(9009, "today", salesCode, currentMode));
+  unawaited(_fetchAndUpdateCount(9010, "yesterday", salesCode, currentMode));
+  unawaited(_fetchAndUpdateCount(9011, "monthly", salesCode, currentMode));
+
+  _isLoadingData = false; // immediately released
+}
+
+Future<void> _fetchAndUpdateCount(
+  int iid,
+  String key,
+  String salesCode,
+  AppMode mode,
+) async {
+  try {
+    await ref.read(guestsProvider.notifier).getGuestData(iid, salesCode, mode);
+
+    if (!mounted) return; // user navigated away — do nothing
+
+    final guestsState = ref.read(guestsProvider);
+    final List<Guest> guests = switch (key) {
+      "today"     => guestsState.todayGuests,
+      "yesterday" => guestsState.yesterdayGuests,
+      "monthly"   => guestsState.monthlyGuests,
+      _           => [],
+    };
+
+    ref.read(guestCountsProvider.notifier).state = {
+      ...ref.read(guestCountsProvider),
+      key: guests.where((g) => g.mid.isNotEmpty).length,
+    };
+  } catch (_) {
+    if (!mounted) return;
+    ref.read(guestCountsProvider.notifier).state = {
+      ...ref.read(guestCountsProvider),
+      key: 0,
+    };
+  }
+}
   Future<void> _manualRefresh() async {
     if (_isLoadingData) return;
 
@@ -310,7 +412,8 @@ await ref.read(guestsProvider.notifier).getGuestData(9011, salesCode, currentMod
       ref.read(runDateProvider.notifier).getRunDate(),
     ]);
   }
-Future<void> _loadLocationLogo() async {
+
+  Future<void> _loadLocationLogo() async {
     final location = await StorageUtil.getCurrentLocation();
     if (mounted) {
       setState(() {
@@ -318,6 +421,7 @@ Future<void> _loadLocationLogo() async {
       });
     }
   }
+
   Widget buildCountBox({
     required int? count,
     required String label,
@@ -376,11 +480,11 @@ Future<void> _loadLocationLogo() async {
     final counts = ref.watch(guestCountsProvider);
     final activeEvent = ref.watch(activeEventProvider);
 
-// Watch the new state
-final runDateState = ref.watch(runDateProvider);
-final formattedDate = runDateState.runDate != null
-    ? DateFormat('EEEE, MMM d, yyyy').format(runDateState.runDate!.date)
-    : null;
+    // Watch the new state
+    final runDateState = ref.watch(runDateProvider);
+    final formattedDate = runDateState.runDate != null
+        ? DateFormat('EEEE, MMM d, yyyy').format(runDateState.runDate!.date)
+        : null;
 
     ref.listen<AppModeSettings>(appmodeSettingsProvider, (prev, next) {
       if (prev?.appMode != next.appMode) {
@@ -419,13 +523,12 @@ final formattedDate = runDateState.runDate != null
               child: Column(
                 children: [
                   // 🔹 Date card — spinner while runDate is null (loading)
-                   FutureBuilder<bool>(
+                  FutureBuilder<bool>(
                     future: StorageUtil.isAdmin(),
                     builder: (context, snapshot) {
-                   
                       if (snapshot.hasData && snapshot.data == true) {
                         return Container(
-                          width: double.infinity, 
+                          width: double.infinity,
                           margin: const EdgeInsets.only(bottom: 8.0),
                           child: Card(
                             elevation: 2,
@@ -452,7 +555,8 @@ final formattedDate = runDateState.runDate != null
                                             locationLogo!,
                                             fit: BoxFit.contain,
                                             errorBuilder: (_, __, ___) =>
-                                                const Icon(                                                  Icons.business,
+                                                const Icon(
+                                                  Icons.business,
                                                   size: 28,
                                                 ),
                                           )
@@ -482,12 +586,15 @@ final formattedDate = runDateState.runDate != null
                                             .read(dailyWalkingProvider.notifier)
                                             .clearDailyWalkingGuests();
                                         ref
-                                            .read(birthdayGiftIncreesProvider.notifier)
+                                            .read(
+                                              birthdayGiftIncreesProvider
+                                                  .notifier,
+                                            )
                                             .clearbirthdayGifts();
                                         ref
                                             .read(marketingProvider.notifier)
                                             .clearMarketing();
-                                             },
+                                      },
                                     ),
                                   ),
 
@@ -526,34 +633,46 @@ final formattedDate = runDateState.runDate != null
                             size: 20,
                             color: Colors.blue,
                           ),
-                        // Replace the formattedDate == null check with:
-                        const SizedBox(width: 6),
-runDateState.isLoading
-    ? const SizedBox(
-        height: 16,
-        width: 16,
-        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.blue),
-      )
-    : runDateState.hasError
-        ? GestureDetector(
-            onTap: () => ref.read(runDateProvider.notifier).getRunDate(),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.refresh, size: 16, color: Colors.red),
-                SizedBox(width: 4),
-                Text('Tap to retry', style: TextStyle(color: Colors.red)),
-              ],
-            ),
-          )
-        : Text(
-            formattedDate ?? '',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
+                          // Replace the formattedDate == null check with:
+                          const SizedBox(width: 6),
+                          runDateState.isLoading
+                              ? const SizedBox(
+                                  height: 16,
+                                  width: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.blue,
+                                  ),
+                                )
+                              : runDateState.hasError
+                              ? GestureDetector(
+                                  onTap: () => ref
+                                      .read(runDateProvider.notifier)
+                                      .getRunDate(),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.refresh,
+                                        size: 16,
+                                        color: Colors.red,
+                                      ),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Tap to retry',
+                                        style: TextStyle(color: Colors.red),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : Text(
+                                  formattedDate ?? '',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
+                                ),
                         ],
                       ),
                     ),
@@ -562,8 +681,9 @@ runDateState.isLoading
                   // Performance heading
                   Consumer(
                     builder: (context, ref, _) {
-                      final appMode =
-                          ref.watch(appmodeSettingsProvider).appMode;
+                      final appMode = ref
+                          .watch(appmodeSettingsProvider)
+                          .appMode;
                       final heading = appMode == AppMode.myData
                           ? "MY PERFORMANCE"
                           : "OVERALL PERFORMANCE";

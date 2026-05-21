@@ -221,8 +221,8 @@ class _DailyWalkingGuestScreenState
                                 Table(
                                   border: TableBorder.all(),
                                   columnWidths: const {
-                                    0: FlexColumnWidth(),
-                                    1: FlexColumnWidth(),
+                                    0: FlexColumnWidth(1),
+                                    1: FlexColumnWidth(1.15),
                                   },
                                   children: [
                                     TableRow(
@@ -537,14 +537,14 @@ class _DailyWalkingGuestScreenState
                         //   color: const Color.fromARGB(255, 254, 2, 2),
                         // ),
                           Container(
-                                                                        padding: const EdgeInsets.all(4),
+                                                                        padding: const EdgeInsets.all(2),
                                                                         decoration: BoxDecoration(
                                                                           color: const Color.fromARGB(255, 230, 0, 0),
                                                                           borderRadius: BorderRadius.circular(6),
                                                                         ),
-                                                                        child: const Icon(Icons.phone, size: 22, color: Colors.white),
+                                                                        child: const Icon(Icons.phone, size: 20, color: Colors.white),
                                                                       ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 3),
                         Text(
                           value,
                           style: TextStyle(

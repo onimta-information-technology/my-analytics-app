@@ -119,7 +119,7 @@ class TripHistory {
 
   factory TripHistory.fromJson(Map<String, dynamic> json) {
     return TripHistory(
-      consecutiveDates: json['ConsecutiveDates'],
+      consecutiveDates: _parseToDouble(json['ConsecutiveDates']),
       arrivalDate: json['ArrivalDate'],
       departureDate: json['DepartureDate'],
       tripDrop: json['Trip_Drop'],
@@ -180,4 +180,14 @@ class TripHistory {
       jsonEncode(exGift.map((e) => e.toJson()).toList()): null,
     };
   }
+  static double _parseToDouble(dynamic value) {
+  if (value == null) return 0.0;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  if (value is String) {
+    String cleanValue = value.replaceAll(',', '').trim();
+    return double.tryParse(cleanValue) ?? 0.0;
+  }
+  return 0.0;
+}
 }

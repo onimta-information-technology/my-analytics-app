@@ -267,11 +267,21 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
     }
   }
 
-  String formatDate(String dateString) {
+  // String formatDate(String dateString) {
+  //   final date = DateTime.parse(dateString);
+  //   return DateFormat('dd MMM yyyy').format(date);
+  // }
+String formatDate(String dateString) {
+  if (dateString.isEmpty || dateString == "1990-01-01") {
+    return "N/A";
+  }
+  try {
     final date = DateTime.parse(dateString);
     return DateFormat('dd MMM yyyy').format(date);
+  } catch (e) {
+    return "N/A";
   }
-
+}
   String _formatAmount(double value) {
     final formatter = NumberFormat('#,##0.##');
     return formatter.format(value);
@@ -464,7 +474,7 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    "Last Visit on -  ${formatDate(guest.lastVisitDate)}",
+                                    "Last Visit on -  ${formatDate(guest.lastVisitDate ?? '')}",
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(
                                       fontSize: 20,

@@ -436,11 +436,21 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
         );
   }
 
-  String formatDate(String dateString) {
+  // String formatDate(String dateString) {
+  //   final date = DateTime.parse(dateString);
+  //   return DateFormat('dd MMM yyyy').format(date);
+  // }
+String formatDate(String dateString) {
+  if (dateString.isEmpty || dateString == "1990-01-01") {
+    return "N/A";
+  }
+  try {
     final date = DateTime.parse(dateString);
     return DateFormat('dd MMM yyyy').format(date);
+  } catch (e) {
+    return "N/A";
   }
-
+}
   // final Map<String, String> ratingImageMap = {
   //   "CLASSIC": "assets/images/ratings/CLASSIC.png",
   //   "DIAMOND": "assets/images/ratings/DIAMOND.png",
@@ -716,7 +726,9 @@ class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    "Last Visit on -  ${formatDate(guest.lastVisitDate)}",
+                                    // "Last Visit on -  ${formatDate(guest.lastVisitDate)}",
+                                      "Last Visit on -  ${formatDate(guest.lastVisitDate ?? '')}",
+
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(
                                       fontSize: 20,

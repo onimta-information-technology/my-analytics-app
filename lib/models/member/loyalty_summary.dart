@@ -35,17 +35,24 @@ class LoyaltySummary {
       name: json['Name'] as String,
       totalPoints: json['TotalPoints'] as int,
       ballysRuppes: json['BallysRuppes'] as int,
-      ballysRuppesExpireMessage: json['BallysRuppesExpireMessage'] as String,
+      // ballysRuppesExpireMessage: json['BallysRuppesExpireMessage'] as String,
+       ballysRuppesExpireMessage: _parseStringField(json['BallysRuppesExpireMessage']),
       ballysCoins: json['BallysCoins'] as int,
-      ballysCoinsExpireMessage: json['BallysCoinsExpireMessage'] as String,
+      // ballysCoinsExpireMessage: json['BallysCoinsExpireMessage'] as String,
+        ballysCoinsExpireMessage: _parseStringField(json['BallysCoinsExpireMessage']),
       lastUpdateDateTime: json['LastUpdateDateTime'],
       lastRedeemType: json['LastRedeemType'] as String,
       lastRedeemAmount: json['LastRedeemAmount'] as int,
-      lastRedeemDate: json['LastRedeemDate'],
-      lastRedeemTime: json['LastRedeemTime'],
+      // lastRedeemDate: json['LastRedeemDate'],
+      // lastRedeemTime: json['LastRedeemTime'],
+      lastRedeemDate: _parseStringField(json['LastRedeemDate']),
+    lastRedeemTime: _parseStringField(json['LastRedeemTime']),
     );
   }
-
+static String _parseStringField(dynamic value) {
+  if (value == null || value is! String) return '';
+  return value;
+}
   Map<String, dynamic> toJson() {
     return {
       'Mid': mid,

@@ -675,7 +675,7 @@ Widget _buildPendingIssuedGiftButtons(FontSettings fontSettings) {
                 }
                 context.push(
                   '/gifts/special-gift-requests/prv-gifts/$memberId',
-                  extra: {'iid': 988908},
+                  extra: {'iid': 988908, 'text2': widget.gift!.idNo.toString()},
                 );
               },
               borderRadius: BorderRadius.circular(12),

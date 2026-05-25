@@ -129,9 +129,15 @@ int _issuedGiftCount = 0;
       avgbet = g.avebet;
 if (g.validDates != null && g.validDates!.isNotEmpty) {
     final parsed = int.tryParse(g.validDates!);
-    if (parsed != null) {
-      _selectedValidDays = parsed;
-    }
+    // if (parsed != null) {
+    //   _selectedValidDays = parsed;
+    // }
+     const validOptions = {30, 60, 90};
+     if (parsed != null && validOptions.contains(parsed)) {
+    _selectedValidDays = parsed;
+  } else {
+    _selectedValidDays = null; // falls back to hint/placeholder
+  }
   }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _loadGuestDataForCard();

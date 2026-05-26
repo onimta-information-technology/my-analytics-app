@@ -315,22 +315,42 @@ class TripInformationWidget extends ConsumerWidget {
                                         ),
                                       ),
                                     ),
-                                    Padding(
-                                      padding: const EdgeInsets.all(8.0),
-                                      child: Text(
-                                        _parseNumberFormat(entry.tripResult),
-                                        textAlign: TextAlign.end,
-                                        style: TextStyle(
-                                          color: Colors.black,
-                                          fontSize: fontSettings.fontSize,
-                                          fontWeight: fontSettings.fontWeight,
-                                          fontFamily: 'monospace',
-                                          fontFeatures: const [
-                                            FontFeature.tabularFigures(),
-                                          ],
+                                    // Padding(
+                                    //   padding: const EdgeInsets.all(8.0),
+                                    //   child: Text(
+                                    //     _parseNumberFormat(entry.tripResult),
+                                    //     textAlign: TextAlign.end,
+                                    //     style: TextStyle(
+                                    //       color: Colors.black,
+                                    //       fontSize: fontSettings.fontSize,
+                                    //       fontWeight: fontSettings.fontWeight,
+                                    //       fontFamily: 'monospace',
+                                    //       fontFeatures: const [
+                                    //         FontFeature.tabularFigures(),
+                                    //       ],
+                                    //     ),
+                                    //   ),
+                                    // ),
+                                     Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          _parseNumberFormat(entry.tripResult),
+                                          textAlign: TextAlign.end,
+                                          style: TextStyle(
+                                            color:
+                                                (entry.tripResult != null &&
+                                                    entry.tripResult! < 0)
+                                                ? Colors.red
+                                                : Colors.green,
+                                            fontSize: fontSettings.fontSize + 1,
+                                            fontWeight: fontSettings.fontWeight,
+                                            fontFamily: 'monospace',
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
+                                          ),
                                         ),
                                       ),
-                                    ),
                                   ],
                                 ),
                                 TableRow(
@@ -445,6 +465,152 @@ class TripInformationWidget extends ConsumerWidget {
                                     ),
                                   ],
                                 ),
+                                 TableRow(
+                                    children: [
+                                      Container(
+                                        color: Constants.kPrimaryColor
+                                            .withAlpha(50),
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Text(
+                                            "F & B Cost (Est)",
+                                            style: TextStyle(
+                                              color: Colors.black,
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          _parseNumberFormat(entry.fbCost),
+                                          textAlign: TextAlign.end,
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                            fontFamily: 'monospace',
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                   TableRow(
+                                    children: [
+                                      Container(
+                                        color: Constants.kPrimaryColor
+                                            .withAlpha(50),
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Text(
+                                            "Air Ticket Cost (Est)",
+                                            style: TextStyle(
+                                              color: Colors.black,
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          _parseNumberFormat(entry.atCost),
+                                          textAlign: TextAlign.end,
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                            fontFamily: 'monospace',
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                   TableRow(
+                                    children: [
+                                      Container(
+                                        color: Constants.kPrimaryColor
+                                            .withAlpha(50),
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Text(
+                                            "Transport Cost (Est)",
+                                            style: TextStyle(
+                                              color: Colors.black,
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          _parseNumberFormat(
+                                            entry.transportCost,
+                                          ),
+                                          textAlign: TextAlign.end,
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                            fontFamily: 'monospace',
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                    TableRow(
+                                    children: [
+                                      Container(
+                                        color: Constants.kPrimaryColor
+                                            .withAlpha(50),
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Text(
+                                            "Hotel Cost (Est)",
+                                            style: TextStyle(
+                                              color: Colors.black,
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          _parseNumberFormat(entry.htcost),
+                                          textAlign: TextAlign.end,
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                            fontFamily: 'monospace',
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 TableRow(
                                   children: [
                                     Container(

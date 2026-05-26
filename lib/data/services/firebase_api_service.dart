@@ -333,10 +333,11 @@ class FirebaseApiService {
   static Future<Map<String, dynamic>> fetchUserChats() async {
     try {
       final deviceId = await DeviceId.get();
+      final location = await StorageUtil.getCurrentLocation();
       if (deviceId == null || deviceId.isEmpty) {
         throw Exception('deviceId not found in storage');
       }
-      final url = '$domain${endpoints['fetchUserChats']}/$deviceId';
+      final url = '$domain${endpoints['fetchUserChats']}/$deviceId?location=${location?.code}';
       print('Fetching chats for deviceId: $url');
       final response = await getRequest(url);
       if (response['success'] == true) {

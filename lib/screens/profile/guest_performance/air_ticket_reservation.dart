@@ -36,7 +36,7 @@ class AirTicketReservationWidget extends ConsumerWidget {
           const Align(
             child: Text(
               "Air Ticket Reservations",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
             ),
           ),
           const SizedBox(height: 6.0),

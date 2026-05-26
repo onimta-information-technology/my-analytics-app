@@ -50,7 +50,7 @@ class LoyaltySummaryWidget extends ConsumerWidget {
         children: [
           const Text(
             "Loyalty Summary",
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
           ),
           const SizedBox(height: 6.0),
           Card(

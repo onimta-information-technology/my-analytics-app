@@ -29,7 +29,7 @@ class HotelReservationWidget extends ConsumerWidget {
           const Align(
             child: Text(
               "Hotel Reservations",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
             ),
           ),
           const SizedBox(height: 6.0),

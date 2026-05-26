@@ -57,7 +57,7 @@ class FAndBHistory {
       mostOrderedBeverage: json['MostOrderedBeverage'],
       mostOrderedTobacco: json['MostOrderedTobacco'],
       mostOrderedFood: json['MostOrderedFood'],
-      totalCost: json['Total_Cost'],
+      totalCost: _parseToDouble(json['Total_Cost']),
       nongameDetails: nongameDetailsList,
     );
   }
@@ -71,4 +71,14 @@ class FAndBHistory {
       'NongameDetails': nongameDetails.map((e) => e.toJson()).toList(),
     };
   }
+    static double _parseToDouble(dynamic value) {
+  if (value == null) return 0.0;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  if (value is String) {
+    String cleanValue = value.replaceAll(',', '').trim();
+    return double.tryParse(cleanValue) ?? 0.0;
+  }
+  return 0.0;
+}
 }

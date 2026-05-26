@@ -36,7 +36,7 @@ class GamesSummaryWidget extends ConsumerWidget {
           const Align(
             child: Text(
               "Games Summary",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
             ),
           ),
           const SizedBox(height: 16.0),

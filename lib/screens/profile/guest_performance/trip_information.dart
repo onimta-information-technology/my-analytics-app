@@ -29,7 +29,7 @@ class TripInformationWidget extends ConsumerWidget {
         children: [
           const Text(
             "Trip Information",
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
           ),
           const SizedBox(height: 6.0),
           Padding(

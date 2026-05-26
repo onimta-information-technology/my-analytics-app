@@ -42,7 +42,7 @@ class FAndBHistoryWidget extends ConsumerWidget {
           const Align(
             child: Text(
               "F & B History",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
             ),
           ),
           const SizedBox(height: 16.0),

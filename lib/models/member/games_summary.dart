@@ -38,13 +38,17 @@ class GamesSummary {
   });
 
   factory GamesSummary.fromJson(Map<String, dynamic> json) {
-    var list = json['gameDetails'] as List;
-    List<GameDetail> gameDetailsList =
-        list.map((i) => GameDetail.fromJson(i)).toList();
-
+    // var list = json['gameDetails'] as List;
+    // List<GameDetail> gameDetailsList =
+    //     list.map((i) => GameDetail.fromJson(i)).toList();
+final data = json['data'] ?? json;
+  final rawList = data['GameDetails'] ?? data['gameDetails'] ?? [];
+    final List<GameDetail> gameDetailsList = (rawList as List)
+        .map((i) => GameDetail.fromJson(i))
+        .toList();
     return GamesSummary(
-      totalTimespent: json['totalTimespent'],
-      mostPlayedGame: json['mostPlayedGame'],
+      totalTimespent: data['totalTimespent']?? data['TotalTimeSpent'],
+      mostPlayedGame: data['mostPlayedGame']?? data['MostPlayedGame'],
       gameDetails: gameDetailsList,
     );
   }

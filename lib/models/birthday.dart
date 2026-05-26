@@ -42,7 +42,10 @@ class Birthday {
       gRating: json['G_Rating'],
       msg: json['MSG'],
       msg1: json['MSG1'],
-      lvd: DateTime.parse(json['LVD']),
+      //lvd: DateTime.parse(json['LVD']),
+      lvd: json['LVD'] != null && json['LVD'] is String && (json['LVD'] as String).isNotEmpty
+    ? DateTime.tryParse(json['LVD']) ?? DateTime.now()
+    : DateTime.now(),
       gift: json['GIFT'],
       gName: json['GName'],
       mobile: json['Mobile'],

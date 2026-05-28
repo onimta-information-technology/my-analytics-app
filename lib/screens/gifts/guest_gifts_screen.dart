@@ -249,8 +249,8 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Icon(Icons.badge, size: 16, color: Colors.grey[600]),
-                          const SizedBox(width: 4),
+                        //Icon(Icons.badge, size: 15, color: Colors.grey[600]),
+                          const SizedBox(width: 2),
                           Text(
                             'MID: ${selectedGuest.mid}',
                             style: TextStyle(

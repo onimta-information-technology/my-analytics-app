@@ -441,11 +441,11 @@ String _formatDateTime(DateTime dt) {
                               size: 20,
                               color: Colors.blueGrey,
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: 2),
                             Text(
                               'Requested: ${_formatDateTime(reservation.insertDate)}',
                               style: TextStyle(
-                                fontSize: fontSettings.fontSize + 2,
+                                fontSize: fontSettings.fontSize + 1,
                                 color: const Color.fromARGB(255, 0, 0, 0),
                                 fontWeight: fontSettings.fontWeight,
                               ),
@@ -471,7 +471,7 @@ String _formatDateTime(DateTime dt) {
                               Text(
                                 '${reservation.requestStatus}: ${_formatDateTime(reservation.isAppTime)}',
                                 style: TextStyle(
-                                  fontSize: fontSettings.fontSize + 2,
+                                  fontSize: fontSettings.fontSize + 1,
                                   color: reservation.requestStatus == 'Approved'
                                       ? Colors.green[700]
                                       : Colors.red[700],

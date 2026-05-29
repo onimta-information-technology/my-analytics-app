@@ -686,7 +686,7 @@ class _SalesPersonsSheetState extends State<_SalesPersonsSheet> {
                           fontSize: 18, fontWeight: FontWeight.w900),
                     ),
                     trailing: CircleAvatar(
-                      radius: 18,
+                      radius: 20,
                       backgroundColor: widget.accentColor.withOpacity(0.15),
                       child: Text(
                         '${row.count}',

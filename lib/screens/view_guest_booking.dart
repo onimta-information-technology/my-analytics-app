@@ -518,7 +518,7 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
                 fontWeight: fontSettings.fontWeight,
               ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 10),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
@@ -538,13 +538,13 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
                     size: 12,
                     color: Colors.white,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
                   Text(
                     widget.isPending
                         ? 'Pending'
                         : 'Approved',
                     style: const TextStyle(
-                      fontSize: 18,
+                      fontSize: 16,
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                     ),

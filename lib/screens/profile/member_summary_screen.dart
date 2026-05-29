@@ -680,7 +680,7 @@ String formatDate(String dateString) {
                                       Text(
                                         "Total Cash In (Est):",
                                         style: TextStyle(
-                                          fontSize: fontSettings.fontSize + 2,
+                                          fontSize: fontSettings.fontSize ,
                                           fontWeight: fontSettings.fontWeight,
                                         ),
                                       ),
@@ -709,7 +709,7 @@ String formatDate(String dateString) {
                                       Text(
                                         "Total Cash Out (Est):",
                                         style: TextStyle(
-                                          fontSize: fontSettings.fontSize + 2,
+                                          fontSize: fontSettings.fontSize,
                                           fontWeight: fontSettings.fontWeight,
                                         ),
                                       ),
@@ -718,7 +718,7 @@ String formatDate(String dateString) {
                                             ? _formatAmount(table1.cashOut)
                                             : "N/A",
                                         style: TextStyle(
-                                          fontSize: fontSettings.fontSize + 2,
+                                          fontSize: fontSettings.fontSize +1,
                                           fontWeight: fontSettings.fontWeight,
                                           fontFamily: 'monospace',
                                           fontFeatures: const [

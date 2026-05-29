@@ -32,7 +32,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
 
   final TextEditingController _memberIdController = TextEditingController();
   //String _selectedPrefix = "BM"; // Default prefix
-
+final FocusNode _memberIdFocusNode = FocusNode();
   // List of available prefixes
   //final List<String> _prefixes = ["BM", "BL", "BN"];
 String _selectedPrefix = "";
@@ -58,6 +58,12 @@ Future<void> _loadLocationPrefix() async {
     });
   }
 }
+  @override
+  void dispose() {
+    _memberIdController.dispose();
+    _memberIdFocusNode.dispose(); // ✅ always dispose
+    super.dispose();
+  }
   void _applyFilter() async {
     setState(() {
       _isLoading = true;
@@ -194,7 +200,7 @@ Future<void> _openMemberSearchBottomSheet(int iid) async {
   };
 
   Widget _buildMemberIdInput() {
-  final FocusNode memberIdFocusNode = FocusNode();
+  // final FocusNode memberIdFocusNode = FocusNode();
   final bool showPrefix = _prefixes.isNotEmpty && 
       !(_prefixes.length == 1 && RegExp(r'^\d').hasMatch(_selectedPrefix == "" ? "0" : "0"));
 
@@ -244,10 +250,11 @@ Future<void> _openMemberSearchBottomSheet(int iid) async {
         ),
       Expanded(
         child: TextFormField(
+           focusNode: _memberIdFocusNode,
           keyboardType: const TextInputType.numberWithOptions(),
           style: const TextStyle(fontSize: 22),
           autofocus: false,
-          focusNode: memberIdFocusNode,
+          //focusNode: memberIdFocusNode,
           controller: _memberIdController,
           decoration: InputDecoration(
             labelText: "Member ID",
@@ -267,7 +274,7 @@ Future<void> _openMemberSearchBottomSheet(int iid) async {
             suffixIcon: IconButton(
               icon: const Icon(Icons.search),
               onPressed: () {
-                FocusScope.of(context).requestFocus(FocusNode());
+                _memberIdFocusNode.unfocus();
                 _openMemberSearchBottomSheet(8002);
               },
             ),

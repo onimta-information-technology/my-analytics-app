@@ -13,6 +13,7 @@ import 'package:ballys_reservation_app/navigation/app_navigation.dart';
 import 'package:ballys_reservation_app/providers/auth_provider.dart';
 import 'package:ballys_reservation_app/providers/guest_booking_provider.dart';
 import 'package:ballys_reservation_app/utils/badge_sync_helper.dart';
+import 'package:ballys_reservation_app/utils/connectivity_service.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:ballys_reservation_app/utils/token_refresh_service.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -65,7 +66,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   //await ScreenProtector.preventScreenshotOn();
-
+ await ConnectivityService.instance.initialize();
   // Initialize Firebase
   await Firebase.initializeApp();
 

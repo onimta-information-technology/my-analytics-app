@@ -17,6 +17,7 @@ import 'package:ballys_reservation_app/providers/run_date_provider.dart';
 import 'package:ballys_reservation_app/providers/special_gift_provider.dart';
 import 'package:ballys_reservation_app/screens/member_visits.dart';
 import 'package:ballys_reservation_app/screens/member_visits/sales_persons.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -40,13 +41,16 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen>
-    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
+    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver,ConnectivityMixin {
   String? userName;
   bool _isLoadingData = false;
   String? locationLogo;
   @override
   bool get wantKeepAlive => true;
-
+@override
+  void onConnectivityRestored() {
+    _manualRefresh(); // reload data when back online
+  }
   @override
   void initState() {
     super.initState();

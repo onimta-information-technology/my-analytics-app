@@ -4,6 +4,7 @@ import 'package:ballys_reservation_app/data/services/device_config_service.dart'
 import 'package:ballys_reservation_app/providers/auth_provider.dart';
 import 'package:ballys_reservation_app/providers/guests_provider.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -21,7 +22,7 @@ class LoginScreen extends ConsumerStatefulWidget {
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> with ConnectivityMixin {
   final _formKey = GlobalKey<FormState>();
   final _biometricService = BiometricService();
 

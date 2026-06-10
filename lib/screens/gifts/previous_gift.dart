@@ -3,6 +3,7 @@ import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/special_gift_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,7 +27,7 @@ class PrvGiftScreen extends ConsumerStatefulWidget {
   ConsumerState<PrvGiftScreen> createState() => _PrvGiftScreenState();
 }
 
-class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> {
+class _PrvGiftScreenState extends ConsumerState<PrvGiftScreen> with ConnectivityMixin{
   bool _isHorizontal = false;
 
   final ScrollController _headerScrollController = ScrollController();

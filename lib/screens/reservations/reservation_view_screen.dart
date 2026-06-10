@@ -19,6 +19,7 @@ import 'package:ballys_reservation_app/providers/selected_flight_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_hotel_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_reservation_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -35,7 +36,7 @@ class ReservationViewScreen extends ConsumerStatefulWidget {
       _NewReservationScreenState();
 }
 
-class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> {
+class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> with ConnectivityMixin {
   final TextEditingController _reservationNoController =
       TextEditingController();
   final TextEditingController _memberIdController = TextEditingController();

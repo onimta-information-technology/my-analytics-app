@@ -13,6 +13,7 @@ import 'package:ballys_reservation_app/providers/new_reservation_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/providers/special_gift_provider.dart';
 import 'package:ballys_reservation_app/providers/birthday_gift_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/formatter.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
@@ -48,7 +49,7 @@ const ViewSpecificGiftRequest({
       _NewGiftRequestState();
 }
 
-class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> {
+class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> with ConnectivityMixin{
   final TextEditingController _memberIdController = TextEditingController();
   final TextEditingController _memberNameController = TextEditingController();
   final TextEditingController _fromDateController = TextEditingController();

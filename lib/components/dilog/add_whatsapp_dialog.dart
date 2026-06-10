@@ -2,6 +2,7 @@ import 'package:ballys_reservation_app/providers/phone_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/providers/main_profile_details_provider.dart';
 import 'package:ballys_reservation_app/providers/whatsapp_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,7 +25,7 @@ class AddwhatsappPhoneDialog extends ConsumerStatefulWidget {
   ConsumerState<AddwhatsappPhoneDialog> createState() => _AddwhatsappPhoneDialogState();
 }
 
-class _AddwhatsappPhoneDialogState extends ConsumerState<AddwhatsappPhoneDialog> {
+class _AddwhatsappPhoneDialogState extends ConsumerState<AddwhatsappPhoneDialog> with ConnectivityMixin{
   final TextEditingController phoneController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 

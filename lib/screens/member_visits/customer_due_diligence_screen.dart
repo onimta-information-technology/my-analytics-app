@@ -4,6 +4,7 @@ import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/providers/cdd_history_provider.dart';
 import 'package:ballys_reservation_app/providers/customer_due_diligence_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -17,7 +18,7 @@ class CustomerDueDiligenceScreen extends ConsumerStatefulWidget {
 }
 
 class _CustomerDueDiligenceScreenState
-    extends ConsumerState<CustomerDueDiligenceScreen> {
+    extends ConsumerState<CustomerDueDiligenceScreen> with ConnectivityMixin{
   final _idController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 

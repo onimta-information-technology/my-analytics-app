@@ -7,6 +7,7 @@ import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/member_summary_provider.dart';
 import 'package:ballys_reservation_app/providers/profile_date_filter_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,7 +22,7 @@ class MemberSummaryScreen extends ConsumerStatefulWidget {
   ConsumerState<MemberSummaryScreen> createState() => _GuestPerformanceState();
 }
 
-class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> {
+class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> with ConnectivityMixin{
   final TextEditingController _startDateController = TextEditingController();
   final TextEditingController _endDateController = TextEditingController();
   final ValueNotifier<DateTime?> startDateNotifier = ValueNotifier<DateTime?>(

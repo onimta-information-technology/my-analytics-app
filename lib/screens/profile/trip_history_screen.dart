@@ -5,6 +5,7 @@ import 'package:ballys_reservation_app/data/repositories/member_profile_reposito
 import 'package:ballys_reservation_app/models/member/trip_history.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,7 +20,7 @@ class TripHistoryScreen extends ConsumerStatefulWidget {
   ConsumerState<TripHistoryScreen> createState() => _GuestPerformanceState();
 }
 
-class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> {
+class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> with ConnectivityMixin{
   final ValueNotifier<DateTime?> startDateNotifier = ValueNotifier<DateTime?>(
     null,
   );

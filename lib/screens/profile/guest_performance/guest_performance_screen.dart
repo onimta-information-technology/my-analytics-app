@@ -18,6 +18,7 @@ import 'package:ballys_reservation_app/screens/profile/guest_performance/games_s
 import 'package:ballys_reservation_app/screens/profile/guest_performance/hotel_reservation.dart';
 import 'package:ballys_reservation_app/screens/profile/guest_performance/loyalty_summary.dart';
 import 'package:ballys_reservation_app/screens/profile/guest_performance/trip_information.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,7 +38,7 @@ class GuestPerformanceScreen extends ConsumerStatefulWidget {
       _GuestPerformanceState();
 }
 
-class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> {
+class _GuestPerformanceState extends ConsumerState<GuestPerformanceScreen> with ConnectivityMixin {
   final ValueNotifier<DateTime?> startDateNotifier = ValueNotifier<DateTime?>(
     null,
   );

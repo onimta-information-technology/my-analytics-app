@@ -2,6 +2,7 @@ import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/providers/main_profile_details_provider.dart';
 import 'package:ballys_reservation_app/providers/primary_contact_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -19,7 +20,7 @@ class SetPrimaryPhoneDialog extends ConsumerStatefulWidget {
   ConsumerState<SetPrimaryPhoneDialog> createState() => _SetPrimaryPhoneDialogState();
 }
 
-class _SetPrimaryPhoneDialogState extends ConsumerState<SetPrimaryPhoneDialog> {
+class _SetPrimaryPhoneDialogState extends ConsumerState<SetPrimaryPhoneDialog> with ConnectivityMixin{
   String? selectedPhone;
 
   Future<void> _handleSubmit() async {

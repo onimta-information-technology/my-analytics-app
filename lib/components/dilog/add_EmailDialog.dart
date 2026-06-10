@@ -1,6 +1,7 @@
 import 'package:ballys_reservation_app/providers/email_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/providers/main_profile_details_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -22,7 +23,7 @@ class AddEmailDialog extends ConsumerStatefulWidget {
   ConsumerState<AddEmailDialog> createState() => _AddEmailDialogState();
 }
 
-class _AddEmailDialogState extends ConsumerState<AddEmailDialog> {
+class _AddEmailDialogState extends ConsumerState<AddEmailDialog> with ConnectivityMixin{
   final TextEditingController emailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 

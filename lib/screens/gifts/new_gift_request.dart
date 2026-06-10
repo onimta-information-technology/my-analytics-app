@@ -13,6 +13,7 @@ import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/member_search_provider.dart';
 import 'package:ballys_reservation_app/providers/new_reservation_provider.dart';
 import 'package:ballys_reservation_app/providers/special_gift_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/formatter.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -34,7 +35,7 @@ class NewGiftRequest extends ConsumerStatefulWidget {
   ConsumerState<NewGiftRequest> createState() => _NewGiftRequestState();
 }
 
-class _NewGiftRequestState extends ConsumerState<NewGiftRequest> {
+class _NewGiftRequestState extends ConsumerState<NewGiftRequest> with ConnectivityMixin{
   final TextEditingController _memberIdController = TextEditingController();
   final TextEditingController _memberNameController = TextEditingController();
   final TextEditingController _fromDateController = TextEditingController();

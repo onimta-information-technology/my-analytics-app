@@ -1,4 +1,5 @@
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ballys_reservation_app/models/marketing.dart';
@@ -33,7 +34,7 @@ class MarketingDetailPage extends ConsumerStatefulWidget {
       _MarketingDetailPageState();
 }
 
-class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> {
+class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> with ConnectivityMixin{
   List<MarketingDetailedData> filteredMembers = [];
   String? currentLoadingMember;
   Set<String> expandedCards = {};

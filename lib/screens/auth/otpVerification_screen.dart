@@ -4,6 +4,7 @@ import 'package:ballys_reservation_app/data/services/biometric_service.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
 import 'package:ballys_reservation_app/providers/auth_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -32,7 +33,7 @@ class OTPVerificationScreen extends ConsumerStatefulWidget {
       _OTPVerificationScreenState();
 }
 
-class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen>{
+class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen> with ConnectivityMixin{
     // with CodeAutoFill {
   String? _actualOTP;
   bool _isSendingOTP = false;

@@ -7,6 +7,7 @@ import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/models/marketing_group.dart';
 import 'package:ballys_reservation_app/providers/guests_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -48,7 +49,7 @@ class MarketingBreakdownHalfPieCard extends ConsumerStatefulWidget {
 }
 
 class _MarketingBreakdownHalfPieCardState
-    extends ConsumerState<MarketingBreakdownHalfPieCard> {
+    extends ConsumerState<MarketingBreakdownHalfPieCard> with ConnectivityMixin{
   int _selectedPeriod = 0;
   String? _myDataCode;
 
@@ -236,7 +237,7 @@ class _HalfPieSection extends StatefulWidget {
 }
 
 class _HalfPieSectionState extends State<_HalfPieSection>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin,ConnectivityMixin {
   late final AnimationController _controller;
   late final Animation<double> _animation;
   int? _hoveredIndex;
@@ -583,7 +584,7 @@ class _SalesPersonsSheet extends StatefulWidget {
   State<_SalesPersonsSheet> createState() => _SalesPersonsSheetState();
 }
 
-class _SalesPersonsSheetState extends State<_SalesPersonsSheet> {
+class _SalesPersonsSheetState extends State<_SalesPersonsSheet> with ConnectivityMixin {
   late List<_PersonRow> _all;
   late List<_PersonRow> _filtered;
   final _searchCtrl = TextEditingController();
@@ -739,7 +740,7 @@ class _MemberVisitsSheet extends ConsumerStatefulWidget {
   ConsumerState<_MemberVisitsSheet> createState() => _MemberVisitsSheetState();
 }
 
-class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> {
+class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> with ConnectivityMixin{
   late List<Guest> _filtered;
   final _searchCtrl = TextEditingController();
 

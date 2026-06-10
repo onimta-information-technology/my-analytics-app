@@ -37,7 +37,7 @@ static bool get dismissedThisSession => _dismissedThisSession;
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.close, size: 20),
+                icon: const Icon(Icons.close, size: 24, color: Color.fromARGB(255, 0, 0, 0)),
                 tooltip: 'Dismiss',
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),

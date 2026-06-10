@@ -2,6 +2,7 @@ import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,7 +19,7 @@ class MemberVisits extends ConsumerStatefulWidget {
   ConsumerState<MemberVisits> createState() => _MemberVisitsState();
 }
 
-class _MemberVisitsState extends ConsumerState<MemberVisits> {
+class _MemberVisitsState extends ConsumerState<MemberVisits> with ConnectivityMixin {
   bool _useBadgeForRating = false;
 
   // final Map<String, String> ratingImageMap = {

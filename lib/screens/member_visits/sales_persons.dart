@@ -1,6 +1,7 @@
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,7 +20,7 @@ class SalesPersonsScreen extends ConsumerStatefulWidget {
   ConsumerState<SalesPersonsScreen> createState() => _SalesPersonsScreenState();
 }
 
-class _SalesPersonsScreenState extends ConsumerState<SalesPersonsScreen> {
+class _SalesPersonsScreenState extends ConsumerState<SalesPersonsScreen> with ConnectivityMixin{
   List<MapEntry<String, List<Guest>>> _filteredSalesPersons = [];
 
   @override

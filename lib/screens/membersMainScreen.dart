@@ -1,5 +1,6 @@
 
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,7 +15,7 @@ class MemberMainScreen extends ConsumerStatefulWidget {
   ConsumerState<MemberMainScreen> createState() => _MemberMainScreenState();
 }
 
-class _MemberMainScreenState extends ConsumerState<MemberMainScreen> {
+class _MemberMainScreenState extends ConsumerState<MemberMainScreen> with ConnectivityMixin{
   
 
   @override

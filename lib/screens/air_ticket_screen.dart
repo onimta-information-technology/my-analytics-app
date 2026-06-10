@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,11 +19,14 @@ class AirTicketScreen extends ConsumerStatefulWidget {
 }
 
 class _AirTicketScreenState extends ConsumerState<AirTicketScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin,ConnectivityMixin {
   late TabController _outerTabController;
   bool _isLoading = false;
   bool _isRefreshing = false;
-
+@override
+  void onConnectivityRestored() {
+   _refresh(); 
+  }
   @override
   void initState() {
     super.initState();

@@ -4,6 +4,7 @@ import 'package:ballys_reservation_app/models/reservation.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/reservation_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_reservation_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,10 +19,13 @@ class ReservationScreen extends ConsumerStatefulWidget {
 }
 
 class _ReservationScreenState extends ConsumerState<ReservationScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin,ConnectivityMixin {
   late TabController _tabController;
   bool _isLoading = false;
-
+@override
+  void onConnectivityRestored() {
+   _loadReservationData();
+  }
   @override
   void initState() {
     super.initState();

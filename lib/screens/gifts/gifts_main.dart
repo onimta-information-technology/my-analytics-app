@@ -273,6 +273,7 @@
 
 import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -287,7 +288,7 @@ class GiftsMainScreen extends ConsumerStatefulWidget {
   ConsumerState<GiftsMainScreen> createState() => _GiftsMainScreenState();
 }
 
-class _GiftsMainScreenState extends ConsumerState<GiftsMainScreen> {
+class _GiftsMainScreenState extends ConsumerState<GiftsMainScreen> with ConnectivityMixin{
   void _showSpecialGiftDialog() {
     showDialog(
       context: context,

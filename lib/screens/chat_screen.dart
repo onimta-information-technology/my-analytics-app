@@ -5,6 +5,7 @@ import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/providers/guest_booking_provider.dart';
 import 'package:ballys_reservation_app/screens/chatDetail_screen.dart';
 import 'package:ballys_reservation_app/utils/badge_sync_helper.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,7 +26,7 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen>
-    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver,ConnectivityMixin {
   late TabController _tabController;
   List<ChatContact> _contacts = [];
   List<ChatContact> _filteredContacts = [];

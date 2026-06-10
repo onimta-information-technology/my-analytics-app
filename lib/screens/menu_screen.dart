@@ -1,4 +1,5 @@
 import 'package:ballys_reservation_app/providers/guest_booking_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:ballys_reservation_app/providers/pending_count_provider.dart';
 import 'package:flutter/material.dart';
@@ -15,7 +16,7 @@ class MenuScreen extends ConsumerStatefulWidget {
 }
 
 class _MenuScreenState extends ConsumerState<MenuScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin,ConnectivityMixin {
   late AnimationController _controller;
   String? _salesCode;
   bool _isLoading = true;

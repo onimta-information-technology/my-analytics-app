@@ -9,6 +9,7 @@ import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,7 +25,7 @@ class MembersScreen extends ConsumerStatefulWidget {
   ConsumerState<MembersScreen> createState() => _MembersScreenState();
 }
 
-class _MembersScreenState extends ConsumerState<MembersScreen> {
+class _MembersScreenState extends ConsumerState<MembersScreen> with ConnectivityMixin{
   String selectedDateOption = "1";
   String selectedBuyInOption = "1";
   bool _isLoading = false;

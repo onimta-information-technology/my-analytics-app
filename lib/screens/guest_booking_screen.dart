@@ -5,6 +5,7 @@ import 'package:ballys_reservation_app/data/repositories/guest_booking_repositor
 import 'package:ballys_reservation_app/models/Guest/guest_booking.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/guest_booking_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -25,7 +26,7 @@ class GuestBookingScreen extends ConsumerStatefulWidget {
 }
 
 class _GuestBookingScreenState extends ConsumerState<GuestBookingScreen>
-    with TickerProviderStateMixin, WidgetsBindingObserver {
+    with TickerProviderStateMixin, WidgetsBindingObserver,ConnectivityMixin{
   late TabController _tabController;
   bool _isLoading = false;
 
@@ -70,6 +71,10 @@ void initState() {
     if (state == AppLifecycleState.resumed) {
       _loadBookingData();
     }
+  }
+    @override
+  void onConnectivityRestored() {
+   _loadBookingData();
   }
   // ✅ Listen for foreground msg_type 35 and auto-reload
   void _setupNotificationListener() {

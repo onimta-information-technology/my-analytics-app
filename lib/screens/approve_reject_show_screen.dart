@@ -1,5 +1,6 @@
 import 'package:ballys_reservation_app/models/pendingCounts.dart';
 import 'package:ballys_reservation_app/providers/pending_count_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
@@ -14,7 +15,7 @@ class ApproveScreen extends ConsumerStatefulWidget {
   ConsumerState<ApproveScreen> createState() => _ApproveScreenState();
 }
 
-class _ApproveScreenState extends ConsumerState<ApproveScreen> {
+class _ApproveScreenState extends ConsumerState<ApproveScreen> with ConnectivityMixin{
   @override
   void initState() {
     super.initState();

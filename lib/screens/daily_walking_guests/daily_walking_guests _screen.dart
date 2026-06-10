@@ -4,6 +4,7 @@ import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ballys_reservation_app/models/Guest/daily_walking_guest.dart';
@@ -21,7 +22,7 @@ class DailyWalkingGuestScreen extends ConsumerStatefulWidget {
 }
 
 class _DailyWalkingGuestScreenState
-    extends ConsumerState<DailyWalkingGuestScreen> {
+    extends ConsumerState<DailyWalkingGuestScreen> with ConnectivityMixin{
   bool _isFirstLoad = true;
   bool _isRefreshing = false;
 
@@ -30,7 +31,10 @@ class _DailyWalkingGuestScreenState
     super.initState();
     _loadGuests();
   }
-
+  @override
+  void onConnectivityRestored() {
+   _refreshGuests();
+  }
   Future<void> _loadGuests() async {
     final guests = ref.read(dailyWalkingProvider);
     if (guests.isEmpty) {

@@ -6,6 +6,7 @@ import 'package:ballys_reservation_app/providers/birthdays_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,7 +22,7 @@ class BirthdayScreen extends ConsumerStatefulWidget {
 }
 
 class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin,ConnectivityMixin {
   late TabController _tabController;
   final List<Birthday> _birthdays = [];
   List<Birthday> _recentBirthdays = [];
@@ -73,6 +74,10 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
     }
 
     _fetchBirthdays();
+  }
+  @override
+  void onConnectivityRestored() {
+   _refreshBirthdays();
   }
 
   // ── NEW: find the topmost visible card using RenderBox hit-testing ───────

@@ -4,6 +4,7 @@ import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
 import 'package:ballys_reservation_app/models/gift/special_gift_request.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/special_gift_provider.dart';
+import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,7 +27,7 @@ class SpecialGiftRequestScreen extends ConsumerStatefulWidget {
 
 class _SpecialGiftRequestScreenState
     extends ConsumerState<SpecialGiftRequestScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin,ConnectivityMixin {
   late TabController _tabController;
   bool _isLoading = false;
 
@@ -175,7 +176,13 @@ class _SpecialGiftRequestScreenState
     _tabController.dispose();
     super.dispose();
   }
-
+@override
+  void onConnectivityRestored() async {                           // ← new
+    String? salesCode = await StorageUtil.getSalesCode();
+    if (salesCode != null && salesCode.isNotEmpty) {
+      _loadSpGiftData(salesCode);
+    }
+  }
   // ── Data ───────────────────────────────────────────────────────────────────
 
   String _formatDate(String? dateStr) {

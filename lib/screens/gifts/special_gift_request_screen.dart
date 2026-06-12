@@ -30,7 +30,9 @@ class _SpecialGiftRequestScreenState
     with TickerProviderStateMixin,ConnectivityMixin {
   late TabController _tabController;
   bool _isLoading = false;
-
+final TextEditingController _searchController = TextEditingController();
+ String _searchQuery = '';
+bool _isSearching = false;
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   Color _getStatusColor(String status) {
@@ -174,6 +176,7 @@ class _SpecialGiftRequestScreenState
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 @override
@@ -242,20 +245,47 @@ class _SpecialGiftRequestScreenState
     final giftsp = ref.watch(giftProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('OTP Gift Request'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, size: 30),
-            onPressed: () async {
-              String? salesCode = await StorageUtil.getSalesCode();
-              if (salesCode != null && salesCode.isNotEmpty) {
-                _loadSpGiftData(salesCode);
-              }
-            },
-            tooltip: 'Refresh',
+    appBar: AppBar(
+  title: _isSearching
+      ? TextField(
+          controller: _searchController,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Search by name, ID, or requested by...',
+            border: InputBorder.none,
+            hintStyle: TextStyle(color: Color.fromARGB(179, 0, 0, 0)),
           ),
-        ],
+          style: const TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
+          onChanged: (value) {
+            setState(() => _searchQuery = value.trim().toLowerCase());
+          },
+        )
+      : const Text('OTP Gift Request'),
+  actions: [
+    IconButton(
+      icon: Icon(_isSearching ? Icons.close : Icons.search, size: 28),
+      tooltip: _isSearching ? 'Close Search' : 'Search',
+      onPressed: () {
+        setState(() {
+          _isSearching = !_isSearching;
+          if (!_isSearching) {
+            _searchController.clear();
+            _searchQuery = '';
+          }
+        });
+      },
+    ),
+    IconButton(
+      icon: const Icon(Icons.refresh, size: 30),
+      onPressed: () async {
+        String? salesCode = await StorageUtil.getSalesCode();
+        if (salesCode != null && salesCode.isNotEmpty) {
+          _loadSpGiftData(salesCode);
+        }
+      },
+      tooltip: 'Refresh',
+    ),
+  ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.pink,
@@ -412,11 +442,19 @@ class _SpecialGiftRequestScreenState
           );
         }
 
-        final filteredGifts = snapshot.data ?? [];
-        if (filteredGifts.isEmpty) {
+        // final filteredGifts = snapshot.data ?? [];
+     
+ final filteredGifts = (snapshot.data ?? []).where((gift) {
+      if (_searchQuery.isEmpty) return true;
+      return gift.mid.toLowerCase().contains(_searchQuery) ||
+          gift.mname.toLowerCase().contains(_searchQuery) ||
+          
+           gift.giftCategory.toLowerCase().contains(_searchQuery) ||
+          gift.reqBy.toLowerCase().contains(_searchQuery);
+    }).toList();
+       if (filteredGifts.isEmpty) {
           return const Center(child: Text("No gifts found"));
         }
-
         return ListView.builder(
           itemCount: filteredGifts.length,
           itemBuilder: (context, index) {

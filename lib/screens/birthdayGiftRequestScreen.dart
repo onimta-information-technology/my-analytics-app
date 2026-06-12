@@ -32,7 +32,9 @@ class _BirthdayGiftRequestScreenState
     with TickerProviderStateMixin,ConnectivityMixin {
   late TabController _tabController;
   bool _isLoading = false;
-
+final TextEditingController _searchController = TextEditingController();
+String _searchQuery = '';
+bool _isSearching = false;
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   Color _getStatusColor(String status) {
@@ -181,6 +183,7 @@ class _BirthdayGiftRequestScreenState
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 @override
@@ -287,8 +290,35 @@ Color _getRatingColor(String? rating) {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Birthday Gift Request'),
+       title: _isSearching
+      ? TextField(
+          controller: _searchController,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Search by name, ID, or requested by...',
+            border: InputBorder.none,
+            hintStyle: TextStyle(color: Color.fromARGB(179, 0, 0, 0)),
+          ),
+          style: const TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
+          onChanged: (value) {
+            setState(() => _searchQuery = value.trim().toLowerCase());
+          },
+        )
+      : const Text('Birthday Gift Request'),
         actions: [
+          IconButton(
+      icon: Icon(_isSearching ? Icons.close : Icons.search, size: 28),
+      tooltip: _isSearching ? 'Close Search' : 'Search',
+      onPressed: () {
+        setState(() {
+          _isSearching = !_isSearching;
+          if (!_isSearching) {
+            _searchController.clear();
+            _searchQuery = '';
+          }
+        });
+      },
+    ),
           IconButton(
             icon: const Icon(Icons.refresh, size: 30),
             onPressed: () async {
@@ -452,7 +482,16 @@ Color _getRatingColor(String? rating) {
           );
         }
 
-        final filteredGifts = snapshot.data ?? [];
+        //final filteredGifts = snapshot.data ?? [];
+        final filteredGifts = (snapshot.data ?? []).where((gift) {
+  if (_searchQuery.isEmpty) return true;
+  return gift.mid.toLowerCase().contains(_searchQuery) ||
+      gift.mname.toLowerCase().contains(_searchQuery) ||
+       gift.giftDesc.toLowerCase().contains(_searchQuery) ||
+        gift.prvGiftAmount.toString().contains(_searchQuery) ||
+         gift.giftCategory.toLowerCase().contains(_searchQuery) ||
+      gift.reqBy.toLowerCase().contains(_searchQuery);
+}).toList();
         if (filteredGifts.isEmpty) {
           return const Center(child: Text("No birthday gifts found"));
         }

@@ -22,6 +22,10 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen>
     with SingleTickerProviderStateMixin,ConnectivityMixin {
   late TabController _tabController;
   bool _isLoading = false;
+  final TextEditingController _searchController = TextEditingController();
+String _searchQuery = '';
+bool _isSearching = false;
+
 @override
   void onConnectivityRestored() {
    _loadReservationData();
@@ -125,6 +129,7 @@ Future<bool> _canAccessReservationDetails(
   @override
   void dispose() {
     _tabController.dispose();
+     _searchController.dispose(); 
     super.dispose();
   }
 
@@ -187,8 +192,35 @@ String _formatDateTime(DateTime dt) {
             }
           },
         ),
-        title: const Text('Reservations'),
+title: _isSearching
+      ? TextField(
+          controller: _searchController,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Search by name, ID, or requested by...',
+            border: InputBorder.none,
+            hintStyle: TextStyle(color: Color.fromARGB(179, 0, 0, 0)),
+          ),
+          style: const TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
+          onChanged: (value) {
+            setState(() => _searchQuery = value.trim().toLowerCase());
+          },
+        )
+      : const Text('Reservations'),
         actions: [
+          IconButton(
+      icon: Icon(_isSearching ? Icons.close : Icons.search, size: 28),
+      tooltip: _isSearching ? 'Close Search' : 'Search',
+      onPressed: () {
+        setState(() {
+          _isSearching = !_isSearching;
+          if (!_isSearching) {
+            _searchController.clear();
+            _searchQuery = '';
+          }
+        });
+      },
+    ),
           IconButton(
             icon: const Icon(Icons.refresh, size: 30),
             onPressed: _loadReservationData,
@@ -311,8 +343,15 @@ String _formatDateTime(DateTime dt) {
           );
         }
 
-        final filteredReservations = snapshot.data ?? [];
-
+        // final filteredReservations = snapshot.data ?? [];
+final filteredReservations = (snapshot.data ?? []).where((reservation) {
+  if (_searchQuery.isEmpty) return true;
+  return reservation.mid.toLowerCase().contains(_searchQuery) ||
+      reservation.mName.toLowerCase().contains(_searchQuery) ||
+      reservation.reqBy.toLowerCase().contains(_searchQuery) ||
+        reservation.reservNo.toLowerCase().contains(_searchQuery) ||
+      reservation.reservNo.toLowerCase().contains(_searchQuery);
+}).toList();
         if (filteredReservations.isEmpty) {
           return const Center(child: Text('No reservations available.'));
         }

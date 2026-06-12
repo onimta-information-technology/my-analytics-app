@@ -143,7 +143,7 @@ centerTitle: true,
                     Expanded(
                       child: InkWell(
                         onTap: () {
-                          context.go('/reservations');
+                          context.go('/reservationMain');
                         },
                         // child: Card(
                         //   color: Colors.orange[700],

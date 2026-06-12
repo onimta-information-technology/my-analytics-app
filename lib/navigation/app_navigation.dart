@@ -45,6 +45,7 @@ import 'package:ballys_reservation_app/screens/menu_screen.dart';
 import 'package:ballys_reservation_app/screens/profile/trip_history_screen.dart';
 import 'package:ballys_reservation_app/screens/report_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/air_tickets_selection_screen.dart';
+import 'package:ballys_reservation_app/screens/reservations/main_reservation.dart';
 import 'package:ballys_reservation_app/screens/reservations/new_reservation_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/reservation_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/reservation_view_screen.dart';
@@ -278,94 +279,197 @@ class AppNavigation {
               ),
             ],
           ),
+          // GoRoute(
+          //   path: '/reservations',
+          //   pageBuilder: (context, state) => CustomTransitionPage(
+          //     fullscreenDialog: true,
+          //     key: state.pageKey,
+          //     child: const ReservationScreen(),
+          //     transitionsBuilder:
+          //         (context, animation, secondaryAnimation, child) {
+          //           return FadeTransition(
+          //             opacity: CurveTween(
+          //               curve: Curves.easeInOutCirc,
+          //             ).animate(animation),
+          //             child: child,
+          //           );
+          //         },
+          //   ),
+          //   routes: [
+          //     GoRoute(
+          //       path: 'new-reservation',
+          //       pageBuilder: (context, state) {
+          //         return CustomTransitionPage(
+          //           fullscreenDialog: false,
+          //           key: state.pageKey,
+          //           child: const NewReservationScreen(),
+          //           transitionsBuilder:
+          //               (context, animation, secondaryAnimation, child) {
+          //                 return FadeTransition(
+          //                   opacity: CurveTween(
+          //                     curve: Curves.easeInOutCirc,
+          //                   ).animate(animation),
+          //                   child: child,
+          //                 );
+          //               },
+          //         );
+          //       },
+          //       routes: [
+          //         GoRoute(
+          //           path: 'air-tickets-selection',
+          //           pageBuilder: (context, state) {
+          //             final Map<String, dynamic> data =
+          //                 state.extra as Map<String, dynamic>;
+          //             final arrivalDate = data['arrivalDate'] ?? '';
+          //             final departureDate = data['departureDate'] ?? '';
+          //             return CustomTransitionPage(
+          //               fullscreenDialog: false,
+          //               key: state.pageKey,
+          //               child: AirTicketsSelectionScreen(
+          //                 AirportRepository(
+          //                   ApiService(const FlutterSecureStorage()),
+          //                 ),
+          //                 arrivalDate: arrivalDate,
+          //                 departureDate: departureDate,
+          //               ),
+          //               transitionsBuilder:
+          //                   (context, animation, secondaryAnimation, child) {
+          //                     return FadeTransition(
+          //                       opacity: CurveTween(
+          //                         curve: Curves.easeInOutCirc,
+          //                       ).animate(animation),
+          //                       child: child,
+          //                     );
+          //                   },
+          //             );
+          //           },
+          //         ),
+          //       ],
+          //     ),
+          //     GoRoute(
+          //       path: 'reservation-view',
+          //       pageBuilder: (context, state) {
+          //         return CustomTransitionPage(
+          //           fullscreenDialog: false,
+          //           key: state.pageKey,
+          //           child: const ReservationViewScreen(),
+          //           transitionsBuilder:
+          //               (context, animation, secondaryAnimation, child) {
+          //                 return FadeTransition(
+          //                   opacity: CurveTween(
+          //                     curve: Curves.easeInOutCirc,
+          //                   ).animate(animation),
+          //                   child: child,
+          //                 );
+          //               },
+          //         );
+          //       },
+          //     ),
+          //   ],
+          // ),
           GoRoute(
-            path: '/reservations',
-            pageBuilder: (context, state) => CustomTransitionPage(
-              fullscreenDialog: true,
-              key: state.pageKey,
-              child: const ReservationScreen(),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) {
+  path: '/reservationMain',
+  pageBuilder: (context, state) => CustomTransitionPage(
+    fullscreenDialog: true,
+    key: state.pageKey,
+    child: const ReservationMainScreen(),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return FadeTransition(
+        opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+        child: child,
+      );
+    },
+  ),
+  routes: [
+    // Existing reservation screen (reused)
+    GoRoute(
+      path: 'reservations',
+      pageBuilder: (context, state) => CustomTransitionPage(
+        fullscreenDialog: false,
+        key: state.pageKey,
+        child: const ReservationScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+            child: child,
+          );
+        },
+      ),
+      routes: [
+        GoRoute(
+          path: 'new-reservation',
+          pageBuilder: (context, state) => CustomTransitionPage(
+            fullscreenDialog: false,
+            key: state.pageKey,
+            child: const NewReservationScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(
+                opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+                child: child,
+              );
+            },
+          ),
+          routes: [
+            GoRoute(
+              path: 'air-tickets-selection',
+              pageBuilder: (context, state) {
+                final Map<String, dynamic> data =
+                    state.extra as Map<String, dynamic>;
+                final arrivalDate = data['arrivalDate'] ?? '';
+                final departureDate = data['departureDate'] ?? '';
+                return CustomTransitionPage(
+                  fullscreenDialog: false,
+                  key: state.pageKey,
+                  child: AirTicketsSelectionScreen(
+                    AirportRepository(ApiService(const FlutterSecureStorage())),
+                    arrivalDate: arrivalDate,
+                    departureDate: departureDate,
+                  ),
+                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
                     return FadeTransition(
-                      opacity: CurveTween(
-                        curve: Curves.easeInOutCirc,
-                      ).animate(animation),
+                      opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
                       child: child,
                     );
                   },
+                );
+              },
             ),
-            routes: [
-              GoRoute(
-                path: 'new-reservation',
-                pageBuilder: (context, state) {
-                  return CustomTransitionPage(
-                    fullscreenDialog: false,
-                    key: state.pageKey,
-                    child: const NewReservationScreen(),
-                    transitionsBuilder:
-                        (context, animation, secondaryAnimation, child) {
-                          return FadeTransition(
-                            opacity: CurveTween(
-                              curve: Curves.easeInOutCirc,
-                            ).animate(animation),
-                            child: child,
-                          );
-                        },
-                  );
-                },
-                routes: [
-                  GoRoute(
-                    path: 'air-tickets-selection',
-                    pageBuilder: (context, state) {
-                      final Map<String, dynamic> data =
-                          state.extra as Map<String, dynamic>;
-                      final arrivalDate = data['arrivalDate'] ?? '';
-                      final departureDate = data['departureDate'] ?? '';
-                      return CustomTransitionPage(
-                        fullscreenDialog: false,
-                        key: state.pageKey,
-                        child: AirTicketsSelectionScreen(
-                          AirportRepository(
-                            ApiService(const FlutterSecureStorage()),
-                          ),
-                          arrivalDate: arrivalDate,
-                          departureDate: departureDate,
-                        ),
-                        transitionsBuilder:
-                            (context, animation, secondaryAnimation, child) {
-                              return FadeTransition(
-                                opacity: CurveTween(
-                                  curve: Curves.easeInOutCirc,
-                                ).animate(animation),
-                                child: child,
-                              );
-                            },
-                      );
-                    },
-                  ),
-                ],
-              ),
-              GoRoute(
-                path: 'reservation-view',
-                pageBuilder: (context, state) {
-                  return CustomTransitionPage(
-                    fullscreenDialog: false,
-                    key: state.pageKey,
-                    child: const ReservationViewScreen(),
-                    transitionsBuilder:
-                        (context, animation, secondaryAnimation, child) {
-                          return FadeTransition(
-                            opacity: CurveTween(
-                              curve: Curves.easeInOutCirc,
-                            ).animate(animation),
-                            child: child,
-                          );
-                        },
-                  );
-                },
-              ),
-            ],
+          ],
+        ),
+        GoRoute(
+          path: 'reservation-view',
+          pageBuilder: (context, state) => CustomTransitionPage(
+            fullscreenDialog: false,
+            key: state.pageKey,
+            child: const ReservationViewScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(
+                opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+                child: child,
+              );
+            },
           ),
+        ),
+      ],
+    ),
+
+    // Quick Reservation — connect your new screen here when ready
+    // GoRoute(
+    //   path: 'quick-reservation',
+    //   pageBuilder: (context, state) => CustomTransitionPage(
+    //     fullscreenDialog: false,
+    //     key: state.pageKey,
+    //    // child: const QuickReservationScreen(), // ← replace with your new screen
+    //     transitionsBuilder: (context, animation, secondaryAnimation, child) {
+    //       return FadeTransition(
+    //         opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+    //         child: child,
+    //       );
+    //     },
+    //   ),
+    // ),
+  ],
+),
           GoRoute(
             path: '/support',
             pageBuilder: (context, state) => CustomTransitionPage(

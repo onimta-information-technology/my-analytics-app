@@ -277,7 +277,7 @@ Future<void> _loadLocationPrefix() async {
   void _openAirTicketsSelectorScreen(BuildContext context) {
     FocusScope.of(context).requestFocus(FocusNode());
     context.push(
-      "/reservations/new-reservation/air-tickets-selection",
+      "/reservationMain/reservations/new-reservation/air-tickets-selection",
       extra: {
         'arrivalDate': _arrivalDateController.text,
         'departureDate': _departureDateController.text,

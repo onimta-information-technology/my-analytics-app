@@ -230,7 +230,7 @@ title: _isSearching
               icon: const Icon(Icons.add_rounded, size: 35),
               onPressed: () async {
                 final result = await context.push(
-                  '/reservations/new-reservation',
+                  '/reservationMain/reservations/new-reservation',
                 );
                 if (result == true) await _loadReservationData();
               },
@@ -656,7 +656,7 @@ final filteredReservations = (snapshot.data ?? []).where((reservation) {
                           .setSelectedReservation(reservation);
 
                       final result = await context.push(
-                        "/reservations/reservation-view",
+                        "/reservationMain/reservations/reservation-view",
                       );
                       if (result == true) await _loadReservationData();
                     },

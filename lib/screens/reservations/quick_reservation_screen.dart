@@ -1982,13 +1982,65 @@ class _LabeledCard extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Preview card
-// ─────────────────────────────────────────────────────────────────────────────
 class _PreviewCard extends StatelessWidget {
   final String text;
   final Color  accent;
   const _PreviewCard({required this.text, required this.accent});
+
+  List<TextSpan> _buildSpans(String fullText) {
+    final lines = fullText.split('\n');
+    final spans = <TextSpan>[];
+
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      final colonIdx = line.indexOf(':');
+
+      if (colonIdx != -1) {
+        final label = line.substring(0, colonIdx + 1); // e.g. "Name of Guest    :"
+        final value = line.substring(colonIdx + 1);    // e.g. " John Doe"
+
+        spans.add(TextSpan(
+          text: label,
+          style: const TextStyle(
+            fontSize: 15,
+            height: 1.6,
+            fontFamily: 'monospace',
+            color: Color(0xFF2C3E50),
+            fontWeight: FontWeight.normal,
+          ),
+        ));
+        spans.add(TextSpan(
+          text: value,
+          style: const TextStyle(
+            fontSize: 15,
+            height: 1.6,
+            fontFamily: 'monospace',
+            color: Color(0xFF2C3E50),
+            fontWeight: FontWeight.bold, // ← bold value
+          ),
+        ));
+      } else {
+        // Header lines like "*HOTEL RESERVATION REQUEST*"
+        final cleaned = line.replaceAll('*', '');
+        spans.add(TextSpan(
+          text: cleaned,
+          style: TextStyle(
+            fontSize: 15,
+            height: 1.6,
+            fontFamily: 'monospace',
+            color: accent,
+            fontWeight: FontWeight.bold,
+          ),
+        ));
+      }
+
+      if (i < lines.length - 1) {
+        spans.add(const TextSpan(text: '\n'));
+      }
+    }
+
+    return spans;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2017,12 +2069,9 @@ class _PreviewCard extends StatelessWidget {
                   fontWeight: FontWeight.w700)),
         ]),
         const SizedBox(height: 10),
-        Text(text,
-            style: const TextStyle(
-                fontSize: 15,
-                height: 1.6,
-                fontFamily: 'monospace',
-                color: Color(0xFF2C3E50))),
+        RichText(
+          text: TextSpan(children: _buildSpans(text)),
+        ),
       ]),
     );
   }

@@ -21,12 +21,12 @@ import 'package:ballys_reservation_app/providers/airports_provider.dart';
 import 'package:ballys_reservation_app/providers/new_reservation_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 
 // ─── Section enum ─────────────────────────────────────────────────────────────
 enum _Section { hotel, airTicket, extension }
 
 // ─── Shared text styles ───────────────────────────────────────────────────────
-// Typed text inside every field / dropdown
 const TextStyle kInputTextStyle = TextStyle(
   fontSize: 16.5,
   fontWeight: FontWeight.w600,
@@ -54,9 +54,18 @@ class _QuickReservationScreenState
 
   bool _isLoading = false;
 
+  // ── Location-aware MID ──────────────────────────────────────────────────────
+  bool         _isNumericOnlyLocation = false;
+  List<String> _prefixes              = ["BM", "BL", "BN"];
+  String       _selectedPrefix        = "BM";
+
+  // ── SHARED guest fields ─────────────────────────────────────────────────────
+  final _sharedMemberId   = TextEditingController(); // full MID e.g. BM12345
+  final _sharedMidNumber  = TextEditingController(); // number portion only
+  final _sharedGuestName  = TextEditingController();
+  bool  _sharedGuestCardVisible = false;
+
   // ── HOTEL fields ────────────────────────────────────────────────────────────
-  final _h_guestName       = TextEditingController();
-  final _h_memberId        = TextEditingController();
   final _h_packageAmount   = TextEditingController();
   final _h_noOfRooms       = TextEditingController(text: '1');
   final _h_noOfPax         = TextEditingController(text: '1');
@@ -73,17 +82,14 @@ class _QuickReservationScreenState
   String    _h_eciLco = 'NA';
 
   // Hotel / Room selections
-  // toJson() keys: 'hotel' (double), 'hotel_name' (String)
   Map<String, dynamic>? _selectedHotel;
   String? _selectedHotelName;
   double? _selectedHotelId;
 
-  // toJson() keys: 'CatCode' (int?), 'CatName' (String?)
   Map<String, dynamic>? _selectedRoomCategory;
   int?    _selectedRoomCategoryId;
   String? _selectedRoomCategoryName;
 
-  // toJson() keys: 'ID' (int?), 'RoomType' (String?), 'MealPlan' (String?)
   Map<String, dynamic>? _selectedRoomType;
   int?    _selectedRoomTypeId;
   String? _selectedRoomTypeName;
@@ -96,8 +102,6 @@ class _QuickReservationScreenState
   Key _roomTypeDropdownKey     = UniqueKey();
 
   // ── AIR TICKET fields ───────────────────────────────────────────────────────
-  final _a_memberId      = TextEditingController();
-  final _a_guestName     = TextEditingController();
   final _a_packageAmount = TextEditingController();
   final _a_noOfSeats     = TextEditingController(text: '1');
   final _a_class         = TextEditingController();
@@ -120,8 +124,6 @@ class _QuickReservationScreenState
   Key _a_returnToAirportKey   = UniqueKey();
 
   // ── EXTENSION fields ────────────────────────────────────────────────────────
-  final _e_guestName      = TextEditingController();
-  final _e_memberId       = TextEditingController();
   final _e_packageAmount  = TextEditingController();
   final _e_noOfRooms      = TextEditingController(text: '1');
   final _e_extensionDate  = TextEditingController();
@@ -129,11 +131,6 @@ class _QuickReservationScreenState
   final _e_approvedBy     = TextEditingController();
   final _e_arrCtrl        = TextEditingController();
   DateTime? _e_arrDate;
-
-  // ── Guest card visibility ───────────────────────────────────────────────────
-  bool _h_guestCardVisible = false;
-  bool _a_guestCardVisible = false;
-  bool _e_guestCardVisible = false;
 
   // ── Colors ──────────────────────────────────────────────────────────────────
   static const _hotelColor = Color(0xFFE65C00);
@@ -154,22 +151,77 @@ class _QuickReservationScreenState
     super.initState();
     _loadHotels();
     _loadAirports();
+    _loadLocationPrefix();
   }
 
   @override
   void dispose() {
     for (final c in [
-      _h_guestName, _h_memberId, _h_packageAmount, _h_noOfRooms, _h_noOfPax,
+      _sharedMemberId, _sharedMidNumber, _sharedGuestName,
+      _h_packageAmount, _h_noOfRooms, _h_noOfPax,
       _h_mealPlan, _h_paymentBy, _h_remarks, _h_marketingPerson, _h_approvedBy,
       _h_arrivalCtrl, _h_departureCtrl,
-      _a_memberId, _a_guestName, _a_packageAmount, _a_noOfSeats, _a_class,
+      _a_packageAmount, _a_noOfSeats, _a_class,
       _a_airlines, _a_arrCtrl, _a_depCtrl,
-      _e_guestName, _e_memberId, _e_packageAmount, _e_noOfRooms,
+      _e_packageAmount, _e_noOfRooms,
       _e_extensionDate, _e_earlyDeparture, _e_approvedBy, _e_arrCtrl,
     ]) {
       c.dispose();
     }
     super.dispose();
+  }
+
+  // ── Location prefix loader ───────────────────────────────────────────────────
+Future<void> _loadLocationPrefix() async {
+  final location = await StorageUtil.getCurrentLocation();
+  if (location == null) return;
+
+  final code      = location.code.split('_').first;
+  final isNumeric = code == "BELLAGIO";
+
+  // Only rebuild if something actually changed
+  if (isNumeric == _isNumericOnlyLocation) return;
+
+  setState(() {
+    _isNumericOnlyLocation = isNumeric;
+    _prefixes              = isNumeric ? [] : ["BM", "BL", "BN"];
+    _selectedPrefix        = isNumeric ? "" : "BM";
+  });
+}
+
+  // ── MID field sync ───────────────────────────────────────────────────────────
+  /// Splits a full MID (e.g. "BM12345") into prefix + number and updates
+  /// both controllers, mirroring NewReservationScreen behaviour.
+  void _updateMemberIdFields(String fullMemberId) {
+    if (fullMemberId.isEmpty) return;
+
+    if (_isNumericOnlyLocation) {
+      setState(() {
+        _sharedMidNumber.text = fullMemberId;
+        _sharedMemberId.text  = fullMemberId;
+      });
+      return;
+    }
+
+    String prefix     = 'BM';
+    String numberPart = fullMemberId;
+
+    if (fullMemberId.startsWith('BM')) {
+      prefix     = 'BM';
+      numberPart = fullMemberId.substring(2);
+    } else if (fullMemberId.startsWith('BL')) {
+      prefix     = 'BL';
+      numberPart = fullMemberId.substring(2);
+    } else if (fullMemberId.startsWith('BN')) {
+      prefix     = 'BN';
+      numberPart = fullMemberId.substring(2);
+    }
+
+    setState(() {
+      _selectedPrefix       = prefix;
+      _sharedMidNumber.text = numberPart;
+      _sharedMemberId.text  = fullMemberId;
+    });
   }
 
   // ── API loaders ─────────────────────────────────────────────────────────────
@@ -180,26 +232,23 @@ class _QuickReservationScreenState
     }
   }
 
-  Future<void> _loadAirports() async {
-    try {
-      final airports = ref.read(airportsProvider);
-      if (airports.isEmpty) {
-        setState(() => _isLoading = true);
-        await ref.read(airportsProvider.notifier).getAllAirports();
-        setState(() => _isLoading = false);
-      }
-    } catch (_) {
-      setState(() => _isLoading = false);
+Future<void> _loadAirports() async {
+  try {
+    final airports = ref.read(airportsProvider);
+    if (airports.isEmpty) {
+      await ref.read(airportsProvider.notifier).getAllAirports();
     }
+  } catch (_) {
+    // fail silently — airports load in background
   }
+}
 
   Future<void> _loadRoomCategories(double hotelId) async {
     try {
-      final repo = HotelRepository(ApiService(const FlutterSecureStorage()));
+      final repo   = HotelRepository(ApiService(const FlutterSecureStorage()));
       final result = await repo.getSelectedHotelRoomCategories(hotelId);
       setState(() {
-        // toJson() → keys: 'CatCode', 'CatName'
-        _roomCategories = result.map((c) => c.toJson()).toList();
+        _roomCategories           = result.map((c) => c.toJson()).toList();
         _selectedRoomCategory     = null;
         _selectedRoomCategoryId   = null;
         _selectedRoomCategoryName = null;
@@ -217,10 +266,9 @@ class _QuickReservationScreenState
 
   Future<void> _loadRoomTypes(double hotelId, int categoryId) async {
     try {
-      final repo = HotelRepository(ApiService(const FlutterSecureStorage()));
+      final repo   = HotelRepository(ApiService(const FlutterSecureStorage()));
       final result = await repo.getSelectedHotelCategoryRoomTypes(hotelId, categoryId);
       setState(() {
-        // toJson() → keys: 'ID', 'RoomType', 'MealPlan'
         _roomTypes            = result.map((t) => t.toJson()).toList();
         _selectedRoomType     = null;
         _selectedRoomTypeId   = null;
@@ -235,15 +283,13 @@ class _QuickReservationScreenState
   // ── Guest search ─────────────────────────────────────────────────────────────
   Future<void> _openGuestSearch({
     required int iid,
-    required TextEditingController memberIdCtrl,
-    required TextEditingController memberNameCtrl,
     required VoidCallback onCardVisible,
   }) async {
     final repo = GuestRepository(ApiService(const FlutterSecureStorage()));
-    final term = iid == 8002 ? memberIdCtrl.text : memberNameCtrl.text;
+    final term = iid == 8002 ? _sharedMemberId.text : _sharedGuestName.text;
 
     if (term.length < 3) {
-      _showSearchSheet([], term, iid, memberIdCtrl, memberNameCtrl, onCardVisible);
+      _showSearchSheet([], term, iid, onCardVisible);
       return;
     }
 
@@ -251,18 +297,56 @@ class _QuickReservationScreenState
     try {
       final guests = await repo.searchGuest(iid, term);
       setState(() => _isLoading = false);
-      _showSearchSheet(guests, term, iid, memberIdCtrl, memberNameCtrl, onCardVisible);
+      _showSearchSheet(guests, term, iid, onCardVisible);
     } catch (_) {
       setState(() => _isLoading = false);
     }
   }
+/// Fetches full guest data first, THEN shows the card.
+/// The card will not appear until image/rating/lastVisit are ready.
+Future<void> _fetchAndSetGuest({
+  required String mid,
+  required String name,
+  required VoidCallback onReady,
+}) async {
+  try {
+    final repo   = GuestRepository(ApiService(const FlutterSecureStorage()));
+    final guests = await repo.searchGuest(9021, mid);
 
+    if (!mounted) return;
+
+    if (guests.isNotEmpty) {
+      final g = guests.first;
+      ref.read(selectedGuestProvider.notifier).setSelectedGuest(
+        Guest(
+          mid:           g.mid             ?? mid,
+          memberName:    g.mName           ?? name,
+          country:       '',
+          lastVisitDate: g.lvd?.toString() ?? '',
+        
+          age:           0,
+          gRating:       g.gRating         ?? '',
+          mGroup:        '',
+          gName:         g.gName           ?? '',
+          memImage2:     g.memImage2,
+        ),
+      );
+    } else {
+      // No result — set bare guest
+      _setGuest(mid: mid, name: name);
+    }
+  } catch (_) {
+    if (!mounted) return;
+    _setGuest(mid: mid, name: name);
+  }
+
+  // Only reveal the card after provider is fully populated
+  onReady();
+}
   void _showSearchSheet(
     List<GuestSearchResponse> guests,
     String term,
     int iid,
-    TextEditingController memberIdCtrl,
-    TextEditingController memberNameCtrl,
     VoidCallback onCardVisible,
   ) {
     showModalBottomSheet(
@@ -279,61 +363,89 @@ class _QuickReservationScreenState
           if (newTerm.length < 3) return;
           try {
             final repo = GuestRepository(ApiService(const FlutterSecureStorage()));
-            final r = await repo.searchGuest(newIid, newTerm);
+            final r    = await repo.searchGuest(newIid, newTerm);
             Navigator.of(ctx).pop();
-            _showSearchSheet(r, newTerm, newIid, memberIdCtrl, memberNameCtrl, onCardVisible);
+            _showSearchSheet(r, newTerm, newIid, onCardVisible);
           } catch (_) {}
         },
       ),
     );
 
-    ref.listenManual(newReservationProvider, (_, next) {
-      if (next.bmNumber != null) {
-        memberIdCtrl.text   = next.bmNumber!;
-        memberNameCtrl.text = next.guestName ?? '';
-        _setGuest(mid: next.bmNumber!, name: next.guestName ?? '');
-        onCardVisible();
-        ref.read(newReservationProvider.notifier).resetState();
-      }
-    });
+ ref.listenManual(newReservationProvider, (_, next) {
+  if (next.bmNumber != null) {
+    _updateMemberIdFields(next.bmNumber!);
+    _sharedGuestName.text = next.guestName ?? '';
+    // Pass onCardVisible so card only shows AFTER full data is ready
+    _fetchAndSetGuest(
+      mid: next.bmNumber!,
+      name: next.guestName ?? '',
+      onReady: onCardVisible,
+    );
+    ref.read(newReservationProvider.notifier).resetState();
+  }
+});
   }
 
-  void _setGuest({required String mid, required String name}) {
-    ref.read(selectedGuestProvider.notifier).setSelectedGuest(Guest(
-      mid: mid, memberName: name, country: '', lastVisitDate: '',
-      gift: '', age: 0, gRating: '', mGroup: '', gName: '',
-    ));
+void _setGuest({required String mid, required String name}) {
+  ref.read(selectedGuestProvider.notifier).setSelectedGuest(Guest(
+    mid: mid,
+    memberName: name,
+    country: '',
+    lastVisitDate: '',
+   
+    age: 0,
+    gRating: '',
+    mGroup: '',
+    gName: '',
+  ));
+}
+
+Future<void> _navigateToProfile(String mid, String name) async {
+  if (mid.isEmpty) return;
+
+  // ── If selectedGuestProvider already has this guest's full data,
+  //    navigate immediately — no API call needed.
+  final currentGuest = ref.read(selectedGuestProvider);
+  if (currentGuest != null && currentGuest.mid == mid) {
+    if (mounted) context.push('/home/profile');
+    return;
   }
 
-  Future<void> _navigateToProfile(String mid, String name) async {
-    if (mid.isEmpty) return;
-    setState(() => _isLoading = true);
-    try {
-      final repo  = GuestRepository(ApiService(const FlutterSecureStorage()));
-      final guests = await repo.searchGuest(9021, mid);
-      setState(() => _isLoading = false);
-      if (guests.isNotEmpty) {
-        final g = guests.first;
-        ref.read(selectedGuestProvider.notifier).setSelectedGuest(Guest(
-          mid: g.mid ?? mid, memberName: g.mName ?? name, country: '',
-          lastVisitDate: g.lvd?.toString() ?? '', gift: '', age: 0,
-          gRating: g.gRating ?? '', mGroup: '', gName: g.gName ?? '',
-          memImage2: g.memImage2,
-        ));
-      } else {
-        _setGuest(mid: mid, name: name);
-      }
-    } catch (_) {
-      setState(() => _isLoading = false);
+  // ── Otherwise fetch (edge case: profile tapped before card loaded)
+  setState(() => _isLoading = true);
+  try {
+    final repo   = GuestRepository(ApiService(const FlutterSecureStorage()));
+    final guests = await repo.searchGuest(9021, mid);
+    setState(() => _isLoading = false);
+
+    if (guests.isNotEmpty) {
+      final g = guests.first;
+      ref.read(selectedGuestProvider.notifier).setSelectedGuest(Guest(
+        mid:           g.mid             ?? mid,
+        memberName:    g.mName           ?? name,
+        country:       '',
+        lastVisitDate: g.lvd?.toString() ?? '',
+      
+        age:           0,
+        gRating:       g.gRating         ?? '',
+        mGroup:        '',
+        gName:         g.gName           ?? '',
+        memImage2:     g.memImage2,
+      ));
+    } else {
       _setGuest(mid: mid, name: name);
     }
-    if (mounted) context.push('/home/profile');
+  } catch (_) {
+    setState(() => _isLoading = false);
+    _setGuest(mid: mid, name: name);
   }
 
+  if (mounted) context.push('/home/profile');
+}
   // ── Date picker ─────────────────────────────────────────────────────────────
   Future<DateTime?> _pickDate(
     BuildContext context, {
-    String label = 'Select Date',
+    String label   = 'Select Date',
     DateTime? initial,
     DateTime? minDate,
   }) async {
@@ -404,8 +516,8 @@ class _QuickReservationScreenState
   // ── Message builders ─────────────────────────────────────────────────────────
   String _buildHotelText() => '''
 *HOTEL RESERVATION REQUEST*
-Name of the Guest    : ${_h_guestName.text}
-Membership No         : ${_h_memberId.text}
+Name of the Guest    : ${_sharedGuestName.text}
+Membership No         : ${_sharedMemberId.text}
 Package Amount       : ${_h_packageAmount.text}
 Name of the Hotel    : ${_selectedHotelName ?? ''}
 Arrival                        : ${_h_arrivalCtrl.text}
@@ -441,8 +553,8 @@ Approved by.            : ${_h_approvedBy.text}
     }
     return '''
 *AIR TICKET REQUEST*
-BM                       : ${_a_memberId.text}
-Guest Name        : ${_a_guestName.text}
+BM                       : ${_sharedMemberId.text}
+Guest Name        : ${_sharedGuestName.text}
 Package Amount : ${_a_packageAmount.text}
 Sector                  : $sector
 Arr Date              : ${_a_arrCtrl.text}
@@ -455,8 +567,8 @@ Round Trip           : ${_a_isRoundTrip ? 'Yes' : 'No'}''';
 
   String _buildExtText() => '''
 *EXTENSION*
-Name of the Guest              : ${_e_guestName.text}
-Membership No                   : ${_e_memberId.text}
+Name of the Guest              : ${_sharedGuestName.text}
+Membership No                   : ${_sharedMemberId.text}
 Package Amount                 : ${_e_packageAmount.text}
 Arrival                                  : ${_e_arrCtrl.text}
 No of Room/s                      : ${_e_noOfRooms.text}
@@ -517,7 +629,6 @@ Extension Approved By     : ${_e_approvedBy.text}''';
             ),
           ],
         ),
-        // ── Theme wrap: bumps the typed text size of EVERY field below ──
         body: Theme(
           data: Theme.of(context).copyWith(
             textTheme: Theme.of(context).textTheme.copyWith(
@@ -603,7 +714,6 @@ InputDecoration _fieldDeco(String label,
     {IconData? icon, Color accent = const Color(0xFFE65C00)}) {
   return InputDecoration(
     labelText: label,
-    // ── Label: black + bold + bigger ──────────────────────────────────
     labelStyle: const TextStyle(
       color: Colors.black,
       fontWeight: FontWeight.bold,
@@ -614,7 +724,6 @@ InputDecoration _fieldDeco(String label,
       fontWeight: FontWeight.bold,
       fontSize: 17,
     ),
-    // ── Placeholder / hint: black + bold ──────────────────────────────
     hintStyle: const TextStyle(
       color: Colors.black87,
       fontWeight: FontWeight.bold,
@@ -676,9 +785,13 @@ Widget _rowPair(Widget left, Widget right) {
   ]);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Location-aware guest identity row
+// ─────────────────────────────────────────────────────────────────────────────
 Widget _guestIdentityRow({
   required BuildContext context,
   required TextEditingController memberIdCtrl,
+  required TextEditingController memberIdNumberCtrl,
   required TextEditingController memberNameCtrl,
   required Color accent,
   required String midLabel,
@@ -687,34 +800,77 @@ Widget _guestIdentityRow({
   required VoidCallback onSearchByName,
   required VoidCallback onProfileTap,
   required bool profileEnabled,
+  // ── Location-aware MID params ────────────────────────────────────────────
+  required bool isNumericOnly,
+  required List<String> prefixes,
+  required String selectedPrefix,
+  required ValueChanged<String> onPrefixChanged,
 }) {
   return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
     Row(children: [
       Expanded(
         child: TextFormField(
-          controller: memberIdCtrl,
+          controller: memberIdNumberCtrl,
           style: kInputTextStyle,
-          decoration:
-              _fieldDeco(midLabel, icon: Icons.badge_outlined, accent: accent)
-                  .copyWith(
+          keyboardType: TextInputType.number,
+          decoration: _fieldDeco(midLabel, accent: accent).copyWith(
+            // ── Prefix dropdown or nothing for numeric-only locations ────
+            prefixIcon: isNumericOnly
+                ? null
+                : Padding(
+                    padding: const EdgeInsets.only(left: 12, right: 4),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: selectedPrefix,
+                        style: kInputTextStyle,
+                        items: prefixes.map((p) {
+                          return DropdownMenuItem(
+                            value: p,
+                            child: Text(p, style: kInputTextStyle),
+                          );
+                        }).toList(),
+                        onChanged: (v) {
+                          if (v != null) {
+                            onPrefixChanged(v);
+                            // Keep full memberIdCtrl in sync
+                            memberIdCtrl.text =
+                                '$v${memberIdNumberCtrl.text}';
+                          }
+                        },
+                      ),
+                    ),
+                  ),
             suffixIcon: IconButton(
               icon: Icon(Icons.search, color: accent),
-              onPressed: onSearchById,
+              onPressed: () {
+                // Build full MID before opening search
+                memberIdCtrl.text = isNumericOnly
+                    ? memberIdNumberCtrl.text
+                    : '$selectedPrefix${memberIdNumberCtrl.text}';
+                onSearchById();
+              },
             ),
           ),
-          textCapitalization: TextCapitalization.characters,
-          onChanged: (_) => memberNameCtrl.clear(),
+          onChanged: (value) {
+            memberNameCtrl.clear();
+            // Keep full memberIdCtrl in sync as user types
+            memberIdCtrl.text = isNumericOnly
+                ? value
+                : '$selectedPrefix$value';
+          },
         ),
       ),
       const SizedBox(width: 8),
+      // ── Profile button ───────────────────────────────────────────────
       ElevatedButton(
         onPressed: profileEnabled ? onProfileTap : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor:
-              profileEnabled ? const Color.fromARGB(255, 0, 0, 0) : Colors.grey.shade400,
+          backgroundColor: profileEnabled
+              ? const Color.fromARGB(255, 0, 0, 0)
+              : Colors.grey.shade400,
           foregroundColor: Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12)),
           padding:
               const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
         ),
@@ -722,6 +878,7 @@ Widget _guestIdentityRow({
       ),
     ]),
     const SizedBox(height: 10),
+    // ── Guest name field ─────────────────────────────────────────────────
     TextFormField(
       controller: memberNameCtrl,
       style: kInputTextStyle,
@@ -734,7 +891,7 @@ Widget _guestIdentityRow({
         ),
       ),
       textCapitalization: TextCapitalization.words,
-      onChanged: (_) => memberIdCtrl.clear(),
+      onChanged: (_) => memberIdNumberCtrl.clear(),
     ),
   ]);
 }
@@ -743,8 +900,8 @@ Widget _guestIdentityRow({
 // Airport dropdown (reads airportsProvider)
 // ─────────────────────────────────────────────────────────────────────────────
 class _AirportDropdown extends ConsumerWidget {
-  final String  label;
-  final Color   accent;
+  final String   label;
+  final Color    accent;
   final Airport? selectedAirport;
   final ValueChanged<Airport?> onChanged;
 
@@ -824,8 +981,7 @@ class _AirportDropdown extends ConsumerWidget {
                 fontWeight: FontWeight.w600, fontSize: 15),
           ),
           subtitle: Text(item.airportName ?? '',
-              style:
-                  const TextStyle(fontSize: 12, color: Colors.grey)),
+              style: const TextStyle(fontSize: 12, color: Colors.grey)),
           selected: isSelected,
           tileColor: isFocused ? Colors.grey.shade100 : null,
         ),
@@ -845,8 +1001,6 @@ class _HotelForm extends StatelessWidget {
   final _QuickReservationScreenState state;
   const _HotelForm({super.key, required this.state});
 
-  // ── Safe key resolver for HotelResponse.toJson() ──────────────────────────
-  // toJson() produces: { 'hotel': double, 'hotel_name': String }
   static String _hotelName(Map<String, dynamic>? item) =>
       (item?['hotel_name'] ?? '') as String;
 
@@ -866,44 +1020,49 @@ class _HotelForm extends StatelessWidget {
           _sectionHeader(
               'Hotel Reservation Request', accent, Icons.hotel_rounded),
 
-          // ── Guest identity ────────────────────────────────────────────
+          // ── Location-aware guest identity ─────────────────────────────
           _guestIdentityRow(
-            context: context,
-            memberIdCtrl:   state._h_memberId,
-            memberNameCtrl: state._h_guestName,
-            accent:         accent,
-            midLabel:  'Membership No *',
-            nameLabel: 'Guest Name *',
+            context:              context,
+            memberIdCtrl:         state._sharedMemberId,
+            memberIdNumberCtrl:   state._sharedMidNumber,
+            memberNameCtrl:       state._sharedGuestName,
+            accent:               accent,
+            midLabel:             'Membership No *',
+            nameLabel:            'Guest Name *',
             onSearchById: () => state._openGuestSearch(
               iid: 8002,
-              memberIdCtrl:   state._h_memberId,
-              memberNameCtrl: state._h_guestName,
-              onCardVisible:
-                  () => state.setState(() => state._h_guestCardVisible = true),
+              onCardVisible: () =>
+                  state.setState(() => state._sharedGuestCardVisible = true),
             ),
             onSearchByName: () => state._openGuestSearch(
               iid: 8003,
-              memberIdCtrl:   state._h_memberId,
-              memberNameCtrl: state._h_guestName,
-              onCardVisible:
-                  () => state.setState(() => state._h_guestCardVisible = true),
+              onCardVisible: () =>
+                  state.setState(() => state._sharedGuestCardVisible = true),
             ),
             onProfileTap: () => state._navigateToProfile(
-                state._h_memberId.text, state._h_guestName.text),
-            profileEnabled: state._h_guestCardVisible,
+                state._sharedMemberId.text, state._sharedGuestName.text),
+            profileEnabled:  state._sharedGuestCardVisible,
+            isNumericOnly:   state._isNumericOnlyLocation,
+            prefixes:        state._prefixes,
+            selectedPrefix:  state._selectedPrefix,
+            onPrefixChanged: (v) => state.setState(() {
+              state._selectedPrefix    = v;
+              state._sharedMemberId.text =
+                  '$v${state._sharedMidNumber.text}';
+            }),
           ),
           const SizedBox(height: 12),
 
           // ── Guest card ────────────────────────────────────────────────
-          if (state._h_guestCardVisible &&
-              state._h_memberId.text.isNotEmpty &&
-              state._h_guestName.text.isNotEmpty)
+          if (state._sharedGuestCardVisible &&
+              state._sharedMemberId.text.isNotEmpty &&
+              state._sharedGuestName.text.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: GuestDisplayCardSpecialGiftview(
-                memberIdText:   state._h_memberId.text,
-                memberNameText: state._h_guestName.text,
-                showCard: true,
+                memberIdText:      state._sharedMemberId.text,
+                memberNameText:    state._sharedGuestName.text,
+                showCard:          true,
                 showLastVisitDate: true,
               ),
             ),
@@ -919,7 +1078,6 @@ class _HotelForm extends StatelessWidget {
           const SizedBox(height: 12),
 
           // ── Hotel dropdown ─────────────────────────────────────────────
-          // HotelResponse.toJson() → { 'hotel': double, 'hotel_name': String }
           DropdownSearch<Map<String, dynamic>>(
             key: state._hotelDropdownKey,
             items: (filter, _) {
@@ -974,7 +1132,6 @@ class _HotelForm extends StatelessWidget {
                   backgroundColor: accent.withOpacity(0.12),
                   child: Icon(Icons.hotel_rounded, color: accent, size: 18),
                 ),
-                // ← uses resolved key 'hotel_name'
                 title: Text(
                   _hotelName(item),
                   style: const TextStyle(
@@ -992,7 +1149,6 @@ class _HotelForm extends StatelessWidget {
           const SizedBox(height: 12),
 
           // ── Room Category dropdown ─────────────────────────────────────
-          // RoomCategoryResponse.toJson() → { 'CatCode': int?, 'CatName': String? }
           DropdownSearch<Map<String, dynamic>>(
             key: state._roomCategoryDropdownKey,
             items: (f, _) => state._roomCategories
@@ -1025,7 +1181,7 @@ class _HotelForm extends StatelessWidget {
                 state._selectedRoomCategoryName =
                     (val?['CatName'] ?? '') as String;
               });
-              if (state._selectedHotelId   != null &&
+              if (state._selectedHotelId       != null &&
                   state._selectedRoomCategoryId != null) {
                 state._loadRoomTypes(
                     state._selectedHotelId!, state._selectedRoomCategoryId!);
@@ -1049,7 +1205,6 @@ class _HotelForm extends StatelessWidget {
           const SizedBox(height: 12),
 
           // ── Room Type dropdown ─────────────────────────────────────────
-          // RoomTypeResponse.toJson() → { 'ID': int?, 'RoomType': String?, 'MealPlan': String? }
           DropdownSearch<Map<String, dynamic>>(
             key: state._roomTypeDropdownKey,
             items: (f, _) => state._roomTypes
@@ -1097,8 +1252,7 @@ class _HotelForm extends StatelessWidget {
                     style: const TextStyle(
                         fontWeight: FontWeight.w600, fontSize: 15)),
                 subtitle: Text((item['MealPlan'] ?? '') as String,
-                    style: const TextStyle(
-                        fontSize: 12, color: Colors.grey)),
+                    style: const TextStyle(fontSize: 12, color: Colors.grey)),
                 selected: isSelected,
                 tileColor: isFocused ? Colors.grey.shade100 : null,
               ),
@@ -1148,22 +1302,20 @@ class _HotelForm extends StatelessWidget {
           const SizedBox(height: 12),
 
           // ── Rooms + Pax ───────────────────────────────────────────────
-          // ── Rooms + Pax ───────────────────────────────────────────────
-_rowPair(
-  _StepperField(
-    controller: state._h_noOfRooms,
-    label: 'No of Rooms',
-    icon: Icons.door_back_door_outlined,
-    accent: accent,
-  ),
-  _StepperField(
-    controller: state._h_noOfPax,
-    label: 'No of Pax',
-    icon: Icons.group_outlined,
-    accent: accent,
-  ),
-),
-const SizedBox(height: 12),
+          _rowPair(
+            _StepperField(
+              controller: state._h_noOfRooms,
+              label: 'No of Rooms',
+              icon: Icons.door_back_door_outlined,
+              accent: accent,
+            ),
+            _StepperField(
+              controller: state._h_noOfPax,
+              label: 'No of Pax',
+              icon: Icons.group_outlined,
+              accent: accent,
+            ),
+          ),
           const SizedBox(height: 12),
 
           // ── ECI / LCO ─────────────────────────────────────────────────
@@ -1248,44 +1400,49 @@ class _AirForm extends StatelessWidget {
           _sectionHeader(
               'Air Ticket Request', accent, Icons.flight_rounded),
 
-          // ── Guest identity ────────────────────────────────────────────
+          // ── Location-aware guest identity ─────────────────────────────
           _guestIdentityRow(
-            context: context,
-            memberIdCtrl:   state._a_memberId,
-            memberNameCtrl: state._a_guestName,
-            accent:         accent,
-            midLabel:  'BM No',
-            nameLabel: 'Guest Name',
+            context:              context,
+            memberIdCtrl:         state._sharedMemberId,
+            memberIdNumberCtrl:   state._sharedMidNumber,
+            memberNameCtrl:       state._sharedGuestName,
+            accent:               accent,
+            midLabel:             'Membership No *',
+            nameLabel:            'Guest Name',
             onSearchById: () => state._openGuestSearch(
               iid: 8002,
-              memberIdCtrl:   state._a_memberId,
-              memberNameCtrl: state._a_guestName,
-              onCardVisible:
-                  () => state.setState(() => state._a_guestCardVisible = true),
+              onCardVisible: () =>
+                  state.setState(() => state._sharedGuestCardVisible = true),
             ),
             onSearchByName: () => state._openGuestSearch(
               iid: 8003,
-              memberIdCtrl:   state._a_memberId,
-              memberNameCtrl: state._a_guestName,
-              onCardVisible:
-                  () => state.setState(() => state._a_guestCardVisible = true),
+              onCardVisible: () =>
+                  state.setState(() => state._sharedGuestCardVisible = true),
             ),
             onProfileTap: () => state._navigateToProfile(
-                state._a_memberId.text, state._a_guestName.text),
-            profileEnabled: state._a_guestCardVisible,
+                state._sharedMemberId.text, state._sharedGuestName.text),
+            profileEnabled:  state._sharedGuestCardVisible,
+            isNumericOnly:   state._isNumericOnlyLocation,
+            prefixes:        state._prefixes,
+            selectedPrefix:  state._selectedPrefix,
+            onPrefixChanged: (v) => state.setState(() {
+              state._selectedPrefix      = v;
+              state._sharedMemberId.text =
+                  '$v${state._sharedMidNumber.text}';
+            }),
           ),
           const SizedBox(height: 12),
 
           // ── Guest card ────────────────────────────────────────────────
-          if (state._a_guestCardVisible &&
-              state._a_memberId.text.isNotEmpty &&
-              state._a_guestName.text.isNotEmpty)
+          if (state._sharedGuestCardVisible &&
+              state._sharedMemberId.text.isNotEmpty &&
+              state._sharedGuestName.text.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: GuestDisplayCardSpecialGiftview(
-                memberIdText:   state._a_memberId.text,
-                memberNameText: state._a_guestName.text,
-                showCard: true,
+                memberIdText:      state._sharedMemberId.text,
+                memberNameText:    state._sharedGuestName.text,
+                showCard:          true,
                 showLastVisitDate: true,
               ),
             ),
@@ -1343,8 +1500,7 @@ class _AirForm extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: Colors.grey.shade300),
             ),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             child: Row(children: [
               Icon(Icons.compare_arrows_rounded, color: accent, size: 20),
               const SizedBox(width: 10),
@@ -1487,44 +1643,49 @@ class _ExtForm extends StatelessWidget {
           _sectionHeader(
               'Extension / Early Departure', accent, Icons.date_range_rounded),
 
-          // ── Guest identity ────────────────────────────────────────────
+          // ── Location-aware guest identity ─────────────────────────────
           _guestIdentityRow(
-            context: context,
-            memberIdCtrl:   state._e_memberId,
-            memberNameCtrl: state._e_guestName,
-            accent:         accent,
-            midLabel:  'Membership No',
-            nameLabel: 'Guest Name',
+            context:              context,
+            memberIdCtrl:         state._sharedMemberId,
+            memberIdNumberCtrl:   state._sharedMidNumber,
+            memberNameCtrl:       state._sharedGuestName,
+            accent:               accent,
+            midLabel:             'Membership No *',
+            nameLabel:            'Guest Name',
             onSearchById: () => state._openGuestSearch(
               iid: 8002,
-              memberIdCtrl:   state._e_memberId,
-              memberNameCtrl: state._e_guestName,
-              onCardVisible:
-                  () => state.setState(() => state._e_guestCardVisible = true),
+              onCardVisible: () =>
+                  state.setState(() => state._sharedGuestCardVisible = true),
             ),
             onSearchByName: () => state._openGuestSearch(
               iid: 8003,
-              memberIdCtrl:   state._e_memberId,
-              memberNameCtrl: state._e_guestName,
-              onCardVisible:
-                  () => state.setState(() => state._e_guestCardVisible = true),
+              onCardVisible: () =>
+                  state.setState(() => state._sharedGuestCardVisible = true),
             ),
             onProfileTap: () => state._navigateToProfile(
-                state._e_memberId.text, state._e_guestName.text),
-            profileEnabled: state._e_guestCardVisible,
+                state._sharedMemberId.text, state._sharedGuestName.text),
+            profileEnabled:  state._sharedGuestCardVisible,
+            isNumericOnly:   state._isNumericOnlyLocation,
+            prefixes:        state._prefixes,
+            selectedPrefix:  state._selectedPrefix,
+            onPrefixChanged: (v) => state.setState(() {
+              state._selectedPrefix      = v;
+              state._sharedMemberId.text =
+                  '$v${state._sharedMidNumber.text}';
+            }),
           ),
           const SizedBox(height: 12),
 
           // ── Guest card ────────────────────────────────────────────────
-          if (state._e_guestCardVisible &&
-              state._e_memberId.text.isNotEmpty &&
-              state._e_guestName.text.isNotEmpty)
+          if (state._sharedGuestCardVisible &&
+              state._sharedMemberId.text.isNotEmpty &&
+              state._sharedGuestName.text.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: GuestDisplayCardSpecialGiftview(
-                memberIdText:   state._e_memberId.text,
-                memberNameText: state._e_guestName.text,
-                showCard: true,
+                memberIdText:      state._sharedMemberId.text,
+                memberNameText:    state._sharedGuestName.text,
+                showCard:          true,
                 showLastVisitDate: true,
               ),
             ),
@@ -1596,9 +1757,9 @@ class _ExtForm extends StatelessWidget {
 // Chip selector
 // ─────────────────────────────────────────────────────────────────────────────
 class _ChipSelector extends StatefulWidget {
-  final List<String>       options;
-  final String             selected;
-  final Color              accent;
+  final List<String>         options;
+  final String               selected;
+  final Color                accent;
   final ValueChanged<String> onChanged;
   const _ChipSelector({
     required this.options,
@@ -1642,13 +1803,17 @@ class _ChipSelectorState extends State<_ChipSelector> {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Stepper field
+// ─────────────────────────────────────────────────────────────────────────────
 class _StepperField extends StatelessWidget {
   final TextEditingController controller;
-  final String label;
+  final String   label;
   final IconData icon;
-  final Color accent;
-  final int min;
-  final int max;
+  final Color    accent;
+  final int      min;
+  final int      max;
 
   const _StepperField({
     required this.controller,
@@ -1692,14 +1857,12 @@ class _StepperField extends StatelessWidget {
               ]),
               const SizedBox(height: 8),
               Row(children: [
-                // ── Minus button ──────────────────────────────────
                 _StepButton(
                   icon: Icons.remove,
                   accent: accent,
                   enabled: _value > min,
                   onTap: () => _change(-1, () => setState(() {})),
                 ),
-                // ── Value display ─────────────────────────────────
                 Expanded(
                   child: Center(
                     child: Text(
@@ -1711,7 +1874,6 @@ class _StepperField extends StatelessWidget {
                     ),
                   ),
                 ),
-                // ── Plus button ───────────────────────────────────
                 _StepButton(
                   icon: Icons.add,
                   accent: accent,
@@ -1728,9 +1890,9 @@ class _StepperField extends StatelessWidget {
 }
 
 class _StepButton extends StatelessWidget {
-  final IconData icon;
-  final Color accent;
-  final bool enabled;
+  final IconData    icon;
+  final Color       accent;
+  final bool        enabled;
   final VoidCallback onTap;
 
   const _StepButton({
@@ -1760,6 +1922,7 @@ class _StepButton extends StatelessWidget {
     );
   }
 }
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Labeled card
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1829,7 +1992,7 @@ class _PreviewCard extends StatelessWidget {
         const SizedBox(height: 10),
         Text(text,
             style: const TextStyle(
-                fontSize: 15,          // ← was 13, increased
+                fontSize: 15,
                 height: 1.6,
                 fontFamily: 'monospace',
                 color: Color(0xFF2C3E50))),

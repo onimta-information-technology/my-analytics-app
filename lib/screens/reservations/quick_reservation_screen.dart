@@ -130,8 +130,9 @@ class _QuickReservationScreenState
   final _e_earlyDeparture = TextEditingController();
   final _e_approvedBy     = TextEditingController();
   final _e_arrCtrl        = TextEditingController();
+  final _e_depCtrl        = TextEditingController();
   DateTime? _e_arrDate;
-
+  DateTime? _e_depDate;
   // ── Colors ──────────────────────────────────────────────────────────────────
   static const _hotelColor = Color(0xFFE65C00);
   static const _airColor   = Color(0xFF0277BD);
@@ -164,7 +165,7 @@ class _QuickReservationScreenState
       _a_packageAmount, _a_noOfSeats, _a_class,
       _a_airlines, _a_arrCtrl, _a_depCtrl,
       _e_packageAmount, _e_noOfRooms,
-      _e_extensionDate, _e_earlyDeparture, _e_approvedBy, _e_arrCtrl,
+      _e_extensionDate, _e_earlyDeparture, _e_approvedBy, _e_arrCtrl,_e_depCtrl,
     ]) {
       c.dispose();
     }
@@ -571,6 +572,7 @@ Name of the Guest              : ${_sharedGuestName.text}
 Membership No                   : ${_sharedMemberId.text}
 Package Amount                 : ${_e_packageAmount.text}
 Arrival                                  : ${_e_arrCtrl.text}
+Departure                            : ${_e_depCtrl.text}
 No of Room/s                      : ${_e_noOfRooms.text}
 Extension Date                   : ${_e_extensionDate.text}
 Early Departure                  : ${_e_earlyDeparture.text}
@@ -1265,7 +1267,7 @@ class _HotelForm extends StatelessWidget {
           const SizedBox(height: 12),
 
           // ── Arrival + Departure ───────────────────────────────────────
-          _rowPair(
+          // _rowPair(
             _dateField(context, 'Arrival Date *', state._h_arrivalCtrl, accent,
                 () async {
               final d = await state._pickDate(context,
@@ -1283,6 +1285,7 @@ class _HotelForm extends StatelessWidget {
                 (context as Element).markNeedsBuild();
               }
             }),
+               const SizedBox(height: 12),
             _dateField(context, 'Departure Date *', state._h_departureCtrl,
                 accent, () async {
               final d = await state._pickDate(context,
@@ -1298,7 +1301,7 @@ class _HotelForm extends StatelessWidget {
                 (context as Element).markNeedsBuild();
               }
             }),
-          ),
+         // ),
           const SizedBox(height: 12),
 
           // ── Rooms + Pax ───────────────────────────────────────────────
@@ -1559,7 +1562,7 @@ class _AirForm extends StatelessWidget {
           const SizedBox(height: 12),
 
           // ── Dates ─────────────────────────────────────────────────────
-          _rowPair(
+        //  _rowPair(
             _dateField(context, 'Arrival Date', state._a_arrCtrl, accent,
                 () async {
               final d = await state._pickDate(context,
@@ -1571,6 +1574,7 @@ class _AirForm extends StatelessWidget {
                 (context as Element).markNeedsBuild();
               }
             }),
+              const SizedBox(height: 12),
             _dateField(context, 'Departure Date', state._a_depCtrl, accent,
                 () async {
               final d = await state._pickDate(context,
@@ -1586,18 +1590,18 @@ class _AirForm extends StatelessWidget {
                 (context as Element).markNeedsBuild();
               }
             }),
-          ),
+        //  ),
           const SizedBox(height: 12),
 
           // ── Seats + Class ─────────────────────────────────────────────
           _rowPair(
-            TextFormField(
+            _StepperField(
                 controller: state._a_noOfSeats,
-                style: kInputTextStyle,
-                decoration: _fieldDeco('No of Seats',
+               // style: kInputTextStyle,
+                label: 'No of Seats',
                     icon: Icons.event_seat_outlined, accent: accent),
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
+               // keyboardType: TextInputType.number,
+               // inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
             TextFormField(
                 controller: state._a_class,
                 style: kInputTextStyle,
@@ -1689,22 +1693,30 @@ class _ExtForm extends StatelessWidget {
                 showLastVisitDate: true,
               ),
             ),
-
-          // ── Package Amount + Rooms ────────────────────────────────────
-          _rowPair(
+// _rowPair(
             TextFormField(
                 controller: state._e_packageAmount,
                 style: kInputTextStyle,
                 decoration: _fieldDeco('Package Amount',
                     icon: Icons.currency_rupee, accent: accent),
                 keyboardType: TextInputType.number),
-            TextFormField(
+          const SizedBox(height: 12),
+          // ── Package Amount + Rooms ────────────────────────────────────
+          //_rowPair(
+            // TextFormField(
+            //     controller: state._e_packageAmount,
+            //     style: kInputTextStyle,
+            //     decoration: _fieldDeco('Package Amount',
+            //         icon: Icons.currency_rupee, accent: accent),
+            //     keyboardType: TextInputType.number),
+            _StepperField(
                 controller: state._e_noOfRooms,
-                style: kInputTextStyle,
-                decoration: _fieldDeco('No of Rooms',
-                    icon: Icons.door_back_door_outlined, accent: accent),
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
+                // style: kInputTextStyle,
+                label: 'No of Rooms',
+                    icon: Icons.door_back_door_outlined, accent: accent,
+                // keyboardType: TextInputType.number,
+                // inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
+                            // ),
           ),
           const SizedBox(height: 12),
 
@@ -1715,6 +1727,18 @@ class _ExtForm extends StatelessWidget {
             if (d != null) {
               state._e_arrDate = d;
               state._e_arrCtrl.text = state._fmt(d);
+              // ignore: invalid_use_of_protected_member
+              (context as Element).markNeedsBuild();
+            }
+          }),
+                    const SizedBox(height: 12),
+          _dateField(context, 'Departure Date', state._e_depCtrl, accent,
+              () async {
+            final d = await state._pickDate(context,
+                label: 'Select Departure Date', initial: state._e_depDate);
+            if (d != null) {
+              state._e_depDate = d;
+              state._e_depCtrl.text = state._fmt(d);
               // ignore: invalid_use_of_protected_member
               (context as Element).markNeedsBuild();
             }

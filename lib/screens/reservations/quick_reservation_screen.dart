@@ -126,8 +126,8 @@ class _QuickReservationScreenState
   // ── EXTENSION fields ────────────────────────────────────────────────────────
   final _e_packageAmount  = TextEditingController();
   final _e_noOfRooms      = TextEditingController(text: '1');
-  final _e_extensionDate  = TextEditingController();
-  final _e_earlyDeparture = TextEditingController();
+ final _e_extensionDate  = TextEditingController(text: '0');
+final _e_earlyDeparture = TextEditingController(text: '0');
   final _e_approvedBy     = TextEditingController();
   final _e_arrCtrl        = TextEditingController();
   final _e_depCtrl        = TextEditingController();
@@ -1745,19 +1745,22 @@ class _ExtForm extends StatelessWidget {
           }),
           const SizedBox(height: 12),
 
-          _rowPair(
-            TextFormField(
-                controller: state._e_extensionDate,
-                style: kInputTextStyle,
-                decoration: _fieldDeco('Extension + Days',
-                        icon: Icons.add_circle_outline, accent: accent)
-                    .copyWith(hintText: '+ 1 Day')),
-            TextFormField(
-                controller: state._e_earlyDeparture,
-                style: kInputTextStyle,
-                decoration: _fieldDeco('Early Departure - Days',
-                    icon: Icons.remove_circle_outline, accent: accent)),
-          ),
+         _rowPair(
+  _StepperField(
+    controller: state._e_extensionDate,
+    label: 'Extension + Days',
+    icon: Icons.add_circle_outline,
+    accent: accent,
+    min: 0,
+  ),
+  _StepperField(
+    controller: state._e_earlyDeparture,
+    label: 'Early Departure - Days',
+    icon: Icons.remove_circle_outline,
+    accent: accent,
+    min: 0,
+  ),
+),
           const SizedBox(height: 12),
 
           TextFormField(

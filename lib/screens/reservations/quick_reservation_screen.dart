@@ -26,7 +26,7 @@ import 'package:ballys_reservation_app/utils/storage_util.dart';
 enum _Section { hotel, airTicket, extension }
 
 const TextStyle kInputTextStyle = TextStyle(
-  fontSize: 16.5,
+  fontSize: 17,
   fontWeight: FontWeight.w600,
   color: Colors.black,
 );
@@ -1050,7 +1050,7 @@ InputDecoration _fieldDeco(
     labelStyle: const TextStyle(
       color: Colors.black,
       fontWeight: FontWeight.bold,
-      fontSize: 15.5,
+      fontSize: 16,
     ),
     floatingLabelStyle: const TextStyle(
       color: Colors.black,
@@ -1060,7 +1060,7 @@ InputDecoration _fieldDeco(
     hintStyle: const TextStyle(
       color: Colors.black87,
       fontWeight: FontWeight.bold,
-      fontSize: 15,
+      fontSize: 16,
     ),
     prefixIcon: icon != null ? Icon(icon, size: 20, color: accent) : null,
     filled: true,
@@ -1099,7 +1099,7 @@ Widget _sectionHeader(String title, Color color, IconData icon) {
           style: TextStyle(
             color: color,
             fontWeight: FontWeight.w700,
-            fontSize: 15,
+            fontSize: 17,
           ),
         ),
       ],
@@ -1328,7 +1328,7 @@ Widget _addedMembersSection({
                         style: TextStyle(
                           color: accent,
                           fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                          fontSize: 15,
                         ),
                       ),
                     ),
@@ -1343,7 +1343,7 @@ Widget _addedMembersSection({
                                 : '—',
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
-                              fontSize: 14,
+                              fontSize: 16,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1351,7 +1351,7 @@ Widget _addedMembersSection({
                             m['memberId'] as String? ?? '',
                             style: TextStyle(
                               color: accent,
-                              fontSize: 12,
+                              fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -1508,7 +1508,7 @@ class _AirportDropdown extends ConsumerWidget {
           ),
           subtitle: Text(
             item.airportName ?? '',
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
+            style: const TextStyle(fontSize: 15, color: Colors.grey),
           ),
           selected: isSelected,
           tileColor: isFocused ? Colors.grey.shade100 : null,
@@ -2481,7 +2481,7 @@ class _StepperField extends StatelessWidget {
                   Text(
                     label,
                     style: const TextStyle(
-                      fontSize: 13,
+                      fontSize: 17,
                       fontWeight: FontWeight.bold,
                       color: Colors.black,
                     ),
@@ -2584,7 +2584,7 @@ class _LabeledCard extends StatelessWidget {
           Text(
             label,
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: 16,
               color: Colors.black,
               fontWeight: FontWeight.bold,
             ),
@@ -2605,56 +2605,110 @@ class _PreviewCard extends StatelessWidget {
   final Color accent;
   const _PreviewCard({required this.text, required this.accent});
 
-  List<TextSpan> _buildSpans(String fullText) {
-    final lines = fullText.split('\n');
-    final spans = <TextSpan>[];
-    for (int i = 0; i < lines.length; i++) {
-      final line = lines[i];
-      final colonIdx = line.indexOf(':');
-      if (colonIdx != -1) {
-        spans.add(
-          TextSpan(
-            text: line.substring(0, colonIdx + 1),
-            style: const TextStyle(
-              fontSize: 15,
-              height: 1.6,
-              fontFamily: 'monospace',
-              color: Color(0xFF2C3E50),
-              fontWeight: FontWeight.normal,
-            ),
-          ),
-        );
-        spans.add(
-          TextSpan(
-            text: line.substring(colonIdx + 1),
-            style: const TextStyle(
-              fontSize: 15,
-              height: 1.6,
-              fontFamily: 'monospace',
-              color: Color(0xFF2C3E50),
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        );
-      } else {
-        spans.add(
-          TextSpan(
-            text: line.replaceAll('*', ''),
-            style: TextStyle(
-              fontSize: 15,
-              height: 1.6,
-              fontFamily: 'monospace',
-              color: accent,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        );
-      }
-      if (i < lines.length - 1) spans.add(const TextSpan(text: '\n'));
-    }
-    return spans;
-  }
+  // List<TextSpan> _buildSpans(String fullText) {
+  //   final lines = fullText.split('\n');
+  //   final spans = <TextSpan>[];
+  //   for (int i = 0; i < lines.length; i++) {
+  //     final line = lines[i];
+  //     final colonIdx = line.indexOf(':');
+  //     if (colonIdx != -1) {
+  //       spans.add(
+  //         TextSpan(
+  //           text: line.substring(0, colonIdx + 1),
+  //           style: const TextStyle(
+  //             fontSize: 15,
+  //             height: 1.6,
+  //             fontFamily: 'monospace',
+  //             color: Color(0xFF2C3E50),
+  //             fontWeight: FontWeight.normal,
+  //           ),
+  //         ),
+  //       );
+  //       spans.add(
+  //         TextSpan(
+  //           text: line.substring(colonIdx + 1),
+  //           style: const TextStyle(
+  //             fontSize: 15,
+  //             height: 1.6,
+  //             fontFamily: 'monospace',
+  //             color: Color(0xFF2C3E50),
+  //             fontWeight: FontWeight.bold,
+  //           ),
+  //         ),
+  //       );
+  //     } else {
+  //       spans.add(
+  //         TextSpan(
+  //           text: line.replaceAll('*', ''),
+  //           style: TextStyle(
+  //             fontSize: 15,
+  //             height: 1.6,
+  //             fontFamily: 'monospace',
+  //             color: accent,
+  //             fontWeight: FontWeight.bold,
+  //           ),
+  //         ),
+  //       );
+  //     }
+  //     if (i < lines.length - 1) spans.add(const TextSpan(text: '\n'));
+  //   }
+  //   return spans;
+  // }
+List<TextSpan> _buildSpans(String fullText) {
+  final lines = fullText.split('\n');
+  final spans = <TextSpan>[];
+  for (int i = 0; i < lines.length; i++) {
+    final line = lines[i];
+    final colonIdx = line.indexOf(':');
+    final trimmed = line.trim();
+    final isTitleLine = trimmed.startsWith('*') &&
+        trimmed.endsWith('*') &&
+        !trimmed.contains('Member'); // exclude the "── Member N ──" separators
 
+    if (colonIdx != -1) {
+      spans.add(
+        TextSpan(
+          text: line.substring(0, colonIdx + 1),
+          style: const TextStyle(
+            fontSize: 18,
+            height: 1.6,
+            fontFamily: 'monospace',
+            color: Color.fromARGB(255, 0, 0, 0),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+      spans.add(
+        TextSpan(
+          text: line.substring(colonIdx + 1),
+          style: const TextStyle(
+            fontSize: 18,
+            height: 1.6,
+            fontFamily: 'monospace',
+            color: Color.fromARGB(255, 0, 0, 0),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+    } else {
+      spans.add(
+        TextSpan(
+          text: line.replaceAll('*', ''),
+          style: TextStyle(
+            fontSize: isTitleLine ? 19 : 18,        // ← bigger for the title
+            height: 1.6,
+            fontFamily: 'monospace',
+            color: accent,
+            fontWeight: FontWeight.bold,
+            letterSpacing: isTitleLine ? 0.5 : 0,
+          ),
+        ),
+      );
+    }
+    if (i < lines.length - 1) spans.add(const TextSpan(text: '\n'));
+  }
+  return spans;
+}
   @override
   Widget build(BuildContext context) {
     return Container(

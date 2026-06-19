@@ -78,7 +78,7 @@ dependencies:
   permission_handler: ^11.3.0
   open_filex: ^4.3.4
   sticky_headers: ^0.3.0
-
+  webview_flutter: ^4.10.0
 
 dev_dependencies:
   flutter_test:

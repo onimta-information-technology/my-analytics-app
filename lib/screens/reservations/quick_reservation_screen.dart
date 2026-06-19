@@ -129,6 +129,10 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
   static const _airColor = Color(0xFF0277BD);
   static const _extColor = Color(0xFF2E7D32);
 
+  final _hotelScrollCtrl = ScrollController();
+  final _airScrollCtrl = ScrollController();
+  final _extScrollCtrl = ScrollController();
+
   Color get _accentColor {
     switch (_activeSection) {
       case _Section.hotel:
@@ -180,6 +184,9 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     ]) {
       c.dispose();
     }
+    _hotelScrollCtrl.dispose();
+    _airScrollCtrl.dispose();
+    _extScrollCtrl.dispose();
     super.dispose();
   }
 
@@ -321,7 +328,114 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     );
   }
 
-  // ── Apply & Add — HOTEL ─────────────────────────────────────────────────────
+  void _scrollToTop(ScrollController ctrl) {
+    if (ctrl.hasClients) {
+      ctrl.animateTo(
+        0,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  // ── Add Member with Same Details — HOTEL ────────────────────────────────────
+  void _addMemberWithSameDetailsHotel() {
+    if (_sharedGuestName.text.trim().isEmpty &&
+        _sharedMemberId.text.trim().isEmpty) {
+      _showRequiredSnack();
+      return;
+    }
+    setState(() {
+      _hotelMembers.add({
+        'guestName': _sharedGuestName.text,
+        'memberId': _sharedMemberId.text,
+        'packageAmount': _h_packageAmount.text,
+        'hotel': _selectedHotelName ?? '',
+        'arrival': _h_arrivalCtrl.text,
+        'departure': _h_departureCtrl.text,
+        'noOfRooms': _h_noOfRooms.text,
+        'noOfPax': _h_noOfPax.text,
+        'roomType': _selectedRoomTypeName ?? '',
+        'roomCategory': _selectedRoomCategoryName ?? '',
+        'eciLco': _h_eciLco,
+        'mealPlan': _h_mealPlan.text,
+        'paymentBy': _h_paymentBy.text,
+        'remarks': _h_remarks.text,
+        'marketingPerson': _h_marketingPerson.text,
+        'approvedBy': _h_approvedBy.text,
+      });
+      // Clear only member identity fields
+      _resetSharedGuest();
+    });
+    _showAddedSnack(_hotelMembers.length, _hotelColor);
+    _scrollToTop(_hotelScrollCtrl);
+  }
+
+  // ── Add Member with Same Details — AIR TICKET ───────────────────────────────
+  void _addMemberWithSameDetailsAir() {
+    if (_sharedGuestName.text.trim().isEmpty &&
+        _sharedMemberId.text.trim().isEmpty) {
+      _showRequiredSnack();
+      return;
+    }
+    setState(() {
+      _airMembers.add({
+        'guestName': _sharedGuestName.text,
+        'memberId': _sharedMemberId.text,
+        'packageAmount': _a_packageAmount.text,
+        'fromAirport': _a_fromAirport != null
+            ? '${_a_fromAirport!.cityName ?? ''} (${_a_fromAirport!.airportCode ?? ''})'
+            : '',
+        'toAirport': _a_toAirport != null
+            ? '${_a_toAirport!.cityName ?? ''} (${_a_toAirport!.airportCode ?? ''})'
+            : '',
+        'isRoundTrip': _a_isRoundTrip,
+        'returnFrom': _a_returnFromAirport != null
+            ? '${_a_returnFromAirport!.cityName ?? ''} (${_a_returnFromAirport!.airportCode ?? ''})'
+            : '',
+        'returnTo': _a_returnToAirport != null
+            ? '${_a_returnToAirport!.cityName ?? ''} (${_a_returnToAirport!.airportCode ?? ''})'
+            : '',
+        'arrDate': _a_arrCtrl.text,
+        'depDate': _a_depCtrl.text,
+        'noOfSeats': _a_noOfSeats.text,
+        'class': _a_class.text,
+        'airlines': _a_airlines.text,
+      });
+      // Clear only member identity fields
+      _resetSharedGuest();
+    });
+    _showAddedSnack(_airMembers.length, _airColor);
+    _scrollToTop(_airScrollCtrl);
+  }
+
+  // ── Add Member with Same Details — EXTENSION ────────────────────────────────
+  void _addMemberWithSameDetailsExt() {
+    if (_sharedGuestName.text.trim().isEmpty &&
+        _sharedMemberId.text.trim().isEmpty) {
+      _showRequiredSnack();
+      return;
+    }
+    setState(() {
+      _extMembers.add({
+        'guestName': _sharedGuestName.text,
+        'memberId': _sharedMemberId.text,
+        'packageAmount': _e_packageAmount.text,
+        'arrival': _e_arrCtrl.text,
+        'departure': _e_depCtrl.text,
+        'noOfRooms': _e_noOfRooms.text,
+        'extensionDate': _e_extensionDate.text,
+        'earlyDeparture': _e_earlyDeparture.text,
+        'approvedBy': _e_approvedBy.text,
+      });
+      // Clear only member identity fields
+      _resetSharedGuest();
+    });
+    _showAddedSnack(_extMembers.length, _extColor);
+    _scrollToTop(_extScrollCtrl);
+  }
+
+
   void _applyAndAddHotelMember() {
     if (_sharedGuestName.text.trim().isEmpty &&
         _sharedMemberId.text.trim().isEmpty) {
@@ -377,6 +491,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _roomTypeDropdownKey = UniqueKey();
     });
     _showAddedSnack(_hotelMembers.length, _hotelColor);
+    _scrollToTop(_hotelScrollCtrl);
   }
 
   // ── Apply & Add — AIR TICKET ────────────────────────────────────────────────
@@ -430,6 +545,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _a_returnToAirportKey = UniqueKey();
     });
     _showAddedSnack(_airMembers.length, _airColor);
+    _scrollToTop(_airScrollCtrl);
   }
 
   // ── Apply & Add — EXTENSION ─────────────────────────────────────────────────
@@ -463,6 +579,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _e_depDate = null;
     });
     _showAddedSnack(_extMembers.length, _extColor);
+    _scrollToTop(_extScrollCtrl);
   }
 
   // ── Guest search ─────────────────────────────────────────────────────────────
@@ -1397,27 +1514,57 @@ Widget _addedMembersSection({
   );
 }
 
-// ── Apply & Add Member button widget ────────────────────────────────────────
-Widget _applyAddButton(Color accent, VoidCallback onPressed) {
-  return SizedBox(
-    width: double.infinity,
-    child: ElevatedButton.icon(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: accent,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        elevation: 0,
+// ── Action buttons: Apply & Add + Add with Same Details ─────────────────────
+Widget _actionButtons({
+  required Color accent,
+  required VoidCallback onApplyAndAdd,
+  required VoidCallback onSameDetails,
+}) {
+  return Column(
+    children: [
+      SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: onApplyAndAdd,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: accent,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+            elevation: 0,
+          ),
+          icon: const Icon(Icons.person_add_alt_1_rounded),
+          label: const Text(
+            'Apply & Add Member',
+            style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600),
+          ),
+        ),
       ),
-      icon: const Icon(Icons.person_add_alt_1_rounded),
-      label: const Text(
-        'Apply & Add Member',
-        style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600),
+      const SizedBox(height: 10),
+      SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: onSameDetails,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: accent,
+            side: BorderSide(color: accent, width: 1.8),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+          ),
+          icon: const Icon(Icons.group_add_rounded),
+          label: const Text(
+            'Add Member with Same Details',
+            style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600),
+          ),
+        ),
       ),
-    ),
+    ],
   );
 }
+
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Airport dropdown
@@ -1541,6 +1688,7 @@ class _HotelForm extends StatelessWidget {
     return Form(
       key: state._hotelFormKey,
       child: ListView(
+        controller: state._hotelScrollCtrl,
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
         children: [
           _sectionHeader(
@@ -1933,7 +2081,11 @@ class _HotelForm extends StatelessWidget {
             keyboardType: TextInputType.multiline,
           ),
           const SizedBox(height: 16),
-          _applyAddButton(accent, state._applyAndAddHotelMember),
+          _actionButtons(
+            accent: accent,
+            onApplyAndAdd: state._applyAndAddHotelMember,
+            onSameDetails: state._addMemberWithSameDetailsHotel,
+          ),
           const SizedBox(height: 20),
           _addedMembersSection(
             members: state._hotelMembers,
@@ -1962,6 +2114,7 @@ class _AirForm extends StatelessWidget {
     return Form(
       key: state._airFormKey,
       child: ListView(
+        controller: state._airScrollCtrl,
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
         children: [
           _sectionHeader('Air Ticket Request', accent, Icons.flight_rounded),
@@ -2199,7 +2352,11 @@ class _AirForm extends StatelessWidget {
             textCapitalization: TextCapitalization.words,
           ),
           const SizedBox(height: 16),
-          _applyAddButton(accent, state._applyAndAddAirMember),
+          _actionButtons(
+            accent: accent,
+            onApplyAndAdd: state._applyAndAddAirMember,
+            onSameDetails: state._addMemberWithSameDetailsAir,
+          ),
           const SizedBox(height: 20),
           _addedMembersSection(
             members: state._airMembers,
@@ -2228,6 +2385,7 @@ class _ExtForm extends StatelessWidget {
     return Form(
       key: state._extFormKey,
       child: ListView(
+        controller: state._extScrollCtrl,
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
         children: [
           _sectionHeader(
@@ -2367,7 +2525,11 @@ class _ExtForm extends StatelessWidget {
             textCapitalization: TextCapitalization.words,
           ),
           const SizedBox(height: 16),
-          _applyAddButton(accent, state._applyAndAddExtMember),
+          _actionButtons(
+            accent: accent,
+            onApplyAndAdd: state._applyAndAddExtMember,
+            onSameDetails: state._addMemberWithSameDetailsExt,
+          ),
           const SizedBox(height: 20),
           _addedMembersSection(
             members: state._extMembers,

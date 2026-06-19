@@ -168,6 +168,7 @@ flutter:
     - assets/icon/menu_screen/packageGuest.json
     - assets/icon/menu_screen/Home Icon.json
     - assets/icon/menu_screen/Home icon Animation.json
+    - assets/icon/menu_screen/followMembers.json
  
 
   fonts:

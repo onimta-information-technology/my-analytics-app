@@ -377,7 +377,7 @@ centerTitle: true,
                     Expanded(
                       child: GestureDetector(
                         onTap: () {
-                          context.go('/inactive-members');
+                          context.go('/inctiveMemberMain');
                         },
                         // child: const Card(
                         //   color: Color.fromARGB(255, 194, 44, 221),

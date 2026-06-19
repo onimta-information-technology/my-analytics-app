@@ -7,6 +7,7 @@ import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/main.dart';
 import 'package:ballys_reservation_app/models/Guest/guest_booking.dart';
 import 'package:ballys_reservation_app/models/birthday.dart';
+import 'package:ballys_reservation_app/screens/Inactive_memberMain.dart';
 import 'package:ballys_reservation_app/screens/member_visits/cdd_cards_screen.dart';
 import 'package:ballys_reservation_app/models/cdd/cdd_history_item.dart';
 import 'package:ballys_reservation_app/screens/member_visits/cdd_names_screen.dart';
@@ -554,6 +555,21 @@ class AppNavigation {
               ),
             ],
           ),
+
+           GoRoute(
+  path: '/inctiveMemberMain',
+  pageBuilder: (context, state) => CustomTransitionPage(
+    fullscreenDialog: true,
+    key: state.pageKey,
+    child: const InactiveMembermainScreen(),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return FadeTransition(
+        opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+        child: child,
+      );
+    },
+  ),
+  routes: [
           GoRoute(
             path: '/inactive-members',
             pageBuilder: (context, state) => CustomTransitionPage(
@@ -575,6 +591,8 @@ class AppNavigation {
                   },
             ),
           ),
+           
+        ]),
           GoRoute(
             path: '/gifts',
             pageBuilder: (context, state) => CustomTransitionPage(

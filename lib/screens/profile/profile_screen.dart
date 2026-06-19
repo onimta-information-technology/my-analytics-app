@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:ballys_reservation_app/components/dilog/add_EmailDialog.dart';
 import 'package:ballys_reservation_app/components/dilog/add_phone_dialog.dart';
 import 'package:ballys_reservation_app/components/dilog/add_whatsapp_dialog.dart';
+import 'package:ballys_reservation_app/components/dilog/follow_dialog.dart';
 import 'package:ballys_reservation_app/components/dilog/set_primary_phone_dialog.dart';
 import 'package:ballys_reservation_app/components/dilog/set_primary_email_dialog.dart';
 import 'package:ballys_reservation_app/components/dilog/set_primary_whatsapp_dialog.dart';
@@ -46,7 +48,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   bool? _memProfSH;
   String? _userMarketingCode;
   bool _useBadgeForRating = false;
-
+bool _showFollowButton = false;
   @override
   void initState() {
     super.initState();
@@ -65,6 +67,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       if (extra != null && extra is Map<String, dynamic>) {
         setState(() {
           _nogiftamount = extra['nogiftamount'] == true;
+          _showFollowButton = extra['showFollowButton'] == true;
         });
       }
 
@@ -550,173 +553,177 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                       crossAxisAlignment: CrossAxisAlignment.center,
                       mainAxisSize: MainAxisSize.max,
                       children: [
-                        Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Container(
-                              width: 200,
-                              height: 200,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    spreadRadius: 3,
-                                    blurRadius: 5,
-                                    offset: const Offset(0, 5),
-                                  ),
-                                ],
-                              ),
-                              child: GestureDetector(
-                                onTap: () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (BuildContext context) {
-                                      return Dialog(
-                                        backgroundColor: Colors.transparent,
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Hero(
-                                              tag: "guest-image",
-                                              child: guest.memImage2 != null
-                                                  ? Image.memory(
-                                                      base64Decode(
-                                                        guest.memImage2!,
-                                                      ),
-                                                      fit: BoxFit.contain,
-                                                    )
-                                                  : Image.asset(
-                                                      'assets/images/placeholder_image.jpg',
-                                                      fit: BoxFit.contain,
-                                                    ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    },
-                                  );
-                                },
-                                child: Hero(
-                                  tag: "guest-image",
-                                  child: CircleAvatar(
-                                    radius: 70,
-                                    backgroundImage: guest.memImage2 != null
-                                        ? MemoryImage(
-                                            base64Decode(guest.memImage2!),
-                                          )
-                                        : const AssetImage(
-                                            'assets/images/placeholder_image.jpg',
-                                          ),
-                                    backgroundColor: Colors.grey[200],
-                                  ),
-                                ),
-                              ),
+                       Stack(
+  clipBehavior: Clip.none,
+  children: [
+    Container(
+      width: 200,
+      height: 200,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            spreadRadius: 3,
+            blurRadius: 5,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: GestureDetector(
+        onTap: () {
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return Dialog(
+                backgroundColor: Colors.transparent,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Hero(
+                      tag: "guest-image",
+                      child: guest.memImage2 != null
+                          ? Image.memory(
+                              base64Decode(guest.memImage2!),
+                              fit: BoxFit.contain,
+                            )
+                          : Image.asset(
+                              'assets/images/placeholder_image.jpg',
+                              fit: BoxFit.contain,
                             ),
-                            // Rating badge / image positioned top-left
-                            Positioned(
-                              top: 0,
-                              left: -70,
-                              child: _useBadgeForRating
-                                  ? Hero(
-                                      tag: "rating-image-${guest.mid}",
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 6,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: _getRatingColor(guest.gRating),
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(
-                                                0.25,
-                                              ),
-                                              blurRadius: 6,
-                                              offset: const Offset(0, 3),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Text(
-                                          guest.gRating ?? 'N/A',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    )
-                                  // : Card(
-                                  //     elevation: 5,
-                                  //     shape: RoundedRectangleBorder(
-                                  //       borderRadius: BorderRadius.circular(12),
-                                  //     ),
-                                  //     child: Padding(
-                                  //       padding: const EdgeInsets.all(0),
-                                  //       child: SizedBox(
-                                  //         width: 120,
-                                  //         height: 50,
-                                  //         child: imagePath != null
-                                  //             ? Hero(
-                                  //                 tag:
-                                  //                     "rating-image-${guest.mid}",
-                                  //                 child: Image.asset(
-                                  //                   imagePath,
-                                  //                   fit: BoxFit.contain,
-                                  //                 ),
-                                  //               )
-                                  //             : Hero(
-                                  //                 tag:
-                                  //                     "rating-image-${guest.mid}",
-                                  //                 child: Image.asset(
-                                  //                   "assets/images/ratings/CLASSIC.png",
-                                  //                   fit: BoxFit.contain,
-                                  //                 ),
-                                  //               ),
-                                  //       ),
-                                  //     ),
-                                  //   ),
-                                  : Hero(
-                                      tag: "rating-image-${guest.mid}",
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 6,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: _getRatingColorBallys(
-                                            guest.gRating,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(
-                                                0.25,
-                                              ),
-                                              blurRadius: 6,
-                                              offset: const Offset(0, 3),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Text(
-                                          guest.gRating ??'N/A',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                            ),
-                          ],
-                        ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+        child: Hero(
+          tag: "guest-image",
+          child: CircleAvatar(
+            radius: 70,
+            backgroundImage: guest.memImage2 != null
+                ? MemoryImage(base64Decode(guest.memImage2!))
+                : const AssetImage('assets/images/placeholder_image.jpg'),
+            backgroundColor: Colors.grey[200],
+          ),
+        ),
+      ),
+    ),
+
+    // Rating badge — top-left (unchanged)
+  
+    Positioned(
+      top: 0,
+      left: -70,
+      child: _useBadgeForRating
+          ? Hero(
+              tag: "rating-image-${guest.mid}",
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _getRatingColor(guest.gRating),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.25),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  guest.gRating ?? 'N/A',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            )
+          : Hero(
+              tag: "rating-image-${guest.mid}",
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _getRatingColorBallys(guest.gRating),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.25),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  guest.gRating ?? 'N/A',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+    ),
+   if (_showFollowButton)
+    // ⭐ Follow button — floats on the right side, picture stays centered
+   Positioned(
+  bottom: 10,
+  right: -35,
+  child: Column(
+    children: [
+      Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(30),
+          onTap: () {
+            debugPrint('Follow button tapped'); // temporary check
+            showDialog(
+              context: context,
+              builder: (context) => FollowDialog(
+                memberId: guest.mid,
+                onSubmit: (File? photo, String description) {
+                  debugPrint('Follow photo: ${photo?.path}, description: $description');
+                },
+              ),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color.fromARGB(255, 255, 0, 0),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 4),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.25),
+                  blurRadius: 6,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.person_add_alt_1, color: Colors.white, size: 30),
+          ),
+        ),
+      ),
+      const SizedBox(height: 4),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 3)],
+        ),
+        child: const Text('Follow up', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+      ),
+    ],
+  ),
+),
+  ],
+),
                         const SizedBox(height: 24),
                         Center(
                           child: Text(

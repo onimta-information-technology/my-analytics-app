@@ -183,12 +183,12 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
                                     key: ValueKey(guest.mid),
                                     splashColor: Colors.transparent,
                                     highlightColor: Colors.transparent,
-                                    onTap: () {
-                                      ref
-                                          .read(selectedGuestProvider.notifier)
-                                          .setSelectedGuest(guest);
-                                      context.push('/home/profile');
-                                    },
+                                  onTap: () {
+  ref
+      .read(selectedGuestProvider.notifier)
+      .setSelectedGuest(guest);
+  context.push('/home/profile', extra: {'showFollowButton': true});
+},
                                     child: Card(
                                       margin: const EdgeInsets.symmetric(
                                         vertical: 5.0,

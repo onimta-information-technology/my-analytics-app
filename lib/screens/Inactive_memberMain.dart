@@ -96,7 +96,7 @@ class _InactiveMembermainScreenState extends ConsumerState<InactiveMembermainScr
                                   fit: BoxFit.contain,
                                 ),
                                 const Text(
-                                  'Follow Member',
+                                  'Follow Up',
                                   style: TextStyle(
                                     fontSize: 16.0,
                                     fontWeight: FontWeight.normal,

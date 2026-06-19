@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:ballys_reservation_app/components/Event/events.dart';
+import 'package:ballys_reservation_app/components/lastThreemonth.dart';
 import 'package:ballys_reservation_app/components/location_selector_widget.dart';
 import 'package:ballys_reservation_app/components/marketing_breakdown_chart_card.dart';
 import 'package:ballys_reservation_app/components/marketing_performance.dart';
@@ -821,6 +822,8 @@ Future<void> _fetchAndUpdateCount(
                   const MarketingBreakdownHalfPieCard(),
                   const SizedBox(height: 8),
                   const MarketingPerformanceWidget(),
+                  const SizedBox(height: 8),
+const LastThreeMonthsGuestCard(), 
                 ],
               ),
             ),

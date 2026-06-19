@@ -2507,7 +2507,7 @@ class _ExtForm extends StatelessWidget {
             ),
             _StepperField(
               controller: state._e_earlyDeparture,
-              label: 'Early Departure - Days',
+              label: 'Early D - Days',
               icon: Icons.remove_circle_outline,
               accent: accent,
               min: 0,

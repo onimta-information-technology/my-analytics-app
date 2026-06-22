@@ -906,6 +906,42 @@ class _AirTicketsSelectionScreenState
                           const Text("No", style: TextStyle(fontSize: 16)),
                         ],
                       ),
+                      /////////
+                      /// const SizedBox(height: 16),
+                      const Align(
+                        alignment: Alignment.topLeft,
+                        child: Text(
+                          "Visa",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Radio<String>(
+                            value: "Yes",
+                            // groupValue: _airportTranspotation,
+                            // onChanged: (value) {
+                            //   setState(() {
+                            //     _airportTranspotation = value!;
+                            //   });
+                            // },
+                          ),
+                          const Text("Yes", style: TextStyle(fontSize: 16)),
+                          Radio<String>(
+                            value: "No",
+                            // groupValue: _airportTranspotation,
+                            // onChanged: (value) {
+                            //   setState(() {
+                            //     _airportTranspotation = value!;
+                            //   });
+                            // },
+                          ),
+                          const Text("No", style: TextStyle(fontSize: 16)),
+                        ],
+                      ),
                       const SizedBox(height: 35),
                       SizedBox(
                         width: double.infinity,

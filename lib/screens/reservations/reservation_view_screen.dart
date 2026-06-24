@@ -1000,7 +1000,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
                       onPressed: () async {
                         Future<void> navigateToEdit() async {
                           final result = await context.push(
-                            "/reservations/new-reservation",
+                            "/reservationMain/reservations/new-reservation",
                           );
                           if (result == true && mounted) {
                             Navigator.of(context).pop(true);

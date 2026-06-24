@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dropdown_search/dropdown_search.dart';
+import 'package:ballys_reservation_app/components/air_ticket_class_selector.dart';
 
 import 'package:ballys_reservation_app/components/bottom_sheets/member_search-new_sheet.dart';
 import 'package:ballys_reservation_app/components/guest_deatils_view_spGift.dart';
@@ -23,7 +24,7 @@ import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 
-enum _Section { hotel, airTicket, extension }
+enum _Section { airTicket ,hotel }
 
 const TextStyle kInputTextStyle = TextStyle(
   fontSize: 17,
@@ -40,11 +41,10 @@ class QuickReservationScreen extends ConsumerStatefulWidget {
 
 class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     with TickerProviderStateMixin, ConnectivityMixin {
-  _Section _activeSection = _Section.hotel;
+  _Section _activeSection = _Section.airTicket;
 
   final _hotelFormKey = GlobalKey<FormState>();
   final _airFormKey = GlobalKey<FormState>();
-  final _extFormKey = GlobalKey<FormState>();
 
   bool _isLoading = false;
 
@@ -55,16 +55,17 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
   final _sharedMemberId = TextEditingController();
   final _sharedMidNumber = TextEditingController();
   final _sharedGuestName = TextEditingController();
+  final _sharedPackageAmount = TextEditingController();
   bool _sharedGuestCardVisible = false;
 
   // HOTEL members list
   List<Map<String, dynamic>> _hotelMembers = [];
 
-  final _h_packageAmount = TextEditingController();
+  // final _h_packageAmount = TextEditingController();
   final _h_noOfRooms = TextEditingController(text: '1');
   final _h_noOfPax = TextEditingController(text: '1');
   final _h_mealPlan = TextEditingController();
-  final _h_paymentBy = TextEditingController();
+  final _h_paymentBy = TextEditingController(text: 'NA');
   final _h_remarks = TextEditingController();
   final _h_marketingPerson = TextEditingController();
   final _h_approvedBy = TextEditingController();
@@ -93,9 +94,10 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
   // AIR members list
   List<Map<String, dynamic>> _airMembers = [];
 
-  final _a_packageAmount = TextEditingController();
+  // final _a_packageAmount = TextEditingController();
   final _a_noOfSeats = TextEditingController(text: '1');
-  final _a_class = TextEditingController();
+  Map<String, dynamic>? _a_selectedClass;
+  Key _a_classKey = UniqueKey();
   final _a_airlines = TextEditingController();
   final _a_arrCtrl = TextEditingController();
   final _a_depCtrl = TextEditingController();
@@ -112,26 +114,11 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
   Key _a_returnFromAirportKey = UniqueKey();
   Key _a_returnToAirportKey = UniqueKey();
 
-  // EXT members list
-  List<Map<String, dynamic>> _extMembers = [];
-
-  final _e_packageAmount = TextEditingController();
-  final _e_noOfRooms = TextEditingController(text: '1');
-  final _e_extensionDate = TextEditingController(text: '0');
-  final _e_earlyDeparture = TextEditingController(text: '0');
-  final _e_approvedBy = TextEditingController();
-  final _e_arrCtrl = TextEditingController();
-  final _e_depCtrl = TextEditingController();
-  DateTime? _e_arrDate;
-  DateTime? _e_depDate;
-
   static const _hotelColor = Color(0xFFE65C00);
   static const _airColor = Color(0xFF0277BD);
-  static const _extColor = Color(0xFF2E7D32);
 
   final _hotelScrollCtrl = ScrollController();
   final _airScrollCtrl = ScrollController();
-  final _extScrollCtrl = ScrollController();
 
   Color get _accentColor {
     switch (_activeSection) {
@@ -139,8 +126,6 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
         return _hotelColor;
       case _Section.airTicket:
         return _airColor;
-      case _Section.extension:
-        return _extColor;
     }
   }
 
@@ -158,7 +143,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _sharedMemberId,
       _sharedMidNumber,
       _sharedGuestName,
-      _h_packageAmount,
+      _sharedPackageAmount,
       _h_noOfRooms,
       _h_noOfPax,
       _h_mealPlan,
@@ -168,25 +153,16 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _h_approvedBy,
       _h_arrivalCtrl,
       _h_departureCtrl,
-      _a_packageAmount,
+     // _a_packageAmount,
       _a_noOfSeats,
-      _a_class,
       _a_airlines,
       _a_arrCtrl,
       _a_depCtrl,
-      _e_packageAmount,
-      _e_noOfRooms,
-      _e_extensionDate,
-      _e_earlyDeparture,
-      _e_approvedBy,
-      _e_arrCtrl,
-      _e_depCtrl,
     ]) {
       c.dispose();
     }
     _hotelScrollCtrl.dispose();
     _airScrollCtrl.dispose();
-    _extScrollCtrl.dispose();
     super.dispose();
   }
 
@@ -349,7 +325,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _hotelMembers.add({
         'guestName': _sharedGuestName.text,
         'memberId': _sharedMemberId.text,
-        'packageAmount': _h_packageAmount.text,
+        'packageAmount': _sharedPackageAmount.text,
         'hotel': _selectedHotelName ?? '',
         'arrival': _h_arrivalCtrl.text,
         'departure': _h_departureCtrl.text,
@@ -382,7 +358,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _airMembers.add({
         'guestName': _sharedGuestName.text,
         'memberId': _sharedMemberId.text,
-        'packageAmount': _a_packageAmount.text,
+        'packageAmount': _sharedPackageAmount.text,
         'fromAirport': _a_fromAirport != null
             ? '${_a_fromAirport!.cityName ?? ''} (${_a_fromAirport!.airportCode ?? ''})'
             : '',
@@ -399,7 +375,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
         'arrDate': _a_arrCtrl.text,
         'depDate': _a_depCtrl.text,
         'noOfSeats': _a_noOfSeats.text,
-        'class': _a_class.text,
+        'class': _a_selectedClass?['type'] ?? '',
         'airlines': _a_airlines.text,
       });
       // Clear only member identity fields
@@ -408,33 +384,6 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     _showAddedSnack(_airMembers.length, _airColor);
     _scrollToTop(_airScrollCtrl);
   }
-
-  // ── Add Member with Same Details — EXTENSION ────────────────────────────────
-  void _addMemberWithSameDetailsExt() {
-    if (_sharedGuestName.text.trim().isEmpty &&
-        _sharedMemberId.text.trim().isEmpty) {
-      _showRequiredSnack();
-      return;
-    }
-    setState(() {
-      _extMembers.add({
-        'guestName': _sharedGuestName.text,
-        'memberId': _sharedMemberId.text,
-        'packageAmount': _e_packageAmount.text,
-        'arrival': _e_arrCtrl.text,
-        'departure': _e_depCtrl.text,
-        'noOfRooms': _e_noOfRooms.text,
-        'extensionDate': _e_extensionDate.text,
-        'earlyDeparture': _e_earlyDeparture.text,
-        'approvedBy': _e_approvedBy.text,
-      });
-      // Clear only member identity fields
-      _resetSharedGuest();
-    });
-    _showAddedSnack(_extMembers.length, _extColor);
-    _scrollToTop(_extScrollCtrl);
-  }
-
 
   void _applyAndAddHotelMember() {
     if (_sharedGuestName.text.trim().isEmpty &&
@@ -446,7 +395,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _hotelMembers.add({
         'guestName': _sharedGuestName.text,
         'memberId': _sharedMemberId.text,
-        'packageAmount': _h_packageAmount.text,
+        'packageAmount': _sharedPackageAmount.text,
         'hotel': _selectedHotelName ?? '',
         'arrival': _h_arrivalCtrl.text,
         'departure': _h_departureCtrl.text,
@@ -462,11 +411,11 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
         'approvedBy': _h_approvedBy.text,
       });
       _resetSharedGuest();
-      _h_packageAmount.clear();
+      _sharedPackageAmount.clear();
       _h_noOfRooms.text = '1';
       _h_noOfPax.text = '1';
       _h_mealPlan.clear();
-      _h_paymentBy.clear();
+      _h_paymentBy.text = 'NA';
       _h_remarks.clear();
       _h_marketingPerson.clear();
       _h_approvedBy.clear();
@@ -505,7 +454,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _airMembers.add({
         'guestName': _sharedGuestName.text,
         'memberId': _sharedMemberId.text,
-        'packageAmount': _a_packageAmount.text,
+        'packageAmount': _sharedPackageAmount.text,
         'fromAirport': _a_fromAirport != null
             ? '${_a_fromAirport!.cityName ?? ''} (${_a_fromAirport!.airportCode ?? ''})'
             : '',
@@ -522,13 +471,14 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
         'arrDate': _a_arrCtrl.text,
         'depDate': _a_depCtrl.text,
         'noOfSeats': _a_noOfSeats.text,
-        'class': _a_class.text,
+        'class': _a_selectedClass?['type'] ?? '',
         'airlines': _a_airlines.text,
       });
       _resetSharedGuest();
-      _a_packageAmount.clear();
+      _sharedPackageAmount.clear();
       _a_noOfSeats.text = '1';
-      _a_class.clear();
+      _a_selectedClass = null;
+      _a_classKey = UniqueKey();
       _a_airlines.clear();
       _a_arrCtrl.clear();
       _a_depCtrl.clear();
@@ -546,40 +496,6 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     });
     _showAddedSnack(_airMembers.length, _airColor);
     _scrollToTop(_airScrollCtrl);
-  }
-
-  // ── Apply & Add — EXTENSION ─────────────────────────────────────────────────
-  void _applyAndAddExtMember() {
-    if (_sharedGuestName.text.trim().isEmpty &&
-        _sharedMemberId.text.trim().isEmpty) {
-      _showRequiredSnack();
-      return;
-    }
-    setState(() {
-      _extMembers.add({
-        'guestName': _sharedGuestName.text,
-        'memberId': _sharedMemberId.text,
-        'packageAmount': _e_packageAmount.text,
-        'arrival': _e_arrCtrl.text,
-        'departure': _e_depCtrl.text,
-        'noOfRooms': _e_noOfRooms.text,
-        'extensionDate': _e_extensionDate.text,
-        'earlyDeparture': _e_earlyDeparture.text,
-        'approvedBy': _e_approvedBy.text,
-      });
-      _resetSharedGuest();
-      _e_packageAmount.clear();
-      _e_noOfRooms.text = '1';
-      _e_extensionDate.text = '0';
-      _e_earlyDeparture.text = '0';
-      _e_approvedBy.clear();
-      _e_arrCtrl.clear();
-      _e_depCtrl.clear();
-      _e_arrDate = null;
-      _e_depDate = null;
-    });
-    _showAddedSnack(_extMembers.length, _extColor);
-    _scrollToTop(_extScrollCtrl);
   }
 
   // ── Guest search ─────────────────────────────────────────────────────────────
@@ -838,17 +754,16 @@ No Of Pax            : ${m['noOfPax']}
 Room Type            : ${m['roomType']}
 Room Category        : ${m['roomCategory']}
 ECI/LCO Facility     : ${m['eciLco']}
-Meal Plan            : ${m['mealPlan']}
 Payment By           : ${m['paymentBy']}
 Remarks              : ${m['remarks']}
-Approved by.         : ${m['approvedBy']}
+
 *''';
 
   String _buildHotelText() {
     final current = {
       'guestName': _sharedGuestName.text,
       'memberId': _sharedMemberId.text,
-      'packageAmount': _h_packageAmount.text,
+      'packageAmount': _sharedPackageAmount.text,
       'hotel': _selectedHotelName ?? '',
       'arrival': _h_arrivalCtrl.text,
       'departure': _h_departureCtrl.text,
@@ -861,7 +776,6 @@ Approved by.         : ${m['approvedBy']}
       'paymentBy': _h_paymentBy.text,
       'remarks': _h_remarks.text,
       'marketingPerson': _h_marketingPerson.text,
-      'approvedBy': _h_approvedBy.text,
     };
     if (_hotelMembers.isEmpty) return _singleHotelText(current);
     final all = [
@@ -913,7 +827,7 @@ Round Trip           : ${isRound ? 'Yes' : 'No'}''';
     final current = {
       'guestName': _sharedGuestName.text,
       'memberId': _sharedMemberId.text,
-      'packageAmount': _a_packageAmount.text,
+      'packageAmount': _sharedPackageAmount.text,
       'fromAirport': (fromCode.isNotEmpty && fromCity.isNotEmpty)
           ? '$fromCity ($fromCode)'
           : '',
@@ -930,7 +844,7 @@ Round Trip           : ${isRound ? 'Yes' : 'No'}''';
       'arrDate': _a_arrCtrl.text,
       'depDate': _a_depCtrl.text,
       'noOfSeats': _a_noOfSeats.text,
-      'class': _a_class.text,
+      'class': _a_selectedClass?['type'] ?? '',
       'airlines': _a_airlines.text,
     };
     if (_airMembers.isEmpty) return _singleAirText(current);
@@ -945,48 +859,6 @@ Round Trip           : ${isRound ? 'Yes' : 'No'}''';
       if (i > 0) buf.writeln('\n');
       buf.writeln('*── Member ${i + 1} ──*');
       buf.write(_singleAirText(all[i]));
-    }
-    return buf.toString();
-  }
-
-  // ── Message builders — EXT ───────────────────────────────────────────────────
-  String _singleExtText(Map<String, dynamic> m) =>
-      '''
-*EXTENSION*
-Name of the Guest              : ${m['guestName']}
-Membership No                   : ${m['memberId']}
-Package Amount                 : ${m['packageAmount']}
-Arrival                                  : ${m['arrival']}
-Departure                            : ${m['departure']}
-No of Room/s                      : ${m['noOfRooms']}
-Extension Date                   : ${m['extensionDate']}
-Early Departure                  : ${m['earlyDeparture']}
-Extension Approved By     : ${m['approvedBy']}''';
-
-  String _buildExtText() {
-    final current = {
-      'guestName': _sharedGuestName.text,
-      'memberId': _sharedMemberId.text,
-      'packageAmount': _e_packageAmount.text,
-      'arrival': _e_arrCtrl.text,
-      'departure': _e_depCtrl.text,
-      'noOfRooms': _e_noOfRooms.text,
-      'extensionDate': _e_extensionDate.text,
-      'earlyDeparture': _e_earlyDeparture.text,
-      'approvedBy': _e_approvedBy.text,
-    };
-    if (_extMembers.isEmpty) return _singleExtText(current);
-    final all = [
-      ..._extMembers,
-      if ((current['guestName'] as String).isNotEmpty ||
-          (current['memberId'] as String).isNotEmpty)
-        current,
-    ];
-    final buf = StringBuffer();
-    for (int i = 0; i < all.length; i++) {
-      if (i > 0) buf.writeln('\n');
-      buf.writeln('*── Member ${i + 1} ──*');
-      buf.write(_singleExtText(all[i]));
     }
     return buf.toString();
   }
@@ -1017,9 +889,6 @@ Extension Approved By     : ${m['approvedBy']}''';
         break;
       case _Section.airTicket:
         _copyToClipboard(_buildAirText());
-        break;
-      case _Section.extension:
-        _copyToClipboard(_buildExtText());
         break;
     }
   }
@@ -1070,19 +939,13 @@ Extension Approved By     : ${m['approvedBy']}''';
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 14),
                   child: Row(
                     children: [
-                      _sectionTab(_Section.hotel, Icons.hotel_rounded, 'Hotel'),
-                      const SizedBox(width: 8),
                       _sectionTab(
                         _Section.airTicket,
                         Icons.flight_rounded,
                         'Air Ticket',
                       ),
                       const SizedBox(width: 8),
-                      _sectionTab(
-                        _Section.extension,
-                        Icons.date_range_rounded,
-                        'Extension',
-                      ),
+                      _sectionTab(_Section.hotel, Icons.hotel_rounded, 'Hotel'),
                     ],
                   ),
                 ),
@@ -1091,9 +954,7 @@ Extension Approved By     : ${m['approvedBy']}''';
                     duration: const Duration(milliseconds: 250),
                     child: _activeSection == _Section.hotel
                         ? _HotelForm(key: const ValueKey('hotel'), state: this)
-                        : _activeSection == _Section.airTicket
-                        ? _AirForm(key: const ValueKey('air'), state: this)
-                        : _ExtForm(key: const ValueKey('ext'), state: this),
+                        : _AirForm(key: const ValueKey('air'), state: this),
                   ),
                 ),
               ],
@@ -1531,7 +1392,8 @@ Widget _actionButtons({
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+              borderRadius: BorderRadius.circular(12),
+            ),
             elevation: 0,
           ),
           icon: const Icon(Icons.person_add_alt_1_rounded),
@@ -1551,7 +1413,8 @@ Widget _actionButtons({
             side: BorderSide(color: accent, width: 1.8),
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
           icon: const Icon(Icons.group_add_rounded),
           label: const Text(
@@ -1563,8 +1426,6 @@ Widget _actionButtons({
     ],
   );
 }
-
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Airport dropdown
@@ -1741,7 +1602,7 @@ class _HotelForm extends StatelessWidget {
               ),
             ),
           TextFormField(
-            controller: state._h_packageAmount,
+            controller: state._sharedPackageAmount,
             style: kInputTextStyle,
             decoration: _fieldDeco(
               'Package Amount',
@@ -1749,6 +1610,54 @@ class _HotelForm extends StatelessWidget {
               accent: accent,
             ),
             keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 12),
+          _dateField(
+            context,
+            'Arrival Date *',
+            state._h_arrivalCtrl,
+            accent,
+            () async {
+              final d = await state._pickDate(
+                context,
+                label: 'Select Arrival Date',
+                initial: state._h_arrivalDate,
+              );
+              if (d != null) {
+                state._h_arrivalDate = d;
+                state._h_arrivalCtrl.text = state._fmt(d);
+                if (state._h_departureDate != null &&
+                    !state._h_departureDate!.isAfter(d)) {
+                  state._h_departureDate = null;
+                  state._h_departureCtrl.clear();
+                }
+                // ignore: invalid_use_of_protected_member
+                (context as Element).markNeedsBuild();
+              }
+            },
+          ),
+          const SizedBox(height: 12),
+          _dateField(
+            context,
+            'Departure Date *',
+            state._h_departureCtrl,
+            accent,
+            () async {
+              final d = await state._pickDate(
+                context,
+                label: 'Select Departure Date',
+                initial: state._h_departureDate,
+                minDate: state._h_arrivalDate != null
+                    ? state._h_arrivalDate!.add(const Duration(days: 1))
+                    : null,
+              );
+              if (d != null) {
+                state._h_departureDate = d;
+                state._h_departureCtrl.text = state._fmt(d);
+                // ignore: invalid_use_of_protected_member
+                (context as Element).markNeedsBuild();
+              }
+            },
           ),
           const SizedBox(height: 12),
           DropdownSearch<Map<String, dynamic>>(
@@ -1958,54 +1867,7 @@ class _HotelForm extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          _dateField(
-            context,
-            'Arrival Date *',
-            state._h_arrivalCtrl,
-            accent,
-            () async {
-              final d = await state._pickDate(
-                context,
-                label: 'Select Arrival Date',
-                initial: state._h_arrivalDate,
-              );
-              if (d != null) {
-                state._h_arrivalDate = d;
-                state._h_arrivalCtrl.text = state._fmt(d);
-                if (state._h_departureDate != null &&
-                    !state._h_departureDate!.isAfter(d)) {
-                  state._h_departureDate = null;
-                  state._h_departureCtrl.clear();
-                }
-                // ignore: invalid_use_of_protected_member
-                (context as Element).markNeedsBuild();
-              }
-            },
-          ),
-          const SizedBox(height: 12),
-          _dateField(
-            context,
-            'Departure Date *',
-            state._h_departureCtrl,
-            accent,
-            () async {
-              final d = await state._pickDate(
-                context,
-                label: 'Select Departure Date',
-                initial: state._h_departureDate,
-                minDate: state._h_arrivalDate != null
-                    ? state._h_arrivalDate!.add(const Duration(days: 1))
-                    : null,
-              );
-              if (d != null) {
-                state._h_departureDate = d;
-                state._h_departureCtrl.text = state._fmt(d);
-                // ignore: invalid_use_of_protected_member
-                (context as Element).markNeedsBuild();
-              }
-            },
-          ),
-          const SizedBox(height: 12),
+          
           _rowPair(
             _StepperField(
               controller: state._h_noOfRooms,
@@ -2032,42 +1894,26 @@ class _HotelForm extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          _rowPair(
-            TextFormField(
-              controller: state._h_mealPlan,
-              style: kInputTextStyle,
-              decoration: _fieldDeco(
-                'Meal Plan',
-                icon: Icons.restaurant_outlined,
-                accent: accent,
-              ),
-              textCapitalization: TextCapitalization.words,
-            ),
-            TextFormField(
-              controller: state._h_paymentBy,
-              style: kInputTextStyle,
-              decoration: _fieldDeco(
-                'Payment By',
-                icon: Icons.payment_outlined,
-                accent: accent,
-              ),
-              textCapitalization: TextCapitalization.words,
-            ),
-          ),
-          const SizedBox(height: 12),
-          // _rowPair(
-          // TextFormField(controller: state._h_marketingPerson, style: kInputTextStyle, decoration: _fieldDeco('Marketing Person', icon: Icons.support_agent_outlined, accent: accent), textCapitalization: TextCapitalization.words),
-          TextFormField(
-            controller: state._h_approvedBy,
-            style: kInputTextStyle,
-            decoration: _fieldDeco(
-              'Approved By',
-              icon: Icons.verified_user_outlined,
+
+          _LabeledCard(
+            label: 'Payment By',
+            accent: accent,
+            child: _ChipSelector(
+              options: const [
+                'NA',
+                'By Guest',
+                'By Hamoos',
+                'By Guest & Hamoos',
+              ],
+              selected: state._h_paymentBy.text.isEmpty
+                  ? 'NA'
+                  : state._h_paymentBy.text,
               accent: accent,
+              onChanged: (v) =>
+                  state.setState(() => state._h_paymentBy.text = v),
             ),
-            textCapitalization: TextCapitalization.words,
           ),
-          // ),
+
           const SizedBox(height: 12),
           TextFormField(
             controller: state._h_remarks,
@@ -2163,7 +2009,7 @@ class _AirForm extends StatelessWidget {
               ),
             ),
           TextFormField(
-            controller: state._a_packageAmount,
+            controller: state._sharedPackageAmount,
             style: kInputTextStyle,
             decoration: _fieldDeco(
               'Package Amount',
@@ -2173,6 +2019,51 @@ class _AirForm extends StatelessWidget {
             keyboardType: TextInputType.number,
           ),
           const SizedBox(height: 16),
+           _dateField(
+            context,
+            'Arrival Date',
+            state._a_arrCtrl,
+            accent,
+            () async {
+              final d = await state._pickDate(
+                context,
+                label: 'Select Arrival Date',
+                initial: state._a_arrDate,
+              );
+              if (d != null) {
+                state._a_arrDate = d;
+                state._a_arrCtrl.text = state._fmt(
+                  d,
+                ); // ignore: invalid_use_of_protected_member
+                (context as Element).markNeedsBuild();
+              }
+            },
+          ),
+          const SizedBox(height: 12),
+          _dateField(
+            context,
+            'Departure Date',
+            state._a_depCtrl,
+            accent,
+            () async {
+              final d = await state._pickDate(
+                context,
+                label: 'Select Departure Date',
+                initial: state._a_depDate,
+                minDate: state._a_arrDate != null
+                    ? state._a_arrDate!.add(const Duration(days: 1))
+                    : null,
+              );
+              if (d != null) {
+                state._a_depDate = d;
+                state._a_depCtrl.text = state._fmt(
+                  d,
+                ); // ignore: invalid_use_of_protected_member
+                (context as Element).markNeedsBuild();
+              }
+            },
+          ),
+          const SizedBox(height: 12),
           _LabeledCard(
             label: 'Departure Flight',
             accent: accent,
@@ -2277,69 +2168,23 @@ class _AirForm extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 12),
-          _dateField(
-            context,
-            'Arrival Date',
-            state._a_arrCtrl,
-            accent,
-            () async {
-              final d = await state._pickDate(
-                context,
-                label: 'Select Arrival Date',
-                initial: state._a_arrDate,
-              );
-              if (d != null) {
-                state._a_arrDate = d;
-                state._a_arrCtrl.text = state._fmt(
-                  d,
-                ); // ignore: invalid_use_of_protected_member
-                (context as Element).markNeedsBuild();
-              }
-            },
-          ),
-          const SizedBox(height: 12),
-          _dateField(
-            context,
-            'Departure Date',
-            state._a_depCtrl,
-            accent,
-            () async {
-              final d = await state._pickDate(
-                context,
-                label: 'Select Departure Date',
-                initial: state._a_depDate,
-                minDate: state._a_arrDate != null
-                    ? state._a_arrDate!.add(const Duration(days: 1))
-                    : null,
-              );
-              if (d != null) {
-                state._a_depDate = d;
-                state._a_depCtrl.text = state._fmt(
-                  d,
-                ); // ignore: invalid_use_of_protected_member
-                (context as Element).markNeedsBuild();
-              }
-            },
-          ),
-          const SizedBox(height: 12),
-          _rowPair(
+         
+       
             _StepperField(
               controller: state._a_noOfSeats,
               label: 'No of Seats',
               icon: Icons.event_seat_outlined,
               accent: accent,
             ),
-            TextFormField(
-              controller: state._a_class,
-              style: kInputTextStyle,
-              decoration: _fieldDeco(
-                'Class',
-                icon: Icons.class_outlined,
-                accent: accent,
-              ),
-              textCapitalization: TextCapitalization.words,
+              const SizedBox(height: 12),
+            AirTicketClassSelector(
+              key: state._a_classKey,
+              selectedClass: state._a_selectedClass,
+              onClassSelected: (selectedClass) => state.setState(() {
+                state._a_selectedClass = selectedClass;
+              }),
             ),
-          ),
+         //),
           const SizedBox(height: 12),
           TextFormField(
             controller: state._a_airlines,
@@ -2352,6 +2197,7 @@ class _AirForm extends StatelessWidget {
             textCapitalization: TextCapitalization.words,
           ),
           const SizedBox(height: 16),
+          
           _actionButtons(
             accent: accent,
             onApplyAndAdd: state._applyAndAddAirMember,
@@ -2366,179 +2212,6 @@ class _AirForm extends StatelessWidget {
                 () => state.setState(() => state._airMembers.removeAt(i)),
           ),
           // _PreviewCard(text: state._buildAirText(), accent: accent),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// EXTENSION FORM
-// ─────────────────────────────────────────────────────────────────────────────
-class _ExtForm extends StatelessWidget {
-  final _QuickReservationScreenState state;
-  const _ExtForm({super.key, required this.state});
-
-  @override
-  Widget build(BuildContext context) {
-    const accent = _QuickReservationScreenState._extColor;
-    return Form(
-      key: state._extFormKey,
-      child: ListView(
-        controller: state._extScrollCtrl,
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
-        children: [
-          _sectionHeader(
-            'Extension / Early Departure',
-            accent,
-            Icons.date_range_rounded,
-          ),
-          _guestIdentityRow(
-            context: context,
-            memberIdCtrl: state._sharedMemberId,
-            memberIdNumberCtrl: state._sharedMidNumber,
-            memberNameCtrl: state._sharedGuestName,
-            accent: accent,
-            midLabel: 'Membership No *',
-            nameLabel: 'Guest Name',
-            onSearchById: () => state._openGuestSearch(
-              iid: 8002,
-              onCardVisible: () =>
-                  state.setState(() => state._sharedGuestCardVisible = true),
-            ),
-            onSearchByName: () => state._openGuestSearch(
-              iid: 8003,
-              onCardVisible: () =>
-                  state.setState(() => state._sharedGuestCardVisible = true),
-            ),
-            onProfileTap: () => state._navigateToProfile(
-              state._sharedMemberId.text,
-              state._sharedGuestName.text,
-            ),
-            profileEnabled: state._sharedGuestCardVisible,
-            isNumericOnly: state._isNumericOnlyLocation,
-            prefixes: state._prefixes,
-            selectedPrefix: state._selectedPrefix,
-            onPrefixChanged: (v) => state.setState(() {
-              state._selectedPrefix = v;
-              state._sharedMemberId.text = '$v${state._sharedMidNumber.text}';
-            }),
-          ),
-          const SizedBox(height: 12),
-          if (state._sharedGuestCardVisible &&
-              state._sharedMemberId.text.isNotEmpty &&
-              state._sharedGuestName.text.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: GuestDisplayCardSpecialGiftview(
-                memberIdText: state._sharedMemberId.text,
-                memberNameText: state._sharedGuestName.text,
-                showCard: true,
-                showLastVisitDate: true,
-              ),
-            ),
-          TextFormField(
-            controller: state._e_packageAmount,
-            style: kInputTextStyle,
-            decoration: _fieldDeco(
-              'Package Amount',
-              icon: Icons.currency_rupee,
-              accent: accent,
-            ),
-            keyboardType: TextInputType.number,
-          ),
-          const SizedBox(height: 12),
-          _StepperField(
-            controller: state._e_noOfRooms,
-            label: 'No of Rooms',
-            icon: Icons.door_back_door_outlined,
-            accent: accent,
-          ),
-          const SizedBox(height: 12),
-          _dateField(
-            context,
-            'Arrival Date',
-            state._e_arrCtrl,
-            accent,
-            () async {
-              final d = await state._pickDate(
-                context,
-                label: 'Select Arrival Date',
-                initial: state._e_arrDate,
-              );
-              if (d != null) {
-                state._e_arrDate = d;
-                state._e_arrCtrl.text = state._fmt(
-                  d,
-                ); // ignore: invalid_use_of_protected_member
-                (context as Element).markNeedsBuild();
-              }
-            },
-          ),
-          const SizedBox(height: 12),
-          _dateField(
-            context,
-            'Departure Date',
-            state._e_depCtrl,
-            accent,
-            () async {
-              final d = await state._pickDate(
-                context,
-                label: 'Select Departure Date',
-                initial: state._e_depDate,
-              );
-              if (d != null) {
-                state._e_depDate = d;
-                state._e_depCtrl.text = state._fmt(
-                  d,
-                ); // ignore: invalid_use_of_protected_member
-                (context as Element).markNeedsBuild();
-              }
-            },
-          ),
-          const SizedBox(height: 12),
-          _rowPair(
-            _StepperField(
-              controller: state._e_extensionDate,
-              label: 'Extension + Days',
-              icon: Icons.add_circle_outline,
-              accent: accent,
-              min: 0,
-            ),
-            _StepperField(
-              controller: state._e_earlyDeparture,
-              label: 'Early D - Days',
-              icon: Icons.remove_circle_outline,
-              accent: accent,
-              min: 0,
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: state._e_approvedBy,
-            style: kInputTextStyle,
-            decoration: _fieldDeco(
-              'Extension Approved By\n(Required above 3 nights)',
-              icon: Icons.verified_user_outlined,
-              accent: accent,
-            ),
-            textCapitalization: TextCapitalization.words,
-          ),
-          const SizedBox(height: 16),
-          _actionButtons(
-            accent: accent,
-            onApplyAndAdd: state._applyAndAddExtMember,
-            onSameDetails: state._addMemberWithSameDetailsExt,
-          ),
-          const SizedBox(height: 20),
-          _addedMembersSection(
-            members: state._extMembers,
-            accent: accent,
-            textBuilder: state._singleExtText,
-            onRemove: (i) =>
-                () => state.setState(() => state._extMembers.removeAt(i)),
-          ),
-          // _PreviewCard(text: state._buildExtText(), accent: accent),
         ],
       ),
     );
@@ -2767,110 +2440,65 @@ class _PreviewCard extends StatelessWidget {
   final Color accent;
   const _PreviewCard({required this.text, required this.accent});
 
-  // List<TextSpan> _buildSpans(String fullText) {
-  //   final lines = fullText.split('\n');
-  //   final spans = <TextSpan>[];
-  //   for (int i = 0; i < lines.length; i++) {
-  //     final line = lines[i];
-  //     final colonIdx = line.indexOf(':');
-  //     if (colonIdx != -1) {
-  //       spans.add(
-  //         TextSpan(
-  //           text: line.substring(0, colonIdx + 1),
-  //           style: const TextStyle(
-  //             fontSize: 15,
-  //             height: 1.6,
-  //             fontFamily: 'monospace',
-  //             color: Color(0xFF2C3E50),
-  //             fontWeight: FontWeight.normal,
-  //           ),
-  //         ),
-  //       );
-  //       spans.add(
-  //         TextSpan(
-  //           text: line.substring(colonIdx + 1),
-  //           style: const TextStyle(
-  //             fontSize: 15,
-  //             height: 1.6,
-  //             fontFamily: 'monospace',
-  //             color: Color(0xFF2C3E50),
-  //             fontWeight: FontWeight.bold,
-  //           ),
-  //         ),
-  //       );
-  //     } else {
-  //       spans.add(
-  //         TextSpan(
-  //           text: line.replaceAll('*', ''),
-  //           style: TextStyle(
-  //             fontSize: 15,
-  //             height: 1.6,
-  //             fontFamily: 'monospace',
-  //             color: accent,
-  //             fontWeight: FontWeight.bold,
-  //           ),
-  //         ),
-  //       );
-  //     }
-  //     if (i < lines.length - 1) spans.add(const TextSpan(text: '\n'));
-  //   }
-  //   return spans;
-  // }
-List<TextSpan> _buildSpans(String fullText) {
-  final lines = fullText.split('\n');
-  final spans = <TextSpan>[];
-  for (int i = 0; i < lines.length; i++) {
-    final line = lines[i];
-    final colonIdx = line.indexOf(':');
-    final trimmed = line.trim();
-    final isTitleLine = trimmed.startsWith('*') &&
-        trimmed.endsWith('*') &&
-        !trimmed.contains('Member'); // exclude the "── Member N ──" separators
+  List<TextSpan> _buildSpans(String fullText) {
+    final lines = fullText.split('\n');
+    final spans = <TextSpan>[];
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      final colonIdx = line.indexOf(':');
+      final trimmed = line.trim();
+      final isTitleLine =
+          trimmed.startsWith('*') &&
+          trimmed.endsWith('*') &&
+          !trimmed.contains(
+            'Member',
+          ); // exclude the "── Member N ──" separators
 
-    if (colonIdx != -1) {
-      spans.add(
-        TextSpan(
-          text: line.substring(0, colonIdx + 1),
-          style: const TextStyle(
-            fontSize: 18,
-            height: 1.6,
-            fontFamily: 'monospace',
-            color: Color.fromARGB(255, 0, 0, 0),
-            fontWeight: FontWeight.bold,
+      if (colonIdx != -1) {
+        spans.add(
+          TextSpan(
+            text: line.substring(0, colonIdx + 1),
+            style: const TextStyle(
+              fontSize: 18,
+              height: 1.6,
+              fontFamily: 'monospace',
+              color: Color.fromARGB(255, 0, 0, 0),
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        ),
-      );
-      spans.add(
-        TextSpan(
-          text: line.substring(colonIdx + 1),
-          style: const TextStyle(
-            fontSize: 18,
-            height: 1.6,
-            fontFamily: 'monospace',
-            color: Color.fromARGB(255, 0, 0, 0),
-            fontWeight: FontWeight.bold,
+        );
+        spans.add(
+          TextSpan(
+            text: line.substring(colonIdx + 1),
+            style: const TextStyle(
+              fontSize: 18,
+              height: 1.6,
+              fontFamily: 'monospace',
+              color: Color.fromARGB(255, 0, 0, 0),
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        ),
-      );
-    } else {
-      spans.add(
-        TextSpan(
-          text: line.replaceAll('*', ''),
-          style: TextStyle(
-            fontSize: isTitleLine ? 19 : 18,        // ← bigger for the title
-            height: 1.6,
-            fontFamily: 'monospace',
-            color: accent,
-            fontWeight: FontWeight.bold,
-            letterSpacing: isTitleLine ? 0.5 : 0,
+        );
+      } else {
+        spans.add(
+          TextSpan(
+            text: line.replaceAll('*', ''),
+            style: TextStyle(
+              fontSize: isTitleLine ? 19 : 18, // ← bigger for the title
+              height: 1.6,
+              fontFamily: 'monospace',
+              color: accent,
+              fontWeight: FontWeight.bold,
+              letterSpacing: isTitleLine ? 0.5 : 0,
+            ),
           ),
-        ),
-      );
+        );
+      }
+      if (i < lines.length - 1) spans.add(const TextSpan(text: '\n'));
     }
-    if (i < lines.length - 1) spans.add(const TextSpan(text: '\n'));
+    return spans;
   }
-  return spans;
-}
+
   @override
   Widget build(BuildContext context) {
     return Container(

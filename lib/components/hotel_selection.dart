@@ -84,7 +84,8 @@ class _HotelAndRoomSelectionBottomSheetState
   int numberOfRooms = 1;
 
   List<HotelDescip> hotelList = [];
-
+String selectedEcLcoFacility = 'NA';
+String selectedByPaymnet = 'NA';
   void _selectDateRange(BuildContext context) async {
     DateTimeRange? pickedDateRange = await showDateRangePicker(
       context: context,
@@ -406,6 +407,8 @@ class _HotelAndRoomSelectionBottomSheetState
 
       editMode = false;
       editIndex = null;
+      selectedEcLcoFacility = 'NA';
+      selectedByPaymnet = 'NA';
     });
   }
 
@@ -784,7 +787,61 @@ class _HotelAndRoomSelectionBottomSheetState
                           },
                         ),
                         const SizedBox(height: 16),
-
+// ── EC/LCO Facility Dropdown ────────────────────────────
+DropdownButtonFormField<String>(
+  value: selectedEcLcoFacility,
+  decoration: const InputDecoration(
+    labelText: 'EC/LCO Facility',
+    labelStyle: TextStyle(
+      fontSize: 20,
+      fontWeight: FontWeight.bold,
+    ),
+    border: OutlineInputBorder(),
+  ),
+  style: const TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.bold,
+    color: Colors.black,
+  ),
+  icon: const Icon(Icons.arrow_drop_down, size: 30),
+  items: const [
+    DropdownMenuItem(value: 'NA',        child: Text('NA')),
+    DropdownMenuItem(value: 'ECL',       child: Text('ECL')),
+    DropdownMenuItem(value: 'LCO',       child: Text('LCO')),
+    DropdownMenuItem(value: 'ECL & LCO', child: Text('ECL & LCO')),
+  ],
+  onChanged: (value) {
+    setState(() => selectedEcLcoFacility = value ?? 'NA');
+  },
+),
+const SizedBox(height: 16),
+DropdownButtonFormField<String>(
+  value: selectedByPaymnet,
+  decoration: const InputDecoration(
+    labelText: 'Payment By',
+    labelStyle: TextStyle(
+      fontSize: 20,
+      fontWeight: FontWeight.bold,
+    ),
+    border: OutlineInputBorder(),
+  ),
+  style: const TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.bold,
+    color: Colors.black,
+  ),
+  icon: const Icon(Icons.arrow_drop_down, size: 30),
+  items: const [
+    DropdownMenuItem(value: 'NA',        child: Text('NA')),
+    DropdownMenuItem(value: 'By Guest',       child: Text('By Guest')),
+    DropdownMenuItem(value: 'By Hamoos ',       child: Text('By Hamoos')),
+    DropdownMenuItem(value: 'By Guest & Hamoos', child: Text('By Guest & Hamoos')),
+  ],
+  onChanged: (value) {
+    setState(() => selectedByPaymnet = value ?? 'NA');
+  },
+),
+const SizedBox(height: 16),
                         // ── Cost Calculator Button ─────────────
                         SizedBox(
                           width: double.infinity,

@@ -1,6 +1,7 @@
 import 'package:ballys_reservation_app/components/air_ticket_class_selector.dart';
 import 'package:ballys_reservation_app/components/custom_airport_field.dart';
 import 'package:ballys_reservation_app/components/flight_card.dart';
+import 'package:ballys_reservation_app/components/passport_upload_widget.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/airport_repository.dart';
 import 'package:ballys_reservation_app/models/airport_search_response.dart';
@@ -54,7 +55,8 @@ class _AirTicketsSelectionScreenState
       ValueNotifier<List<Map<String, dynamic>>>([]);
 
   final ValueNotifier<String> costNotifier = ValueNotifier<String>("0");
-
+  final List<String> _contactPersons = ["test 1", "test 2"];
+List<PassportFile> _passportFiles = [];
   @override
   void initState() {
     super.initState();
@@ -116,7 +118,7 @@ class _AirTicketsSelectionScreenState
   int numberOfRooms = 1;
 
   List<FlightBooking> flightList = [];
-
+String? _selectedContactPerson;
   void _selectDateRange(BuildContext context) async {
     DateTimeRange? pickedDateRange = await showDateRangePicker(
       context: context,
@@ -419,6 +421,7 @@ class _AirTicketsSelectionScreenState
 
       editMode = false;
       editIndex = null;
+      _passportFiles = [];
     });
   }
 
@@ -836,6 +839,53 @@ class _AirTicketsSelectionScreenState
                                 style: TextStyle(fontSize: 18)),
                           ],
                         ),
+                           const SizedBox(height: 16),
+  PassportUploadWidget(
+    initialFiles: _passportFiles,
+    onFilesChanged: (files) {
+      setState(() {
+        _passportFiles = List.from(files);
+      });
+    },
+  ),
+  const SizedBox(height: 20),
+// const Align(
+//   alignment: Alignment.topLeft,
+//   child: Text(
+//     "Contact Person",
+//     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+//   ),
+// ),
+// const SizedBox(height: 5),
+DropdownSearch<String>(
+  items: (filter, infiniteScrollProps) => _contactPersons
+      .where((item) => item.toLowerCase().contains(filter.toLowerCase()))
+      .toList(),
+  selectedItem: _selectedContactPerson,
+  onChanged: (value) {
+    setState(() {
+      _selectedContactPerson = value;
+    });
+  },
+  decoratorProps: DropDownDecoratorProps(
+    decoration: InputDecoration(
+      labelText: "Hamoos Contact Person",
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8.0),
+      ),
+      prefixIcon: const Icon(Icons.person_outline),
+    ),
+  ),
+  popupProps: PopupProps.menu(
+    showSearchBox: true,
+    searchFieldProps: const TextFieldProps(
+      decoration: InputDecoration(
+        hintText: "Search contact person",
+        border: OutlineInputBorder(),
+      ),
+    ),
+  ),
+),
                       const SizedBox(height: 16),
                       const Align(
                         alignment: Alignment.topLeft,

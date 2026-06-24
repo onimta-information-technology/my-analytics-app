@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:ballys_reservation_app/components/air_ticket_class_selector.dart';
+import 'package:ballys_reservation_app/components/passport_upload_widget.dart';
 
 import 'package:ballys_reservation_app/components/bottom_sheets/member_search-new_sheet.dart';
 import 'package:ballys_reservation_app/components/guest_deatils_view_spGift.dart';
@@ -173,6 +174,19 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
   Key _a_toAirportKey = UniqueKey();
   Key _a_returnFromAirportKey = UniqueKey();
   Key _a_returnToAirportKey = UniqueKey();
+
+  // ── Air ticket — additional facility radio options (NEW) ───────────────────
+  String _a_skipRouteFacility = 'No';
+  String _a_airportTransport = 'No';
+  String _a_visa = 'No';
+
+  // ── Air ticket — Hamoue contact person dropdown (NEW, hardcoded test values) ─
+  static const List<String> _hamoueContactOptions = ['test1', 'test2'];
+  String? _a_hamoueContactPerson;
+
+  // ── Air ticket — passport bio data page uploads (NEW) ──────────────────────
+  List<PassportFile> _a_passportFiles = [];
+  Key _a_passportUploadKey = UniqueKey();
 
   static const _hotelColor = Color(0xFFE65C00);
   static const _airColor = Color(0xFF0277BD);
@@ -605,6 +619,11 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       'sector': _a_selectedAirline?.sector ?? '',
       'cost': _a_selectedAirline?.cost?.toString() ?? '',
       'remarks': _a_remarksCtrl.text,
+      'skipRouteFacility': _a_skipRouteFacility,
+      'airportTransport': _a_airportTransport,
+      'visa': _a_visa,
+      'hamoueContactPerson': _a_hamoueContactPerson ?? '',
+      'passportFiles': _a_passportFiles.map((f) => f.fileName).join(', '),
     };
   }
 
@@ -664,6 +683,12 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _a_toAirportKey = UniqueKey();
       _a_returnFromAirportKey = UniqueKey();
       _a_returnToAirportKey = UniqueKey();
+      _a_skipRouteFacility = 'No';
+      _a_airportTransport = 'No';
+      _a_visa = 'No';
+      _a_hamoueContactPerson = null;
+      _a_passportFiles = [];
+      _a_passportUploadKey = UniqueKey();
     });
     _showAddedSnack(_airMembers.length, _airColor);
     _scrollToTop(_airScrollCtrl);
@@ -998,6 +1023,11 @@ Class                    : ${m['class']}
 Airline                  : ${m['airline']}${(m['sector'] as String? ?? '').isNotEmpty ? ' (${m['sector']})' : ''}
 Cost                      : ${m['cost']}
 Round Trip           : ${isRound ? 'Yes' : 'No'}
+Skip Route Facility : ${m['skipRouteFacility']}
+Airport Transport   : ${m['airportTransport']}
+Visa                     : ${m['visa']}
+Hamoue Contact   : ${(m['hamoueContactPerson'] as String? ?? '').isEmpty ? 'NA' : m['hamoueContactPerson']}
+Passport File/s      : ${(m['passportFiles'] as String? ?? '').isEmpty ? 'None' : m['passportFiles']}
 Remarks              : ${m['remarks']}''';
   }
 
@@ -1031,6 +1061,11 @@ Remarks              : ${m['remarks']}''';
       'sector': _a_selectedAirline?.sector ?? '',
       'cost': _a_selectedAirline?.cost?.toString() ?? '',
       'remarks': _a_remarksCtrl.text,
+      'skipRouteFacility': _a_skipRouteFacility,
+      'airportTransport': _a_airportTransport,
+      'visa': _a_visa,
+      'hamoueContactPerson': _a_hamoueContactPerson ?? '',
+      'passportFiles': _a_passportFiles.map((f) => f.fileName).join(', '),
     };
     if (_airMembers.isEmpty) return _singleAirText(current);
     final all = [
@@ -2753,6 +2788,73 @@ class _AirForm extends StatelessWidget {
 
           const SizedBox(height: 12),
 
+          // ── Additional facilities (NEW) ──────────────────────────────────────
+          _sectionHeader(
+            'Additional Facilities',
+            accent,
+            Icons.checklist_rtl_rounded,
+          ),
+          _YesNoRadioRow(
+            label: 'Skip Route Facility',
+            icon: Icons.alt_route_rounded,
+            value: state._a_skipRouteFacility,
+            accent: accent,
+            onChanged: (v) =>
+                state.setState(() => state._a_skipRouteFacility = v),
+          ),
+          const SizedBox(height: 10),
+          _YesNoRadioRow(
+            label: 'Airport Transport',
+            icon: Icons.local_taxi_rounded,
+            value: state._a_airportTransport,
+            accent: accent,
+            onChanged: (v) =>
+                state.setState(() => state._a_airportTransport = v),
+          ),
+          const SizedBox(height: 10),
+          _YesNoRadioRow(
+            label: 'Visa',
+            icon: Icons.badge_outlined,
+            value: state._a_visa,
+            accent: accent,
+            onChanged: (v) => state.setState(() => state._a_visa = v),
+          ),
+          const SizedBox(height: 12),
+
+          // ── Hamoue contact person (NEW, hardcoded test values) ──────────────
+          DropdownButtonFormField<String>(
+            value: state._a_hamoueContactPerson,
+            style: kInputTextStyle,
+            decoration: _fieldDeco(
+              'Hamoue Contact Person',
+              icon: Icons.support_agent_rounded,
+              accent: accent,
+            ),
+            items: _QuickReservationScreenState._hamoueContactOptions
+                .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                .toList(),
+            onChanged: (v) =>
+                state.setState(() => state._a_hamoueContactPerson = v),
+          ),
+          const SizedBox(height: 16),
+
+          // ── Passport bio data page upload (NEW) ──────────────────────────────
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: PassportUploadWidget(
+              key: state._a_passportUploadKey,
+              initialFiles: state._a_passportFiles,
+              onFilesChanged: (files) =>
+                  state.setState(() => state._a_passportFiles = files),
+            ),
+          ),
+          const SizedBox(height: 16),
+
           // ── Remarks (Air Tab) ─────────────────────────────────────────────────
           TextFormField(
             controller: state._a_remarksCtrl,
@@ -2780,6 +2882,84 @@ class _AirForm extends StatelessWidget {
             onRemove: (i) =>
                 () => state.setState(() => state._airMembers.removeAt(i)),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Yes / No radio row — used for Skip Route Facility, Airport Transport, Visa
+// ─────────────────────────────────────────────────────────────────────────────
+class _YesNoRadioRow extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final String value; // 'Yes' or 'No'
+  final Color accent;
+  final ValueChanged<String> onChanged;
+
+  const _YesNoRadioRow({
+    required this.label,
+    required this.icon,
+    required this.value,
+    required this.accent,
+    required this.onChanged,
+  });
+
+  Widget _option(String text) {
+    final selected = value == text;
+    return InkWell(
+      onTap: () => onChanged(text),
+      borderRadius: BorderRadius.circular(8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Radio<String>(
+            value: text,
+            groupValue: value,
+            activeColor: accent,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            visualDensity: VisualDensity.compact,
+            onChanged: (v) => onChanged(v!),
+          ),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 14.5,
+              fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+              color: selected ? accent : Colors.black87,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: accent),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 15.5,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+          ),
+          _option('Yes'),
+          _option('No'),
         ],
       ),
     );

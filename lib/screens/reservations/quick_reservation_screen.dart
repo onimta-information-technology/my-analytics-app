@@ -16,6 +16,7 @@ import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/airport_search_response.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
+import 'package:ballys_reservation_app/models/reservation/airport_cost_response.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/hotels_provider.dart';
 import 'package:ballys_reservation_app/providers/airports_provider.dart';
@@ -24,13 +25,62 @@ import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 
-enum _Section { airTicket ,hotel }
+enum _Section { airTicket, hotel }
 
 const TextStyle kInputTextStyle = TextStyle(
   fontSize: 17,
   fontWeight: FontWeight.w600,
   color: Colors.black,
 );
+
+// ─── Model: one hotel booking inside a guest member ──────────────────────────
+class _HotelEntry {
+  String hotel;
+  String arrival;
+  String departure;
+  String noOfRooms;
+  String noOfPax;
+  String roomType;
+  String roomCategory;
+  String eciLco;
+  String mealPlan;
+  String paymentBy;
+  String remarks;
+  String marketingPerson;
+  String approvedBy;
+
+  _HotelEntry({
+    this.hotel = '',
+    this.arrival = '',
+    this.departure = '',
+    this.noOfRooms = '1',
+    this.noOfPax = '1',
+    this.roomType = '',
+    this.roomCategory = '',
+    this.eciLco = 'NA',
+    this.mealPlan = '',
+    this.paymentBy = 'NA',
+    this.remarks = '',
+    this.marketingPerson = '',
+    this.approvedBy = '',
+  });
+
+  Map<String, dynamic> toMap() => {
+        'hotel': hotel,
+        'arrival': arrival,
+        'departure': departure,
+        'noOfRooms': noOfRooms,
+        'noOfPax': noOfPax,
+        'roomType': roomType,
+        'roomCategory': roomCategory,
+        'eciLco': eciLco,
+        'mealPlan': mealPlan,
+        'paymentBy': paymentBy,
+        'remarks': remarks,
+        'marketingPerson': marketingPerson,
+        'approvedBy': approvedBy,
+      };
+}
 
 class QuickReservationScreen extends ConsumerStatefulWidget {
   const QuickReservationScreen({super.key});
@@ -58,10 +108,11 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
   final _sharedPackageAmount = TextEditingController();
   bool _sharedGuestCardVisible = false;
 
-  // HOTEL members list
+  // ── HOTEL members list ──────────────────────────────────────────────────────
+  // Each member now has a 'hotels' list (List<_HotelEntry>) plus identity fields.
   List<Map<String, dynamic>> _hotelMembers = [];
 
-  // final _h_packageAmount = TextEditingController();
+  // Current hotel form fields (one hotel being edited at a time per guest)
   final _h_noOfRooms = TextEditingController(text: '1');
   final _h_noOfPax = TextEditingController(text: '1');
   final _h_mealPlan = TextEditingController();
@@ -91,16 +142,25 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
   Key _roomCategoryDropdownKey = UniqueKey();
   Key _roomTypeDropdownKey = UniqueKey();
 
-  // AIR members list
+  // Pending hotels for the current guest (before the guest is fully "added")
+  List<_HotelEntry> _pendingHotels = [];
+
+  // ── AIR members list ────────────────────────────────────────────────────────
   List<Map<String, dynamic>> _airMembers = [];
 
-  // final _a_packageAmount = TextEditingController();
   final _a_noOfSeats = TextEditingController(text: '1');
   Map<String, dynamic>? _a_selectedClass;
   Key _a_classKey = UniqueKey();
-  final _a_airlines = TextEditingController();
+
+  // Airlines — now an AirportCostResponse selected from dropdown
+  AirportCostResponse? _a_selectedAirline;
+  List<AirportCostResponse> _a_airlineCosts = [];
+  bool _a_airlinesLoading = false;
+  Key _a_airlineKey = UniqueKey();
+
   final _a_arrCtrl = TextEditingController();
   final _a_depCtrl = TextEditingController();
+  final _a_remarksCtrl = TextEditingController(); // ← NEW: remarks for air tab
 
   DateTime? _a_arrDate;
   DateTime? _a_depDate;
@@ -153,11 +213,10 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _h_approvedBy,
       _h_arrivalCtrl,
       _h_departureCtrl,
-     // _a_packageAmount,
       _a_noOfSeats,
-      _a_airlines,
       _a_arrCtrl,
       _a_depCtrl,
+      _a_remarksCtrl,
     ]) {
       c.dispose();
     }
@@ -260,12 +319,85 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     }
   }
 
+  // ── Load airline costs from API 9023 ────────────────────────────────────────
+  Future<void> _loadAirlineCosts() async {
+    final from = _a_fromAirport?.airportCode ?? '';
+    final to = _a_toAirport?.airportCode ?? '';
+    final returnTo = _a_returnToAirport?.airportCode ?? to;
+
+    if (from.isEmpty || to.isEmpty) {
+      setState(() {
+        _a_airlineCosts = [];
+        _a_selectedAirline = null;
+        _a_airlineKey = UniqueKey();
+      });
+      return;
+    }
+
+    setState(() {
+      _a_airlinesLoading = true;
+      _a_selectedAirline = null;
+      _a_airlineKey = UniqueKey();
+    });
+
+    try {
+      final repo = AirportRepository(ApiService(const FlutterSecureStorage()));
+      final costs = await repo.getAirportCosts(
+        departureFrom: from,
+        departureTo: to,
+        returnTo: returnTo,
+      );
+      setState(() {
+        _a_airlineCosts = costs;
+        _a_airlinesLoading = false;
+        _a_airlineKey = UniqueKey();
+      });
+    } catch (_) {
+      setState(() {
+        _a_airlineCosts = [];
+        _a_airlinesLoading = false;
+        _a_airlineKey = UniqueKey();
+      });
+    }
+  }
+
   // ── Shared helpers ──────────────────────────────────────────────────────────
   void _resetSharedGuest() {
     _sharedMemberId.clear();
     _sharedMidNumber.clear();
     _sharedGuestName.clear();
     _sharedGuestCardVisible = false;
+  }
+
+  void _resetHotelFields() {
+    _sharedPackageAmount.clear();
+    _h_noOfRooms.text = '1';
+    _h_noOfPax.text = '1';
+    _h_mealPlan.clear();
+    _h_paymentBy.text = 'NA';
+    _h_remarks.clear();
+    _h_marketingPerson.clear();
+    _h_approvedBy.clear();
+    _h_arrivalCtrl.clear();
+    _h_departureCtrl.clear();
+    _h_arrivalDate = null;
+    _h_departureDate = null;
+    _h_eciLco = 'NA';
+    _selectedHotel = null;
+    _selectedHotelName = null;
+    _selectedHotelId = null;
+    _selectedRoomCategory = null;
+    _selectedRoomCategoryId = null;
+    _selectedRoomCategoryName = null;
+    _selectedRoomType = null;
+    _selectedRoomTypeId = null;
+    _selectedRoomTypeName = null;
+    _roomCategories = [];
+    _roomTypes = [];
+    _hotelDropdownKey = UniqueKey();
+    _roomCategoryDropdownKey = UniqueKey();
+    _roomTypeDropdownKey = UniqueKey();
+    _pendingHotels = [];
   }
 
   void _showRequiredSnack() {
@@ -304,6 +436,24 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     );
   }
 
+  void _showHotelAddedSnack() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.hotel_rounded, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Text('Hotel ${_pendingHotels.length} added for this guest'),
+          ],
+        ),
+        backgroundColor: _hotelColor,
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
   void _scrollToTop(ScrollController ctrl) {
     if (ctrl.hasClients) {
       ctrl.animateTo(
@@ -314,104 +464,49 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     }
   }
 
-  // ── Add Member with Same Details — HOTEL ────────────────────────────────────
-  void _addMemberWithSameDetailsHotel() {
-    if (_sharedGuestName.text.trim().isEmpty &&
-        _sharedMemberId.text.trim().isEmpty) {
-      _showRequiredSnack();
-      return;
-    }
-    setState(() {
-      _hotelMembers.add({
-        'guestName': _sharedGuestName.text,
-        'memberId': _sharedMemberId.text,
-        'packageAmount': _sharedPackageAmount.text,
-        'hotel': _selectedHotelName ?? '',
-        'arrival': _h_arrivalCtrl.text,
-        'departure': _h_departureCtrl.text,
-        'noOfRooms': _h_noOfRooms.text,
-        'noOfPax': _h_noOfPax.text,
-        'roomType': _selectedRoomTypeName ?? '',
-        'roomCategory': _selectedRoomCategoryName ?? '',
-        'eciLco': _h_eciLco,
-        'mealPlan': _h_mealPlan.text,
-        'paymentBy': _h_paymentBy.text,
-        'remarks': _h_remarks.text,
-        'marketingPerson': _h_marketingPerson.text,
-        'approvedBy': _h_approvedBy.text,
-      });
-      // Clear only member identity fields
-      _resetSharedGuest();
-    });
-    _showAddedSnack(_hotelMembers.length, _hotelColor);
-    _scrollToTop(_hotelScrollCtrl);
+  // ── Capture current hotel fields → _HotelEntry ──────────────────────────────
+  _HotelEntry _captureCurrentHotelEntry() {
+    return _HotelEntry(
+      hotel: _selectedHotelName ?? '',
+      arrival: _h_arrivalCtrl.text,
+      departure: _h_departureCtrl.text,
+      noOfRooms: _h_noOfRooms.text,
+      noOfPax: _h_noOfPax.text,
+      roomType: _selectedRoomTypeName ?? '',
+      roomCategory: _selectedRoomCategoryName ?? '',
+      eciLco: _h_eciLco,
+      mealPlan: _h_mealPlan.text,
+      paymentBy: _h_paymentBy.text,
+      remarks: _h_remarks.text,
+      marketingPerson: _h_marketingPerson.text,
+      approvedBy: _h_approvedBy.text,
+    );
   }
 
-  // ── Add Member with Same Details — AIR TICKET ───────────────────────────────
-  void _addMemberWithSameDetailsAir() {
-    if (_sharedGuestName.text.trim().isEmpty &&
-        _sharedMemberId.text.trim().isEmpty) {
-      _showRequiredSnack();
+  // ── Add another hotel to the current pending-guest form ─────────────────────
+  void _addAnotherHotel() {
+    if (_selectedHotelName == null || _selectedHotelName!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.white, size: 18),
+              SizedBox(width: 8),
+              Text('Please select a hotel first'),
+            ],
+          ),
+          backgroundColor: Colors.orange.shade700,
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
       return;
     }
     setState(() {
-      _airMembers.add({
-        'guestName': _sharedGuestName.text,
-        'memberId': _sharedMemberId.text,
-        'packageAmount': _sharedPackageAmount.text,
-        'fromAirport': _a_fromAirport != null
-            ? '${_a_fromAirport!.cityName ?? ''} (${_a_fromAirport!.airportCode ?? ''})'
-            : '',
-        'toAirport': _a_toAirport != null
-            ? '${_a_toAirport!.cityName ?? ''} (${_a_toAirport!.airportCode ?? ''})'
-            : '',
-        'isRoundTrip': _a_isRoundTrip,
-        'returnFrom': _a_returnFromAirport != null
-            ? '${_a_returnFromAirport!.cityName ?? ''} (${_a_returnFromAirport!.airportCode ?? ''})'
-            : '',
-        'returnTo': _a_returnToAirport != null
-            ? '${_a_returnToAirport!.cityName ?? ''} (${_a_returnToAirport!.airportCode ?? ''})'
-            : '',
-        'arrDate': _a_arrCtrl.text,
-        'depDate': _a_depCtrl.text,
-        'noOfSeats': _a_noOfSeats.text,
-        'class': _a_selectedClass?['type'] ?? '',
-        'airlines': _a_airlines.text,
-      });
-      // Clear only member identity fields
-      _resetSharedGuest();
-    });
-    _showAddedSnack(_airMembers.length, _airColor);
-    _scrollToTop(_airScrollCtrl);
-  }
-
-  void _applyAndAddHotelMember() {
-    if (_sharedGuestName.text.trim().isEmpty &&
-        _sharedMemberId.text.trim().isEmpty) {
-      _showRequiredSnack();
-      return;
-    }
-    setState(() {
-      _hotelMembers.add({
-        'guestName': _sharedGuestName.text,
-        'memberId': _sharedMemberId.text,
-        'packageAmount': _sharedPackageAmount.text,
-        'hotel': _selectedHotelName ?? '',
-        'arrival': _h_arrivalCtrl.text,
-        'departure': _h_departureCtrl.text,
-        'noOfRooms': _h_noOfRooms.text,
-        'noOfPax': _h_noOfPax.text,
-        'roomType': _selectedRoomTypeName ?? '',
-        'roomCategory': _selectedRoomCategoryName ?? '',
-        'eciLco': _h_eciLco,
-        'mealPlan': _h_mealPlan.text,
-        'paymentBy': _h_paymentBy.text,
-        'remarks': _h_remarks.text,
-        'marketingPerson': _h_marketingPerson.text,
-        'approvedBy': _h_approvedBy.text,
-      });
-      _resetSharedGuest();
-      _sharedPackageAmount.clear();
+      _pendingHotels.add(_captureCurrentHotelEntry());
+      // Reset only the hotel-details fields, keep guest identity
       _h_noOfRooms.text = '1';
       _h_noOfPax.text = '1';
       _h_mealPlan.clear();
@@ -439,6 +534,101 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _roomCategoryDropdownKey = UniqueKey();
       _roomTypeDropdownKey = UniqueKey();
     });
+    _showHotelAddedSnack();
+  }
+
+  // ── Add Member with Same Details — HOTEL ────────────────────────────────────
+  void _addMemberWithSameDetailsHotel() {
+    if (_sharedGuestName.text.trim().isEmpty &&
+        _sharedMemberId.text.trim().isEmpty) {
+      _showRequiredSnack();
+      return;
+    }
+    // Collect current hotel if hotel name is filled
+    final hotels = List<_HotelEntry>.from(_pendingHotels);
+    if (_selectedHotelName != null && _selectedHotelName!.isNotEmpty) {
+      hotels.add(_captureCurrentHotelEntry());
+    }
+
+    setState(() {
+      _hotelMembers.add({
+        'guestName': _sharedGuestName.text,
+        'memberId': _sharedMemberId.text,
+        'packageAmount': _sharedPackageAmount.text,
+        'hotels': hotels,
+      });
+      _resetSharedGuest();
+      _pendingHotels = [];
+    });
+    _showAddedSnack(_hotelMembers.length, _hotelColor);
+    _scrollToTop(_hotelScrollCtrl);
+  }
+
+  // ── Add Member with Same Details — AIR TICKET ───────────────────────────────
+  void _addMemberWithSameDetailsAir() {
+    if (_sharedGuestName.text.trim().isEmpty &&
+        _sharedMemberId.text.trim().isEmpty) {
+      _showRequiredSnack();
+      return;
+    }
+    setState(() {
+      _airMembers.add(_captureCurrentAirMember());
+      _resetSharedGuest();
+    });
+    _showAddedSnack(_airMembers.length, _airColor);
+    _scrollToTop(_airScrollCtrl);
+  }
+
+  Map<String, dynamic> _captureCurrentAirMember() {
+    return {
+      'guestName': _sharedGuestName.text,
+      'memberId': _sharedMemberId.text,
+      'packageAmount': _sharedPackageAmount.text,
+      'fromAirport': _a_fromAirport != null
+          ? '${_a_fromAirport!.cityName ?? ''} (${_a_fromAirport!.airportCode ?? ''})'
+          : '',
+      'toAirport': _a_toAirport != null
+          ? '${_a_toAirport!.cityName ?? ''} (${_a_toAirport!.airportCode ?? ''})'
+          : '',
+      'isRoundTrip': _a_isRoundTrip,
+      'returnFrom': _a_returnFromAirport != null
+          ? '${_a_returnFromAirport!.cityName ?? ''} (${_a_returnFromAirport!.airportCode ?? ''})'
+          : '',
+      'returnTo': _a_returnToAirport != null
+          ? '${_a_returnToAirport!.cityName ?? ''} (${_a_returnToAirport!.airportCode ?? ''})'
+          : '',
+      'arrDate': _a_arrCtrl.text,
+      'depDate': _a_depCtrl.text,
+      'noOfSeats': _a_noOfSeats.text,
+      'class': _a_selectedClass?['type'] ?? '',
+      'airline': _a_selectedAirline?.airLine ?? '',
+      'sector': _a_selectedAirline?.sector ?? '',
+      'cost': _a_selectedAirline?.cost?.toString() ?? '',
+      'remarks': _a_remarksCtrl.text,
+    };
+  }
+
+  void _applyAndAddHotelMember() {
+    if (_sharedGuestName.text.trim().isEmpty &&
+        _sharedMemberId.text.trim().isEmpty) {
+      _showRequiredSnack();
+      return;
+    }
+    final hotels = List<_HotelEntry>.from(_pendingHotels);
+    if (_selectedHotelName != null && _selectedHotelName!.isNotEmpty) {
+      hotels.add(_captureCurrentHotelEntry());
+    }
+
+    setState(() {
+      _hotelMembers.add({
+        'guestName': _sharedGuestName.text,
+        'memberId': _sharedMemberId.text,
+        'packageAmount': _sharedPackageAmount.text,
+        'hotels': hotels,
+      });
+      _resetSharedGuest();
+      _resetHotelFields();
+    });
     _showAddedSnack(_hotelMembers.length, _hotelColor);
     _scrollToTop(_hotelScrollCtrl);
   }
@@ -451,37 +641,18 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       return;
     }
     setState(() {
-      _airMembers.add({
-        'guestName': _sharedGuestName.text,
-        'memberId': _sharedMemberId.text,
-        'packageAmount': _sharedPackageAmount.text,
-        'fromAirport': _a_fromAirport != null
-            ? '${_a_fromAirport!.cityName ?? ''} (${_a_fromAirport!.airportCode ?? ''})'
-            : '',
-        'toAirport': _a_toAirport != null
-            ? '${_a_toAirport!.cityName ?? ''} (${_a_toAirport!.airportCode ?? ''})'
-            : '',
-        'isRoundTrip': _a_isRoundTrip,
-        'returnFrom': _a_returnFromAirport != null
-            ? '${_a_returnFromAirport!.cityName ?? ''} (${_a_returnFromAirport!.airportCode ?? ''})'
-            : '',
-        'returnTo': _a_returnToAirport != null
-            ? '${_a_returnToAirport!.cityName ?? ''} (${_a_returnToAirport!.airportCode ?? ''})'
-            : '',
-        'arrDate': _a_arrCtrl.text,
-        'depDate': _a_depCtrl.text,
-        'noOfSeats': _a_noOfSeats.text,
-        'class': _a_selectedClass?['type'] ?? '',
-        'airlines': _a_airlines.text,
-      });
+      _airMembers.add(_captureCurrentAirMember());
       _resetSharedGuest();
       _sharedPackageAmount.clear();
       _a_noOfSeats.text = '1';
       _a_selectedClass = null;
       _a_classKey = UniqueKey();
-      _a_airlines.clear();
+      _a_selectedAirline = null;
+      _a_airlineCosts = [];
+      _a_airlineKey = UniqueKey();
       _a_arrCtrl.clear();
       _a_depCtrl.clear();
+      _a_remarksCtrl.clear();
       _a_arrDate = null;
       _a_depDate = null;
       _a_fromAirport = null;
@@ -530,9 +701,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       if (!mounted) return;
       if (guests.isNotEmpty) {
         final g = guests.first;
-        ref
-            .read(selectedGuestProvider.notifier)
-            .setSelectedGuest(
+        ref.read(selectedGuestProvider.notifier).setSelectedGuest(
               Guest(
                 mid: g.mid ?? mid,
                 memberName: g.mName ?? name,
@@ -574,9 +743,8 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
         onSearch: (newTerm, newIid) async {
           if (newTerm.length < 3) return;
           try {
-            final repo = GuestRepository(
-              ApiService(const FlutterSecureStorage()),
-            );
+            final repo =
+                GuestRepository(ApiService(const FlutterSecureStorage()));
             final r = await repo.searchGuest(newIid, newTerm);
             Navigator.of(ctx).pop();
             _showSearchSheet(r, newTerm, newIid, onCardVisible);
@@ -599,9 +767,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
   }
 
   void _setGuest({required String mid, required String name}) {
-    ref
-        .read(selectedGuestProvider.notifier)
-        .setSelectedGuest(
+    ref.read(selectedGuestProvider.notifier).setSelectedGuest(
           Guest(
             mid: mid,
             memberName: name,
@@ -629,9 +795,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       setState(() => _isLoading = false);
       if (guests.isNotEmpty) {
         final g = guests.first;
-        ref
-            .read(selectedGuestProvider.notifier)
-            .setSelectedGuest(
+        ref.read(selectedGuestProvider.notifier).setSelectedGuest(
               Guest(
                 mid: g.mid ?? mid,
                 memberName: g.mName ?? name,
@@ -740,44 +904,60 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   // ── Message builders — HOTEL ─────────────────────────────────────────────────
-  String _singleHotelText(Map<String, dynamic> m) =>
-      '''
-*HOTEL RESERVATION REQUEST*
-Name of the Guest    : ${m['guestName']}
-Membership No        : ${m['memberId']}
-Package Amount       : ${m['packageAmount']}
-Name of the Hotel    : ${m['hotel']}
-Arrival              : ${m['arrival']}
-Departure            : ${m['departure']}
-No of Room/s         : ${m['noOfRooms']}
-No Of Pax            : ${m['noOfPax']}
-Room Type            : ${m['roomType']}
-Room Category        : ${m['roomCategory']}
-ECI/LCO Facility     : ${m['eciLco']}
-Payment By           : ${m['paymentBy']}
-Remarks              : ${m['remarks']}
+  String _singleHotelEntryText(_HotelEntry h, {int? hotelIndex}) {
+    final prefix =
+        hotelIndex != null ? '  [Hotel ${hotelIndex + 1}]\n' : '';
+    return '''${prefix}  Name of the Hotel    : ${h.hotel}
+  Arrival              : ${h.arrival}
+  Departure            : ${h.departure}
+  No of Room/s         : ${h.noOfRooms}
+  No Of Pax            : ${h.noOfPax}
+  Room Type            : ${h.roomType}
+  Room Category        : ${h.roomCategory}
+  ECI/LCO Facility     : ${h.eciLco}
+  Payment By           : ${h.paymentBy}
+  Remarks              : ${h.remarks}''';
+  }
 
-*''';
+  String _singleHotelMemberText(Map<String, dynamic> m) {
+    final hotels = (m['hotels'] as List<_HotelEntry>?) ?? [];
+    final buf = StringBuffer();
+    buf.writeln('*HOTEL RESERVATION REQUEST*');
+    buf.writeln('Name of the Guest    : ${m['guestName']}');
+    buf.writeln('Membership No        : ${m['memberId']}');
+    buf.writeln('Package Amount       : ${m['packageAmount']}');
+    if (hotels.isEmpty) {
+      buf.writeln('  (No hotels added)');
+    } else if (hotels.length == 1) {
+      buf.writeln(_singleHotelEntryText(hotels.first));
+    } else {
+      for (int i = 0; i < hotels.length; i++) {
+        buf.writeln(_singleHotelEntryText(hotels[i], hotelIndex: i));
+        if (i < hotels.length - 1) buf.writeln('  ─────────────────────');
+      }
+    }
+    buf.write('*');
+    return buf.toString();
+  }
+
+  // Legacy signature kept for _addedMembersSection textBuilder
+  String _singleHotelText(Map<String, dynamic> m) =>
+      _singleHotelMemberText(m);
 
   String _buildHotelText() {
+    // Build a "current" member snapshot from the form
+    final currentHotels = List<_HotelEntry>.from(_pendingHotels);
+    if (_selectedHotelName != null && _selectedHotelName!.isNotEmpty) {
+      currentHotels.add(_captureCurrentHotelEntry());
+    }
     final current = {
       'guestName': _sharedGuestName.text,
       'memberId': _sharedMemberId.text,
       'packageAmount': _sharedPackageAmount.text,
-      'hotel': _selectedHotelName ?? '',
-      'arrival': _h_arrivalCtrl.text,
-      'departure': _h_departureCtrl.text,
-      'noOfRooms': _h_noOfRooms.text,
-      'noOfPax': _h_noOfPax.text,
-      'roomType': _selectedRoomTypeName ?? '',
-      'roomCategory': _selectedRoomCategoryName ?? '',
-      'eciLco': _h_eciLco,
-      'mealPlan': _h_mealPlan.text,
-      'paymentBy': _h_paymentBy.text,
-      'remarks': _h_remarks.text,
-      'marketingPerson': _h_marketingPerson.text,
+      'hotels': currentHotels,
     };
-    if (_hotelMembers.isEmpty) return _singleHotelText(current);
+
+    if (_hotelMembers.isEmpty) return _singleHotelMemberText(current);
     final all = [
       ..._hotelMembers,
       if ((current['guestName'] as String).isNotEmpty ||
@@ -788,7 +968,7 @@ Remarks              : ${m['remarks']}
     for (int i = 0; i < all.length; i++) {
       if (i > 0) buf.writeln('\n');
       buf.writeln('*── Member ${i + 1} ──*');
-      buf.write(_singleHotelText(all[i]));
+      buf.write(_singleHotelMemberText(all[i]));
     }
     return buf.toString();
   }
@@ -815,8 +995,10 @@ Arr Date              : ${m['arrDate']}
 Dep Date             : ${m['depDate']}
 No of Seats         : ${m['noOfSeats']}
 Class                    : ${m['class']}
-Airlines               : ${m['airlines']}
-Round Trip           : ${isRound ? 'Yes' : 'No'}''';
+Airline                  : ${m['airline']}${(m['sector'] as String? ?? '').isNotEmpty ? ' (${m['sector']})' : ''}
+Cost                      : ${m['cost']}
+Round Trip           : ${isRound ? 'Yes' : 'No'}
+Remarks              : ${m['remarks']}''';
   }
 
   String _buildAirText() {
@@ -845,7 +1027,10 @@ Round Trip           : ${isRound ? 'Yes' : 'No'}''';
       'depDate': _a_depCtrl.text,
       'noOfSeats': _a_noOfSeats.text,
       'class': _a_selectedClass?['type'] ?? '',
-      'airlines': _a_airlines.text,
+      'airline': _a_selectedAirline?.airLine ?? '',
+      'sector': _a_selectedAirline?.sector ?? '',
+      'cost': _a_selectedAirline?.cost?.toString() ?? '',
+      'remarks': _a_remarksCtrl.text,
     };
     if (_airMembers.isEmpty) return _singleAirText(current);
     final all = [
@@ -928,9 +1113,9 @@ Round Trip           : ${isRound ? 'Yes' : 'No'}''';
           ),
           body: Theme(
             data: Theme.of(context).copyWith(
-              textTheme: Theme.of(
-                context,
-              ).textTheme.copyWith(titleMedium: kInputTextStyle),
+              textTheme: Theme.of(context).textTheme.copyWith(
+                    titleMedium: kInputTextStyle,
+                  ),
             ),
             child: Column(
               children: [
@@ -945,7 +1130,8 @@ Round Trip           : ${isRound ? 'Yes' : 'No'}''';
                         'Air Ticket',
                       ),
                       const SizedBox(width: 8),
-                      _sectionTab(_Section.hotel, Icons.hotel_rounded, 'Hotel'),
+                      _sectionTab(
+                          _Section.hotel, Icons.hotel_rounded, 'Hotel'),
                     ],
                   ),
                 ),
@@ -1181,9 +1367,8 @@ Widget _guestIdentityRow({
               ),
               onChanged: (value) {
                 memberNameCtrl.clear();
-                memberIdCtrl.text = isNumericOnly
-                    ? value
-                    : '$selectedPrefix$value';
+                memberIdCtrl.text =
+                    isNumericOnly ? value : '$selectedPrefix$value';
               },
             ),
           ),
@@ -1198,7 +1383,8 @@ Widget _guestIdentityRow({
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
+              padding:
+                  const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
             ),
             child: const Icon(Icons.person_search, size: 25),
           ),
@@ -1208,17 +1394,16 @@ Widget _guestIdentityRow({
       TextFormField(
         controller: memberNameCtrl,
         style: kInputTextStyle,
-        decoration:
-            _fieldDeco(
-              nameLabel,
-              icon: Icons.person_outline,
-              accent: accent,
-            ).copyWith(
-              suffixIcon: IconButton(
-                icon: Icon(Icons.search, color: accent),
-                onPressed: onSearchByName,
-              ),
-            ),
+        decoration: _fieldDeco(
+          nameLabel,
+          icon: Icons.person_outline,
+          accent: accent,
+        ).copyWith(
+          suffixIcon: IconButton(
+            icon: Icon(Icons.search, color: accent),
+            onPressed: onSearchByName,
+          ),
+        ),
         textCapitalization: TextCapitalization.words,
         onChanged: (_) => memberIdNumberCtrl.clear(),
       ),
@@ -1226,7 +1411,7 @@ Widget _guestIdentityRow({
   );
 }
 
-// ── Shared added-members section widget ─────────────────────────────────────
+// ── Shared added-members section widget ──────────────────────────────────────
 Widget _addedMembersSection({
   required List<Map<String, dynamic>> members,
   required Color accent,
@@ -1358,24 +1543,11 @@ Widget _addedMembersSection({
           ),
         );
       }).toList(),
-      // Container(
-      //   margin: const EdgeInsets.only(bottom: 16),
-      //   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      //   decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(10),
-      //       border: Border.all(color: Colors.blue.shade200)),
-      //   child: Row(children: [
-      //     Icon(Icons.info_outline_rounded, color: Colors.blue.shade700, size: 18), const SizedBox(width: 10),
-      //     Expanded(child: Text(
-      //       'Form is reset — fill in the next member\'s details above, then tap Apply & Add Member again.',
-      //       style: TextStyle(color: Colors.blue.shade800, fontSize: 12.5, fontWeight: FontWeight.w500),
-      //     )),
-      //   ]),
-      // ),
     ],
   );
 }
 
-// ── Action buttons: Apply & Add + Add with Same Details ─────────────────────
+// ── Action buttons: Apply & Add + Add with Same Details ──────────────────────
 Widget _actionButtons({
   required Color accent,
   required VoidCallback onApplyAndAdd,
@@ -1493,7 +1665,8 @@ class _AirportDropdown extends ConsumerWidget {
               fontSize: 15,
             ),
             prefixIcon: const Icon(Icons.search),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            border:
+                OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
           ),
         ),
         itemBuilder: (ctx, item, isSelected, isFocused) => ListTile(
@@ -1512,7 +1685,8 @@ class _AirportDropdown extends ConsumerWidget {
           ),
           title: Text(
             '${item.cityName ?? ''}, ${item.country ?? ''}',
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+            style:
+                const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
           ),
           subtitle: Text(
             item.airportName ?? '',
@@ -1522,9 +1696,175 @@ class _AirportDropdown extends ConsumerWidget {
           tileColor: isFocused ? Colors.grey.shade100 : null,
         ),
         dialogProps: DialogProps(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Airline cost dropdown — fetches from API 9023
+// ─────────────────────────────────────────────────────────────────────────────
+class _AirlineDropdown extends StatelessWidget {
+  final Key dropdownKey;
+  final List<AirportCostResponse> items;
+  final AirportCostResponse? selectedItem;
+  final bool isLoading;
+  final Color accent;
+  final ValueChanged<AirportCostResponse?> onChanged;
+
+  const _AirlineDropdown({
+    required this.dropdownKey,
+    required this.items,
+    required this.selectedItem,
+    required this.isLoading,
+    required this.accent,
+    required this.onChanged,
+  });
+
+  String _itemLabel(AirportCostResponse a) {
+    final parts = <String>[];
+    if ((a.airLine ?? '').isNotEmpty) parts.add(a.airLine!);
+    if ((a.sector ?? '').isNotEmpty) parts.add(a.sector!.trim());
+    if (a.cost != null) parts.add('LKR ${a.cost}');
+    if ((a.travelClass ?? '').isNotEmpty) parts.add('Class: ${a.travelClass}');
+    return parts.join(' | ');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: accent,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Loading airlines...',
+              style: TextStyle(
+                color: accent,
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return DropdownSearch<AirportCostResponse>(
+      key: dropdownKey,
+      selectedItem: selectedItem,
+      items: (filter, _) {
+        if (filter.isEmpty) return items;
+        final lf = filter.toLowerCase();
+        return items
+            .where((a) =>
+                (a.airLine ?? '').toLowerCase().contains(lf) ||
+                (a.sector ?? '').toLowerCase().contains(lf) ||
+                (a.travelClass ?? '').toLowerCase().contains(lf))
+            .toList();
+      },
+      itemAsString: _itemLabel,
+      compareFn: (a, b) =>
+          a.airLine == b.airLine &&
+          a.sector == b.sector &&
+          a.cost == b.cost,
+      enabled: items.isNotEmpty,
+      decoratorProps: DropDownDecoratorProps(
+        decoration: _fieldDeco(
+          items.isEmpty
+              ? 'Airline  (select From/To airports first)'
+              : 'Select Airline *',
+          icon: Icons.airplanemode_active_rounded,
+          accent: accent,
+        ),
+      ),
+      dropdownBuilder: (context, item) {
+        if (item == null) return const Text('');
+        return Text(
+          _itemLabel(item),
+          style: kInputTextStyle,
+          overflow: TextOverflow.ellipsis,
+        );
+      },
+      onChanged: onChanged,
+      popupProps: PopupProps.dialog(
+        showSearchBox: true,
+        searchFieldProps: TextFieldProps(
+          autofocus: true,
+          style: kInputTextStyle,
+          decoration: InputDecoration(
+            hintText: 'Search airline or sector...',
+            hintStyle: const TextStyle(
+              color: Colors.black87,
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
+            prefixIcon: const Icon(Icons.search),
+            border:
+                OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
           ),
+        ),
+        itemBuilder: (ctx, item, isSelected, isFocused) => ListTile(
+          leading: CircleAvatar(
+            backgroundColor: accent.withOpacity(0.12),
+            child: Text(
+              (item.airLine ?? '??').length > 3
+                  ? (item.airLine ?? '??').substring(0, 3)
+                  : (item.airLine ?? '??'),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: accent,
+              ),
+            ),
+          ),
+          title: Text(
+            '${item.airLine ?? ''} — ${(item.sector ?? '').trim()}',
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if ((item.travelClass ?? '').isNotEmpty)
+                Text('Class: ${item.travelClass}',
+                    style:
+                        const TextStyle(fontSize: 13, color: Colors.grey)),
+              if (item.cost != null)
+                Text('Cost: LKR ${item.cost}',
+                    style: TextStyle(
+                        fontSize: 13,
+                        color: accent,
+                        fontWeight: FontWeight.w600)),
+              if (item.usRate != null)
+                Text('USD Rate: ${item.usRate}',
+                    style:
+                        const TextStyle(fontSize: 12, color: Colors.grey)),
+            ],
+          ),
+          selected: isSelected,
+          tileColor: isFocused ? Colors.grey.shade100 : null,
+        ),
+        dialogProps: DialogProps(
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
         ),
       ),
     );
@@ -1537,6 +1877,7 @@ class _AirportDropdown extends ConsumerWidget {
 class _HotelForm extends StatelessWidget {
   final _QuickReservationScreenState state;
   const _HotelForm({super.key, required this.state});
+
   static String _hotelName(Map<String, dynamic>? item) =>
       (item?['hotel_name'] ?? '') as String;
   static double? _hotelId(Map<String, dynamic>? item) =>
@@ -1585,7 +1926,8 @@ class _HotelForm extends StatelessWidget {
             selectedPrefix: state._selectedPrefix,
             onPrefixChanged: (v) => state.setState(() {
               state._selectedPrefix = v;
-              state._sharedMemberId.text = '$v${state._sharedMidNumber.text}';
+              state._sharedMemberId.text =
+                  '$v${state._sharedMidNumber.text}';
             }),
           ),
           const SizedBox(height: 12),
@@ -1612,6 +1954,120 @@ class _HotelForm extends StatelessWidget {
             keyboardType: TextInputType.number,
           ),
           const SizedBox(height: 12),
+
+          // ── Pending hotels list ─────────────────────────────────────────────
+          if (state._pendingHotels.isNotEmpty) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: accent.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: accent.withOpacity(0.25)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.hotel_rounded, color: accent, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Hotels Added for This Guest (${state._pendingHotels.length})',
+                    style: TextStyle(
+                      color: accent,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ...state._pendingHotels.asMap().entries.map((e) {
+              final idx = e.key;
+              final h = e.value;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border:
+                      Border.all(color: accent.withOpacity(0.35), width: 1.2),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 13,
+                      backgroundColor: accent.withOpacity(0.15),
+                      child: Text(
+                        '${idx + 1}',
+                        style: TextStyle(
+                          color: accent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            h.hotel.isNotEmpty ? h.hotel : '—',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            '${h.arrival} → ${h.departure}  |  ${h.roomType}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline_rounded,
+                          color: Colors.red, size: 20),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () => state.setState(
+                          () => state._pendingHotels.removeAt(idx)),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+            const SizedBox(height: 4),
+            Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: accent.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: accent.withOpacity(0.2)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.add_circle_outline,
+                      color: accent, size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Fill in the next hotel details below',
+                    style: TextStyle(
+                        color: accent,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
           _dateField(
             context,
             'Arrival Date *',
@@ -1667,9 +2123,9 @@ class _HotelForm extends StatelessWidget {
               if (filter.isEmpty) return mapped;
               return mapped
                   .where(
-                    (h) => _hotelName(
-                      h,
-                    ).toLowerCase().contains(filter.toLowerCase()),
+                    (h) => _hotelName(h)
+                        .toLowerCase()
+                        .contains(filter.toLowerCase()),
                   )
                   .toList();
             },
@@ -1843,7 +2299,8 @@ class _HotelForm extends StatelessWidget {
               itemBuilder: (ctx, item, isSelected, isFocused) => ListTile(
                 leading: CircleAvatar(
                   backgroundColor: accent.withOpacity(0.12),
-                  child: Icon(Icons.bed_outlined, color: accent, size: 18),
+                  child:
+                      Icon(Icons.bed_outlined, color: accent, size: 18),
                 ),
                 title: Text(
                   (item['RoomType'] ?? '') as String,
@@ -1867,7 +2324,6 @@ class _HotelForm extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          
           _rowPair(
             _StepperField(
               controller: state._h_noOfRooms,
@@ -1894,7 +2350,6 @@ class _HotelForm extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-
           _LabeledCard(
             label: 'Payment By',
             accent: accent,
@@ -1913,7 +2368,6 @@ class _HotelForm extends StatelessWidget {
                   state.setState(() => state._h_paymentBy.text = v),
             ),
           ),
-
           const SizedBox(height: 12),
           TextFormField(
             controller: state._h_remarks,
@@ -1925,6 +2379,31 @@ class _HotelForm extends StatelessWidget {
             ),
             maxLines: 3,
             keyboardType: TextInputType.multiline,
+          ),
+          const SizedBox(height: 12),
+
+          // ── Add Another Hotel button ─────────────────────────────────────────
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: state._addAnotherHotel,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: accent,
+                side: BorderSide(
+                    color: accent.withOpacity(0.6), width: 1.5),
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                backgroundColor: accent.withOpacity(0.04),
+              ),
+              icon: const Icon(Icons.add_business_rounded),
+              label: const Text(
+                'Add Another Hotel for This Guest',
+                style:
+                    TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              ),
+            ),
           ),
           const SizedBox(height: 16),
           _actionButtons(
@@ -1940,7 +2419,6 @@ class _HotelForm extends StatelessWidget {
             onRemove: (i) =>
                 () => state.setState(() => state._hotelMembers.removeAt(i)),
           ),
-          // _PreviewCard(text: state._buildHotelText(), accent: accent),
         ],
       ),
     );
@@ -1992,7 +2470,8 @@ class _AirForm extends StatelessWidget {
             selectedPrefix: state._selectedPrefix,
             onPrefixChanged: (v) => state.setState(() {
               state._selectedPrefix = v;
-              state._sharedMemberId.text = '$v${state._sharedMidNumber.text}';
+              state._sharedMemberId.text =
+                  '$v${state._sharedMidNumber.text}';
             }),
           ),
           const SizedBox(height: 12),
@@ -2019,7 +2498,7 @@ class _AirForm extends StatelessWidget {
             keyboardType: TextInputType.number,
           ),
           const SizedBox(height: 16),
-           _dateField(
+          _dateField(
             context,
             'Arrival Date',
             state._a_arrCtrl,
@@ -2032,9 +2511,8 @@ class _AirForm extends StatelessWidget {
               );
               if (d != null) {
                 state._a_arrDate = d;
-                state._a_arrCtrl.text = state._fmt(
-                  d,
-                ); // ignore: invalid_use_of_protected_member
+                state._a_arrCtrl.text = state._fmt(d);
+                // ignore: invalid_use_of_protected_member
                 (context as Element).markNeedsBuild();
               }
             },
@@ -2056,9 +2534,8 @@ class _AirForm extends StatelessWidget {
               );
               if (d != null) {
                 state._a_depDate = d;
-                state._a_depCtrl.text = state._fmt(
-                  d,
-                ); // ignore: invalid_use_of_protected_member
+                state._a_depCtrl.text = state._fmt(d);
+                // ignore: invalid_use_of_protected_member
                 (context as Element).markNeedsBuild();
               }
             },
@@ -2074,13 +2551,20 @@ class _AirForm extends StatelessWidget {
                   label: 'From (Departure Airport)',
                   accent: accent,
                   selectedAirport: state._a_fromAirport,
-                  onChanged: (a) => state.setState(() {
-                    state._a_fromAirport = a;
-                    if (state._a_isRoundTrip) {
-                      state._a_returnToAirport = a;
-                      state._a_returnToAirportKey = UniqueKey();
-                    }
-                  }),
+                  onChanged: (a) {
+                    state.setState(() {
+                      state._a_fromAirport = a;
+                      if (state._a_isRoundTrip) {
+                        state._a_returnToAirport = a;
+                        state._a_returnToAirportKey = UniqueKey();
+                      }
+                      // Reset airline when route changes
+                      state._a_selectedAirline = null;
+                      state._a_airlineCosts = [];
+                      state._a_airlineKey = UniqueKey();
+                    });
+                    state._loadAirlineCosts();
+                  },
                 ),
                 const SizedBox(height: 10),
                 _AirportDropdown(
@@ -2088,13 +2572,20 @@ class _AirForm extends StatelessWidget {
                   label: 'To (Arrival Airport)',
                   accent: accent,
                   selectedAirport: state._a_toAirport,
-                  onChanged: (a) => state.setState(() {
-                    state._a_toAirport = a;
-                    if (state._a_isRoundTrip) {
-                      state._a_returnFromAirport = a;
-                      state._a_returnFromAirportKey = UniqueKey();
-                    }
-                  }),
+                  onChanged: (a) {
+                    state.setState(() {
+                      state._a_toAirport = a;
+                      if (state._a_isRoundTrip) {
+                        state._a_returnFromAirport = a;
+                        state._a_returnFromAirportKey = UniqueKey();
+                      }
+                      // Reset airline when route changes
+                      state._a_selectedAirline = null;
+                      state._a_airlineCosts = [];
+                      state._a_airlineKey = UniqueKey();
+                    });
+                    state._loadAirlineCosts();
+                  },
                 ),
               ],
             ),
@@ -2106,7 +2597,8 @@ class _AirForm extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: Colors.grey.shade300),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             child: Row(
               children: [
                 Icon(Icons.compare_arrows_rounded, color: accent, size: 20),
@@ -2123,18 +2615,24 @@ class _AirForm extends StatelessWidget {
                 Switch(
                   value: state._a_isRoundTrip,
                   activeColor: accent,
-                  onChanged: (v) => state.setState(() {
-                    state._a_isRoundTrip = v;
-                    if (v) {
-                      state._a_returnFromAirport = state._a_toAirport;
-                      state._a_returnToAirport = state._a_fromAirport;
-                      state._a_returnFromAirportKey = UniqueKey();
-                      state._a_returnToAirportKey = UniqueKey();
-                    } else {
-                      state._a_returnFromAirport = null;
-                      state._a_returnToAirport = null;
-                    }
-                  }),
+                  onChanged: (v) {
+                    state.setState(() {
+                      state._a_isRoundTrip = v;
+                      if (v) {
+                        state._a_returnFromAirport = state._a_toAirport;
+                        state._a_returnToAirport = state._a_fromAirport;
+                        state._a_returnFromAirportKey = UniqueKey();
+                        state._a_returnToAirportKey = UniqueKey();
+                      } else {
+                        state._a_returnFromAirport = null;
+                        state._a_returnToAirport = null;
+                      }
+                      state._a_selectedAirline = null;
+                      state._a_airlineCosts = [];
+                      state._a_airlineKey = UniqueKey();
+                    });
+                    state._loadAirlineCosts();
+                  },
                 ),
               ],
             ),
@@ -2151,8 +2649,10 @@ class _AirForm extends StatelessWidget {
                     label: 'Return From',
                     accent: accent,
                     selectedAirport: state._a_returnFromAirport,
-                    onChanged: (a) =>
-                        state.setState(() => state._a_returnFromAirport = a),
+                    onChanged: (a) {
+                      state.setState(() => state._a_returnFromAirport = a);
+                      state._loadAirlineCosts();
+                    },
                   ),
                   const SizedBox(height: 10),
                   _AirportDropdown(
@@ -2160,44 +2660,113 @@ class _AirForm extends StatelessWidget {
                     label: 'Return To',
                     accent: accent,
                     selectedAirport: state._a_returnToAirport,
-                    onChanged: (a) =>
-                        state.setState(() => state._a_returnToAirport = a),
+                    onChanged: (a) {
+                      state.setState(() => state._a_returnToAirport = a);
+                      state._loadAirlineCosts();
+                    },
                   ),
                 ],
               ),
             ),
           ],
           const SizedBox(height: 12),
-         
-       
-            _StepperField(
-              controller: state._a_noOfSeats,
-              label: 'No of Seats',
-              icon: Icons.event_seat_outlined,
-              accent: accent,
-            ),
-              const SizedBox(height: 12),
-            AirTicketClassSelector(
-              key: state._a_classKey,
-              selectedClass: state._a_selectedClass,
-              onClassSelected: (selectedClass) => state.setState(() {
-                state._a_selectedClass = selectedClass;
-              }),
-            ),
-         //),
+          _StepperField(
+            controller: state._a_noOfSeats,
+            label: 'No of Seats',
+            icon: Icons.event_seat_outlined,
+            accent: accent,
+          ),
           const SizedBox(height: 12),
+          AirTicketClassSelector(
+            key: state._a_classKey,
+            selectedClass: state._a_selectedClass,
+            onClassSelected: (selectedClass) => state.setState(() {
+              state._a_selectedClass = selectedClass;
+            }),
+          ),
+          const SizedBox(height: 12),
+
+          // ── Airline dropdown (from API 9023) ──────────────────────────────────
+          _AirlineDropdown(
+            dropdownKey: state._a_airlineKey,
+            items: state._a_airlineCosts,
+            selectedItem: state._a_selectedAirline,
+            isLoading: state._a_airlinesLoading,
+            accent: accent,
+            onChanged: (val) =>
+                state.setState(() => state._a_selectedAirline = val),
+          ),
+
+          // ── Selected airline info card ─────────────────────────────────────
+          if (state._a_selectedAirline != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: accent.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: accent.withOpacity(0.25)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.flight_rounded, color: accent, size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        state._a_selectedAirline!.airLine ?? '',
+                        style: TextStyle(
+                          color: accent,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  if ((state._a_selectedAirline!.sector ?? '').isNotEmpty)
+                    Text(
+                      'Sector: ${state._a_selectedAirline!.sector!.trim()}',
+                      style: const TextStyle(
+                          fontSize: 13, color: Colors.black87),
+                    ),
+                  if (state._a_selectedAirline!.cost != null)
+                    Text(
+                      'Cost: LKR ${state._a_selectedAirline!.cost}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: accent,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  if (state._a_selectedAirline!.usRate != null)
+                    Text(
+                      'USD Rate: ${state._a_selectedAirline!.usRate}',
+                      style: const TextStyle(
+                          fontSize: 12, color: Colors.grey),
+                    ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 12),
+
+          // ── Remarks (Air Tab) ─────────────────────────────────────────────────
           TextFormField(
-            controller: state._a_airlines,
+            controller: state._a_remarksCtrl,
             style: kInputTextStyle,
             decoration: _fieldDeco(
-              'Airlines',
-              icon: Icons.airplanemode_active_rounded,
+              'Remarks',
+              icon: Icons.notes_rounded,
               accent: accent,
             ),
-            textCapitalization: TextCapitalization.words,
+            maxLines: 3,
+            keyboardType: TextInputType.multiline,
           ),
+
           const SizedBox(height: 16),
-          
           _actionButtons(
             accent: accent,
             onApplyAndAdd: state._applyAndAddAirMember,
@@ -2211,7 +2780,6 @@ class _AirForm extends StatelessWidget {
             onRemove: (i) =>
                 () => state.setState(() => state._airMembers.removeAt(i)),
           ),
-          // _PreviewCard(text: state._buildAirText(), accent: accent),
         ],
       ),
     );
@@ -2305,7 +2873,8 @@ class _StepperField extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: Colors.grey.shade300),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -2447,12 +3016,9 @@ class _PreviewCard extends StatelessWidget {
       final line = lines[i];
       final colonIdx = line.indexOf(':');
       final trimmed = line.trim();
-      final isTitleLine =
-          trimmed.startsWith('*') &&
+      final isTitleLine = trimmed.startsWith('*') &&
           trimmed.endsWith('*') &&
-          !trimmed.contains(
-            'Member',
-          ); // exclude the "── Member N ──" separators
+          !trimmed.contains('Member');
 
       if (colonIdx != -1) {
         spans.add(
@@ -2484,7 +3050,7 @@ class _PreviewCard extends StatelessWidget {
           TextSpan(
             text: line.replaceAll('*', ''),
             style: TextStyle(
-              fontSize: isTitleLine ? 19 : 18, // ← bigger for the title
+              fontSize: isTitleLine ? 19 : 18,
               height: 1.6,
               fontFamily: 'monospace',
               color: accent,

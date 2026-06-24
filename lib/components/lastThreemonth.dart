@@ -121,8 +121,8 @@ class _LastThreeMonthsGuestCardState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Title with expand/collapse icon — same pattern as
-            // MarketingPerformanceWidget.
+            // Title with refresh + expand/collapse icons — refresh moved
+            // up to the top per request.
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -135,6 +135,19 @@ class _LastThreeMonthsGuestCardState
                       color: Colors.black87,
                     ),
                   ),
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.refresh,
+                    color: lastThreeMonthsState.isLoading
+                        ? Colors.grey
+                        : Colors.blue,
+                    size: 26,
+                  ),
+                  onPressed: lastThreeMonthsState.isLoading
+                      ? null
+                      : () =>
+                          ref.read(lastThreeMonthsProvider.notifier).getData(),
                 ),
                 IconButton(
                   icon: Icon(
@@ -237,76 +250,30 @@ class _LastThreeMonthsGuestCardState
 
             const SizedBox(height: 16),
 
-            // Legend with refresh button — same pattern as
-            // MarketingPerformanceWidget.
+            // Legend — refresh button now lives in the title row above.
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 12,
-                          height: 12,
-                          decoration: const BoxDecoration(
-                            color: Colors.green,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Text("WIN"),
-                      ],
-                    ),
-                    const SizedBox(width: 20),
-                    Row(
-                      children: [
-                        Container(
-                          width: 12,
-                          height: 12,
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Text("LOST"),
-                      ],
-                    ),
-                  ],
-                ),
-                Card(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  color: lastThreeMonthsState.isLoading
-                      ? Colors.grey
-                      : Colors.blue,
-                  elevation: 2,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: TextButton.icon(
-                      onPressed: lastThreeMonthsState.isLoading
-                          ? null
-                          : () => ref
-                              .read(lastThreeMonthsProvider.notifier)
-                              .getData(),
-                      icon: const Icon(
-                        Icons.refresh,
-                        size: 14,
-                        color: Colors.white,
-                      ),
-                      label: const Text(
-                        "Refresh",
-                        style: TextStyle(fontSize: 16, color: Colors.white),
-                      ),
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: const BoxDecoration(
+                    color: Colors.green,
+                    shape: BoxShape.circle,
                   ),
                 ),
+                const SizedBox(width: 4),
+                const Text("WIN"),
+                const SizedBox(width: 20),
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Text("LOST"),
               ],
             ),
           ],

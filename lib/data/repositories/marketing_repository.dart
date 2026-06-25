@@ -4,11 +4,10 @@ import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart'
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 
-// Create a combined result class to hold all three tables
 class MarketingApiResult {
   final List<MarketingPerformance> performanceData;
   final List<MarketingDetailedData> detailedData;
-  final List<MarketingResult> resultData; // NEW: Table2 data
+  final List<MarketingResult> resultData;
 
   MarketingApiResult({
     required this.performanceData,
@@ -17,12 +16,22 @@ class MarketingApiResult {
   });
 }
 
+// NEW: Result type for target API calls
+class MarketingTargetApiResult {
+  final List<MarketingTargetDetail> detailRows; // Table  (individual trips)
+  final List<MarketingTarget> summaryRows;      // Table1 (per-SM summary)
+
+  MarketingTargetApiResult({
+    required this.detailRows,
+    required this.summaryRows,
+  });
+}
+
 class MarketingRepository {
   final ApiService apiService;
 
   MarketingRepository(this.apiService);
 
-  // Modified to return Table, Table1, and Table2 data
   Future<MarketingApiResult> getMarketingData(
     int iid,
     AppMode appMode,
@@ -30,9 +39,8 @@ class MarketingRepository {
   ) async {
     final actualSalesCode = await StorageUtil.getSalesCode();
     final deviceId = await DeviceId.get();
-    print('Marketing Repository - IID: $iid, Sales Code: $actualSalesCode, Device ID: $deviceId');
-     final spName = await StorageUtil.getStoredProcedureName();
-     print('Using stored procedure: $spName');
+    final spName = await StorageUtil.getStoredProcedureName();
+
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -64,18 +72,13 @@ class MarketingRepository {
 
     List<MarketingPerformance> marketingPerformanceList = [];
     List<MarketingDetailedData> marketingDetailedList = [];
-    List<MarketingResult> marketingResultList = []; // NEW
+    List<MarketingResult> marketingResultList = [];
 
-    // Process Table (Performance Summary)
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List &&
         response['CommonResult']['Table'].isNotEmpty) {
-      final tableData = response['CommonResult']['Table'];
-
-      for (var table in tableData) {
+      for (var table in response['CommonResult']['Table']) {
         final performance = MarketingPerformance.fromJson(table);
-
-        // Filter based on app mode and sales code
         if (actualSalesCode == 'AD001' && appMode == AppMode.overallData) {
           marketingPerformanceList.add(performance);
         } else {
@@ -86,16 +89,11 @@ class MarketingRepository {
       }
     }
 
-    // Process Table1 (Detailed Member Data)
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table1'] is List &&
         response['CommonResult']['Table1'].isNotEmpty) {
-      final table1Data = response['CommonResult']['Table1'];
-
-      for (var memberData in table1Data) {
+      for (var memberData in response['CommonResult']['Table1']) {
         final detailed = MarketingDetailedData.fromJson(memberData);
-
-        // Apply same filtering logic as performance data
         if (actualSalesCode == 'AD001' && appMode == AppMode.overallData) {
           marketingDetailedList.add(detailed);
         } else {
@@ -106,16 +104,11 @@ class MarketingRepository {
       }
     }
 
-    // NEW: Process Table2 (Result Data)
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table2'] is List &&
         response['CommonResult']['Table2'].isNotEmpty) {
-      final table2Data = response['CommonResult']['Table2'];
-
-      for (var resultData in table2Data) {
+      for (var resultData in response['CommonResult']['Table2']) {
         final result = MarketingResult.fromJson(resultData);
-
-        // Apply same filtering logic as other tables
         if (actualSalesCode == 'AD001' && appMode == AppMode.overallData) {
           marketingResultList.add(result);
         } else {
@@ -129,11 +122,73 @@ class MarketingRepository {
     return MarketingApiResult(
       performanceData: marketingPerformanceList,
       detailedData: marketingDetailedList,
-      resultData: marketingResultList, // NEW
+      resultData: marketingResultList,
     );
   }
 
-  // Helper method to get detailed data for specific SM
+  // NEW: Fetch target data — IID 778898 (monthly) or 558899 (last month)
+  Future<MarketingTargetApiResult> getTargetData(
+    int iid,
+    AppMode appMode,
+  ) async {
+    final actualSalesCode = await StorageUtil.getSalesCode();
+    final deviceId = await DeviceId.get();
+    final spName = await StorageUtil.getStoredProcedureName();
+print("tesq");
+    final response = await apiService.post('CommonExecute', {
+      "HasReturnData": "T",
+      "Parameters": [
+        {
+          "Para_Data": iid,
+          "Para_Direction": "Input",
+          "Para_Lenth": 1,
+          "Para_Name": "@Iid",
+          "Para_Type": "int",
+        },
+        {
+          "Para_Data": actualSalesCode,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text1",
+          "Para_Type": "varchar",
+        },
+        {
+          "Para_Data": deviceId,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text30",
+          "Para_Type": "varchar",
+        },
+      ],
+      "SpName": spName,
+      "con": "1",
+    });
+
+    List<MarketingTargetDetail> detailRows = [];
+    List<MarketingTarget> summaryRows = [];
+
+    // Table — individual member trip rows
+    if (response['CommonResult'] != null &&
+        response['CommonResult']['Table'] is List) {
+      for (var row in response['CommonResult']['Table']) {
+        detailRows.add(MarketingTargetDetail.fromJson(row));
+      }
+    }
+
+    // Table1 — per-SM/group summary rows
+    if (response['CommonResult'] != null &&
+        response['CommonResult']['Table1'] is List) {
+      for (var row in response['CommonResult']['Table1']) {
+        summaryRows.add(MarketingTarget.fromJson(row));
+      }
+    }
+
+    return MarketingTargetApiResult(
+      detailRows: detailRows,
+      summaryRows: summaryRows,
+    );
+  }
+
   List<MarketingDetailedData> getDetailedDataForSM(
     List<MarketingDetailedData> allDetailedData,
     String smCode,
@@ -141,7 +196,6 @@ class MarketingRepository {
     return allDetailedData.where((data) => data.sm == smCode).toList();
   }
 
-  // Updated methods to use the new combined API call
   Future<MarketingApiResult> getTodayData(
     AppMode appMode,
     String salesCode,
@@ -163,7 +217,6 @@ class MarketingRepository {
     return await getMarketingData(8898, appMode, salesCode);
   }
 
-  // Legacy methods for backward compatibility (if needed)
   Future<List<MarketingPerformance>> getMarketingPerformance(
     int iid,
     AppMode appMode,

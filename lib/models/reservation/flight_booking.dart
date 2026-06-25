@@ -12,6 +12,9 @@ class FlightBooking {
   final String airTicketClassName;
   final bool isRoundTrip;
   final dynamic selectedCost;
+  final String? airLine;
+  final String? contactPerson;
+  final bool visa;
 
   FlightBooking({
     required this.guestCount,
@@ -24,6 +27,9 @@ class FlightBooking {
     required this.airTicketClassName,
     required this.isRoundTrip,
     required this.selectedCost,
+    this.airLine,
+    this.contactPerson,
+    this.visa = false,
   });
 
   factory FlightBooking.fromJson(Map<String, dynamic> json) {
@@ -40,6 +46,9 @@ class FlightBooking {
       airTicketClassName: json['air_ticket_class_name'] ?? '',
       isRoundTrip: json['is_round_trip'] ?? false,
       selectedCost: _parseCost(json['selected_cost']),
+      airLine: json['air_line'] as String?,
+      contactPerson: json['contact_person'] as String?,
+      visa: json['visa'] as bool? ?? false,
     );
   }
 
@@ -79,16 +88,36 @@ class FlightBooking {
 
   Map<String, dynamic> toJson() {
     return {
-      'guest_count': guestCount,
-      'airports': airports?.toJson(),
-      'air_ticket_class': airTicketClass,
-      'arrival_date': arrivalDate?.toIso8601String(),
-      'departure_date': departureDate?.toIso8601String(),
-      'silk_route': silkRoute,
-      'airport_transportation': airportTransportation,
-      'air_ticket_class_name': airTicketClassName,
-      'is_round_trip': isRoundTrip,
-      'selected_cost': _parseCostToDouble(selectedCost),
+      'GuestCount': guestCount,
+      'AirTicketClass': airTicketClass,
+      'AirTicketClassName': airTicketClassName,
+      'AirLine': airLine,
+      'ContactPerson': contactPerson,
+      'Visa': visa,
+      'IsRoundTrip': isRoundTrip,
+      'SilkRoute': silkRoute,
+      'AirportTransportation': airportTransportation,
+      'ArrivalDate': arrivalDate?.toIso8601String(),
+      'DepartureDate': departureDate?.toIso8601String(),
+      'SelectedCost': _parseCostToDouble(selectedCost),
+      // Departure leg — flattened
+      'DF_AirportCode': airports?.departure?.dFrom.airportCode,
+      'DF_CityName': airports?.departure?.dFrom.cityName,
+      'DF_AirportName': airports?.departure?.dFrom.airportName,
+      'DF_Country': airports?.departure?.dFrom.country,
+      'DT_AirportCode': airports?.departure?.dTo.airportCode,
+      'DT_CityName': airports?.departure?.dTo.cityName,
+      'DT_AirportName': airports?.departure?.dTo.airportName,
+      'DT_Country': airports?.departure?.dTo.country,
+      // Return leg — flattened (null when one-way)
+      'RF_AirportCode': airports?.returnFlight?.rFrom.airportCode,
+      'RF_CityName': airports?.returnFlight?.rFrom.cityName,
+      'RF_AirportName': airports?.returnFlight?.rFrom.airportName,
+      'RF_Country': airports?.returnFlight?.rFrom.country,
+      'RT_AirportCode': airports?.returnFlight?.rTo.airportCode,
+      'RT_CityName': airports?.returnFlight?.rTo.cityName,
+      'RT_AirportName': airports?.returnFlight?.rTo.airportName,
+      'RT_Country': airports?.returnFlight?.rTo.country,
     };
   }
 }

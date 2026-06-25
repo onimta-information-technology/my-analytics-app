@@ -3,7 +3,7 @@ class MarketingPerformance {
   final String smName;
   final double winLost;
   final bool isPositive;
-  final double displayValue; // Value in K format
+  final double displayValue;
 
   MarketingPerformance({
     required this.sm,
@@ -43,7 +43,6 @@ class MarketingPerformance {
   }
 }
 
-// NEW: Model for Table2 (Result data)
 class MarketingResult {
   final String sm;
   final String smName;
@@ -97,16 +96,122 @@ class MarketingResult {
   }
 }
 
-// Complete detailed marketing data model with all fields from Table1
+// NEW: Summary row from Table1 — one entry per SM/group
+class MarketingTarget {
+  final String gcode;
+  final String gName;
+  final double actualDrop;
+  final double mTarget;
+  final double achievement; // percentage
+
+  MarketingTarget({
+    required this.gcode,
+    required this.gName,
+    required this.actualDrop,
+    required this.mTarget,
+    required this.achievement,
+  });
+
+  factory MarketingTarget.fromJson(Map<String, dynamic> json) {
+    return MarketingTarget(
+      gcode: json['Gcode']?.toString() ?? '',
+      gName: json['GName']?.toString() ?? '',
+      actualDrop: (json['ActualDrop'] as num?)?.toDouble() ?? 0.0,
+      mTarget: (json['M_Target'] as num?)?.toDouble() ?? 0.0,
+      achievement: (json['Achievement'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'Gcode': gcode,
+        'GName': gName,
+        'ActualDrop': actualDrop,
+        'M_Target': mTarget,
+        'Achievement': achievement,
+      };
+
+  @override
+  String toString() =>
+      'MarketingTarget{gcode: $gcode, gName: $gName, actualDrop: $actualDrop, mTarget: $mTarget, achievement: $achievement}';
+}
+
+// NEW: Detail row from Table (individual member trips)
+class MarketingTargetDetail {
+  final double idNo;
+  final String mid;
+  final String mName;
+  final int tripNo;
+  final DateTime? arrivalDate;
+  final DateTime? departureDate;
+  final double actualDrop;
+  final String gcode;
+  final String gName;
+  final double mTarget;
+
+  MarketingTargetDetail({
+    required this.idNo,
+    required this.mid,
+    required this.mName,
+    required this.tripNo,
+    this.arrivalDate,
+    this.departureDate,
+    required this.actualDrop,
+    required this.gcode,
+    required this.gName,
+    required this.mTarget,
+  });
+
+  factory MarketingTargetDetail.fromJson(Map<String, dynamic> json) {
+    DateTime? parseDate(dynamic v) {
+      if (v == null) return null;
+      try {
+        return DateTime.parse(v.toString());
+      } catch (_) {
+        return null;
+      }
+    }
+
+    return MarketingTargetDetail(
+      idNo: (json['Id_No'] as num?)?.toDouble() ?? 0.0,
+      mid: json['MID']?.toString() ?? '',
+      mName: json['MName']?.toString() ?? '',
+      tripNo: (json['TripNo'] as num?)?.toInt() ?? 0,
+      arrivalDate: parseDate(json['ArrivalDate']),
+      departureDate: parseDate(json['DepartureDate']),
+      actualDrop: (json['ActualDrop'] as num?)?.toDouble() ?? 0.0,
+      gcode: json['Gcode']?.toString() ?? '',
+      gName: json['GName']?.toString() ?? '',
+      mTarget: (json['M_Target'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'Id_No': idNo,
+        'MID': mid,
+        'MName': mName,
+        'TripNo': tripNo,
+        'ArrivalDate': arrivalDate?.toIso8601String(),
+        'DepartureDate': departureDate?.toIso8601String(),
+        'ActualDrop': actualDrop,
+        'Gcode': gcode,
+        'GName': gName,
+        'M_Target': mTarget,
+      };
+
+  @override
+  String toString() =>
+      'MarketingTargetDetail{mid: $mid, mName: $mName, tripNo: $tripNo, actualDrop: $actualDrop}';
+}
+
 class MarketingDetailedData {
   final String memId;
-  final String mName; // Member name
+  final String mName;
   final double mDrop;
   final double cashOut;
   final double comm;
-  final double paidComm; // Paid commission
-  final double balanceComm; // Balance commission
-  final double winLost; // Actual win/lost value from Table1
+  final double paidComm;
+  final double balanceComm;
+  final double winLost;
   final String sm;
   final String smName;
 

@@ -1,13 +1,30 @@
-// guest_reservation_entry.dart
-//
-// Lightweight model representing ONE guest's full booking slice inside a
-// single multi-guest reservation. Several of these share one reservationNo.
-//
-// Place this file at: lib/models/reservation/guest_reservation_entry.dart
-// (adjust the import paths below to match wherever you put it)
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:ballys_reservation_app/models/reservation/hotel_desc.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_booking.dart';
+
+class PassportImage {
+  final String path;
+  final String fileName;
+  final bool isPdf;
+
+  PassportImage({
+    required this.path,
+    required this.fileName,
+    required this.isPdf,
+  });
+
+  Map<String, dynamic> toJsonWithGuest(String guestBmNumber) {
+    final bytes = File(path).readAsBytesSync();
+    return {
+      'GuestBMNumber': guestBmNumber,
+      'FileName': fileName,
+      'IsPdf': isPdf,
+      'Base64Data': base64Encode(bytes),
+    };
+  }
+}
 
 class GuestReservationEntry {
   final String mid;
@@ -18,6 +35,7 @@ class GuestReservationEntry {
   final DateTime? departureDate;
   final String remarks;
   final String airTicketRequisition; // "Yes" / "No"
+  final List<PassportImage> passportImages;
 
   GuestReservationEntry({
     required this.mid,
@@ -28,24 +46,27 @@ class GuestReservationEntry {
     required this.departureDate,
     required this.remarks,
     required this.airTicketRequisition,
+    this.passportImages = const [],
   });
 
-  /// Used to build the `guests` array sent to the backend.
+  /// Simplified guest entry sent inside the `guests` array.
   Map<String, dynamic> toJson() {
     return {
-      "bmNumber": mid,
-      "guestName": guestName,
-      "roomDetails": hotels.map((h) => h.toJson()).toList(),
-      "airTicketDetails": flights.map((f) => f.toJson()).toList(),
-      "arrivalDate": arrivalDate?.toIso8601String(),
-      "departureDate": departureDate?.toIso8601String(),
-      "remarks": remarks,
-      "hasAirTicketReservation": airTicketRequisition == "Yes" ? "1" : "0",
+      'BMNumber': mid,
+      'GuestName': guestName,
+      'ArrivalDate': arrivalDate?.toIso8601String(),
+      'DepartureDate': departureDate?.toIso8601String(),
+      'HasAirTicketReservation': airTicketRequisition == 'Yes',
+      'Remarks': remarks,
     };
   }
 
-  /// Convenience copy used when "editing" an already-added guest
-  /// (pops it back into the form fields).
+  /// Returns passport images for this guest to be added to the top-level
+  /// `passport_images` array, each tagged with this guest's BM number.
+  List<Map<String, dynamic>> toPassportImagesJson() {
+    return passportImages.map((p) => p.toJsonWithGuest(mid)).toList();
+  }
+
   GuestReservationEntry copyWith({
     String? mid,
     String? guestName,
@@ -55,6 +76,7 @@ class GuestReservationEntry {
     DateTime? departureDate,
     String? remarks,
     String? airTicketRequisition,
+    List<PassportImage>? passportImages,
   }) {
     return GuestReservationEntry(
       mid: mid ?? this.mid,
@@ -65,6 +87,7 @@ class GuestReservationEntry {
       departureDate: departureDate ?? this.departureDate,
       remarks: remarks ?? this.remarks,
       airTicketRequisition: airTicketRequisition ?? this.airTicketRequisition,
+      passportImages: passportImages ?? this.passportImages,
     );
   }
 }

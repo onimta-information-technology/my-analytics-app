@@ -716,10 +716,37 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> with Conne
                         ),
                       ),
                     ),
-
+                    SizedBox(height: 8),
+// Visit count summary card
+if (_tripHistory.isNotEmpty)
+  Container(
+    width: double.infinity,
+    margin: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 20),
+    decoration: BoxDecoration(
+      color: const Color.fromARGB(255, 46, 25, 233).withOpacity(0.1),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: Constants.kSecondaryColor.withOpacity(0.4)),
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Icon(Icons.confirmation_number_outlined, size: 22),
+        const SizedBox(width: 10),
+        Text(
+          "Total Visits : ${_tripHistory.length}",
+          style: TextStyle(
+            fontSize: fontSettings.fontSize + 5,
+            fontWeight: FontWeight.w900,
+            color: const Color.fromARGB(255, 6, 8, 64),
+          ),
+        ),
+      ],
+    ),
+  ),
                     // Trip history table
                     Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16.0),
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
                       child: Table(
                         border: TableBorder.all(),
                         columnWidths: const {
@@ -1053,6 +1080,9 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> with Conne
                                     ],
                                   ),
                                   TableRow(
+                                      decoration: const BoxDecoration(
+    color: Color.fromARGB(255, 1, 255, 22), // light green background
+  ),
                                     children: [
                                       Container(
                                         color: Constants.kPrimaryColor

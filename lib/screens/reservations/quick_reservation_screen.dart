@@ -1023,7 +1023,7 @@ Class                    : ${m['class']}
 Airline                  : ${m['airline']}${(m['sector'] as String? ?? '').isNotEmpty ? ' (${m['sector']})' : ''}
 Cost                      : ${m['cost']}
 Round Trip           : ${isRound ? 'Yes' : 'No'}
-Skip Route Facility : ${m['skipRouteFacility']}
+Slik Route Facility : ${m['skipRouteFacility']}
 Airport Transport   : ${m['airportTransport']}
 Visa                     : ${m['visa']}
 Hamoue Contact   : ${(m['hamoueContactPerson'] as String? ?? '').isEmpty ? 'NA' : m['hamoueContactPerson']}
@@ -2795,7 +2795,7 @@ class _AirForm extends StatelessWidget {
             Icons.checklist_rtl_rounded,
           ),
           _YesNoRadioRow(
-            label: 'Skip Route Facility',
+            label: 'Slik Route Facility',
             icon: Icons.alt_route_rounded,
             value: state._a_skipRouteFacility,
             accent: accent,

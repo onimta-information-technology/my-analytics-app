@@ -83,6 +83,9 @@ class LastThreeMonthsNotifier extends StateNotifier<LastThreeMonthsState> {
   List<LastThreeMonthsDetailedData> getDetailedDataForSM(String smCode) {
     return state.detailedData.where((data) => data.sm == smCode).toList();
   }
+    void clearData() {
+    state = const LastThreeMonthsState();
+  }
 }
 
 final lastThreeMonthsRepositoryProvider = Provider((ref) {

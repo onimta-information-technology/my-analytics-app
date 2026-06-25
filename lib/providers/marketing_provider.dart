@@ -6,13 +6,20 @@ import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+enum MarketingViewType {
+  performance,
+  result,
+  target, // NEW — only valid when selectedTab == 2 or 3
+}
+
 class MarketingNotifier extends StateNotifier<MarketingState> {
   final MarketingRepository marketingRepository;
   final Ref ref;
 
   MarketingNotifier(this.marketingRepository, this.ref)
       : super(MarketingState());
-void clearMarketing() {
+
+  void clearMarketing() {
     state = MarketingState(
       todayPerformance: [],
       yesterdayPerformance: [],
@@ -27,7 +34,7 @@ void clearMarketing() {
       isLoading: false,
     );
   }
-  // Updated to fetch performance, detailed, and result data in one call
+
   Future<void> getMarketingData(int iid, {AppMode? overrideAppMode}) async {
     state = state.copyWith(isLoading: true);
 
@@ -36,88 +43,121 @@ void clearMarketing() {
       final currentAppModeSettings = ref.read(appmodeSettingsProvider);
       final appMode = overrideAppMode ?? currentAppModeSettings.appMode;
 
-      // Single API call to get all three tables
       final result = await marketingRepository.getMarketingData(
         iid,
         appMode,
         salesCode!,
       );
 
-      // Update state based on IID
-      switch (iid) {
-        case 8896: // Today
-          state = state.copyWith(
-            todayPerformance: result.performanceData,
-            todayDetailedData: result.detailedData,
-            todayResultData: result.resultData, // NEW
-            isLoading: false,
-          );
-          break;
-        case 8897: // Yesterday
-          state = state.copyWith(
-            yesterdayPerformance: result.performanceData,
-            yesterdayDetailedData: result.detailedData,
-            yesterdayResultData: result.resultData, // NEW
-            isLoading: false,
-          );
-          break;
-        case 8898: // Monthly
-          state = state.copyWith(
-            monthlyPerformance: result.performanceData,
-            monthlyDetailedData: result.detailedData,
-            monthlyResultData: result.resultData, // NEW
-            isLoading: false,
-          );
-          break;
-        case 8899: // Last Monthly
-          state = state.copyWith(
-            lastmonthPerformance: result.performanceData,
-            lastmonthDetailedData: result.detailedData,
-            lastmonthResultData: result.resultData, // NEW
-            isLoading: false,
-          );
-          break;
-      }
-    } catch (e, stackTrace) {
-      // Reset specific state instead of all
       switch (iid) {
         case 8896:
           state = state.copyWith(
-            todayPerformance: [],
-            todayDetailedData: [],
-            todayResultData: [],
+            todayPerformance: result.performanceData,
+            todayDetailedData: result.detailedData,
+            todayResultData: result.resultData,
             isLoading: false,
           );
           break;
         case 8897:
           state = state.copyWith(
-            yesterdayPerformance: [],
-            yesterdayDetailedData: [],
-            yesterdayResultData: [],
+            yesterdayPerformance: result.performanceData,
+            yesterdayDetailedData: result.detailedData,
+            yesterdayResultData: result.resultData,
             isLoading: false,
           );
           break;
         case 8898:
           state = state.copyWith(
-            monthlyPerformance: [],
-            monthlyDetailedData: [],
-            monthlyResultData: [],
+            monthlyPerformance: result.performanceData,
+            monthlyDetailedData: result.detailedData,
+            monthlyResultData: result.resultData,
             isLoading: false,
           );
           break;
         case 8899:
           state = state.copyWith(
-            lastmonthPerformance: [],
-            lastmonthDetailedData: [],
-            lastmonthResultData: [],
+            lastmonthPerformance: result.performanceData,
+            lastmonthDetailedData: result.detailedData,
+            lastmonthResultData: result.resultData,
             isLoading: false,
           );
+          break;
+      }
+    } catch (e) {
+      switch (iid) {
+        case 8896:
+          state = state.copyWith(
+              todayPerformance: [],
+              todayDetailedData: [],
+              todayResultData: [],
+              isLoading: false);
+          break;
+        case 8897:
+          state = state.copyWith(
+              yesterdayPerformance: [],
+              yesterdayDetailedData: [],
+              yesterdayResultData: [],
+              isLoading: false);
+          break;
+        case 8898:
+          state = state.copyWith(
+              monthlyPerformance: [],
+              monthlyDetailedData: [],
+              monthlyResultData: [],
+              isLoading: false);
+          break;
+        case 8899:
+          state = state.copyWith(
+              lastmonthPerformance: [],
+              lastmonthDetailedData: [],
+              lastmonthResultData: [],
+              isLoading: false);
           break;
       }
     }
   }
 
-  // NEW METHOD: Refresh only the current tab based on selectedTab
+  // NEW: Fetch target data for monthly (IID 778898) or last month (IID 558899)
+  Future<void> getTargetData(int tabIndex, {AppMode? overrideAppMode}) async {
+    state = state.copyWith(isLoading: true);
+
+    try {
+      final currentAppModeSettings = ref.read(appmodeSettingsProvider);
+      final appMode = overrideAppMode ?? currentAppModeSettings.appMode;
+
+      // Monthly = 778898, Last Month = 558899
+      final iid = tabIndex == 2 ? 778898 : 558899;
+
+      final result = await marketingRepository.getTargetData(iid, appMode);
+
+      if (tabIndex == 2) {
+        state = state.copyWith(
+          monthlyTargetSummary: result.summaryRows,
+          monthlyTargetDetail: result.detailRows,
+          isLoading: false,
+        );
+      } else {
+        state = state.copyWith(
+          lastmonthTargetSummary: result.summaryRows,
+          lastmonthTargetDetail: result.detailRows,
+          isLoading: false,
+        );
+      }
+    } catch (e) {
+      if (tabIndex == 2) {
+        state = state.copyWith(
+            monthlyTargetSummary: [],
+            monthlyTargetDetail: [],
+            isLoading: false);
+      } else {
+        state = state.copyWith(
+            lastmonthTargetSummary: [],
+            lastmonthTargetDetail: [],
+            isLoading: false);
+      }
+    }
+  }
+
   Future<void> refreshCurrentTab({AppMode? overrideAppMode}) async {
     switch (state.selectedTab) {
       case 0:
@@ -138,35 +178,29 @@ void clearMarketing() {
     }
   }
 
-  // NEW METHOD: Handle app mode change - refresh ALL tabs
   Future<void> onAppModeChanged(AppMode newAppMode) async {
-    if (state.selectedTab == -1) {
-      return;
-    }
+    if (state.selectedTab == -1) return;
     await refreshAllDataWithAppMode(newAppMode);
   }
 
-  // NEW METHOD: Refresh all data with specific app mode
   Future<void> refreshAllDataWithAppMode(AppMode appMode) async {
     state = state.copyWith(isLoading: true);
-
     try {
       await Future.wait([
-        getMarketingData(8896, overrideAppMode: appMode), // Today
-        getMarketingData(8897, overrideAppMode: appMode), // Yesterday
-        getMarketingData(8898, overrideAppMode: appMode), // Monthly
-        getMarketingData(8899, overrideAppMode: appMode), // last month
+        getMarketingData(8896, overrideAppMode: appMode),
+        getMarketingData(8897, overrideAppMode: appMode),
+        getMarketingData(8898, overrideAppMode: appMode),
+        getMarketingData(8899, overrideAppMode: appMode),
       ]);
     } catch (e) {
+      // ignore
     } finally {
       state = state.copyWith(isLoading: false);
     }
   }
 
-  // Get detailed data for a specific SM from already loaded data
   List<MarketingDetailedData> getDetailedDataForSM(String smCode) {
     List<MarketingDetailedData> currentDetailedData;
-
     switch (state.selectedTab) {
       case 0:
         currentDetailedData = state.todayDetailedData;
@@ -184,47 +218,29 @@ void clearMarketing() {
         currentDetailedData = state.todayDetailedData;
         break;
     }
-
     return currentDetailedData.where((data) => data.sm == smCode).toList();
   }
 
-  // Updated methods using the new combined approach
-  Future<void> getTodayData() async {
-    await getMarketingData(8896);
+  // NEW: Get target detail rows for a specific group code
+  List<MarketingTargetDetail> getTargetDetailForGroup(String gcode) {
+    final details = state.selectedTab == 2
+        ? state.monthlyTargetDetail
+        : state.lastmonthTargetDetail;
+    return details.where((d) => d.gcode == gcode).toList();
   }
 
-  Future<void> getYesterdayData() async {
-    await getMarketingData(8897);
-  }
+  Future<void> getTodayData() async => getMarketingData(8896);
+  Future<void> getYesterdayData() async => getMarketingData(8897);
+  Future<void> getMonthlyData() async => getMarketingData(8898);
+  Future<void> getLastMonthData() async => getMarketingData(8899);
 
-  Future<void> getMonthlyData() async {
-    await getMarketingData(8898);
-  }
+  Future<void> getTodayPerformance() async => getTodayData();
+  Future<void> getYesterdayPerformance() async => getYesterdayData();
+  Future<void> getMonthlyPerformance() async => getMonthlyData();
+  Future<void> getLastMonthPerformance() async => getLastMonthData();
 
-  Future<void> getLastMonthData() async {
-    await getMarketingData(8899);
-  }
-
-  // Legacy methods for backward compatibility
-  Future<void> getTodayPerformance() async {
-    await getTodayData();
-  }
-
-  Future<void> getYesterdayPerformance() async {
-    await getYesterdayData();
-  }
-
-  Future<void> getMonthlyPerformance() async {
-    await getMonthlyData();
-  }
-
-  Future<void> getLastMonthPerformance() async {
-    await getLastMonthData();
-  }
-
-  Future<void> getMonthlyPerformanceOverall() async {
-    await getMarketingData(8898, overrideAppMode: AppMode.overallData);
-  }
+  Future<void> getMonthlyPerformanceOverall() async =>
+      getMarketingData(8898, overrideAppMode: AppMode.overallData);
 
   Future<void> refreshAllData({AppMode? overrideAppMode}) async {
     if (overrideAppMode != null) {
@@ -247,16 +263,9 @@ void clearMarketing() {
     state = state.copyWith(selectedTab: tabIndex);
   }
 
-  // NEW: Set view type (Performance or Result)
   void setViewType(MarketingViewType viewType) {
     state = state.copyWith(viewType: viewType);
   }
-}
-
-// NEW: Enum for view type
-enum MarketingViewType {
-  performance,
-  result,
 }
 
 // Providers
@@ -280,29 +289,32 @@ final marketingProvider =
   return MarketingNotifier(marketingRepository, ref);
 });
 
-// Updated MarketingState to store result data for each time period
 class MarketingState {
   final List<MarketingPerformance> todayPerformance;
   final List<MarketingPerformance> yesterdayPerformance;
   final List<MarketingPerformance> monthlyPerformance;
   final List<MarketingPerformance> lastmonthPerformance;
 
-  // Store detailed data for each time period
   final List<MarketingDetailedData> todayDetailedData;
   final List<MarketingDetailedData> yesterdayDetailedData;
   final List<MarketingDetailedData> monthlyDetailedData;
   final List<MarketingDetailedData> lastmonthDetailedData;
 
-  // NEW: Store result data (Table2) for each time period
   final List<MarketingResult> todayResultData;
   final List<MarketingResult> yesterdayResultData;
   final List<MarketingResult> monthlyResultData;
   final List<MarketingResult> lastmonthResultData;
 
+  // NEW: Target data (monthly & last month only)
+  final List<MarketingTarget> monthlyTargetSummary;
+  final List<MarketingTarget> lastmonthTargetSummary;
+  final List<MarketingTargetDetail> monthlyTargetDetail;
+  final List<MarketingTargetDetail> lastmonthTargetDetail;
+
   final List<MarketingDetailedData> detailedData;
   final int selectedTab;
   final bool isLoading;
-  final MarketingViewType viewType; // NEW
+  final MarketingViewType viewType;
 
   MarketingState({
     this.todayPerformance = const [],
@@ -313,14 +325,18 @@ class MarketingState {
     this.yesterdayDetailedData = const [],
     this.monthlyDetailedData = const [],
     this.lastmonthDetailedData = const [],
-    this.todayResultData = const [], // NEW
-    this.yesterdayResultData = const [], // NEW
-    this.monthlyResultData = const [], // NEW
-    this.lastmonthResultData = const [], // NEW
+    this.todayResultData = const [],
+    this.yesterdayResultData = const [],
+    this.monthlyResultData = const [],
+    this.lastmonthResultData = const [],
+    this.monthlyTargetSummary = const [],     // NEW
+    this.lastmonthTargetSummary = const [],   // NEW
+    this.monthlyTargetDetail = const [],      // NEW
+    this.lastmonthTargetDetail = const [],    // NEW
     this.detailedData = const [],
     this.selectedTab = -1,
     this.isLoading = false,
-    this.viewType = MarketingViewType.performance, // NEW
+    this.viewType = MarketingViewType.performance,
   });
 
   MarketingState copyWith({
@@ -332,14 +348,18 @@ class MarketingState {
     List<MarketingDetailedData>? yesterdayDetailedData,
     List<MarketingDetailedData>? monthlyDetailedData,
     List<MarketingDetailedData>? lastmonthDetailedData,
-    List<MarketingResult>? todayResultData, // NEW
-    List<MarketingResult>? yesterdayResultData, // NEW
-    List<MarketingResult>? monthlyResultData, // NEW
-    List<MarketingResult>? lastmonthResultData, // NEW
+    List<MarketingResult>? todayResultData,
+    List<MarketingResult>? yesterdayResultData,
+    List<MarketingResult>? monthlyResultData,
+    List<MarketingResult>? lastmonthResultData,
+    List<MarketingTarget>? monthlyTargetSummary,      // NEW
+    List<MarketingTarget>? lastmonthTargetSummary,    // NEW
+    List<MarketingTargetDetail>? monthlyTargetDetail, // NEW
+    List<MarketingTargetDetail>? lastmonthTargetDetail, // NEW
     List<MarketingDetailedData>? detailedData,
     int? selectedTab,
     bool? isLoading,
-    MarketingViewType? viewType, // NEW
+    MarketingViewType? viewType,
   }) {
     return MarketingState(
       todayPerformance: todayPerformance ?? this.todayPerformance,
@@ -347,81 +367,73 @@ class MarketingState {
       monthlyPerformance: monthlyPerformance ?? this.monthlyPerformance,
       lastmonthPerformance: lastmonthPerformance ?? this.lastmonthPerformance,
       todayDetailedData: todayDetailedData ?? this.todayDetailedData,
-      yesterdayDetailedData:
-          yesterdayDetailedData ?? this.yesterdayDetailedData,
+      yesterdayDetailedData: yesterdayDetailedData ?? this.yesterdayDetailedData,
       monthlyDetailedData: monthlyDetailedData ?? this.monthlyDetailedData,
-      lastmonthDetailedData:
-          lastmonthDetailedData ?? this.lastmonthDetailedData,
-      todayResultData: todayResultData ?? this.todayResultData, // NEW
-      yesterdayResultData: yesterdayResultData ?? this.yesterdayResultData, // NEW
-      monthlyResultData: monthlyResultData ?? this.monthlyResultData, // NEW
-      lastmonthResultData: lastmonthResultData ?? this.lastmonthResultData, // NEW
+      lastmonthDetailedData: lastmonthDetailedData ?? this.lastmonthDetailedData,
+      todayResultData: todayResultData ?? this.todayResultData,
+      yesterdayResultData: yesterdayResultData ?? this.yesterdayResultData,
+      monthlyResultData: monthlyResultData ?? this.monthlyResultData,
+      lastmonthResultData: lastmonthResultData ?? this.lastmonthResultData,
+      monthlyTargetSummary: monthlyTargetSummary ?? this.monthlyTargetSummary,
+      lastmonthTargetSummary: lastmonthTargetSummary ?? this.lastmonthTargetSummary,
+      monthlyTargetDetail: monthlyTargetDetail ?? this.monthlyTargetDetail,
+      lastmonthTargetDetail: lastmonthTargetDetail ?? this.lastmonthTargetDetail,
       detailedData: detailedData ?? this.detailedData,
       selectedTab: selectedTab ?? this.selectedTab,
       isLoading: isLoading ?? this.isLoading,
-      viewType: viewType ?? this.viewType, // NEW
+      viewType: viewType ?? this.viewType,
     );
   }
 
-  // Helper methods to get current data based on selected tab
   List<MarketingPerformance> get currentPerformanceData {
     switch (selectedTab) {
-      case 0:
-        return todayPerformance;
-      case 1:
-        return yesterdayPerformance;
-      case 2:
-        return monthlyPerformance;
-      case 3:
-        return lastmonthPerformance;
-      default:
-        return todayPerformance;
+      case 0: return todayPerformance;
+      case 1: return yesterdayPerformance;
+      case 2: return monthlyPerformance;
+      case 3: return lastmonthPerformance;
+      default: return todayPerformance;
     }
   }
 
   List<MarketingDetailedData> get currentDetailedData {
     switch (selectedTab) {
-      case 0:
-        return todayDetailedData;
-      case 1:
-        return yesterdayDetailedData;
-      case 2:
-        return monthlyDetailedData;
-      case 3:
-        return lastmonthDetailedData;
-      default:
-        return todayDetailedData;
+      case 0: return todayDetailedData;
+      case 1: return yesterdayDetailedData;
+      case 2: return monthlyDetailedData;
+      case 3: return lastmonthDetailedData;
+      default: return todayDetailedData;
     }
   }
 
-  // NEW: Helper method to get current result data
   List<MarketingResult> get currentResultData {
     switch (selectedTab) {
-      case 0:
-        return todayResultData;
-      case 1:
-        return yesterdayResultData;
-      case 2:
-        return monthlyResultData;
-      case 3:
-        return lastmonthResultData;
-      default:
-        return todayResultData;
+      case 0: return todayResultData;
+      case 1: return yesterdayResultData;
+      case 2: return monthlyResultData;
+      case 3: return lastmonthResultData;
+      default: return todayResultData;
     }
   }
+
+  // NEW: Current target summary list
+  List<MarketingTarget> get currentTargetSummary {
+    switch (selectedTab) {
+      case 2: return monthlyTargetSummary;
+      case 3: return lastmonthTargetSummary;
+      default: return [];
+    }
+  }
+
+  // NEW: Whether target tab is available for the current tab selection
+  bool get isTargetAvailable => selectedTab == 2 || selectedTab == 3;
 
   String get currentTabTitle {
     switch (selectedTab) {
-      case 0:
-        return "Today";
-      case 1:
-        return "Yesterday";
-      case 2:
-        return "Monthly";
-      case 3:
-        return "Last Month";
-      default:
-        return "Today";
+      case 0: return "Today";
+      case 1: return "Yesterday";
+      case 2: return "Monthly";
+      case 3: return "Last Month";
+      default: return "Today";
     }
   }
 }

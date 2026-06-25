@@ -55,6 +55,7 @@ class _AirTicketsSelectionScreenState
       ValueNotifier<List<Map<String, dynamic>>>([]);
 
   final ValueNotifier<String> costNotifier = ValueNotifier<String>("0");
+  final ValueNotifier<String?> airLineNotifier = ValueNotifier<String?>(null);
   final List<String> _contactPersons = ["test 1", "test 2"];
 List<PassportFile> _passportFiles = [];
   @override
@@ -86,6 +87,7 @@ List<PassportFile> _passportFiles = [];
 
   bool _isLoading = false;
   bool _isRoundTrip = false;
+  bool _visa = false;
   bool editMode = false;
   int? editIndex;
 
@@ -271,6 +273,7 @@ String? _selectedContactPerson;
       costIndex = index;
       double calculation = cost.cost! * numberOfGuests;
       costNotifier.value = NumberFormat().format(calculation.round());
+      airLineNotifier.value = cost.airLine;
     });
   }
 
@@ -296,6 +299,8 @@ String? _selectedContactPerson;
       _silkRouteFacility = flight.silkRoute == 1 ? "Yes" : "No";
       _airportTranspotation = flight.airportTransportation == 1 ? "Yes" : "No";
       _isRoundTrip = flight.isRoundTrip;
+      _visa = flight.visa;
+      _selectedContactPerson = flight.contactPerson;
 
       _departureFromAirport = flight.airports!.departure?.dFrom.toAirport();
       _departureToAirport = flight.airports!.departure?.dTo.toAirport();
@@ -306,6 +311,7 @@ String? _selectedContactPerson;
       _departureToAirportKey = UniqueKey();
 
       costNotifier.value = flight.selectedCost;
+      airLineNotifier.value = flight.airLine;
     });
   }
 
@@ -368,6 +374,9 @@ String? _selectedContactPerson;
       airTicketClassName: _airTicketClassName!,
       isRoundTrip: _isRoundTrip,
       selectedCost: costNotifier.value,
+      airLine: airLineNotifier.value,
+      contactPerson: _selectedContactPerson,
+      visa: _visa,
       airports: airport,
     );
 
@@ -389,6 +398,7 @@ String? _selectedContactPerson;
 
   void _clearSelectedCost() {
     costNotifier.value = "0";
+    airLineNotifier.value = null;
     selectedCost = null;
     costIndex = null;
   }
@@ -406,6 +416,8 @@ String? _selectedContactPerson;
       _silkRouteFacility = "No";
       _airportTranspotation = "No";
       _isRoundTrip = false;
+      _visa = false;
+      _selectedContactPerson = null;
 
       _departureFromAirport = null;
       _departureToAirport = null;
@@ -417,6 +429,7 @@ String? _selectedContactPerson;
 
       selectedCost = null;
       costNotifier.value = "0";
+      airLineNotifier.value = null;
       costIndex = null;
 
       editMode = false;
@@ -970,24 +983,20 @@ DropdownSearch<String>(
                       ),
                       Row(
                         children: [
-                          Radio<String>(
-                            value: "Yes",
-                            // groupValue: _airportTranspotation,
-                            // onChanged: (value) {
-                            //   setState(() {
-                            //     _airportTranspotation = value!;
-                            //   });
-                            // },
+                          Radio<bool>(
+                            value: true,
+                            groupValue: _visa,
+                            onChanged: (value) {
+                              setState(() => _visa = value!);
+                            },
                           ),
                           const Text("Yes", style: TextStyle(fontSize: 16)),
-                          Radio<String>(
-                            value: "No",
-                            // groupValue: _airportTranspotation,
-                            // onChanged: (value) {
-                            //   setState(() {
-                            //     _airportTranspotation = value!;
-                            //   });
-                            // },
+                          Radio<bool>(
+                            value: false,
+                            groupValue: _visa,
+                            onChanged: (value) {
+                              setState(() => _visa = value!);
+                            },
                           ),
                           const Text("No", style: TextStyle(fontSize: 16)),
                         ],

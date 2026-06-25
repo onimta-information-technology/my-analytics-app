@@ -897,10 +897,11 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
       airTicketDetails:
           firstGuest.flights.map((ticket) => ticket.toJson()).toList(),
       reservationnewnumber: _reservationnewnumberController.text,
-      // NOTE: `guests` is a new field — add it to the NewReservation model
-      // (e.g. `final List<Map<String, dynamic>>? guests;`) and include it
-      // in NewReservation.toJson() so the backend receives the full array.
-     // guests: allGuests.map((g) => g.toJson()).toList(),
+      packageAmount: _packageAmountController.text,
+      guests: allGuests.map((g) => g.toJson()).toList(),
+      passportImages: allGuests
+          .expand((g) => g.toPassportImagesJson())
+          .toList(),
     );
 
     if (_isEditMode) {

@@ -341,6 +341,8 @@ String selectedByPaymnet = 'NA';
       noOfNights: numberOfNights,
       selectedCost: costNotifier.value,
       costIndex: costIndex,
+      ecLcoFacility: selectedEcLcoFacility,
+      paymentBy: selectedByPaymnet,
     );
 
     setState(() {

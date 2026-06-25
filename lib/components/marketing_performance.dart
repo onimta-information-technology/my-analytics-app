@@ -1,5 +1,6 @@
 import 'package:ballys_reservation_app/models/marketing.dart';
 import 'package:ballys_reservation_app/screens/marketing_detail_page.dart';
+import 'package:ballys_reservation_app/screens/marketing_target_detail_page.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -24,6 +25,11 @@ class _MarketingPerformanceWidgetState
   AppMode? _previousAppMode;
   String? userName;
   bool _refreshEnabled = false;
+
+  // Max height for the content area when this widget is embedded
+  // (not full screen). Beyond this, the content scrolls internally
+  // instead of expanding the card indefinitely.
+  static const double _embeddedMaxContentHeight = 320.0;
 
   @override
   void initState() {
@@ -69,11 +75,8 @@ class _MarketingPerformanceWidgetState
     if (data.isEmpty) return [];
 
     final maxAbsAmount = data.map((p) {
-      if (p is MarketingPerformance) {
-        return p.winLost.abs();
-      } else if (p is MarketingResult) {
-        return p.winLost.abs();
-      }
+      if (p is MarketingPerformance) return p.winLost.abs();
+      if (p is MarketingResult) return p.winLost.abs();
       return 0.0;
     }).reduce((a, b) => math.max(a, b));
 
@@ -93,7 +96,6 @@ class _MarketingPerformanceWidgetState
       }
 
       double percentage = 0.0;
-
       if (maxAbsAmount > 0 && winLost != 0) {
         final absValue = winLost.abs();
         final linearRatio = absValue / maxAbsAmount;
@@ -114,6 +116,23 @@ class _MarketingPerformanceWidgetState
     }).toList();
   }
 
+  // ── Wraps content so it scrolls within a bounded height when this
+  // widget is embedded (not full screen). In full screen mode the
+  // parent page already provides its own scroll view, so we return
+  // the child unchanged there.
+  Widget _wrapScrollable(Widget child,
+      {double maxHeight = _embeddedMaxContentHeight}) {
+    if (widget.isFullScreen) {
+      return child;
+    }
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: SingleChildScrollView(
+        child: child,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final marketingState = ref.watch(marketingProvider);
@@ -123,11 +142,15 @@ class _MarketingPerformanceWidgetState
 
     _handleAppModeChange(currentAppMode);
 
-    // Get current data based on view type
-    final List<dynamic> currentData = marketingState.viewType ==
-            MarketingViewType.performance
-        ? marketingState.currentPerformanceData
-        : marketingState.currentResultData;
+    // Determine current data
+    final bool isTargetView =
+        marketingState.viewType == MarketingViewType.target;
+    final List<dynamic> currentData =
+        marketingState.viewType == MarketingViewType.performance
+            ? marketingState.currentPerformanceData
+            : marketingState.viewType == MarketingViewType.result
+                ? marketingState.currentResultData
+                : []; // target view — list built separately
 
     final bool tabsEnabled = _tabsEnabled && !marketingState.isLoading;
     final dataWithPercentages = _calculatePercentages(currentData);
@@ -136,39 +159,43 @@ class _MarketingPerformanceWidgetState
         .where((item) => item.isPositive)
         .toList()
       ..sort((a, b) {
-        final aValue = a.item is MarketingPerformance
+        final aVal = a.item is MarketingPerformance
             ? (a.item as MarketingPerformance).displayValue
             : (a.item as MarketingResult).displayValue;
-        final bValue = b.item is MarketingPerformance
+        final bVal = b.item is MarketingPerformance
             ? (b.item as MarketingPerformance).displayValue
             : (b.item as MarketingResult).displayValue;
-        return bValue.compareTo(aValue);
+        return bVal.compareTo(aVal);
       });
 
     final negativeData = dataWithPercentages
         .where((item) => !item.isPositive)
         .toList()
       ..sort((a, b) {
-        final aValue = a.item is MarketingPerformance
+        final aVal = a.item is MarketingPerformance
             ? (a.item as MarketingPerformance).displayValue
             : (a.item as MarketingResult).displayValue;
-        final bValue = b.item is MarketingPerformance
+        final bVal = b.item is MarketingPerformance
             ? (b.item as MarketingPerformance).displayValue
             : (b.item as MarketingResult).displayValue;
-        return aValue.compareTo(bValue);
+        return aVal.compareTo(bVal);
       });
 
     final sortedData = [...positiveData, ...negativeData];
+
+    // Target summary data (sorted by achievement desc)
+    final targetSummary = [...marketingState.currentTargetSummary]
+      ..sort((a, b) => b.achievement.compareTo(a.achievement));
 
     return Card(
       elevation: 2,
       margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
       child: Padding(
-        padding: const EdgeInsets.all(12.0), // Reduced padding to give more space
+        padding: const EdgeInsets.all(12.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Title with expand/collapse icon
+            // Title row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -190,6 +217,7 @@ class _MarketingPerformanceWidgetState
                   ),
                   onPressed: () {
                     if (widget.isFullScreen) {
+                      ref.read(marketingProvider.notifier).clearMarketing();
                       Navigator.pop(context);
                     } else {
                       Navigator.push(
@@ -208,8 +236,7 @@ class _MarketingPerformanceWidgetState
                               child: SingleChildScrollView(
                                 padding: EdgeInsets.all(8),
                                 child: MarketingPerformanceWidget(
-                                  isFullScreen: true,
-                                ),
+                                    isFullScreen: true),
                               ),
                             ),
                           ),
@@ -222,31 +249,31 @@ class _MarketingPerformanceWidgetState
             ),
             const SizedBox(height: 16),
 
-            // Tab buttons
+            // Time period tab buttons
             Center(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildTabButton("Today", 0,
-                        marketingState.selectedTab == 0, tabsEnabled),
+                    _buildTabButton(
+                        "Today", 0, marketingState.selectedTab == 0, tabsEnabled),
                     const SizedBox(width: 7),
-                    _buildTabButton("Yesterday", 1,
-                        marketingState.selectedTab == 1, tabsEnabled),
+                    _buildTabButton(
+                        "Yesterday", 1, marketingState.selectedTab == 1, tabsEnabled),
                     const SizedBox(width: 7),
-                    _buildTabButton("Monthly", 2,
-                        marketingState.selectedTab == 2, tabsEnabled),
+                    _buildTabButton(
+                        "Monthly", 2, marketingState.selectedTab == 2, tabsEnabled),
                     const SizedBox(width: 7),
-                    _buildTabButton("Last Month", 3,
-                        marketingState.selectedTab == 3, tabsEnabled),
+                    _buildTabButton(
+                        "Last Month", 3, marketingState.selectedTab == 3, tabsEnabled),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 16),
 
-            // NEW: Performance/Result toggle (show for all tabs when a tab is selected)
+            // View type toggle (Performance / Result / Target)
             if (marketingState.selectedTab >= 0) ...[
               Center(
                 child: Container(
@@ -260,14 +287,21 @@ class _MarketingPerformanceWidgetState
                       _buildViewTypeButton(
                         "Performance",
                         MarketingViewType.performance,
-                        marketingState.viewType ==
-                            MarketingViewType.performance,
+                        marketingState.viewType == MarketingViewType.performance,
                       ),
                       _buildViewTypeButton(
                         "Result",
                         MarketingViewType.result,
                         marketingState.viewType == MarketingViewType.result,
                       ),
+                      // Target only for Monthly & Last Month tabs
+                      if (marketingState.isTargetAvailable)
+                        _buildViewTypeButton(
+                          "Target",
+                          MarketingViewType.target,
+                          marketingState.viewType == MarketingViewType.target,
+                          accentColor: Colors.deepPurple,
+                        ),
                     ],
                   ),
                 ),
@@ -275,7 +309,7 @@ class _MarketingPerformanceWidgetState
               const SizedBox(height: 16),
             ],
 
-            // Performance/Result list
+            // ── Content ──
             if (marketingState.isLoading)
               const Center(
                 child: Padding(
@@ -292,85 +326,139 @@ class _MarketingPerformanceWidgetState
                   ),
                 ),
               )
-            else if (currentData.isEmpty)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(20.0),
-                  child: Text(
-                    "No data available",
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
+            else if (isTargetView) ...[
+              // ── TARGET VIEW ──
+              if (targetSummary.isEmpty)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20.0),
+                    child: Text(
+                      "No target data available",
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
+                  ),
+                )
+              else
+                _wrapScrollable(
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey[400]!, width: 1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      children: [
+                        // Header intentionally omitted for Target view.
+                        ...targetSummary.asMap().entries.map(
+                              (entry) => _buildTargetItem(
+                                entry.key + 1,
+                                entry.value,
+                                fontSettings,
+                              ),
+                            ),
+                      ],
+                    ),
                   ),
                 ),
-              )
-            else
-              Container(
-                width: double.infinity, // Make container take full width
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: marketingState.viewType == MarketingViewType.result
-                        ? Colors.grey[400]!
-                        : Colors.transparent,
-                    width: 1,
+            ] else ...[
+              // ── PERFORMANCE / RESULT VIEW ──
+              if (currentData.isEmpty)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20.0),
+                    child: Text(
+                      "No data available",
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(8),
+                )
+              else
+                _wrapScrollable(
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: marketingState.viewType == MarketingViewType.result
+                            ? Colors.grey[400]!
+                            : Colors.transparent,
+                        width: 1,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      children: [
+                        if (marketingState.viewType == MarketingViewType.result)
+                          _buildResultTableHeader(),
+                        ...sortedData.map((itemWithPercentage) {
+                          if (marketingState.viewType ==
+                              MarketingViewType.performance) {
+                            return _buildPerformanceItem(itemWithPercentage);
+                          } else {
+                            return _buildResultItem(itemWithPercentage);
+                          }
+                        }),
+                      ],
+                    ),
+                  ),
                 ),
-                child: Column(
-                  children: [
-                    // Add table header for Result view
-                    if (marketingState.viewType == MarketingViewType.result)
-                      _buildResultTableHeader(),
-                    
-                    ...sortedData.map((itemWithPercentage) {
-                      if (marketingState.viewType ==
-                          MarketingViewType.performance) {
-                        return _buildPerformanceItem(itemWithPercentage);
-                      } else {
-                        return _buildResultItem(itemWithPercentage);
-                      }
-                    }),
-                  ],
-                ),
-              ),
+            ],
 
             const SizedBox(height: 16),
 
-            // Legend with refresh button
+            // Legend + refresh
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 12,
-                          height: 12,
-                          decoration: const BoxDecoration(
-                            color: Colors.green,
-                            shape: BoxShape.circle,
+                if (!isTargetView)
+                  Row(
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: const BoxDecoration(
+                              color: Colors.green,
+                              shape: BoxShape.circle,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Text("WIN"),
-                      ],
-                    ),
-                    const SizedBox(width: 20),
-                    Row(
-                      children: [
-                        Container(
-                          width: 12,
-                          height: 12,
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
+                          const SizedBox(width: 4),
+                          const Text("WIN"),
+                        ],
+                      ),
+                      const SizedBox(width: 20),
+                      Row(
+                        children: [
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
                           ),
+                          const SizedBox(width: 4),
+                          const Text("LOST"),
+                        ],
+                      ),
+                    ],
+                  )
+                else
+                  // Target legend
+                  Row(
+                    children: [
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: const BoxDecoration(
+                          color: Colors.deepPurple,
+                          shape: BoxShape.circle,
                         ),
-                        const SizedBox(width: 4),
-                        const Text("LOST"),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Text("Achievement %"),
+                    ],
+                  ),
                 Card(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -382,20 +470,16 @@ class _MarketingPerformanceWidgetState
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: TextButton.icon(
-                      onPressed: !_refreshEnabled || marketingState.isLoading
-                          ? null
-                          : _refreshCurrentTab,
-                      icon: const Icon(
-                        Icons.refresh,
-                        size: 14,
-                        color: Colors.white,
-                      ),
+                      onPressed:
+                          !_refreshEnabled || marketingState.isLoading
+                              ? null
+                              : _refreshCurrentTab,
+                      icon: const Icon(Icons.refresh,
+                          size: 14, color: Colors.white),
                       label: const Text(
                         "Refresh",
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.white,
-                        ),
+                        style:
+                            TextStyle(fontSize: 16, color: Colors.white),
                       ),
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero,
@@ -412,54 +496,127 @@ class _MarketingPerformanceWidgetState
     );
   }
 
-  // NEW: View type button
-  Widget _buildViewTypeButton(
-      String text, MarketingViewType viewType, bool isSelected) {
-    return GestureDetector(
-      onTap: () {
-        ref.read(marketingProvider.notifier).setViewType(viewType);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.blue : Colors.transparent,
-          borderRadius: BorderRadius.circular(25),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.black87,
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
+  // ── View type toggle button ──────────────────────────────────────────────
+  // Widget _buildViewTypeButton(
+  //   String text,
+  //   MarketingViewType viewType,
+  //   bool isSelected, {
+  //   Color? accentColor,
+  // }) {
+  //   final color = accentColor ?? Colors.blue;
+  //   return GestureDetector(
+  //     onTap: () {
+  //       final notifier = ref.read(marketingProvider.notifier);
+  //       notifier.setViewType(viewType);
+
+  //       // If switching to Target and we have no data yet, load it
+  //       if (viewType == MarketingViewType.target) {
+  //         final state = ref.read(marketingProvider);
+  //         final hasData = state.selectedTab == 2
+  //             ? state.monthlyTargetSummary.isNotEmpty
+  //             : state.lastmonthTargetSummary.isNotEmpty;
+  //         if (!hasData) {
+  //           notifier.getTargetData(state.selectedTab);
+  //         }
+  //       }
+  //     },
+  //     child: Container(
+  //       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+  //       decoration: BoxDecoration(
+  //         color: isSelected ? color : Colors.transparent,
+  //         borderRadius: BorderRadius.circular(25),
+  //       ),
+  //       child: Text(
+  //         text,
+  //         style: TextStyle(
+  //           color: isSelected ? Colors.white : Colors.black87,
+  //           fontWeight: FontWeight.bold,
+  //           fontSize: 14,
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
+Widget _buildViewTypeButton(
+  String text,
+  MarketingViewType viewType,
+  bool isSelected, {
+  Color? accentColor,
+}) {
+  final color = accentColor ?? Colors.blue;
+  return GestureDetector(
+    onTap: () {
+      final notifier = ref.read(marketingProvider.notifier);
+      final state = ref.read(marketingProvider);
+      notifier.setViewType(viewType);
+
+      if (viewType == MarketingViewType.target) {
+        // If switching to Target and we have no data yet, load it
+        final hasData = state.selectedTab == 2
+            ? state.monthlyTargetSummary.isNotEmpty
+            : state.lastmonthTargetSummary.isNotEmpty;
+        if (!hasData) {
+          notifier.getTargetData(state.selectedTab);
+        }
+      } else {
+        // Performance / Result tapped.
+        // This is now the ONLY trigger for the performance/result API
+        // call — switching between Today/Yesterday/Monthly/Last Month
+        // (see _onTabSelected) no longer fetches anything by itself.
+        switch (state.selectedTab) {
+          case 0:
+            // Today's numbers can change through the day, so always refresh.
+            notifier.getTodayPerformance();
+            break;
+          case 1:
+            if (state.yesterdayPerformance.isEmpty) {
+              notifier.getYesterdayPerformance();
+            }
+            break;
+          case 2:
+            if (state.monthlyPerformance.isEmpty) {
+              notifier.getMonthlyPerformance();
+            }
+            break;
+          case 3:
+            if (state.lastmonthPerformance.isEmpty) {
+              notifier.getLastMonthPerformance();
+            }
+            break;
+        }
+      }
+    },
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: isSelected ? color : Colors.transparent,
+        borderRadius: BorderRadius.circular(25),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: isSelected ? Colors.white : Colors.black87,
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
         ),
       ),
-    );
-  }
-
+    ),
+  );
+}
+  // ── Time period tab button ───────────────────────────────────────────────
   Widget _buildTabButton(
       String text, int index, bool isSelected, bool isEnabled) {
     Color borderColor;
     switch (index) {
-      case 0:
-        borderColor = Colors.orange;
-        break;
-      case 1:
-        borderColor = Colors.green;
-        break;
-      case 2:
-        borderColor = Colors.blue;
-        break;
-      case 3:
-        borderColor = const Color.fromARGB(255, 203, 56, 196);
-        break;
-      default:
-        borderColor = Colors.grey;
+      case 0: borderColor = Colors.orange; break;
+      case 1: borderColor = Colors.green; break;
+      case 2: borderColor = Colors.blue; break;
+      case 3: borderColor = const Color.fromARGB(255, 203, 56, 196); break;
+      default: borderColor = Colors.grey;
     }
 
     Color backgroundColor;
     Color textColor;
-
     if (!isEnabled) {
       backgroundColor = Colors.grey[200]!;
       textColor = Colors.grey[500]!;
@@ -491,6 +648,7 @@ class _MarketingPerformanceWidgetState
     );
   }
 
+  // ── Performance bar item ─────────────────────────────────────────────────
   Widget _buildPerformanceItem(_ItemWithPercentage itemWithPercentage) {
     final performance = itemWithPercentage.item as MarketingPerformance;
     final percentage = itemWithPercentage.percentage;
@@ -499,18 +657,15 @@ class _MarketingPerformanceWidgetState
     return Consumer(
       builder: (context, ref, child) {
         final fontSettings = ref.watch(fontSettingsProvider);
-        
         return GestureDetector(
-          onTap: () {
-            _navigateToMarketingDetail(
-                performance.sm, performance.smName, performance.winLost);
-          },
+          onTap: () => _navigateToMarketingDetail(
+              performance.sm, performance.smName, performance.winLost),
           child: Container(
             margin: const EdgeInsets.only(bottom: 8),
             child: Row(
               children: [
                 SizedBox(
-                  width: 120,
+                  width: 200,
                   child: Text(
                     performance.smName,
                     style: TextStyle(
@@ -520,7 +675,7 @@ class _MarketingPerformanceWidgetState
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
                 Expanded(
                   child: Stack(
                     children: [
@@ -547,7 +702,8 @@ class _MarketingPerformanceWidgetState
                   ),
                 ),
                 const SizedBox(width: 8),
-                Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey[600]),
+                Icon(Icons.arrow_forward_ios,
+                    size: 12, color: Colors.grey[600]),
               ],
             ),
           ),
@@ -556,42 +712,35 @@ class _MarketingPerformanceWidgetState
     );
   }
 
-  // NEW: Build result item with two-row layout (similar to screenshot)
+  // ── Result row item ──────────────────────────────────────────────────────
   Widget _buildResultItem(_ItemWithPercentage itemWithPercentage) {
     final result = itemWithPercentage.item as MarketingResult;
 
     return Consumer(
       builder: (context, ref, child) {
         final fontSettings = ref.watch(fontSettingsProvider);
-        
         return GestureDetector(
-          onTap: () {
-            // Navigate to detail page with MDrop and CashOut
-            _navigateToMarketingDetailFromResult(
-              result.sm,
-              result.smName,
-              result.winLost,
-              result.mDrop,
-              result.cashOut,
-            );
-          },
+          onTap: () => _navigateToMarketingDetailFromResult(
+            result.sm,
+            result.smName,
+            result.winLost,
+            result.mDrop,
+            result.cashOut,
+          ),
           child: Container(
-            //margin: const EdgeInsets.only(bottom: 8),
             decoration: BoxDecoration(
               color: Colors.white,
               border: Border(
-                bottom: BorderSide(color: Colors.grey[300]!, width: 1),
-              ),
+                  bottom: BorderSide(color: Colors.grey[300]!, width: 1)),
             ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+              padding:
+                  const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // First Row: SM Name and values row container
                   Row(
                     children: [
-                      // SM Name (flex 3 to match header)
                       Expanded(
                         flex: 3,
                         child: Text(
@@ -604,30 +753,18 @@ class _MarketingPerformanceWidgetState
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      // Empty space for arrow alignment
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        size: 14,
-                        color: Colors.grey[400],
-                      ),
+                      Icon(Icons.arrow_forward_ios,
+                          size: 14, color: Colors.grey[400]),
                     ],
                   ),
-               //   const SizedBox(height: 12), // Space between rows
-                  // Second Row: Grid layout for three values aligned with header
                   Row(
                     children: [
-                      // Left padding to align with header (flex 3 for SM Name space)
-                      const Expanded(
-                        flex: 1,
-                        child: SizedBox.shrink(),
-                      ),
-                      // Three value columns (flex 5 to match header)
+                      const Expanded(flex: 1, child: SizedBox.shrink()),
                       Expanded(
                         flex: 4,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            // MDrop Column
                             Expanded(
                               child: Text(
                                 _formatCurrency(result.mDrop),
@@ -635,11 +772,11 @@ class _MarketingPerformanceWidgetState
                                   fontSize: fontSettings.fontSize - 1,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.black87,
+                                  
                                 ),
                                 textAlign: TextAlign.center,
                               ),
                             ),
-                            // Cash Out Column
                             Expanded(
                               child: Text(
                                 _formatCurrency(result.cashOut),
@@ -651,14 +788,15 @@ class _MarketingPerformanceWidgetState
                                 textAlign: TextAlign.center,
                               ),
                             ),
-                            // Win/Lost Column
                             Expanded(
                               child: Text(
                                 _formatCurrency(result.winLost),
                                 style: TextStyle(
                                   fontSize: fontSettings.fontSize - 1,
                                   fontWeight: FontWeight.bold,
-                                  color: result.isPositive ? Colors.green : Colors.red,
+                                  color: result.isPositive
+                                      ? Colors.green
+                                      : Colors.red,
                                 ),
                                 textAlign: TextAlign.right,
                               ),
@@ -677,71 +815,54 @@ class _MarketingPerformanceWidgetState
     );
   }
 
-  // NEW: Build table header for Result view
+  // ── Result table header ──────────────────────────────────────────────────
   Widget _buildResultTableHeader() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.grey[200],
-        border: Border(
-          bottom: BorderSide(color: Colors.grey[400]!, width: 1),
-        ),
+        border: Border(bottom: BorderSide(color: Colors.grey[400]!, width: 1)),
       ),
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
       child: Row(
         children: [
-          // SM Name Header (reduced flex to give more space to values)
           const Expanded(
             flex: 2,
             child: Text(
               'SM Name',
               style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87),
             ),
           ),
-          // Three value columns (increased flex for more space)
           Expanded(
             flex: 6,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // MDrop Header
                 Expanded(
-                  child: Text(
-                    'Drop',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: const Color.fromARGB(255, 0, 0, 0),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
+                  child: Text('Drop',
+                      style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black),
+                      textAlign: TextAlign.center),
                 ),
-                // Cash Out Header
                 Expanded(
-                  child: Text(
-                    'Cash Out',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: const Color.fromARGB(255, 0, 0, 0),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
+                  child: Text('Cash Out',
+                      style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black),
+                      textAlign: TextAlign.center),
                 ),
-                // Win/Lost Header
                 Expanded(
-                  child: Text(
-                    'Win/Lost',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: const Color.fromARGB(255, 0, 0, 0),
-                    ),
-                    textAlign: TextAlign.right,
-                  ),
+                  child: Text('Win/Lost',
+                      style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black),
+                      textAlign: TextAlign.right),
                 ),
               ],
             ),
@@ -751,33 +872,122 @@ class _MarketingPerformanceWidgetState
     );
   }
 
-  // Helper method to build data columns in Result cards (no longer used but kept for compatibility)
-  Widget _buildDataColumn(String label, String value, Color color) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-            fontWeight: FontWeight.w600,
+  // ── Target summary row item ──────────────────────────────────────────────
+  // Row 1: row number + group name (with arrow)
+  // Row 2: "Drop"        -> actual drop value (thousand-separated)
+  // Row 3: "Target"      -> monthly target value (thousand-separated)
+  // Row 4: "Achievement" -> achievement percentage
+  Widget _buildTargetItem(
+      int rowNumber, MarketingTarget target, fontSettings) {
+    return GestureDetector(
+      onTap: () {
+        final detailRows = ref
+            .read(marketingProvider.notifier)
+            .getTargetDetailForGroup(target.gcode);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MarketingTargetDetailPage(
+              gcode: target.gcode,
+              gName: target.gName,
+              actualDrop: target.actualDrop,
+              mTarget: target.mTarget,
+              achievement: target.achievement,
+              detailRows: detailRows,
+              tabTitle: ref.read(marketingProvider).currentTabTitle,
+            ),
           ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(
+              bottom: BorderSide(color: Colors.grey[200]!, width: 1)),
         ),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: color,
-            fontFamily: 'monospace',
-          ),
-          textAlign: TextAlign.center,
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Row 1: number + group name + arrow
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '$rowNumber. ${target.gName}',
+                    style: TextStyle(
+                      fontSize: fontSettings.fontSize,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Icon(Icons.arrow_forward_ios,
+                    size: 12, color: Colors.grey[400]),
+              ],
+            ),
+            const SizedBox(height: 6),
+            // Row 2: Drop
+            _buildTargetDetailRow(
+              'Drop',
+              _formatWithThousands(target.actualDrop),
+              fontSettings,
+            ),
+            // Row 3: Target
+            _buildTargetDetailRow(
+              'Target',
+              _formatWithThousands(target.mTarget),
+              fontSettings,
+            ),
+            // Row 4: Achievement
+            _buildTargetDetailRow(
+              'Achievement',
+              '${target.achievement.toStringAsFixed(2)}%',
+              fontSettings,
+              valueColor: Colors.deepPurple,
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
+  // ── Helper row: label on the left, value on the right ───────────────────
+  Widget _buildTargetDetailRow(
+    String label,
+    String value,
+    fontSettings, {
+    Color? valueColor,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: fontSettings.fontSize,
+              color: const Color.fromARGB(255, 0, 0, 0),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: fontSettings.fontSize,
+              fontWeight: FontWeight.w900,
+              fontFamily: 'monospace',
+            fontFeatures: const [FontFeature.tabularFigures()],
+              color: valueColor ?? Colors.black87,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
   String _formatCurrency(double amount) {
     if (amount == 0) return 'N/A';
     final absAmount = amount.abs();
@@ -789,6 +999,54 @@ class _MarketingPerformanceWidgetState
     return amount.toStringAsFixed(2);
   }
 
+  String _formatLargeNumber(double amount) {
+    if (amount == 0) return 'N/A';
+    final absAmount = amount.abs();
+    if (absAmount >= 1000000000) {
+      return '${(amount / 1000000000).toStringAsFixed(2)}B';
+    } else if (absAmount >= 1000000) {
+      return '${(amount / 1000000).toStringAsFixed(2)}M';
+    } else if (absAmount >= 1000) {
+      return '${(amount / 1000).toStringAsFixed(2)}K';
+    }
+    return amount.toStringAsFixed(0);
+  }
+
+  // Formats a number with thousand separators, e.g. 1234567.5 -> "1,234,567.50"
+  // String _formatWithThousands(double amount) {
+  //   if (amount == 0) return 'N/A';
+  //   final isNegative = amount < 0;
+  //   final absAmount = amount.abs();
+  //   final parts = absAmount.toStringAsFixed(2).split('.');
+  //   final intPart = parts[0];
+  //   final decPart = parts[1];
+
+  //   final buffer = StringBuffer();
+  //   for (int i = 0; i < intPart.length; i++) {
+  //     final posFromEnd = intPart.length - i;
+  //     buffer.write(intPart[i]);
+  //     if (posFromEnd > 1 && posFromEnd % 3 == 1) {
+  //       buffer.write(',');
+  //     }
+  //   }
+  //   return '${isNegative ? '-' : ''}$buffer.$decPart';
+  // }
+String _formatWithThousands(double amount) {
+  if (amount == 0) return 'N/A';
+  final isNegative = amount < 0;
+  final intPart = amount.abs().round().toString(); // use .truncate() instead of .round() if you want to chop decimals rather than round
+
+  final buffer = StringBuffer();
+  for (int i = 0; i < intPart.length; i++) {
+    final posFromEnd = intPart.length - i;
+    buffer.write(intPart[i]);
+    if (posFromEnd > 1 && posFromEnd % 3 == 1) {
+      buffer.write(',');
+    }
+  }
+  return '${isNegative ? '-' : ''}$buffer';
+}
+  // ── Navigation ───────────────────────────────────────────────────────────
   void _navigateToMarketingDetail(
       String smCode, String smName, double winLost) {
     Navigator.push(
@@ -804,9 +1062,8 @@ class _MarketingPerformanceWidgetState
     );
   }
 
-  // NEW: Navigation from Result view with MDrop and CashOut
-  void _navigateToMarketingDetailFromResult(
-      String smCode, String smName, double winLost, double mDrop, double cashOut) {
+  void _navigateToMarketingDetailFromResult(String smCode, String smName,
+      double winLost, double mDrop, double cashOut) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -822,45 +1079,68 @@ class _MarketingPerformanceWidgetState
     );
   }
 
-  void _onTabSelected(int index) {
-    final notifier = ref.read(marketingProvider.notifier);
-    final state = ref.read(marketingProvider);
-    notifier.setSelectedTab(index);
-    
-    // Reset to Performance view when changing tabs
-    notifier.setViewType(MarketingViewType.performance);
-    
-    if (!_refreshEnabled) {
-      setState(() {
-        _refreshEnabled = true;
-      });
-    }
+  // ── Tab selection ─────────────────────────────────────────────────────────
+  // void _onTabSelected(int index) {
+  //   final notifier = ref.read(marketingProvider.notifier);
+  //   final state = ref.read(marketingProvider);
+  //   notifier.setSelectedTab(index);
 
-    switch (index) {
-      case 0:
-        notifier.getTodayPerformance();
-        break;
-      case 1:
-        if (state.yesterdayPerformance.isEmpty) {
-          notifier.getYesterdayPerformance();
-        }
-        break;
-      case 2:
-        if (state.monthlyPerformance.isEmpty) {
-          notifier.getMonthlyPerformance();
-        }
-        break;
-      case 3:
-        if (state.lastmonthPerformance.isEmpty) {
-          notifier.getLastMonthPerformance();
-        }
-        break;
-    }
+  //   // Always reset to Performance when switching tabs
+  //   notifier.setViewType(MarketingViewType.performance);
+
+  //   if (!_refreshEnabled) {
+  //     setState(() {
+  //       _refreshEnabled = true;
+  //     });
+  //   }
+
+  //   switch (index) {
+  //     case 0:
+  //       notifier.getTodayPerformance();
+  //       break;
+  //     case 1:
+  //       if (state.yesterdayPerformance.isEmpty) {
+  //         notifier.getYesterdayPerformance();
+  //       }
+  //       break;
+  //     case 2:
+  //       if (state.monthlyPerformance.isEmpty) {
+  //         notifier.getMonthlyPerformance();
+  //       }
+  //       break;
+  //     case 3:
+  //       if (state.lastmonthPerformance.isEmpty) {
+  //         notifier.getLastMonthPerformance();
+  //       }
+  //       break;
+  //   }
+  // }
+void _onTabSelected(int index) {
+  final notifier = ref.read(marketingProvider.notifier);
+  notifier.setSelectedTab(index);
+
+  // Always reset to Performance when switching tabs.
+  // NOTE: switching tabs no longer triggers an API call by itself —
+  // the API is now only called when the user taps the Performance or
+  // Result view-type button (see _buildViewTypeButton).
+  notifier.setViewType(MarketingViewType.performance);
+
+  if (!_refreshEnabled) {
+    setState(() {
+      _refreshEnabled = true;
+    });
   }
-
+}
   void _refreshCurrentTab() {
     final marketingState = ref.read(marketingProvider);
     final notifier = ref.read(marketingProvider.notifier);
+
+    // If currently on target view, refresh target data too
+    if (marketingState.viewType == MarketingViewType.target &&
+        marketingState.isTargetAvailable) {
+      notifier.getTargetData(marketingState.selectedTab);
+      return;
+    }
 
     switch (marketingState.selectedTab) {
       case 0:
@@ -883,11 +1163,11 @@ class _MarketingPerformanceWidgetState
 
   @override
   void dispose() {
+    ref.read(marketingProvider.notifier).clearMarketing();
     super.dispose();
   }
 }
 
-// Helper class
 class _ItemWithPercentage {
   final dynamic item;
   final double percentage;

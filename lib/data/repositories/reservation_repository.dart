@@ -91,133 +91,36 @@ print('Response from getReservations API: $response');
     final salesCode = await StorageUtil.getSalesCode();
     final userName = await StorageUtil.getUserName();
     final deviceId = await DeviceId.get();
-     final spName = await StorageUtil.getStoredProcedureName();
+print("test");
     final requestBody = {
-      "HasReturnData": "T",
-      "Parameters": [
-        {
-          "Para_Data": 9013,
-          "Para_Direction": "Input",
-          "Para_Lenth": 1,
-          "Para_Name": "@Iid",
-          "Para_Type": "int",
-        },
-        {
-          "Para_Data": newReservation.bmNumber,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text1",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": newReservation.guestName,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text2",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": jsonEncode(newReservation.roomDetails),
-          "Para_Direction": "Input",
-          "Para_Lenth": 5000,
-          "Para_Name": "@Text3",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": newReservation.noOfNights.toString(),
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text4",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": formatArrivalAndDepartureDate(
-            newReservation.arrivalDate,
-          ),
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text5",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": formatArrivalAndDepartureDate(
-            newReservation.departureDate,
-          ),
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text6",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": newReservation.hasAirTicketReservation,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text7",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": newReservation.remarks,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text8",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": jsonEncode(newReservation.airTicketDetails),
-          "Para_Direction": "Input",
-          "Para_Lenth": 5000,
-          "Para_Name": "@Text9",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": salesCode,
-          "Para_Direction": "Input",
-          "Para_Lenth": 1000,
-          "Para_Name": "@Text10",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": userName,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text11",
-          "Para_Type": "varchar",
-        },
-          {
-          "Para_Data": newReservation.reservationnewnumber,
-          "Para_Direction": "Input",
-          "Para_Lenth": 50,
-          "Para_Name": "@Text12",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": deviceId,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text30",
-          "Para_Type": "varchar",
-        },
-      ],
-      "SpName": spName,
-      "con": "1",
+      'bm_number': newReservation.bmNumber,
+      'guest_name': newReservation.guestName,
+      'arrival_date': newReservation.arrivalDate?.toIso8601String(),
+      'departure_date': newReservation.departureDate?.toIso8601String(),
+      'no_of_nights': newReservation.noOfNights,
+      'has_air_ticket_reservation': newReservation.hasAirTicketReservation == '1',
+      'remarks': newReservation.remarks,
+      'manual_reserv_no': newReservation.reservationnewnumber,
+      'package_amount': double.tryParse(newReservation.packageAmount ?? '0') ?? 0.0,
+      'selected_marketing_person':"",
+      'sales_code': salesCode,
+      'user_name': userName,
+      'device_id': deviceId,
+      'room_details': newReservation.roomDetails,
+      'air_ticket_details': newReservation.airTicketDetails,
+      'guests': newReservation.guests,
+      'passport_images': newReservation.passportImages,
     };
 
     printLargeBody(jsonEncode(requestBody));
 
+    final response = await apiService.post('Reservation_InsertReservation', requestBody);
+print("hii $response");
 
-    final response = await apiService.post('CommonExecute', requestBody);
-
-    if (response['CommonResult'] != null &&
-        response['CommonResult']['Table'] is List &&
-        response['CommonResult']['Table'].isNotEmpty) {
-      final table = response['CommonResult']['Table'][0];
-
-      Reservation reservationResponse = Reservation.fromJson(table);
-
-
-      if (reservationResponse.reservNo != "") {
-        return reservationResponse;
-      }
+    if (response['Table'] is List && (response['Table'] as List).isNotEmpty) {
+      final table = response['Table'][0];
+      final reservationResponse = Reservation.fromJson(table);
+      if (reservationResponse.reservNo != '') return reservationResponse;
       return null;
     } else {
       throw Exception('Unexpected response structure');
@@ -228,140 +131,36 @@ print('Response from getReservations API: $response');
     final salesCode = await StorageUtil.getSalesCode();
     final userName = await StorageUtil.getUserName();
     final deviceId = await DeviceId.get();
-     final spName = await StorageUtil.getStoredProcedureName();
-    final requestBody = {
-      "HasReturnData": "T",
-      "Parameters": [
-        {
-          "Para_Data": 8013,
-          "Para_Direction": "Input",
-          "Para_Lenth": 1,
-          "Para_Name": "@Iid",
-          "Para_Type": "int",
-        },
-        {
-          "Para_Data": newReservation.bmNumber,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text1",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": newReservation.guestName,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text2",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": jsonEncode(newReservation.roomDetails),
-          "Para_Direction": "Input",
-          "Para_Lenth": 5000,
-          "Para_Name": "@Text3",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": newReservation.noOfNights.toString(),
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text4",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": formatArrivalAndDepartureDate(
-            newReservation.arrivalDate,
-          ),
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text5",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": formatArrivalAndDepartureDate(
-            newReservation.departureDate,
-          ),
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text6",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": newReservation.hasAirTicketReservation,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text7",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": newReservation.remarks,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text8",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": jsonEncode(newReservation.airTicketDetails),
-          "Para_Direction": "Input",
-          "Para_Lenth": 5000,
-          "Para_Name": "@Text9",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": salesCode,
-          "Para_Direction": "Input",
-          "Para_Lenth": 1000,
-          "Para_Name": "@Text10",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": userName,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text11",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": newReservation.reservationNo,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text12",
-          "Para_Type": "varchar",
-        },
-         {
-          "Para_Data": newReservation.reservationnewnumber,
-          "Para_Direction": "Input",
-          "Para_Lenth": 50,
-          "Para_Name": "@Text13",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": deviceId,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text30",
-          "Para_Type": "varchar",
-        },
-      ],
-      "SpName": spName,
-      "con": "1",
-    };
 
+    final requestBody = {
+      'bm_number': newReservation.bmNumber,
+      'guest_name': newReservation.guestName,
+      'arrival_date': newReservation.arrivalDate?.toIso8601String(),
+      'departure_date': newReservation.departureDate?.toIso8601String(),
+      'no_of_nights': newReservation.noOfNights,
+      'has_air_ticket_reservation': newReservation.hasAirTicketReservation == '1',
+      'remarks': newReservation.remarks,
+      'reservation_no': newReservation.reservationNo,
+      'manual_reserv_no': newReservation.reservationnewnumber,
+      'package_amount': double.tryParse(newReservation.packageAmount ?? '0') ?? 0.0,
+      'selected_marketing_person': newReservation.selectedMarketingPerson,
+      'sales_code': salesCode,
+      'user_name': userName,
+      'device_id': deviceId,
+      'room_details': newReservation.roomDetails,
+      'air_ticket_details': newReservation.airTicketDetails,
+      'guests': newReservation.guests,
+      'passport_images': newReservation.passportImages,
+    };
 
     printLargeBody(jsonEncode(requestBody));
 
+    final response = await apiService.post('UpdateReservation', requestBody);
 
-    final response = await apiService.post('CommonExecute', requestBody);
-
-    if (response['CommonResult'] != null &&
-        response['CommonResult']['Table'] is List &&
-        response['CommonResult']['Table'].isNotEmpty) {
-      final table = response['CommonResult']['Table'][0];
-
-      Reservation reservationResponse = Reservation.fromJson(table);
-
-      if (reservationResponse.reservNo != "") {
-        return reservationResponse;
-      }
+    if (response['Table'] is List && (response['Table'] as List).isNotEmpty) {
+      final table = response['Table'][0];
+      final reservationResponse = Reservation.fromJson(table);
+      if (reservationResponse.reservNo != '') return reservationResponse;
       return null;
     } else {
       throw Exception('Unexpected response structure');

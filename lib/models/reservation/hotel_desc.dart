@@ -17,6 +17,8 @@ class HotelDescip {
   final int? noOfNights;
   final dynamic selectedCost;
   final int? costIndex;
+  final String? ecLcoFacility;
+  final String? paymentBy;
 
   HotelDescip({
     this.hotel,
@@ -34,6 +36,8 @@ class HotelDescip {
     this.noOfNights,
     this.selectedCost,
     this.costIndex,
+    this.ecLcoFacility,
+    this.paymentBy,
   });
 
   factory HotelDescip.fromJson(Map<String, dynamic> json) {
@@ -53,6 +57,8 @@ class HotelDescip {
       noOfNights: _toInt(json['no_of_nights']),
       selectedCost: _parseCost(json['selected_cost']),
       costIndex: _toInt(json['cost_index']),
+      ecLcoFacility: json['ec_lco_facility'] as String?,
+      paymentBy: json['payment_by'] as String?,
     );
   }
 
@@ -118,23 +124,25 @@ class HotelDescip {
 
   Map<String, dynamic> toJson() {
     return {
-      'hotel': hotel,
-      'hotel_name': hotelName,
-      'room_category': roomCategoryId,
-      'room_category_name': roomCategoryName,
-      'room_type': roomTypeId,
-      'room_type_name': roomTypeName,
-      'guest_count': guestCount,
-      'selected_date_range': selectedDateRange != null
+      'Hotel': hotel,
+      'HotelName': hotelName,
+      'RoomCategory': roomCategoryId,
+      'RoomCategoryName': roomCategoryName,
+      'RoomType': roomTypeId,
+      'RoomTypeName': roomTypeName,
+      'GuestCount': guestCount,
+      'SelectedDateRange': selectedDateRange != null
           ? "${DateFormat('dd/MM/yyyy').format(selectedDateRange!.start)} ~ ${DateFormat('dd/MM/yyyy').format(selectedDateRange!.end)}"
           : null,
-      'arrival_date': arrivalDate?.toIso8601String(),
-      'departure_date': departureDate?.toIso8601String(),
-      'children_count': childrenCount,
-      'room_count': roomCount,
-      'no_of_nights': noOfNights,
-      'selected_cost': _parseCostToDouble(selectedCost),
-      'cost_index': costIndex,
+      'ArrivalDate': arrivalDate?.toIso8601String(),
+      'DepartureDate': departureDate?.toIso8601String(),
+      'ChildrenCount': childrenCount,
+      'RoomCount': roomCount,
+      'NoOfNights': noOfNights,
+      'SelectedCost': _parseCostToDouble(selectedCost),
+      'CostIndex': costIndex,
+      'EC_LCO_Facility': ecLcoFacility,
+      'PaymentBy': paymentBy,
     };
   }
 }

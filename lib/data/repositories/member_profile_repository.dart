@@ -9,6 +9,7 @@ import 'package:ballys_reservation_app/models/member/member_summary.dart';
 import 'package:ballys_reservation_app/models/member/trip_history.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
+import 'package:intl/intl.dart';
 
 class MemberProfileRepository {
   final ApiService apiService;
@@ -163,6 +164,43 @@ Future<List<TripHistory>> getTripHistory2({
     "playerId": playerId,
     "DateFrom": dateFrom,
     "DateTo": dateTo,
+  });
+
+  if (response['status'] == 'SUCCESS' &&
+      response['data'] is Map &&
+      response['data']['Visits'] is List) {
+    final data = response['data']['Visits'] as List;
+
+    // Return empty list instead of throwing when there are no visits
+    if (data.isEmpty) return [];
+
+    return data.map<TripHistory>((item) => TripHistory.fromJson(item)).toList();
+  } else {
+    throw Exception('Data retrieval failed: unexpected response structure');
+  }
+}
+String? formatDateForApi(String? date) {
+  if (date == null || date.isEmpty) return null;
+  final parsed = DateTime.parse(date); // expects yyyy-MM-dd
+  return DateFormat('MM/dd/yyyy').format(parsed);
+}
+Future<List<TripHistory>> getTripHistory3({
+  required String playerId,
+  String? dateFrom,
+  String? dateTo,
+  required int iid,
+}) async {
+ print(dateFrom);
+  print(dateTo);
+   print(iid);
+    print(playerId);
+    final formattedDateFrom = formatDateForApi(dateFrom);
+  final formattedDateTo = formatDateForApi(dateTo);
+  final response = await apiService.post('GetVisitFrequency_V2', {
+    "playerId": playerId,
+    "DateFrom": formattedDateFrom,
+    "DateTo": formattedDateTo,
+    "IID": iid,
   });
 
   if (response['status'] == 'SUCCESS' &&

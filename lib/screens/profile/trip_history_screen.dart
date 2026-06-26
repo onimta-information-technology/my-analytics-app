@@ -33,9 +33,9 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> with Conne
     super.initState();
     _getGuestImage();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _getTripHistory();
-    });
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   _getTripHistory();
+    // });
   }
 
   @override
@@ -59,48 +59,55 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> with Conne
     await _getGuestImage();
   }
 
-  Future<void> _getTripHistory() async {
+  // Shared call to GetVisitFrequency2 (V2 endpoint). `iid` selects the mode:
+  //   2 -> Last Trip, 1 -> Last 5 Trips, 0 -> Search by date range
+  Future<void> _fetchTripHistory({
+    required int iid,
+    String? dateFrom,
+    String? dateTo,
+  }) async {
     try {
       final guest = ref.watch(selectedGuestProvider);
       setState(() {
         _isLoading = true;
       });
 
-      // Format dates for API call
-      String? dateFrom;
-      String? dateTo;
-
-      if (startDateNotifier.value != null) {
-        dateFrom = DateFormat('yyyy-MM-dd').format(startDateNotifier.value!);
-      }
-
-      if (endDateNotifier.value != null) {
-        dateTo = DateFormat('yyyy-MM-dd').format(endDateNotifier.value!);
-      }
-
-      final tripHistory = await widget.memberProfileRepository.getTripHistory2(
+      final tripHistory = await widget.memberProfileRepository.getTripHistory3(
         playerId: guest!.mid,
         dateFrom: dateFrom,
         dateTo: dateTo,
+        iid: iid,
       );
 
-      setState(() {
+    //   setState(() {
+    //     _tripHistory = tripHistory;
+    //     _isLoading = false;
+    //   });
+    // } catch (e) {
+    setState(() {
         _tripHistory = tripHistory;
         _isLoading = false;
 
-        // Only set date notifiers if we have data AND they haven't been set yet
-        if (_tripHistory.isNotEmpty) {
-          if (startDateNotifier.value == null) {
-            final lastArrival = _tripHistory.last.arrivalDate;
-            if (lastArrival.isNotEmpty) {
-              startDateNotifier.value = DateTime.tryParse(lastArrival);
-            }
+        // For "Last Trip" / "Last 5 Trips" quick filters, sync the
+        // Start/End date fields to reflect the data that came back:
+        // Start Date = earliest arrival, End Date = latest departure.
+        if ((iid == 1 || iid == 2) && _tripHistory.isNotEmpty) {
+          final arrivalDates = _tripHistory
+              .map((e) => DateTime.tryParse(e.arrivalDate))
+              .whereType<DateTime>()
+              .toList();
+          final departureDates = _tripHistory
+              .map((e) => DateTime.tryParse(e.departureDate))
+              .whereType<DateTime>()
+              .toList();
+
+          if (arrivalDates.isNotEmpty) {
+            arrivalDates.sort();
+            startDateNotifier.value = arrivalDates.first;
           }
-          if (endDateNotifier.value == null) {
-            final firstDeparture = _tripHistory.first.departureDate;
-            if (firstDeparture.isNotEmpty) {
-              endDateNotifier.value = DateTime.tryParse(firstDeparture);
-            }
+          if (departureDates.isNotEmpty) {
+            departureDates.sort();
+            endDateNotifier.value = departureDates.last;
           }
         }
       });
@@ -122,6 +129,34 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> with Conne
     }
   }
 
+  // Default refresh (used by pull-to-refresh / app bar refresh button):
+  // re-runs whatever is currently on screen using the date range, defaulting
+  // to a plain search (IID 0) when no dates are set yet.
+  Future<void> _getTripHistory() async {
+    String? dateFrom;
+    String? dateTo;
+
+    if (startDateNotifier.value != null) {
+      dateFrom = DateFormat('yyyy-MM-dd').format(startDateNotifier.value!);
+    }
+
+    if (endDateNotifier.value != null) {
+      dateTo = DateFormat('yyyy-MM-dd').format(endDateNotifier.value!);
+    }
+
+    await _fetchTripHistory(iid: 0, dateFrom: dateFrom, dateTo: dateTo);
+  }
+
+  // "Last Trip" button -> IID 2, no date filter, hits the API directly.
+  Future<void> _showLastTrip() async {
+    await _fetchTripHistory(iid: 2, dateFrom: null, dateTo: null);
+  }
+
+  // "Last 5 Trips" button -> IID 1, no date filter, hits the API directly.
+  Future<void> _showLastFiveTrips() async {
+    await _fetchTripHistory(iid: 1, dateFrom: null, dateTo: null);
+  }
+
   Future<void> _getGuestImage() async {
     final guest = ref.read(selectedGuestProvider);
     if (guest!.memImage2 != null) return;
@@ -133,31 +168,6 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> with Conne
     } else {}
   }
 
-  // Future<void> _selectArrivalDate(BuildContext context) async {
-  //   final DateTime? picked = await showDatePicker(
-  //     context: context,
-  //     initialDate: startDateNotifier.value ?? DateTime.now(),
-  //     firstDate: DateTime(2000),
-  //     lastDate: DateTime(2100),
-  //   );
-
-  //   if (picked != null) {
-  //     startDateNotifier.value = picked;
-  //   }
-  // }
-
-  // Future<void> _selectDepartureDate(BuildContext context) async {
-  //   final DateTime? picked = await showDatePicker(
-  //     context: context,
-  //     initialDate: endDateNotifier.value ?? DateTime.now(),
-  //     firstDate: DateTime(2000),
-  //     lastDate: DateTime(2100),
-  //   );
-
-  //   if (picked != null) {
-  //     endDateNotifier.value = picked;
-  //   }
-  // }
   Future<void> _selectArrivalDate(BuildContext context) async {
     final now = DateTime(
       DateTime.now().year,
@@ -307,28 +317,35 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> with Conne
     );
   }
 
+  // "Search" button: validates that both Start Date and End Date are
+  // filled in before calling the API with IID 0.
   void _performAction() {
-    // Validate dates
-    if (startDateNotifier.value != null && endDateNotifier.value != null) {
-      if (startDateNotifier.value!.isAfter(endDateNotifier.value!)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Start date must be before end date'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
+    if (startDateNotifier.value == null || endDateNotifier.value == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select both Start Date and End Date'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
     }
 
-    // Call API with selected dates
-    _getTripHistory();
+    if (startDateNotifier.value!.isAfter(endDateNotifier.value!)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Start date must be before end date'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final dateFrom = DateFormat('yyyy-MM-dd').format(startDateNotifier.value!);
+    final dateTo = DateFormat('yyyy-MM-dd').format(endDateNotifier.value!);
+
+    _fetchTripHistory(iid: 0, dateFrom: dateFrom, dateTo: dateTo);
   }
 
-  // String formatDate(String dateString) {
-  //   final date = DateTime.parse(dateString);
-  //   return DateFormat('dd MMM yyyy').format(date);
-  // }
   String formatDate(String dateString) {
     if (dateString.isEmpty) return "N/A";
     final date = DateTime.tryParse(dateString);
@@ -336,11 +353,6 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> with Conne
     return DateFormat('dd MMM yyyy').format(date);
   }
 
-  // String _formatDate2(String dateString) {
-  //   if (dateString == "") return "N/A";
-  //   final date = DateTime.parse(dateString);
-  //   return DateFormat('yyyy-MM-dd').format(date);
-  // }
   String _formatDate2(String dateString) {
     if (dateString.isEmpty) return "N/A";
     final date = DateTime.tryParse(dateString);
@@ -355,14 +367,6 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> with Conne
     return formattedNumber;
   }
 
-  // final Map<String, String> ratingImageMap = {
-  //   "CLASSIC": "assets/images/ratings/CLASSIC.png",
-  //   "DIAMOND": "assets/images/ratings/DIAMOND.png",
-  //   "GOLD": "assets/images/ratings/GOLD.png",
-  //   "INFINITY": "assets/images/ratings/INFINITY.png",
-  //   "PLATINUM": "assets/images/ratings/PLATINUM.png",
-  //   "SILVER": "assets/images/ratings/SILVER.png",
-  // };
  Color _getRatingColorBallys(String? rating) {
     switch ((rating ?? '').toUpperCase()) {
       case 'GOLD':
@@ -397,8 +401,6 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> with Conne
         body: const Center(child: CircularProgressIndicator()),
       );
     }
-
-    //final String? imagePath = ratingImageMap[guest.gRating];
 
     return Scaffold(
       appBar: AppBar(
@@ -550,36 +552,7 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> with Conne
                         Positioned(
                           top: 10,
                           left: 10,
-                          child:
-                              // Card(
-                              //   elevation: 5,
-                              //   shape: RoundedRectangleBorder(
-                              //     borderRadius: BorderRadius.circular(6),
-                              //   ),
-                              //   child: Padding(
-                              //     padding: const EdgeInsets.all(0),
-                              //     child: SizedBox(
-                              //       width: 80,
-                              //       height: 30,
-                              //       child: imagePath != null
-                              //           ? Hero(
-                              //               tag: "rating-image",
-                              //               child: Image.asset(
-                              //                 imagePath,
-                              //                 fit: BoxFit.contain,
-                              //               ),
-                              //             )
-                              //           : Hero(
-                              //               tag: "rating-image",
-                              //               child: Image.asset(
-                              //                 "assets/images/ratings/CLASSIC.png",
-                              //                 fit: BoxFit.contain,
-                              //               ),
-                              //             ),
-                              //     ),
-                              //   ),
-                              // ),
-                              Hero(
+                          child: Hero(
                                 tag: "rating-image-${guest.mid}",
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
@@ -684,7 +657,12 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> with Conne
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 8),
+
+                    // Quick-filter buttons: call the API directly with the
+                    // appropriate IID (2 = Last Trip, 1 = Last 5 Trips).
+
+
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -696,7 +674,7 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> with Conne
                             borderRadius: BorderRadius.circular(12),
                           ),
                           padding: const EdgeInsets.symmetric(
-                            vertical: 16,
+                            vertical: 10,
                             horizontal: 20,
                           ),
                         ),
@@ -708,7 +686,7 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> with Conne
                             Text(
                               "Search",
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 20,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -717,6 +695,91 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> with Conne
                       ),
                     ),
                     SizedBox(height: 8),
+                                        Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _isLoading ? null : _showLastTrip,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Constants.kSecondaryColor,
+                              backgroundColor:  Constants.kSecondaryColor,
+                              side: BorderSide(
+                                color: Constants.kSecondaryColor,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 10,
+                              ),
+                            ),
+                            child: const Text(
+                              "Last Trip",
+                              style: TextStyle(
+                                fontSize: 20,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _isLoading ? null : _showLastFiveTrips,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Constants.kSecondaryColor,
+                                backgroundColor:  Constants.kSecondaryColor,
+                              side: BorderSide(
+                                color: Constants.kSecondaryColor,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 10,
+                              ),
+                            ),
+                            child: const Text(
+                              "Last 5 Trips",
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+// // Visit count summary card
+// if (_tripHistory.isNotEmpty)
+//   Container(
+//     width: double.infinity,
+//     margin: const EdgeInsets.only(bottom: 8),
+//     padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 20),
+//     decoration: BoxDecoration(
+//       color: const Color.fromARGB(255, 46, 25, 233).withOpacity(0.1),
+//       borderRadius: BorderRadius.circular(12),
+//       border: Border.all(color: Constants.kSecondaryColor.withOpacity(0.4)),
+//     ),
+//     child: Row(
+//       mainAxisAlignment: MainAxisAlignment.center,
+//       children: [
+//         const Icon(Icons.confirmation_number_outlined, size: 22),
+//         const SizedBox(width: 10),
+//         Text(
+//           "Total Visits : ${_tripHistory.length}",
+//           style: TextStyle(
+//             fontSize: fontSettings.fontSize + 5,
+//             fontWeight: FontWeight.w900,
+//             color: const Color.fromARGB(255, 6, 8, 64),
+//           ),
+//         ),
+//       ],
+//     ),
+//   ),
 // Visit count summary card
 if (_tripHistory.isNotEmpty)
   Container(
@@ -734,11 +797,27 @@ if (_tripHistory.isNotEmpty)
         const Icon(Icons.confirmation_number_outlined, size: 22),
         const SizedBox(width: 10),
         Text(
-          "Total Visits : ${_tripHistory.length}",
+          "Total Visits :",
           style: TextStyle(
             fontSize: fontSettings.fontSize + 5,
             fontWeight: FontWeight.w900,
             color: const Color.fromARGB(255, 6, 8, 64),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color.fromARGB(255, 233, 80, 25),
+            borderRadius: BorderRadius.circular(20), // pill/rounded shape
+          ),
+          child: Text(
+            "${_tripHistory.length}",
+            style: TextStyle(
+              fontSize: fontSettings.fontSize + 5,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+            ),
           ),
         ),
       ],
@@ -755,7 +834,6 @@ if (_tripHistory.isNotEmpty)
                         },
                         children: [
                           ..._tripHistory
-                              //  .map((entry) {
                               .asMap()
                               .entries
                               .map((mapEntry) {
@@ -1310,7 +1388,6 @@ if (_tripHistory.isNotEmpty)
                                     ),
                                     children: [
                                       Container(
-                                        //color: Constants.kPrimaryColor.withAlpha(50),
                                         child: Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
@@ -1505,7 +1582,6 @@ if (_tripHistory.isNotEmpty)
                                                                   .start,
                                                           children: [
                                                             Text(
-                                                              //"Amount: ${exgift.amount}",
                                                               "Amount: ${NumberFormat('#,###').format(exgift.amount)}",
                                                               style: TextStyle(
                                                                 fontWeight:

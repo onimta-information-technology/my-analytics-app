@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../services/api_service.dart';
@@ -259,6 +262,30 @@ Future<bool> deleteAccount() async {
   } catch (e) {
     print("Delete account error: $e");
     // Return false instead of throwing to allow proper error handling
+    return false;
+  }
+}
+Future<bool> sendOtpWhatsApp(String mobileNumber, String otp) async {
+  try {
+    // await apiService.post('send-whatsapp', {
+    //   "Mobile_No": mobileNumber,
+    //   "OTP": otp,
+    // });
+    print("hello $mobileNumber");
+const String url =
+        'https://api.ballyscolombo.com/api/Ballys/CRM/send-whatsapp';
+
+     await http.post(
+      Uri.parse(url),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        "Mobile_No": mobileNumber,
+        "OTP": otp,
+      }),
+    );
+    return true;
+  } catch (e) {
+    print('WhatsApp OTP send error: $e');
     return false;
   }
 }

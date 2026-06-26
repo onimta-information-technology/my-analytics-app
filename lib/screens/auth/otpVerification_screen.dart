@@ -368,6 +368,7 @@ print(fullUrl);
     return false;
   }
 }
+
   Future<void> _sendInitialOTP() async {
     setState(() {
       _isSendingOTP = true;
@@ -377,6 +378,8 @@ print(fullUrl);
       _actualOTP = _generateOTP();
       bool sent = await _sendOTPSMS(widget.phoneNumber, _actualOTP!);
 
+ final authRepo = ref.read(authRepositoryProvider); // adjust to your actual provider name
+bool whatsappSent = await authRepo.sendOtpWhatsApp(widget.phoneNumber, _actualOTP!);
       if (!sent) {
         _showErrorMessage('Failed to send OTP. Please try again.');
       } else {
@@ -806,7 +809,8 @@ print(fullUrl);
       _actualOTP = _generateOTP();
 
       bool sent = await _sendOTPSMS(widget.phoneNumber, _actualOTP!);
-
+ final authRepo = ref.read(authRepositoryProvider); // adjust to your actual provider name
+bool whatsappSent = await authRepo.sendOtpWhatsApp(widget.phoneNumber, _actualOTP!);
       if (sent) {
         _startResendTimer();
         _clearOTPFields();

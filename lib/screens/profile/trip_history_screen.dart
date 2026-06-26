@@ -808,8 +808,8 @@ if (_tripHistory.isNotEmpty)
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
-            color: const Color.fromARGB(255, 233, 80, 25),
-            borderRadius: BorderRadius.circular(20), // pill/rounded shape
+            color: const Color.fromARGB(255, 13, 9, 76),
+            //borderRadius: BorderRadius.circular(20), // pill/rounded shape
           ),
           child: Text(
             "${_tripHistory.length}",

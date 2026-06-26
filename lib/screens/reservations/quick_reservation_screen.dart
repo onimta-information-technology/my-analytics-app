@@ -1390,6 +1390,7 @@ Remarks              : ${m['remarks']}''';
       final apiService = ApiService(const FlutterSecureStorage());
       final response =
           await apiService.post('Reservation_InsertReservation', body);
+          print("test3 $response");
       if (!mounted) return;
       setState(() => _isLoading = false);
       final status = response['Status'] as bool? ?? false;
@@ -1484,6 +1485,7 @@ Remarks              : ${m['remarks']}''';
       final apiService = ApiService(const FlutterSecureStorage());
       final response =
           await apiService.post('Reservation_InsertReservation', body);
+           print("test4 $response");
       if (!mounted) return;
       setState(() => _isLoading = false);
       final status = response['Status'] as bool? ?? false;
@@ -1586,9 +1588,9 @@ Remarks              : ${m['remarks']}''';
             onPressed: _onSave,
             backgroundColor: _accentColor,
             foregroundColor: Colors.white,
-            icon: const Icon(Icons.save),
+            icon: const Icon(Icons.save_alt),
             label: const Text(
-              'Save',
+              'Confirm Reservation',
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
           ),

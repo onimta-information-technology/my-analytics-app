@@ -1369,7 +1369,7 @@ Remarks              : ${m['remarks']}''';
     final deviceId = await DeviceId.get();
 
     final body = <String, dynamic>{
-      'bm_number': primary['memberId'],
+      'mid': primary['memberId'],
       'guest_name': primary['guestName'],
       'arrival_date': firstHotel?.arrivalDate?.toIso8601String(),
       'departure_date': firstHotel?.departureDate?.toIso8601String(),
@@ -1468,7 +1468,7 @@ Remarks              : ${m['remarks']}''';
     final deviceId = await DeviceId.get();
 print(" rrr : $airTicketDetails");
     final body = <String, dynamic>{
-      'bm_number': primary['memberId'],
+      'mid': primary['memberId'],
       'guest_name': primary['guestName'],
       'arrival_date':
           (primary['arrDateObj'] as DateTime?)?.toIso8601String(),

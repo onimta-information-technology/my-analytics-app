@@ -93,7 +93,7 @@ print('Response from getReservations API: $response');
     final deviceId = await DeviceId.get();
 print("test");
     final requestBody = {
-      'bm_number': newReservation.bmNumber,
+      'mid': newReservation.bmNumber,
       'guest_name': newReservation.guestName,
       'arrival_date': newReservation.arrivalDate?.toIso8601String(),
       'departure_date': newReservation.departureDate?.toIso8601String(),
@@ -132,7 +132,7 @@ print(response);
     final deviceId = await DeviceId.get();
 
     final requestBody = {
-      'bm_number': newReservation.bmNumber,
+      'mid': newReservation.bmNumber,
       'guest_name': newReservation.guestName,
       'arrival_date': newReservation.arrivalDate?.toIso8601String(),
       'departure_date': newReservation.departureDate?.toIso8601String(),

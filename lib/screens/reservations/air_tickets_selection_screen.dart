@@ -4,6 +4,9 @@ import 'package:ballys_reservation_app/components/flight_card.dart';
 import 'package:ballys_reservation_app/components/passport_upload_widget.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/airport_repository.dart';
+import 'package:ballys_reservation_app/data/repositories/contact_person_repository.dart';
+import 'package:ballys_reservation_app/data/services/api_service.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:ballys_reservation_app/models/airport_search_response.dart';
 import 'package:ballys_reservation_app/models/reservation/airport_cost_response.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_booking.dart';
@@ -56,15 +59,25 @@ class _AirTicketsSelectionScreenState
 
   final ValueNotifier<String> costNotifier = ValueNotifier<String>("0");
   final ValueNotifier<String?> airLineNotifier = ValueNotifier<String?>(null);
-  final List<String> _contactPersons = ["test 1", "test 2"];
-List<PassportFile> _passportFiles = [];
+  List<String> _contactPersons = [];
+  List<PassportFile> _passportFiles = [];
+
   @override
   void initState() {
     super.initState();
     flightList = List.from(ref.read(selectedFlightProvider));
     _getAirports();
+    _loadContactPersons();
     _arrivalDate = widget.arrivalDate;
     _departureDate = widget.departureDate;
+  }
+
+  Future<void> _loadContactPersons() async {
+    try {
+      final repo = ContactPersonRepository(ApiService(const FlutterSecureStorage()));
+      final persons = await repo.getContactPersons();
+      if (mounted) setState(() => _contactPersons = persons);
+    } catch (_) {}
   }
 
   Airport? _departureFromAirport;

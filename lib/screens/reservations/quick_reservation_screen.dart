@@ -27,6 +27,7 @@ import 'package:ballys_reservation_app/providers/airports_provider.dart';
 import 'package:ballys_reservation_app/providers/new_reservation_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
+import 'package:ballys_reservation_app/data/repositories/contact_person_repository.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 
@@ -221,8 +222,8 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
   String _a_airportTransport = 'No';
   String _a_visa = 'No';
 
-  // ── Air ticket — Hamoue contact person dropdown (NEW, hardcoded test values) ─
-  static const List<String> _hamoueContactOptions = ['test1', 'test2'];
+  // ── Air ticket — Hamoue contact person dropdown ───────────────────────────
+  List<String> _hamoueContactPersons = [];
   String? _a_hamoueContactPerson;
 
   // ── Air ticket — passport bio data page uploads (NEW) ──────────────────────
@@ -250,6 +251,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     _loadHotels();
     _loadAirports();
     _loadLocationPrefix();
+    _loadContactPersons();
   }
 
   @override
@@ -332,6 +334,14 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       final airports = ref.read(airportsProvider);
       if (airports.isEmpty)
         await ref.read(airportsProvider.notifier).getAllAirports();
+    } catch (_) {}
+  }
+
+  Future<void> _loadContactPersons() async {
+    try {
+      final repo = ContactPersonRepository(ApiService(const FlutterSecureStorage()));
+      final persons = await repo.getContactPersons();
+      if (mounted) setState(() => _hamoueContactPersons = persons);
     } catch (_) {}
   }
 
@@ -1456,7 +1466,7 @@ Remarks              : ${m['remarks']}''';
     final salesCode = await StorageUtil.getSalesCode();
     final userName = await StorageUtil.getUserName();
     final deviceId = await DeviceId.get();
-
+print(" rrr : $airTicketDetails");
     final body = <String, dynamic>{
       'bm_number': primary['memberId'],
       'guest_name': primary['guestName'],
@@ -3254,7 +3264,7 @@ class _AirForm extends StatelessWidget {
               icon: Icons.support_agent_rounded,
               accent: accent,
             ),
-            items: _QuickReservationScreenState._hamoueContactOptions
+            items: state._hamoueContactPersons
                 .map((p) => DropdownMenuItem(value: p, child: Text(p)))
                 .toList(),
             onChanged: (v) =>

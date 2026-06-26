@@ -90,13 +90,13 @@ class _InactiveMembermainScreenState extends ConsumerState<InactiveMembermainScr
                             child: Column(
                               children: [
                                 Lottie.asset(
-                                  'assets/icon/menu_screen/followMembers.json',
+                                  'assets/icon/menu_screen/Followed.json',
                                   width: 80,
                                   height: 80,
                                   fit: BoxFit.contain,
                                 ),
                                 const Text(
-                                  'Follow Up',
+                                  'Followed',
                                   style: TextStyle(
                                     fontSize: 16.0,
                                     fontWeight: FontWeight.normal,

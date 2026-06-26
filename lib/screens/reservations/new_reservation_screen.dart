@@ -2136,82 +2136,79 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
 
                         // ── Add Guest / Add New Guest Buttons ──
                         if (!_isEditMode) ...[
-                          Row(
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: _onAddGuest,
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor:
-                                        Constants.kSecondaryColor,
-                                    side: BorderSide(
-                                      color: Constants.kSecondaryColor,
-                                      width: 2,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(12),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 14,
-                                    ),
+                              OutlinedButton(
+                                onPressed: _onAddGuest,
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor:
+                                      Constants.kSecondaryColor,
+                                  side: BorderSide(
+                                    color: Constants.kSecondaryColor,
+                                    width: 2,
                                   ),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.center,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.person_add, size: 18),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        "Add Guest",
-                                        style: TextStyle(
-                                          fontSize: fontSettings.fontSize *
-                                              0.9,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(12),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: _onAddNewGuest,
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.deepOrange,
-                                    side: const BorderSide(
-                                      color: Colors.deepOrange,
-                                      width: 2,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(12),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 14,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.center,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(
-                                          Icons.person_add_alt_1,
-                                          size: 18),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        "Add New Guest",
-                                        style: TextStyle(
-                                          fontSize: fontSettings.fontSize *
-                                              0.9,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.person_add, size: 18),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      "Add Member With Same Details",
+                                      style: TextStyle(
+                                        fontSize: fontSettings.fontSize *
+                                            0.9,
+                                        fontWeight: FontWeight.bold,
                                       ),
-                                    ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              OutlinedButton(
+                                onPressed: _onAddNewGuest,
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.deepOrange,
+                                  side: const BorderSide(
+                                    color: Colors.deepOrange,
+                                    width: 2,
                                   ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(12),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                        Icons.person_add_alt_1,
+                                        size: 18),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      "Apply & Add Member",
+                                      style: TextStyle(
+                                        fontSize: fontSettings.fontSize *
+                                            0.9,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],

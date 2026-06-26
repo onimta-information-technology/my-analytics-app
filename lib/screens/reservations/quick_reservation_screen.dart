@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -24,6 +27,7 @@ import 'package:ballys_reservation_app/providers/airports_provider.dart';
 import 'package:ballys_reservation_app/providers/new_reservation_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
+import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 
 enum _Section { airTicket, hotel }
@@ -37,12 +41,17 @@ const TextStyle kInputTextStyle = TextStyle(
 // ─── Model: one hotel booking inside a guest member ──────────────────────────
 class _HotelEntry {
   String hotel;
+  double? hotelId;
   String arrival;
   String departure;
+  DateTime? arrivalDate;
+  DateTime? departureDate;
   String noOfRooms;
   String noOfPax;
   String roomType;
+  int? roomTypeId;
   String roomCategory;
+  int? roomCategoryId;
   String eciLco;
   String mealPlan;
   String paymentBy;
@@ -52,12 +61,17 @@ class _HotelEntry {
 
   _HotelEntry({
     this.hotel = '',
+    this.hotelId,
     this.arrival = '',
     this.departure = '',
+    this.arrivalDate,
+    this.departureDate,
     this.noOfRooms = '1',
     this.noOfPax = '1',
     this.roomType = '',
+    this.roomTypeId,
     this.roomCategory = '',
+    this.roomCategoryId,
     this.eciLco = 'NA',
     this.mealPlan = '',
     this.paymentBy = 'NA',
@@ -81,6 +95,32 @@ class _HotelEntry {
         'marketingPerson': marketingPerson,
         'approvedBy': approvedBy,
       };
+
+  Map<String, dynamic> toApiJson() {
+    final arrDt = arrivalDate;
+    final depDt = departureDate;
+    final nights =
+        (arrDt != null && depDt != null) ? depDt.difference(arrDt).inDays : 0;
+    return {
+      'Hotel': hotelId,
+      'HotelName': hotel,
+      'RoomCategory': roomCategoryId,
+      'RoomCategoryName': roomCategory,
+      'RoomType': roomTypeId,
+      'RoomTypeName': roomType,
+      'GuestCount': int.tryParse(noOfPax) ?? 1,
+      'ChildrenCount': 0,
+      'RoomCount': int.tryParse(noOfRooms) ?? 1,
+      'NoOfNights': nights,
+      'SelectedDateRange': '$arrival - $departure',
+      'ArrivalDate': arrDt?.toIso8601String(),
+      'DepartureDate': depDt?.toIso8601String(),
+      'SelectedCost': 0.0,
+      'CostIndex': 0,
+      'EC_LCO_Facility': eciLco,
+      'PaymentBy': paymentBy,
+    };
+  }
 }
 
 class QuickReservationScreen extends ConsumerStatefulWidget {
@@ -107,6 +147,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
   final _sharedMidNumber = TextEditingController();
   final _sharedGuestName = TextEditingController();
   final _sharedPackageAmount = TextEditingController();
+  final _sharedReservationNo = TextEditingController();
   bool _sharedGuestCardVisible = false;
 
   // ── HOTEL members list ──────────────────────────────────────────────────────
@@ -218,6 +259,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _sharedMidNumber,
       _sharedGuestName,
       _sharedPackageAmount,
+      _sharedReservationNo,
       _h_noOfRooms,
       _h_noOfPax,
       _h_mealPlan,
@@ -385,6 +427,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
 
   void _resetHotelFields() {
     _sharedPackageAmount.clear();
+    _sharedReservationNo.clear();
     _h_noOfRooms.text = '1';
     _h_noOfPax.text = '1';
     _h_mealPlan.clear();
@@ -482,12 +525,17 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
   _HotelEntry _captureCurrentHotelEntry() {
     return _HotelEntry(
       hotel: _selectedHotelName ?? '',
+      hotelId: _selectedHotelId,
       arrival: _h_arrivalCtrl.text,
       departure: _h_departureCtrl.text,
+      arrivalDate: _h_arrivalDate,
+      departureDate: _h_departureDate,
       noOfRooms: _h_noOfRooms.text,
       noOfPax: _h_noOfPax.text,
       roomType: _selectedRoomTypeName ?? '',
+      roomTypeId: _selectedRoomTypeId,
       roomCategory: _selectedRoomCategoryName ?? '',
+      roomCategoryId: _selectedRoomCategoryId,
       eciLco: _h_eciLco,
       mealPlan: _h_mealPlan.text,
       paymentBy: _h_paymentBy.text,
@@ -569,6 +617,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
         'guestName': _sharedGuestName.text,
         'memberId': _sharedMemberId.text,
         'packageAmount': _sharedPackageAmount.text,
+        'reservationNo': _sharedReservationNo.text,
         'hotels': hotels,
       });
       _resetSharedGuest();
@@ -598,6 +647,8 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       'guestName': _sharedGuestName.text,
       'memberId': _sharedMemberId.text,
       'packageAmount': _sharedPackageAmount.text,
+      'reservationNo': _sharedReservationNo.text,
+      // display strings (used for copy text)
       'fromAirport': _a_fromAirport != null
           ? '${_a_fromAirport!.cityName ?? ''} (${_a_fromAirport!.airportCode ?? ''})'
           : '',
@@ -624,6 +675,15 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       'visa': _a_visa,
       'hamoueContactPerson': _a_hamoueContactPerson ?? '',
       'passportFiles': _a_passportFiles.map((f) => f.fileName).join(', '),
+      // typed fields used when building API body
+      'fromAirportData': _a_fromAirport,
+      'toAirportData': _a_toAirport,
+      'returnFromData': _a_returnFromAirport,
+      'returnToData': _a_returnToAirport,
+      'arrDateObj': _a_arrDate,
+      'depDateObj': _a_depDate,
+      'classId': _a_selectedClass?['id'],
+      'passportFileObjects': List<PassportFile>.from(_a_passportFiles),
     };
   }
 
@@ -643,6 +703,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
         'guestName': _sharedGuestName.text,
         'memberId': _sharedMemberId.text,
         'packageAmount': _sharedPackageAmount.text,
+        'reservationNo': _sharedReservationNo.text,
         'hotels': hotels,
       });
       _resetSharedGuest();
@@ -663,6 +724,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _airMembers.add(_captureCurrentAirMember());
       _resetSharedGuest();
       _sharedPackageAmount.clear();
+      _sharedReservationNo.clear();
       _a_noOfSeats.text = '1';
       _a_selectedClass = null;
       _a_classKey = UniqueKey();
@@ -950,6 +1012,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     buf.writeln('*HOTEL RESERVATION REQUEST*');
     buf.writeln('Name of the Guest    : ${m['guestName']}');
     buf.writeln('Membership No        : ${m['memberId']}');
+    buf.writeln('Reservation No       : ${m['reservationNo'] ?? ''}');
     buf.writeln('Package Amount       : ${m['packageAmount']}');
     if (hotels.isEmpty) {
       buf.writeln('  (No hotels added)');
@@ -979,6 +1042,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       'guestName': _sharedGuestName.text,
       'memberId': _sharedMemberId.text,
       'packageAmount': _sharedPackageAmount.text,
+      'reservationNo': _sharedReservationNo.text,
       'hotels': currentHotels,
     };
 
@@ -1014,6 +1078,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
 *AIR TICKET REQUEST*
 BM                       : ${m['memberId']}
 Guest Name        : ${m['guestName']}
+Reservation No    : ${m['reservationNo'] ?? ''}
 Package Amount : ${m['packageAmount']}
 Sector                  : $sector
 Arr Date              : ${m['arrDate']}
@@ -1040,6 +1105,7 @@ Remarks              : ${m['remarks']}''';
       'guestName': _sharedGuestName.text,
       'memberId': _sharedMemberId.text,
       'packageAmount': _sharedPackageAmount.text,
+      'reservationNo': _sharedReservationNo.text,
       'fromAirport': (fromCode.isNotEmpty && fromCity.isNotEmpty)
           ? '$fromCity ($fromCode)'
           : '',
@@ -1113,6 +1179,341 @@ Remarks              : ${m['remarks']}''';
     }
   }
 
+  // ── Save to API ─────────────────────────────────────────────────────────────
+
+  void _showSaveErrorSnack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Row(children: [
+        const Icon(Icons.error_outline, color: Colors.white, size: 18),
+        const SizedBox(width: 8),
+        Expanded(child: Text(message)),
+      ]),
+      backgroundColor: Colors.red.shade700,
+      duration: const Duration(seconds: 4),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    ));
+  }
+
+  Map<String, dynamic> _airMemberToTicketDetail(Map<String, dynamic> m) {
+    final fromAirport = m['fromAirportData'] as Airport?;
+    final toAirport = m['toAirportData'] as Airport?;
+    final returnFrom = m['returnFromData'] as Airport?;
+    final returnTo = m['returnToData'] as Airport?;
+    final arrDate = m['arrDateObj'] as DateTime?;
+    final depDate = m['depDateObj'] as DateTime?;
+    return {
+      'GuestCount': int.tryParse(m['noOfSeats'] as String? ?? '1') ?? 1,
+      'AirTicketClass': m['classId'],
+      'AirTicketClassName': m['class'],
+      'AirLine': m['airline'],
+      'ContactPerson': m['hamoueContactPerson'],
+      'Visa': (m['visa'] as String?) == 'Yes',
+      'IsRoundTrip': m['isRoundTrip'] as bool? ?? false,
+      'SilkRoute': (m['skipRouteFacility'] as String?) == 'Yes' ? 1 : 0,
+      'AirportTransportation': (m['airportTransport'] as String?) == 'Yes' ? 1 : 0,
+      'ArrivalDate': arrDate?.toIso8601String(),
+      'DepartureDate': depDate?.toIso8601String(),
+      'SelectedCost': double.tryParse(m['cost'] as String? ?? '0') ?? 0.0,
+      'DF_AirportCode': fromAirport?.airportCode,
+      'DF_CityName': fromAirport?.cityName,
+      'DF_AirportName': fromAirport?.airportName,
+      'DF_Country': fromAirport?.country,
+      'DT_AirportCode': toAirport?.airportCode,
+      'DT_CityName': toAirport?.cityName,
+      'DT_AirportName': toAirport?.airportName,
+      'DT_Country': toAirport?.country,
+      'RF_AirportCode': returnFrom?.airportCode,
+      'RF_CityName': returnFrom?.cityName,
+      'RF_AirportName': returnFrom?.airportName,
+      'RF_Country': returnFrom?.country,
+      'RT_AirportCode': returnTo?.airportCode,
+      'RT_CityName': returnTo?.cityName,
+      'RT_AirportName': returnTo?.airportName,
+      'RT_Country': returnTo?.country,
+    };
+  }
+
+  List<Map<String, dynamic>> _buildPassportImages(
+      List<Map<String, dynamic>> members) {
+    final images = <Map<String, dynamic>>[];
+    for (final m in members) {
+      final memberId = m['memberId'] as String? ?? '';
+      final files = m['passportFileObjects'] as List<PassportFile>? ?? [];
+      for (final f in files) {
+        try {
+          final bytes = File(f.path).readAsBytesSync();
+          images.add({
+            'GuestBMNumber': memberId,
+            'FileName': f.fileName,
+            'IsPdf': f.isPdf,
+            'Base64Data': base64Encode(bytes),
+          });
+        } catch (_) {}
+      }
+    }
+    return images;
+  }
+
+  void _clearAllHotelForm() {
+    setState(() {
+      _hotelMembers.clear();
+      _resetSharedGuest();
+      _resetHotelFields();
+    });
+  }
+
+  void _clearAllAirForm() {
+    setState(() {
+      _airMembers.clear();
+      _resetSharedGuest();
+      _sharedPackageAmount.clear();
+      _sharedReservationNo.clear();
+      _a_noOfSeats.text = '1';
+      _a_selectedClass = null;
+      _a_classKey = UniqueKey();
+      _a_selectedAirline = null;
+      _a_airlineCosts = [];
+      _a_airlineKey = UniqueKey();
+      _a_arrCtrl.clear();
+      _a_depCtrl.clear();
+      _a_remarksCtrl.clear();
+      _a_arrDate = null;
+      _a_depDate = null;
+      _a_fromAirport = null;
+      _a_toAirport = null;
+      _a_returnFromAirport = null;
+      _a_returnToAirport = null;
+      _a_isRoundTrip = false;
+      _a_fromAirportKey = UniqueKey();
+      _a_toAirportKey = UniqueKey();
+      _a_returnFromAirportKey = UniqueKey();
+      _a_returnToAirportKey = UniqueKey();
+      _a_skipRouteFacility = 'No';
+      _a_airportTransport = 'No';
+      _a_visa = 'No';
+      _a_hamoueContactPerson = null;
+      _a_passportFiles = [];
+      _a_passportUploadKey = UniqueKey();
+    });
+  }
+
+  Future<void> _onSave() async {
+    if (_activeSection == _Section.hotel) {
+      await _saveHotelSection();
+    } else {
+      await _saveAirSection();
+    }
+  }
+
+  Future<void> _saveHotelSection() async {
+    // Collect current form's hotel entries
+    final currentHotels = List<_HotelEntry>.from(_pendingHotels);
+    if (_selectedHotelName != null && _selectedHotelName!.isNotEmpty) {
+      currentHotels.add(_captureCurrentHotelEntry());
+    }
+    final hasCurrentGuest = _sharedGuestName.text.trim().isNotEmpty ||
+        _sharedMemberId.text.trim().isNotEmpty;
+
+    final allMembers = <Map<String, dynamic>>[
+      ..._hotelMembers,
+      if (hasCurrentGuest || currentHotels.isNotEmpty)
+        {
+          'guestName': _sharedGuestName.text,
+          'memberId': _sharedMemberId.text,
+          'packageAmount': _sharedPackageAmount.text,
+          'reservationNo': _sharedReservationNo.text,
+          'hotels': currentHotels,
+        },
+    ];
+
+    if (allMembers.isEmpty) {
+      _showSaveErrorSnack('Please add at least one guest before saving');
+      return;
+    }
+
+    // Flatten all hotel entries from all members into room_details
+    final roomDetails = <Map<String, dynamic>>[];
+    for (final m in allMembers) {
+      final hotels = (m['hotels'] as List<_HotelEntry>?) ?? [];
+      roomDetails.addAll(hotels.map((h) => h.toApiJson()));
+    }
+
+    final guests = allMembers
+        .map((m) => {
+              'BMNumber': m['memberId'],
+              'GuestName': m['guestName'],
+              'ArrivalDate': null,
+              'DepartureDate': null,
+              'HasAirTicketReservation': false,
+              'Remarks': '',
+            })
+        .toList();
+
+    final primary = allMembers.first;
+    final primaryHotels = (primary['hotels'] as List<_HotelEntry>?) ?? [];
+    final firstHotel = primaryHotels.isNotEmpty ? primaryHotels.first : null;
+
+    final salesCode = await StorageUtil.getSalesCode();
+    final userName = await StorageUtil.getUserName();
+    final deviceId = await DeviceId.get();
+
+    final body = <String, dynamic>{
+      'bm_number': primary['memberId'],
+      'guest_name': primary['guestName'],
+      'arrival_date': firstHotel?.arrivalDate?.toIso8601String(),
+      'departure_date': firstHotel?.departureDate?.toIso8601String(),
+      'no_of_nights': firstHotel != null &&
+              firstHotel.arrivalDate != null &&
+              firstHotel.departureDate != null
+          ? firstHotel.departureDate!
+              .difference(firstHotel.arrivalDate!)
+              .inDays
+          : 0,
+      'has_air_ticket_reservation': false,
+      'remarks': '',
+      'manual_reserv_no': primary['reservationNo'] ?? '',
+      'package_amount':
+          double.tryParse(primary['packageAmount'] as String? ?? '0') ?? 0.0,
+      'selected_marketing_person': '',
+      'sales_code': salesCode,
+      'user_name': userName,
+      'device_id': deviceId,
+      'room_details': roomDetails,
+      'air_ticket_details': [],
+      'guests': guests,
+      'passport_images': [],
+    };
+
+    setState(() => _isLoading = true);
+    try {
+      final apiService = ApiService(const FlutterSecureStorage());
+      final response =
+          await apiService.post('Reservation_InsertReservation', body);
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      final status = response['Status'] as bool? ?? false;
+      if (status) {
+        _clearAllHotelForm();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Row(children: [
+            const Icon(Icons.check_circle, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+                child: Text(response['Message'] as String? ??
+                    'Reservation saved successfully')),
+          ]),
+          backgroundColor: Colors.green.shade700,
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ));
+      } else {
+        _showSaveErrorSnack(
+            response['Message'] as String? ?? 'Failed to save reservation');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      _showSaveErrorSnack(e.toString());
+    }
+  }
+
+  Future<void> _saveAirSection() async {
+    final hasCurrentGuest = _sharedGuestName.text.trim().isNotEmpty ||
+        _sharedMemberId.text.trim().isNotEmpty;
+
+    final allMembers = <Map<String, dynamic>>[
+      ..._airMembers,
+      if (hasCurrentGuest) _captureCurrentAirMember(),
+    ];
+
+    if (allMembers.isEmpty) {
+      _showSaveErrorSnack('Please add at least one guest before saving');
+      return;
+    }
+
+    final airTicketDetails =
+        allMembers.map((m) => _airMemberToTicketDetail(m)).toList();
+
+    final guests = allMembers
+        .map((m) => {
+              'BMNumber': m['memberId'],
+              'GuestName': m['guestName'],
+              'ArrivalDate': (m['arrDateObj'] as DateTime?)?.toIso8601String(),
+              'DepartureDate':
+                  (m['depDateObj'] as DateTime?)?.toIso8601String(),
+              'HasAirTicketReservation': true,
+              'Remarks': m['remarks'] ?? '',
+            })
+        .toList();
+
+    final passportImages = _buildPassportImages(allMembers);
+
+    final primary = allMembers.first;
+    final salesCode = await StorageUtil.getSalesCode();
+    final userName = await StorageUtil.getUserName();
+    final deviceId = await DeviceId.get();
+
+    final body = <String, dynamic>{
+      'bm_number': primary['memberId'],
+      'guest_name': primary['guestName'],
+      'arrival_date':
+          (primary['arrDateObj'] as DateTime?)?.toIso8601String(),
+      'departure_date':
+          (primary['depDateObj'] as DateTime?)?.toIso8601String(),
+      'no_of_nights': 0,
+      'has_air_ticket_reservation': true,
+      'remarks': primary['remarks'] ?? '',
+      'manual_reserv_no': primary['reservationNo'] ?? '',
+      'package_amount':
+          double.tryParse(primary['packageAmount'] as String? ?? '0') ?? 0.0,
+      'selected_marketing_person': '',
+      'sales_code': salesCode,
+      'user_name': userName,
+      'device_id': deviceId,
+      'room_details': [],
+      'air_ticket_details': airTicketDetails,
+      'guests': guests,
+      'passport_images': passportImages,
+    };
+
+    setState(() => _isLoading = true);
+    try {
+      final apiService = ApiService(const FlutterSecureStorage());
+      final response =
+          await apiService.post('Reservation_InsertReservation', body);
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      final status = response['Status'] as bool? ?? false;
+      if (status) {
+        _clearAllAirForm();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Row(children: [
+            const Icon(Icons.check_circle, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+                child: Text(response['Message'] as String? ??
+                    'Reservation saved successfully')),
+          ]),
+          backgroundColor: Colors.green.shade700,
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ));
+      } else {
+        _showSaveErrorSnack(
+            response['Message'] as String? ?? 'Failed to save reservation');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      _showSaveErrorSnack(e.toString());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.watch(fontSettingsProvider);
@@ -1182,7 +1583,7 @@ Remarks              : ${m['remarks']}''';
             ),
           ),
           floatingActionButton: FloatingActionButton.extended(
-            onPressed: _onCopy,
+            onPressed: _onSave,
             backgroundColor: _accentColor,
             foregroundColor: Colors.white,
             icon: const Icon(Icons.save),
@@ -1656,9 +2057,10 @@ class _AirportDropdown extends ConsumerWidget {
     return DropdownSearch<Airport>(
       selectedItem: selectedAirport,
       items: (filter, _) {
+        final notifier = ref.read(airportsProvider.notifier);
         if (filter.isEmpty) return airports;
         final lf = filter.toLowerCase();
-        return airports
+        return notifier.allAirports
             .where(
               (a) =>
                   (a.airportCode ?? '').toLowerCase().contains(lf) ||
@@ -1987,6 +2389,16 @@ class _HotelForm extends StatelessWidget {
               accent: accent,
             ),
             keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: state._sharedReservationNo,
+            style: kInputTextStyle,
+            decoration: _fieldDeco(
+              'Manual Reservation No',
+              icon: Icons.confirmation_number_outlined,
+              accent: accent,
+            ),
           ),
           const SizedBox(height: 12),
 
@@ -2531,6 +2943,16 @@ class _AirForm extends StatelessWidget {
               accent: accent,
             ),
             keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: state._sharedReservationNo,
+            style: kInputTextStyle,
+            decoration: _fieldDeco(
+              'Manual Reservation No',
+              icon: Icons.confirmation_number_outlined,
+              accent: accent,
+            ),
           ),
           const SizedBox(height: 16),
           _dateField(

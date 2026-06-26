@@ -115,15 +115,14 @@ print("test");
     printLargeBody(jsonEncode(requestBody));
 
     final response = await apiService.post('Reservation_InsertReservation', requestBody);
-print("hii $response");
 
-    if (response['Table'] is List && (response['Table'] as List).isNotEmpty) {
-      final table = response['Table'][0];
-      final reservationResponse = Reservation.fromJson(table);
-      if (reservationResponse.reservNo != '') return reservationResponse;
-      return null;
+    final status = response['Status'] as bool? ?? false;
+    if (status) {
+      return Reservation.fromJson({
+        'Reserv_No': response['ReservationId']?.toString() ?? '',
+      });
     } else {
-      throw Exception('Unexpected response structure');
+      throw Exception(response['Message'] ?? 'Failed to save reservation');
     }
   }
 

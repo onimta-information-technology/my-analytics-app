@@ -920,15 +920,59 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
           : await reservationRepository.updateReservation(reservation);
 
       if (response != null) {
-        ref
-            .read(reservationProvider.notifier)
-            .addReservationToPending(response);
+        ref.read(reservationProvider.notifier).addReservationToPending(response);
       }
 
-      setState(() => _isLoading = false);
-      Navigator.of(context).pop(true);
+      // Clear all form fields
+      setState(() {
+        _isLoading = false;
+        _memberIdController.clear();
+        _memberIdNumberController.clear();
+        _memberNameController.clear();
+        _noOfNightsController.clear();
+        _arrivalDateController.clear();
+        _departureDateController.clear();
+        _remarksController.clear();
+        _reservationnewnumberController.clear();
+        _packageAmountController.clear();
+        _reservationNoController.clear();
+        _arrivalDate = null;
+        _departureDate = null;
+        _airTicketRequisition = 'No';
+        _guestEntries.clear();
+        _editingGuestIndex = null;
+        _hotelError = null;
+        _airTicketError = null;
+        hasError = false;
+      });
+
+      // Clear all provider state
+      ref.read(selectedHotelProvider.notifier).setHotels([]);
+      ref.read(selectedFlightProvider.notifier).setFlights([]);
+      ref.read(selectedGuestProvider.notifier).clearGuest();
+      ref.read(newReservationProvider.notifier).resetState();
+      ref.read(memberSearchProvider.notifier).resetState();
+      ref.read(selectedReservationProvider.notifier).clearSelectedReservation();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Reservation saved successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.of(context).pop(true);
+      }
     } catch (e) {
       setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

@@ -366,7 +366,13 @@ class _GuestPerformanceState extends ConsumerState<TripHistoryScreen> with Conne
     String formattedNumber = formatter.format(value);
     return formattedNumber;
   }
-
+String _parseNumberFormat2(double? value) {
+  if (value == null || value == 0) return "0";
+  final formatter = NumberFormat('#,##0');
+  // value.round() ensures 123.21 -> 123 and 123.67 -> 124
+  String formattedNumber = formatter.format(value.round());
+  return formattedNumber;
+}
  Color _getRatingColorBallys(String? rating) {
     switch ((rating ?? '').toUpperCase()) {
       case 'GOLD':
@@ -1369,6 +1375,45 @@ if (_tripHistory.isNotEmpty)
                                           textAlign: TextAlign.end,
                                           style: TextStyle(
                                             color: Colors.black,
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                            fontFamily: 'monospace',
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                   TableRow(
+                                      decoration: const BoxDecoration(
+    color: Color.fromARGB(255, 0, 0, 0), // light green background
+  ),
+                                    children: [
+                                      Container(
+                                        // color: Constants.kPrimaryColor
+                                        //     .withAlpha(50),
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Text(
+                                            "Total Trip Cost (Est)",
+                                            style: TextStyle(
+                                              color: Colors.yellow,
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          _parseNumberFormat2(entry.totTripCost),
+                                          textAlign: TextAlign.end,
+                                          style: TextStyle(
+                                            color:Colors.yellow,
                                             fontSize: fontSettings.fontSize,
                                             fontWeight: fontSettings.fontWeight,
                                             fontFamily: 'monospace',

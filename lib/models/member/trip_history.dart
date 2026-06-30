@@ -92,6 +92,7 @@ class TripHistory {
   final double ttlm;
   final double attm;
   final List<ExGift> exGift;
+  final double totTripCost;
 
   TripHistory({
     required this.consecutiveDates,
@@ -115,6 +116,7 @@ class TripHistory {
     required this.ttlm,
     required this.attm,
     required this.exGift,
+    required this.totTripCost,
   });
 
   factory TripHistory.fromJson(Map<String, dynamic> json) {
@@ -149,6 +151,8 @@ class TripHistory {
                 .map((e) => ExGift.fromJson(e))
                 .toList()
           : [],
+
+      totTripCost: json['Tot_TripCost'],
     );
   }
 
@@ -178,6 +182,7 @@ class TripHistory {
       'ATT_M': attm,
       'Ex_Gift': exGift,
       jsonEncode(exGift.map((e) => e.toJson()).toList()): null,
+      'Tot_TripCost' :totTripCost,
     };
   }
   static double _parseToDouble(dynamic value) {

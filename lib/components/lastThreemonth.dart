@@ -84,11 +84,10 @@ class _LastThreeMonthsGuestCardState
     _previousAppMode = currentAppMode;
   }
 
-  // Guest count is the number of distinct memIds per SM, computed from
-  // the detailed rows already loaded alongside the performance data.
+  // New/old guest counts come straight from the API (N_Reg / O_Reg on
+  // each performance row) — no longer derived from the detail rows.
   List<_ItemWithPercentage> _calculatePercentages(
     List<LastThreeMonthsPerformance> data,
-    Map<String, Set<String>> guestIdsBySm,
   ) {
     if (data.isEmpty) return [];
 
@@ -117,7 +116,8 @@ class _LastThreeMonthsGuestCardState
       return _ItemWithPercentage(
         item: item,
         percentage: (percentage * 100).round() / 100,
-        guestCount: guestIdsBySm[item.sm]?.length ?? 0,
+        newReg: item.newReg,
+        oldReg: item.oldReg,
       );
     }).toList();
   }
@@ -148,17 +148,16 @@ class _LastThreeMonthsGuestCardState
 
     _handleAppModeChange(currentAppMode, lastThreeMonthsState.hasLoadedOnce);
 
-    // Guest count per SM, derived from already-loaded detailedData.
-    final guestIdsBySm = <String, Set<String>>{};
-    for (final detail in lastThreeMonthsState.detailedData) {
-      guestIdsBySm.putIfAbsent(detail.sm, () => {}).add(detail.memId);
-    }
-    final totalGuestCount =
-        lastThreeMonthsState.detailedData.map((d) => d.memId).toSet().length;
+    // New/old guest totals come straight from the API (N_Reg / O_Reg
+    // summed across the SM rows).
+    final totalNewReg = lastThreeMonthsState.performanceData
+        .fold<int>(0, (sum, p) => sum + p.newReg);
+    final totalOldReg = lastThreeMonthsState.performanceData
+        .fold<int>(0, (sum, p) => sum + p.oldReg);
+    final totalGuestCount = totalNewReg + totalOldReg;
 
     final dataWithPercentages = _calculatePercentages(
       lastThreeMonthsState.performanceData,
-      guestIdsBySm,
     );
 
     final positiveData = dataWithPercentages
@@ -204,7 +203,8 @@ class _LastThreeMonthsGuestCardState
                         Padding(
                           padding: const EdgeInsets.only(top: 2),
                           child: Text(
-                            "$totalGuestCount guest${totalGuestCount == 1 ? '' : 's'} this period",
+                            "$totalGuestCount guest${totalGuestCount == 1 ? '' : 's'} this period "
+                            "($totalNewReg new, $totalOldReg old)",
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.grey[600],
@@ -357,9 +357,17 @@ class _LastThreeMonthsGuestCardState
                 const SizedBox(width: 4),
                 const Text("LOST"),
                 const SizedBox(width: 20),
-                Icon(Icons.people, size: 14, color: Colors.blue[700]),
+                Text("N",
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.green[700])),
                 const SizedBox(width: 4),
-                const Text("GUESTS"),
+                const Text("NEW"),
+                const SizedBox(width: 12),
+                Text("O",
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.blue[700])),
+                const SizedBox(width: 4),
+                const Text("OLD"),
               ],
             ),
           ],
@@ -371,7 +379,8 @@ class _LastThreeMonthsGuestCardState
   Widget _buildPerformanceItem(_ItemWithPercentage itemWithPercentage) {
     final performance = itemWithPercentage.item;
     final percentage = itemWithPercentage.percentage;
-    final guestCount = itemWithPercentage.guestCount;
+    final newReg = itemWithPercentage.newReg;
+    final oldReg = itemWithPercentage.oldReg;
     final double barWidthFactor = (percentage / 100.0).clamp(0.0, 1.0);
 
     return Consumer(
@@ -422,30 +431,20 @@ class _LastThreeMonthsGuestCardState
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Guest count badge for this SM.
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.blue[50],
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Icon(Icons.people, size: 12, color: Colors.blue[700]),
-                      // const SizedBox(width: 3),
-                      Text(
-                        '$guestCount',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue[700],
-                        ),
-                      ),
-                    ],
-                  ),
+                // New / old guest count badges for this SM (N_Reg / O_Reg).
+                _buildRegBadge(
+                  count: newReg,
+                  // label: 'N',
+                  background: Colors.green[50]!,
+                  foreground: Colors.green[700]!,
                 ),
+                // const SizedBox(width: 4),
+                // _buildRegBadge(
+                //   count: oldReg,
+                //   label: 'O',
+                //   background: Colors.blue[50]!,
+                //   foreground: Colors.blue[700]!,
+                // ),
                 const SizedBox(width: 8),
                 Icon(Icons.arrow_forward_ios,
                     size: 12, color: Colors.grey[600]),
@@ -454,6 +453,45 @@ class _LastThreeMonthsGuestCardState
           ),
         );
       },
+    );
+  }
+
+  // Small pill showing a registration count with a single-letter label
+  // (N = new from N_Reg, O = old from O_Reg).
+  Widget _buildRegBadge({
+    required int count,
+   // required String label,
+    required Color background,
+    required Color foreground,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Text(
+          //   label,
+          //   style: TextStyle(
+          //     fontSize: 11,
+          //     fontWeight: FontWeight.w600,
+          //     color: foreground,
+          //   ),
+          // ),
+         // const SizedBox(width: 3),
+          Text(
+            '$count',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: foreground,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -486,11 +524,13 @@ class _LastThreeMonthsGuestCardState
 class _ItemWithPercentage {
   final LastThreeMonthsPerformance item;
   final double percentage;
-  final int guestCount;
+  final int newReg;
+  final int oldReg;
 
   _ItemWithPercentage({
     required this.item,
     required this.percentage,
-    required this.guestCount,
+    required this.newReg,
+    required this.oldReg,
   });
 }

@@ -196,6 +196,33 @@ class _LastThreeMonthsDetailPageState
     );
   }
 
+  // "NEW" badge shown when the member's G_Status == 1.
+  Widget _buildNewMemberBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.green,
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Icon(Icons.fiber_new, size: 14, color: Colors.white),
+         // SizedBox(width: 3),
+          Text(
+            'NEW',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMemberCard(LastThreeMonthsDetailedData member, fontSettings) {
     final isExpanded = expandedCards.contains(member.memId);
     final isLoading = currentLoadingMember == member.memId;
@@ -257,16 +284,29 @@ class _LastThreeMonthsDetailPageState
                                       color: Color.fromARGB(255, 230, 0, 0),
                                     ),
                                   ],
-                                  Flexible(
-                                    child: Text(
-                                      member.memId,
-                                      style: TextStyle(
-                                        fontSize: fontSettings.fontSize + 2,
-                                        fontWeight: FontWeight.bold,
-                                        color: isLoading
-                                            ? Colors.grey
-                                            : Colors.blue,
-                                      ),
+                                  Expanded(
+                                    child: Wrap(
+                                      crossAxisAlignment:
+                                          WrapCrossAlignment.center,
+                                      spacing: 4,
+                                      runSpacing: 2,
+                                      children: [
+                                        Text(
+                                          member.memId,
+                                          maxLines: 1,
+                                          softWrap: false,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: fontSettings.fontSize + 2,
+                                            fontWeight: FontWeight.bold,
+                                            color: isLoading
+                                                ? Colors.grey
+                                                : Colors.blue,
+                                          ),
+                                        ),
+                                        if (member.isNewMember)
+                                          _buildNewMemberBadge(),
+                                      ],
                                     ),
                                   ),
                                 ],

@@ -34,6 +34,10 @@ class _LastThreeMonthsGuestCardState
     extends ConsumerState<LastThreeMonthsGuestCard> {
   AppMode? _previousAppMode;
 
+  // Captured in initState so dispose() never touches `ref` (illegal in
+  // Riverpod once the element is disposed).
+  LastThreeMonthsNotifier? _lastThreeMonthsNotifier;
+
   // Max height for the SM list when this widget is embedded (not full
   // screen). Beyond this, the list scrolls internally instead of
   // expanding the card indefinitely. Mirrors
@@ -43,13 +47,20 @@ class _LastThreeMonthsGuestCardState
   @override
   void initState() {
     super.initState();
+    _lastThreeMonthsNotifier = ref.read(lastThreeMonthsProvider.notifier);
     // Intentionally no auto-fetch here. Data only loads when the user
     // taps "Load Data" (first time) or "Refresh" (afterwards) below.
   }
 
   @override
   void dispose() {
-    ref.read(lastThreeMonthsProvider.notifier).clearData();
+    // Defer the state reset: mutating a StateNotifier synchronously inside
+    // dispose() runs during finalizeTree/lockState and notifying listeners
+    // there is illegal. Use the captured notifier (NOT `ref`) on a microtask.
+    final notifier = _lastThreeMonthsNotifier;
+    if (notifier != null) {
+      Future.microtask(notifier.clearData);
+    }
     super.dispose();
   }
 

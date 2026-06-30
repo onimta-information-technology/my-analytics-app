@@ -310,7 +310,11 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
         final bVal = b.bDate.month * 100 + b.bDate.day;
         return aVal.compareTo(bVal);
       });
-
+  final Map<String, int> dateCounts = {};
+  for (final b in sorted) {
+    final key = '${b.bDate.day}-${b.bDate.month}';
+    dateCounts[key] = (dateCounts[key] ?? 0) + 1;
+  }
     final seen = <String>{};
     final unique = sorted.where((b) {
       final key = '${b.bDate.day}-${b.bDate.month}';
@@ -351,7 +355,7 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                   borderRadius: BorderRadius.circular(5),
                 ),
                 child: Text(
-                  'All',
+                  'All (${sorted.length})',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -364,6 +368,7 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
 
           final b = unique[index - 1];
           final chipKey = '${b.bDate.day}-${b.bDate.month}';
+           final count = dateCounts[chipKey] ?? 0;
           final isHighlighted = _visibleBirthdayKey == chipKey;
           final isSelected = _selectedMid == b.mid;
           final isActive = isHighlighted || isSelected;
@@ -386,7 +391,8 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                 borderRadius: BorderRadius.circular(5),
               ),
               child: Text(
-                DateFormat('dd MMM').format(b.bDate),
+                // DateFormat('dd MMM').format(b.bDate),
+                 '${DateFormat('dd MMM').format(b.bDate)} ($count)',
                 style: TextStyle(
                   fontSize: 19,
                   fontWeight: isActive ? FontWeight.w900 : FontWeight.bold,

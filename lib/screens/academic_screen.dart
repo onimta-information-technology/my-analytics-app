@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 
 class AcademicScreen extends StatefulWidget {
   const AcademicScreen({super.key});
@@ -22,8 +23,19 @@ class _AcademicScreenState extends State<AcademicScreen> {
           onPageStarted: (_) => setState(() => _isLoading = true),
           onPageFinished: (_) => setState(() => _isLoading = false),
         ),
-      )
-      ..loadRequest(Uri.parse('https://www.ballyscolombo.com/'));
+      );
+    _loadAcademicUrl();
+  }
+
+  Future<void> _loadAcademicUrl() async {
+    final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+    print("hello $apiUrl");
+    
+    final isBellagio = apiUrl.contains('bty.world');
+    final url = isBellagio
+        ? 'https://bellagiocolombo.com/'
+        : 'https://www.ballyscolombo.com/';
+    await _controller.loadRequest(Uri.parse(url));
   }
 
   @override

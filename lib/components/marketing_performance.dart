@@ -26,6 +26,11 @@ class _MarketingPerformanceWidgetState
   String? userName;
   bool _refreshEnabled = false;
 
+  // Captured in initState so dispose() never touches `ref` (illegal in
+  // Riverpod once the element is disposed — it throws and corrupts the
+  // element-tree teardown).
+  MarketingNotifier? _marketingNotifier;
+
   // Max height for the content area when this widget is embedded
   // (not full screen). Beyond this, the content scrolls internally
   // instead of expanding the card indefinitely.
@@ -34,6 +39,7 @@ class _MarketingPerformanceWidgetState
   @override
   void initState() {
     super.initState();
+    _marketingNotifier = ref.read(marketingProvider.notifier);
     _loadUserName();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _enableTabsAfterDelay();
@@ -1163,7 +1169,13 @@ void _onTabSelected(int index) {
 
   @override
   void dispose() {
-    ref.read(marketingProvider.notifier).clearMarketing();
+    // Defer the state reset: mutating a StateNotifier synchronously inside
+    // dispose() runs during finalizeTree/lockState and notifying listeners
+    // there is illegal. Use the captured notifier (NOT `ref`) on a microtask.
+    final notifier = _marketingNotifier;
+    if (notifier != null) {
+      Future.microtask(notifier.clearMarketing);
+    }
     super.dispose();
   }
 }

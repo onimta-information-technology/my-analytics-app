@@ -37,6 +37,10 @@ class BirthdayGiftPriceIncreaseScreen extends ConsumerStatefulWidget {
 
 class _BirthdayGiftPriceIncreaseScreenState
     extends ConsumerState<BirthdayGiftPriceIncreaseScreen> {
+  // Captured in initState so dispose() never touches `ref` (illegal in
+  // Riverpod once the element is disposed).
+  SelectedGuestNotifier? _selectedGuestNotifier;
+
   final TextEditingController _memberIdController = TextEditingController();
   final TextEditingController _memberNameController = TextEditingController();
   final TextEditingController _fromDateController = TextEditingController();
@@ -61,6 +65,7 @@ class _BirthdayGiftPriceIncreaseScreenState
   @override
   void initState() {
     super.initState();
+    _selectedGuestNotifier = ref.read(selectedGuestProvider.notifier);
     _loadUserCredentials();
     _initializeMemberData();
 
@@ -1838,7 +1843,13 @@ if (!ok && returnSerial == "0") {
 
   @override
   void dispose() {
-    ref.read(selectedGuestProvider.notifier).clearGuest();
+    // Defer the state reset: mutating a StateNotifier synchronously inside
+    // dispose() runs during finalizeTree/lockState and notifying listeners
+    // there is illegal. Use the captured notifier (NOT `ref`) on a microtask.
+    final notifier = _selectedGuestNotifier;
+    if (notifier != null) {
+      Future.microtask(notifier.clearGuest);
+    }
 
     _memberIdController.dispose();
     _memberNameController.dispose();

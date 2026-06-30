@@ -1056,9 +1056,10 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
 
     final newReservation = ref.watch(newReservationProvider);
     if (newReservation.bmNumber != null &&
-        _memberIdController.text != newReservation.bmNumber) {
+        (_memberIdController.text != newReservation.bmNumber ||
+            _memberNameController.text != (newReservation.guestName ?? ''))) {
       _memberIdController.text = newReservation.bmNumber!;
-      _memberNameController.text = newReservation.guestName!;
+      _memberNameController.text = newReservation.guestName ?? '';
       _updateMemberIdFields(newReservation.bmNumber!);
     }
 

@@ -6,6 +6,8 @@ import 'package:ballys_reservation_app/models/last_three_months.dart';
 import 'package:ballys_reservation_app/providers/last_three_months_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
+import 'package:ballys_reservation_app/core/constants.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'dart:ui';
@@ -35,11 +37,42 @@ class _LastThreeMonthsDetailPageState
   List<LastThreeMonthsDetailedData> filteredMembers = [];
   String? currentLoadingMember;
   Set<String> expandedCards = {};
+  bool? _memProfSH;
+  String? _userMarketingCode;
 
   @override
   void initState() {
     super.initState();
     _loadMemberDetails();
+    _loadAccessSettings();
+  }
+
+  Future<void> _loadAccessSettings() async {
+    final memProfSH = await StorageUtil.getMemProfSH();
+    final userMarketingCode = await StorageUtil.getMarketingCode();
+    if (mounted) {
+      setState(() {
+        _memProfSH = memProfSH;
+        _userMarketingCode = userMarketingCode;
+      });
+    }
+  }
+
+  bool _hasPermissionToViewMember(LastThreeMonthsDetailedData member) {
+    // When memProfSH is null or true, every member is accessible.
+    if (_memProfSH == null || _memProfSH == true) {
+      return true;
+    }
+
+    // When memProfSH is false, only members in the logged-in user's
+    // marketing group can be opened.
+    if (_memProfSH == false) {
+      return _userMarketingCode != null &&
+          member.sm.isNotEmpty &&
+          _userMarketingCode == member.sm;
+    }
+
+    return true;
   }
 
   void _loadMemberDetails() {
@@ -60,7 +93,14 @@ class _LastThreeMonthsDetailPageState
     return Colors.black87;
   }
 
-  Future<void> _handleMemberIdTap(String memberId) async {
+  Future<void> _handleMemberIdTap(LastThreeMonthsDetailedData member) async {
+    final memberId = member.memId;
+
+    if (!_hasPermissionToViewMember(member)) {
+      _showAccessDeniedDialog();
+      return;
+    }
+
     if (currentLoadingMember == memberId || currentLoadingMember != null) {
       return;
     }
@@ -93,6 +133,87 @@ class _LastThreeMonthsDetailPageState
         });
       }
     }
+  }
+
+  void _showAccessDeniedDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.lock_outline,
+                    size: 50,
+                    color: Colors.red.shade400,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  "Access Denied",
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C3E50),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Constants.kPrimaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      "Got It",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -259,7 +380,7 @@ class _LastThreeMonthsDetailPageState
                             GestureDetector(
                               onTap: isLoading
                                   ? null
-                                  : () => _handleMemberIdTap(member.memId),
+                                  : () => _handleMemberIdTap(member),
                               child: Row(
                                 children: [
                                   if (isLoading) ...[

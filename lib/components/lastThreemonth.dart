@@ -434,17 +434,17 @@ class _LastThreeMonthsGuestCardState
                 // New / old guest count badges for this SM (N_Reg / O_Reg).
                 _buildRegBadge(
                   count: newReg,
-                  // label: 'N',
+                  label: 'N',
                   background: Colors.green[50]!,
                   foreground: Colors.green[700]!,
                 ),
-                // const SizedBox(width: 4),
-                // _buildRegBadge(
-                //   count: oldReg,
-                //   label: 'O',
-                //   background: Colors.blue[50]!,
-                //   foreground: Colors.blue[700]!,
-                // ),
+                const SizedBox(width: 4),
+                _buildRegBadge(
+                  count: oldReg,
+                  label: 'O',
+                  background: Colors.blue[50]!,
+                  foreground: Colors.blue[700]!,
+                ),
                 const SizedBox(width: 8),
                 Icon(Icons.arrow_forward_ios,
                     size: 12, color: Colors.grey[600]),
@@ -460,7 +460,7 @@ class _LastThreeMonthsGuestCardState
   // (N = new from N_Reg, O = old from O_Reg).
   Widget _buildRegBadge({
     required int count,
-   // required String label,
+   required String label,
     required Color background,
     required Color foreground,
   }) {
@@ -473,15 +473,15 @@ class _LastThreeMonthsGuestCardState
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Text(
-          //   label,
-          //   style: TextStyle(
-          //     fontSize: 11,
-          //     fontWeight: FontWeight.w600,
-          //     color: foreground,
-          //   ),
-          // ),
-         // const SizedBox(width: 3),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: foreground,
+            ),
+          ),
+         const SizedBox(width: 3),
           Text(
             '$count',
             style: TextStyle(

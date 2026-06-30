@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/marketing.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
@@ -134,7 +136,7 @@ class MarketingRepository {
     final actualSalesCode = await StorageUtil.getSalesCode();
     final deviceId = await DeviceId.get();
     final spName = await StorageUtil.getStoredProcedureName();
-print("tesq");
+
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -163,6 +165,27 @@ print("tesq");
       "SpName": spName,
       "con": "1",
     });
+
+    // DEBUG: inspect IID 558899 / 778898 — focus on the summary set (Table1),
+    // which is what drives "No target data available". Logcat truncates long
+    // lines, so print the keys + Table1 separately and chunk the full dump.
+    final common = response['CommonResult'];
+    print('=== getTargetData IID=$iid ===');
+    print('CommonResult keys: ${common is Map ? common.keys.toList() : common}');
+    if (common is Map) {
+      final table = common['Table'];
+      final table1 = common['Table1'];
+      print('Table length:  ${table is List ? table.length : 'not a list'}');
+      print('Table1 length: ${table1 is List ? table1.length : 'not a list'}');
+      print('Table1 content: ${jsonEncode(table1)}');
+    }
+    // Full response, chunked so logcat does not cut it off.
+    final full = jsonEncode(response);
+    const chunk = 800;
+    for (var i = 0; i < full.length; i += chunk) {
+      print('RAW[$iid] ${full.substring(i, i + chunk > full.length ? full.length : i + chunk)}');
+    }
+    print('=== getTargetData IID=$iid END ===');
 
     List<MarketingTargetDetail> detailRows = [];
     List<MarketingTarget> summaryRows = [];

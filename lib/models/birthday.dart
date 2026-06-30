@@ -31,25 +31,39 @@ class Birthday {
     this.mGroup,
   });
 
+  static String _str(dynamic v) => v == null ? '' : v.toString();
+
+  static int _int(dynamic v) {
+    if (v == null) return 0;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return int.tryParse(v.toString().trim()) ?? 0;
+  }
+
+  static DateTime _date(dynamic v) {
+    if (v == null) return DateTime.now();
+    if (v is DateTime) return v;
+    final s = v.toString().trim();
+    if (s.isEmpty) return DateTime.now();
+    return DateTime.tryParse(s) ?? DateTime.now();
+  }
+
   factory Birthday.fromJson(Map<String, dynamic> json) {
     return Birthday(
-      mid: json['MID'],
-      mname: json['MNAME'],
-      country: json['Country'],
-      bDate: DateTime.parse(json['BDate']),
-      bdt: json['BDT'],
-      age: json['age'],
-      gRating: json['G_Rating'],
-      msg: json['MSG'],
-      msg1: json['MSG1'],
-      //lvd: DateTime.parse(json['LVD']),
-      lvd: json['LVD'] != null && json['LVD'] is String && (json['LVD'] as String).isNotEmpty
-    ? DateTime.tryParse(json['LVD']) ?? DateTime.now()
-    : DateTime.now(),
-      gift: json['GIFT'],
-      gName: json['GName'],
-      mobile: json['Mobile'],
-      mGroup: json['mGroup']
+      mid: _str(json['MID']),
+      mname: _str(json['MNAME']),
+      country: _str(json['Country']),
+      bDate: _date(json['BDate']),
+      bdt: _str(json['BDT']),
+      age: _int(json['age']),
+      gRating: _str(json['G_Rating']),
+      msg: _str(json['MSG']),
+      msg1: _str(json['MSG1']),
+      lvd: _date(json['LVD']),
+      gift: _str(json['GIFT']),
+      gName: json['GName']?.toString(),
+      mobile: json['Mobile']?.toString(),
+      mGroup: json['mGroup']?.toString(),
     );
   }
 

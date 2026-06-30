@@ -22,6 +22,8 @@ class AirTicketRepository {
     final salesCode = await StorageUtil.getSalesCode();
     final deviceId = await DeviceId.get();
   final spName = await StorageUtil.getStoredProcedureName();
+
+  print('SP me packages $spName');
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -50,11 +52,14 @@ class AirTicketRepository {
       "SpName": spName,
       "con": "1",
     });
+    print('packages data $response');
+     print('packages body $iid , $salesCode');
 
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List &&
         (response['CommonResult']['Table'] as List).isNotEmpty) {
       final tableData = response['CommonResult']['Table'] as List;
+      print("tableData,$tableData");
       return tableData
           .map((item) => AirTicket.fromJson(Map<String, dynamic>.from(item)))
           .toList();

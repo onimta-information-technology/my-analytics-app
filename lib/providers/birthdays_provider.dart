@@ -25,6 +25,7 @@ void clearBirthdays() {
   Future<Map<String, List<Birthday>>> getBirthdays() async {
     try {
       final birthdayMap = await birthdayRepository.getBirthdays();
+      print('birthdays provider -> past: ${birthdayMap['past']?.length}, recentPast: ${birthdayMap['recentPast']?.length}, recentUpcoming: ${birthdayMap['recentUpcoming']?.length}, upcoming: ${birthdayMap['upcoming']?.length}');
       state = {
         'past': birthdayMap['past'] ?? [],
         'recentPast': birthdayMap['recentPast'] ?? [],
@@ -32,7 +33,9 @@ void clearBirthdays() {
         'upcoming': birthdayMap['upcoming'] ?? [],
       };
       return state;
-    } catch (e) {
+    } catch (e, st) {
+      print('getBirthdays ERROR: $e');
+      print('getBirthdays STACK: $st');
       state = {
         'past': [],
         'recentPast': [],

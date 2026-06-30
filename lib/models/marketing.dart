@@ -1,3 +1,25 @@
+// Robust scalar parsing. The CommonExecute API sometimes returns numeric/text
+// columns as the wrong JSON type — e.g. an empty object `{}` (seen on Bellagio
+// when a member has no marketing group) or a number-as-string. A bare
+// `as num?` cast would throw on those and blank the whole target tab.
+double _toDouble(dynamic v) {
+  if (v is num) return v.toDouble();
+  if (v is String) return double.tryParse(v) ?? 0.0;
+  return 0.0;
+}
+
+int _toInt(dynamic v) {
+  if (v is num) return v.toInt();
+  if (v is String) return int.tryParse(v) ?? double.tryParse(v)?.toInt() ?? 0;
+  return 0;
+}
+
+String _toStr(dynamic v) {
+  if (v is String) return v;
+  if (v == null || v is Map || v is List) return '';
+  return v.toString();
+}
+
 class MarketingPerformance {
   final String sm;
   final String smName;
@@ -114,11 +136,11 @@ class MarketingTarget {
 
   factory MarketingTarget.fromJson(Map<String, dynamic> json) {
     return MarketingTarget(
-      gcode: json['Gcode']?.toString() ?? '',
-      gName: json['GName']?.toString() ?? '',
-      actualDrop: (json['ActualDrop'] as num?)?.toDouble() ?? 0.0,
-      mTarget: (json['M_Target'] as num?)?.toDouble() ?? 0.0,
-      achievement: (json['Achievement'] as num?)?.toDouble() ?? 0.0,
+      gcode: _toStr(json['Gcode']),
+      gName: _toStr(json['GName']),
+      actualDrop: _toDouble(json['ActualDrop']),
+      mTarget: _toDouble(json['M_Target']),
+      achievement: _toDouble(json['Achievement']),
     );
   }
 
@@ -172,16 +194,16 @@ class MarketingTargetDetail {
     }
 
     return MarketingTargetDetail(
-      idNo: (json['Id_No'] as num?)?.toDouble() ?? 0.0,
-      mid: json['MID']?.toString() ?? '',
-      mName: json['MName']?.toString() ?? '',
-      tripNo: (json['TripNo'] as num?)?.toInt() ?? 0,
+      idNo: _toDouble(json['Id_No']),
+      mid: _toStr(json['MID']),
+      mName: _toStr(json['MName']),
+      tripNo: _toInt(json['TripNo']),
       arrivalDate: parseDate(json['ArrivalDate']),
       departureDate: parseDate(json['DepartureDate']),
-      actualDrop: (json['ActualDrop'] as num?)?.toDouble() ?? 0.0,
-      gcode: json['Gcode']?.toString() ?? '',
-      gName: json['GName']?.toString() ?? '',
-      mTarget: (json['M_Target'] as num?)?.toDouble() ?? 0.0,
+      actualDrop: _toDouble(json['ActualDrop']),
+      gcode: _toStr(json['Gcode']),
+      gName: _toStr(json['GName']),
+      mTarget: _toDouble(json['M_Target']),
     );
   }
 

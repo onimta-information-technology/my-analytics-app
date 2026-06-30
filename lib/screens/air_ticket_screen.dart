@@ -8,6 +8,7 @@ import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import '../models/air_ticket.dart';
 import '../providers/air_ticket_provider.dart';
 
@@ -346,8 +347,19 @@ class _AirTicketCard extends StatelessWidget {
     return 'Not Visited';
   }
 
-  void _navigateToProfile(BuildContext context) {
-    if (!ticket.mid.toUpperCase().startsWith('BM')) return;
+  Future<void> _navigateToProfile(BuildContext context) async {
+    final mid = ticket.mid.trim();
+    if (mid.isEmpty) return;
+
+    // Member-ID format differs per location: prefixed (BM/BL/BN) on Ballys,
+    // numeric (no prefix) on Bellagio. Only enforce the BM prefix on prefixed
+    // locations so numeric-id locations can navigate too.
+    final location = await StorageUtil.getCurrentLocation();
+    final code = location?.code.split('_').first ?? '';
+    final isNumeric = ["BELLAGIO"].contains(code);
+    if (!isNumeric && !mid.toUpperCase().startsWith('BM')) return;
+
+    if (!context.mounted) return;
 
     ref
         .read(selectedGuestProvider.notifier)

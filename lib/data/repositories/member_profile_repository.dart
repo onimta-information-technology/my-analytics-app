@@ -196,12 +196,18 @@ Future<List<TripHistory>> getTripHistory3({
     print(playerId);
     final formattedDateFrom = formatDateForApi(dateFrom);
   final formattedDateTo = formatDateForApi(dateTo);
-  final response = await apiService.post('GetVisitFrequency_V2', {
+
+  final payload = {
     "playerId": playerId,
     "DateFrom": formattedDateFrom,
     "DateTo": formattedDateTo,
     "IID": iid,
-  });
+  };
+  final baseUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+  print('API CALL → url: $baseUrl/GetVisitFrequency_V2');
+  print('API CALL → payload: $payload');
+
+  final response = await apiService.post('GetVisitFrequency_V2', payload);
 
   if (response['status'] == 'SUCCESS' &&
       response['data'] is Map &&

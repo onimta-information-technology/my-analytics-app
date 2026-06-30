@@ -49,8 +49,17 @@ class BirthdayRepository {
       "con": "1",
     });
 
+    print('=== getBirthdays DEBUG ===');
+    print('salesCode: $salesCode, deviceId: $deviceId, spName: $spName');
+    print('raw response: ${jsonEncode(response)}');
+
     if (response['CommonResult'] != null) {
       final commonResult = response['CommonResult'];
+      print('CommonResult keys: ${commonResult is Map ? commonResult.keys.toList() : commonResult.runtimeType}');
+      print('Table (past)         -> type: ${commonResult['Table'].runtimeType}, value: ${commonResult['Table']}');
+      print('Table1 (recentPast)  -> type: ${commonResult['Table1'].runtimeType}, value: ${commonResult['Table1']}');
+      print('Table2 (recentUpcoming) -> type: ${commonResult['Table2'].runtimeType}, value: ${commonResult['Table2']}');
+      print('Table3 (upcoming)    -> type: ${commonResult['Table3'].runtimeType}, value: ${commonResult['Table3']}');
 
       Map<String, List<Birthday>> birthdayMap = {
         'past': [],
@@ -83,8 +92,12 @@ class BirthdayRepository {
             .toList();
       }
 
+      print('parsed counts -> past: ${birthdayMap['past']!.length}, recentPast: ${birthdayMap['recentPast']!.length}, recentUpcoming: ${birthdayMap['recentUpcoming']!.length}, upcoming: ${birthdayMap['upcoming']!.length}');
+      print('==========================');
       return birthdayMap;
     } else {
+      print('CommonResult is NULL. response keys: ${response.keys.toList()}');
+      print('==========================');
       throw Exception(
         'Birthday retrieving failed: unexpected response structure',
       );

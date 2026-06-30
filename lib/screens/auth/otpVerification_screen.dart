@@ -52,6 +52,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen> w
   Timer? _timer;
   int _resendSeconds = 47;
   bool _isVerifying = false;
+  bool _verificationCompleted = false;
   String _currentOTP = '';
   StreamSubscription? _smsSubscription;
 
@@ -437,7 +438,10 @@ bool whatsappSent = await authRepo.sendOtpWhatsApp(widget.phoneNumber, _actualOT
       return;
     }
 
-    if (_isVerifying) return;
+    // Guard against re-entry AND against a second auto-verify firing after a
+    // successful verification has already navigated away — otherwise the second
+    // call runs on a deactivated widget and crashes.
+    if (_isVerifying || _verificationCompleted) return;
 
     setState(() {
       _isVerifying = true;
@@ -447,6 +451,7 @@ bool whatsappSent = await authRepo.sendOtpWhatsApp(widget.phoneNumber, _actualOT
       bool isValid = await _simulateOTPVerification(_currentOTP);
 
       if (isValid) {
+        _verificationCompleted = true;
         _showSuccessMessage('OTP verified successfully!');
 
         // Check if biometric should be offered
@@ -458,13 +463,18 @@ bool whatsappSent = await authRepo.sendOtpWhatsApp(widget.phoneNumber, _actualOT
         _clearOTPFields();
       }
     } catch (e) {
+      _verificationCompleted = false;
       _showErrorMessage('Verification failed. Please try again.');
 
       ref.read(authProvider.notifier).clearPendingUser();
     } finally {
-      setState(() {
-        _isVerifying = false;
-      });
+      // Widget may already be navigating away (and thus unmounted) after a
+      // successful verification — never call setState on a dead element.
+      if (mounted && !_verificationCompleted) {
+        setState(() {
+          _isVerifying = false;
+        });
+      }
     }
   }
 
@@ -642,14 +652,35 @@ bool whatsappSent = await authRepo.sendOtpWhatsApp(widget.phoneNumber, _actualOT
       }
 
       final name = await StorageUtil.getUserName();
-      
+
       // ✅ MARK USER AS LOGGED IN
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('is_logged_in', true);
 
-      // ✅ Request notification permissions AFTER marking as logged in
+      // ✅ Navigate to home immediately. Notification permission + FCM token
+      // work must NOT block navigation — after logout deletes the FCM token,
+      // getToken() can hang in the same app session and would otherwise leave
+      // the user stuck on the OTP screen.
+      if (mounted) {
+        context.go('/home');
+      }
+
+      // Fire-and-forget: runs in the background, does not touch this widget.
+      unawaited(_completePostLoginSetup(name));
+    } else {
+      throw Exception('Authentication failed after OTP verification');
+    }
+  } catch (e) {
+    _showErrorMessage('Login completion failed. Please try again.');
+    ref.read(authProvider.notifier).clearPendingUser();
+  }
+}
+
+  Future<void> _completePostLoginSetup(String? name) async {
+    try {
       await _requestNotificationPermissions();
 
+      final prefs = await SharedPreferences.getInstance();
       String? fcmtoken = await _getFCMTokenWithRetry();
       if (fcmtoken != null) {
         await prefs.setString('FCMToken', fcmtoken);
@@ -660,18 +691,10 @@ bool whatsappSent = await authRepo.sendOtpWhatsApp(widget.phoneNumber, _actualOT
       } else {
         _setupTokenRefreshListener(name);
       }
-
-      if (mounted) {
-        context.go('/home');
-      }
-    } else {
-      throw Exception('Authentication failed after OTP verification');
+    } catch (e) {
+      print('Post-login setup failed (non-blocking): $e');
     }
-  } catch (e) {
-    _showErrorMessage('Login completion failed. Please try again.');
-    ref.read(authProvider.notifier).clearPendingUser();
   }
-}
 
 
   Future<void> _requestNotificationPermissions() async {
@@ -697,7 +720,11 @@ bool whatsappSent = await authRepo.sendOtpWhatsApp(widget.phoneNumber, _actualOT
   Future<String?> _getFCMTokenWithRetry({int maxRetries = 3}) async {
     for (int i = 0; i < maxRetries; i++) {
       try {
-        String? token = await FirebaseMessaging.instance.getToken();
+        // Guard against getToken() hanging (e.g. after deleteToken() on logout
+        // without an app restart) — never let it block the caller indefinitely.
+        String? token = await FirebaseMessaging.instance
+            .getToken()
+            .timeout(const Duration(seconds: 5));
         if (token != null) {
           return token;
         }
@@ -745,7 +772,8 @@ bool whatsappSent = await authRepo.sendOtpWhatsApp(widget.phoneNumber, _actualOT
   }
 
   void _showErrorMessage(String message) {
-    if (mounted) {
+    if (!mounted) return;
+    try {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -759,11 +787,15 @@ bool whatsappSent = await authRepo.sendOtpWhatsApp(widget.phoneNumber, _actualOT
           duration: const Duration(seconds: 3),
         ),
       );
+    } catch (_) {
+      // Widget is mid-deactivation (e.g. navigating away) — ancestor lookup
+      // is unsafe; skip the snackbar rather than throw.
     }
   }
 
   void _showSuccessMessage(String message) {
-    if (mounted) {
+    if (!mounted) return;
+    try {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -777,6 +809,8 @@ bool whatsappSent = await authRepo.sendOtpWhatsApp(widget.phoneNumber, _actualOT
           duration: const Duration(seconds: 2),
         ),
       );
+    } catch (_) {
+      // See _showErrorMessage.
     }
   }
 
@@ -904,13 +938,14 @@ bool whatsappSent = await authRepo.sendOtpWhatsApp(widget.phoneNumber, _actualOT
             child: Column(
               children: [
                 const SizedBox(height: 20),
-                Hero(
-                  tag: 'hero-image',
-                  child: Image.asset(
-                    'assets/images/logo.png',
-                    width: 150,
-                    height: 150,
-                  ),
+                // NOTE: intentionally NOT a Hero. Sharing the 'hero-image' tag
+                // with the login screen caused a GlobalKey reparenting crash
+                // ("_elements.contains(element)") when context.go('/home')
+                // tears down both routes at once with no matching hero on home.
+                Image.asset(
+                  'assets/images/logo.png',
+                  width: 150,
+                  height: 150,
                 ),
                 const SizedBox(height: 20),
                 const Text(

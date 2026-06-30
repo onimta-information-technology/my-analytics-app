@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/services/biometric_service.dart';
 import 'package:ballys_reservation_app/data/services/device_config_service.dart';
@@ -281,14 +282,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with ConnectivityMixi
       }
 
       final name = await StorageUtil.getUserName();
-      
+
       // ✅ MARK USER AS LOGGED IN
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('is_logged_in', true);
 
-      // ✅ Request notification permissions AFTER marking as logged in
+      // ✅ Navigate immediately. Notification permission + FCM token work must
+      // NOT block navigation — getToken() can hang in the same app session.
+      if (mounted) {
+        context.go('/home');
+      }
+
+      // Fire-and-forget: runs in the background.
+      unawaited(_completePostLoginSetupBypass(name));
+    } else {
+      throw Exception('Authentication failed');
+    }
+  } catch (e) {
+    _showErrorSnackBar('Login failed. Please try again.');
+    ref.read(authProvider.notifier).clearPendingUser();
+  }
+}
+
+  Future<void> _completePostLoginSetupBypass(String? name) async {
+    try {
       await _requestNotificationPermissionsForBypass();
 
+      final prefs = await SharedPreferences.getInstance();
       String? fcmtoken = await _getFCMTokenWithRetry();
       if (fcmtoken != null) {
         await prefs.setString('FCMToken', fcmtoken);
@@ -299,18 +319,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with ConnectivityMixi
       } else {
         _setupTokenRefreshListener(name);
       }
-
-      if (mounted) {
-        context.go('/home');
-      }
-    } else {
-      throw Exception('Authentication failed');
+    } catch (e) {
+      print('Post-login setup failed (non-blocking): $e');
     }
-  } catch (e) {
-    _showErrorSnackBar('Login failed. Please try again.');
-    ref.read(authProvider.notifier).clearPendingUser();
   }
-}
   Future<void> _requestNotificationPermissionsForBypass() async {
     try {
       // Small delay so user sees they've logged in successfully
@@ -334,7 +346,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with ConnectivityMixi
   Future<String?> _getFCMTokenWithRetry({int maxRetries = 3}) async {
     for (int i = 0; i < maxRetries; i++) {
       try {
-        String? token = await FirebaseMessaging.instance.getToken();
+        // Guard against getToken() hanging (e.g. after deleteToken() on logout
+        // without an app restart) — never let it block the caller indefinitely.
+        String? token = await FirebaseMessaging.instance
+            .getToken()
+            .timeout(const Duration(seconds: 5));
         if (token != null) {
           return token;
         }
@@ -401,11 +417,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with ConnectivityMixi
     );
   }
 
-// AFTER — capture the notifier before disposing
-// FIXED
 @override
 void dispose() {
-  ref.read(authProvider.notifier).clearPendingUser();
+  // Do NOT mutate provider state here. Pushing a new AuthState during the
+  // dispose/teardown of this widget notifies listeners mid-navigation, which
+  // crashes the element tree ("deactivated ancestor", "ref after disposed",
+  // duplicate GlobalKey). It also wrongly clears the authenticated user right
+  // after a successful login. Backing out of OTP already clears the pending
+  // user via the OTP screen's back button.
   super.dispose();
 }
 
@@ -429,13 +448,13 @@ void dispose() {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Hero(
-                            tag: 'hero-image',
-                            child: Image.asset(
-                              'assets/images/logo.png',
-                              width: 200,
-                              height: 200,
-                            ),
+                          // NOTE: not a Hero — the shared 'hero-image' tag
+                          // caused duplicate-GlobalKey crashes when flights were
+                          // interrupted by fast auth navigations.
+                          Image.asset(
+                            'assets/images/logo.png',
+                            width: 200,
+                            height: 200,
                           ),
                           const SizedBox(height: 0),
                           const Text(

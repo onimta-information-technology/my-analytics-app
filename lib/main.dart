@@ -740,10 +740,10 @@ class _SplashScreenState extends State<SplashScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Hero(
-              tag: 'hero-image',
-              child: _buildAnimatedLogo(),
-            ),
+            // NOTE: not a Hero — the shared 'hero-image' tag caused
+            // duplicate-GlobalKey crashes when flights were interrupted by
+            // fast auth navigations.
+            _buildAnimatedLogo(),
             const SizedBox(height: 40),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 60.0),

@@ -354,14 +354,36 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                   ),
                   borderRadius: BorderRadius.circular(5),
                 ),
-                child: Text(
-                  'All (${sorted.length})',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: isAll ? Colors.white : Colors.black87,
-                  ),
-                ),
+                // child: Text(
+                //   'All (${sorted.length})',
+                //   style: TextStyle(
+                //     fontSize: 20,
+                //     fontWeight: FontWeight.bold,
+                //     color: isAll ? Colors.white : Colors.black87,
+                //   ),
+                // ),
+                child: Text.rich(
+  TextSpan(
+    children: [
+      TextSpan(
+        text: 'All ',
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: isAll ? Colors.white : Colors.black87,
+        ),
+      ),
+      TextSpan(
+        text: '(${sorted.length})',
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w900,
+          color: isAll ? Colors.amberAccent : Colors.deepOrange,
+        ),
+      ),
+    ],
+  ),
+),
               ),
             );
           }
@@ -390,15 +412,38 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                 ),
                 borderRadius: BorderRadius.circular(5),
               ),
-              child: Text(
-                // DateFormat('dd MMM').format(b.bDate),
-                 '${DateFormat('dd MMM').format(b.bDate)} ($count)',
-                style: TextStyle(
-                  fontSize: 19,
-                  fontWeight: isActive ? FontWeight.w900 : FontWeight.bold,
-                  color: isActive ? Colors.white : Colors.black87,
-                ),
-              ),
+              // child: Text(
+              //   // DateFormat('dd MMM').format(b.bDate),
+              //    '${DateFormat('dd MMM').format(b.bDate)} ($count)',
+              //   style: TextStyle(
+              //     fontSize: 19,
+              //     fontWeight: isActive ? FontWeight.w900 : FontWeight.bold,
+              //     color: isActive ? Colors.white : Colors.black87,
+              //   ),
+              // ),
+              child: Text.rich(
+  TextSpan(
+    children: [
+      TextSpan(
+        text: DateFormat('dd MMM').format(b.bDate),
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: isActive ? FontWeight.w900 : FontWeight.bold,
+          color: isActive ? Colors.white : Colors.black87,
+        ),
+      ),
+      TextSpan(
+        text: ' ( $count )',
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w900,
+          // NEW: distinct color for the count
+          color: isActive ? Colors.amberAccent : Colors.deepOrange,
+        ),
+      ),
+    ],
+  ),
+),
             ),
           );
         },

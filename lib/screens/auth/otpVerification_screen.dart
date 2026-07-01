@@ -381,7 +381,7 @@ print(fullUrl);
 
  final authRepo = ref.read(authRepositoryProvider); // adjust to your actual provider name
 bool whatsappSent = await authRepo.sendOtpWhatsApp(widget.phoneNumber, _actualOTP!);
-      if (!sent) {
+      if (!sent || !whatsappSent) {
         _showErrorMessage('Failed to send OTP. Please try again.');
       } else {
         _showSuccessMessage(
@@ -845,7 +845,7 @@ bool whatsappSent = await authRepo.sendOtpWhatsApp(widget.phoneNumber, _actualOT
       bool sent = await _sendOTPSMS(widget.phoneNumber, _actualOTP!);
  final authRepo = ref.read(authRepositoryProvider); // adjust to your actual provider name
 bool whatsappSent = await authRepo.sendOtpWhatsApp(widget.phoneNumber, _actualOTP!);
-      if (sent) {
+      if (sent || whatsappSent) {
         _startResendTimer();
         _clearOTPFields();
         _showSuccessMessage('New OTP has been sent');

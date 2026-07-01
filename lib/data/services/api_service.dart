@@ -81,7 +81,7 @@ class ApiService {
           throw UnauthorizedException();
         }
       }
-
+print('API response for $endpoint: ${response.body}');
       // ── Success ───────────────────────────────────────────────────────────
   if (response.statusCode == 200) {
   final decoded = jsonDecode(response.body) as Map<String, dynamic>;

@@ -93,7 +93,7 @@ print('Response from getReservations API: $response');
     final deviceId = await DeviceId.get();
 print("test");
     final requestBody = {
-      'mid': newReservation.bmNumber,
+      'bm_number': newReservation.bmNumber,
       'guest_name': newReservation.guestName,
       'arrival_date': newReservation.arrivalDate?.toIso8601String(),
       'departure_date': newReservation.departureDate?.toIso8601String(),
@@ -115,8 +115,9 @@ print("test");
     printLargeBody(jsonEncode(requestBody));
 
     final response = await apiService.post('Reservation_InsertReservation', requestBody);
-print(response);
+print("response: $response");
     final status = response['Status'] as bool? ?? false;
+    print('Reservation save status: $status');
     if (status) {
       return Reservation.fromJson({
         'Reserv_No': response['ReservationId']?.toString() ?? '',
@@ -132,7 +133,7 @@ print(response);
     final deviceId = await DeviceId.get();
 
     final requestBody = {
-      'mid': newReservation.bmNumber,
+      'bm_number': newReservation.bmNumber,
       'guest_name': newReservation.guestName,
       'arrival_date': newReservation.arrivalDate?.toIso8601String(),
       'departure_date': newReservation.departureDate?.toIso8601String(),

@@ -11,6 +11,7 @@ class CustomAirportField extends ConsumerStatefulWidget {
   final Function(Airport) onAirportSelected;
   final String? cityCountryText;
   final String? airportNameText;
+  final bool hasError;
 
   const CustomAirportField({
     super.key,
@@ -20,6 +21,7 @@ class CustomAirportField extends ConsumerStatefulWidget {
     required this.onAirportSelected,
     this.cityCountryText,
     this.airportNameText,
+    this.hasError = false,
   });
 
   @override
@@ -62,7 +64,10 @@ class _CustomAirportFieldState extends ConsumerState<CustomAirportField> {
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 7.0, horizontal: 8.0),
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey),
+              border: Border.all(
+                color: widget.hasError ? Colors.red : Colors.grey,
+                width: widget.hasError ? 2.0 : 1.0,
+              ),
               borderRadius: BorderRadius.circular(8.0),
             ),
             child: Row(
@@ -109,6 +114,14 @@ class _CustomAirportFieldState extends ConsumerState<CustomAirportField> {
             ),
           ),
         ),
+        if (widget.hasError)
+          const Padding(
+            padding: EdgeInsets.only(top: 6.0, left: 8.0),
+            child: Text(
+              "Required",
+              style: TextStyle(fontSize: 12.0, color: Colors.red),
+            ),
+          ),
       ],
     );
   }

@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 class AirTicketClassSelector extends StatefulWidget {
   final Function(Map<String, dynamic>?) onClassSelected;
   final Map<String, dynamic>? selectedClass;
+  final bool hasError;
 
   const AirTicketClassSelector({
     super.key,
     required this.onClassSelected,
     required this.selectedClass,
+    this.hasError = false,
   });
 
   @override
@@ -43,6 +45,7 @@ class _ClassSelectorState extends State<AirTicketClassSelector> {
         labelText: "Class",
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
         prefixIcon: const Icon(Icons.event_seat_outlined),
+        errorText: widget.hasError ? "Required" : null,
       ),
       initialValue: _selectedClass,
       items: _classes

@@ -86,6 +86,13 @@ class _HotelAndRoomSelectionBottomSheetState
   List<HotelDescip> hotelList = [];
 String selectedEcLcoFacility = 'NA';
 String selectedByPaymnet = 'NA';
+
+  // Validation error flags for required fields
+  bool _dateRangeError = false;
+  bool _hotelError = false;
+  bool _roomCategoryError = false;
+  bool _roomTypeError = false;
+
   void _selectDateRange(BuildContext context) async {
     DateTimeRange? pickedDateRange = await showDateRangePicker(
       context: context,
@@ -112,6 +119,7 @@ String selectedByPaymnet = 'NA';
         numberOfNights = pickedDateRange.duration.inDays;
         arrivalDate = pickedDateRange.start;
         departureDate = pickedDateRange.end;
+        _dateRangeError = false;
         _dateRangeController.text =
             "${DateFormat('yyyy-MM-dd').format(pickedDateRange.start)} - ${DateFormat('yyyy-MM-dd').format(pickedDateRange.end)}";
       });
@@ -205,6 +213,7 @@ String selectedByPaymnet = 'NA';
     selectedHotel = hotel;
     selectedHotelId = hotel?['Hotel_IID'];
     selectedHotelName = hotel?['HotelName'] ?? '';
+    if (_hotelError) setState(() => _hotelError = false);
     _clearSelectedCost();
 
     if (selectedHotelId != null) {
@@ -218,6 +227,7 @@ String selectedByPaymnet = 'NA';
     selectedRoomCategory = roomCategory;
     selectedRoomCategoryId = roomCategory?['CatCode'];
     selectedRoomCategoryName = roomCategory?['CatName'] ?? '';
+    if (_roomCategoryError) setState(() => _roomCategoryError = false);
     _clearSelectedCost();
 
     if (selectedHotelId != null && selectedRoomCategoryId != null) {
@@ -235,6 +245,7 @@ String selectedByPaymnet = 'NA';
     sRoomTypeName = roomtype?['RoomType'] ?? '';
     sMealPlanName = roomtype?['MealPlan'] ?? '';
     selectedRoomTypeName = '$sRoomTypeName - $sMealPlanName';
+    if (_roomTypeError) setState(() => _roomTypeError = false);
     _clearSelectedCost();
   }
 
@@ -313,12 +324,20 @@ String selectedByPaymnet = 'NA';
   }
 
   void _saveHotelSelection() {
-    if (selectedDateRange == null ||
-        selectedHotelId == null ||
-        selectedRoomCategoryId == null ||
-        selectedRoomTypeId == null) {
+    final bool dateMissing = selectedDateRange == null;
+    final bool hotelMissing = selectedHotelId == null;
+    final bool categoryMissing = selectedRoomCategoryId == null;
+    final bool roomTypeMissing = selectedRoomTypeId == null;
+
+    if (dateMissing || hotelMissing || categoryMissing || roomTypeMissing) {
+      setState(() {
+        _dateRangeError = dateMissing;
+        _hotelError = hotelMissing;
+        _roomCategoryError = categoryMissing;
+        _roomTypeError = roomTypeMissing;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please complete all selections.")),
+        const SnackBar(content: Text("Please complete all required fields.")),
       );
       return;
     }
@@ -411,6 +430,11 @@ String selectedByPaymnet = 'NA';
       editIndex = null;
       selectedEcLcoFacility = 'NA';
       selectedByPaymnet = 'NA';
+
+      _dateRangeError = false;
+      _hotelError = false;
+      _roomCategoryError = false;
+      _roomTypeError = false;
     });
   }
 
@@ -550,6 +574,7 @@ String selectedByPaymnet = 'NA';
                               fontWeight: FontWeight.bold,
                             ),
                             border: const OutlineInputBorder(),
+                            errorText: _dateRangeError ? "Required" : null,
                             suffixIcon: IconButton(
                               icon: const Icon(Icons.calendar_today),
                               onPressed: () => _selectDateRange(context),
@@ -591,14 +616,15 @@ String selectedByPaymnet = 'NA';
                               ref.watch(hotelsProvider.notifier).hotelsAsMap,
                           itemAsString: (item) => item['HotelName'] ?? '',
                           compareFn: (a, b) => a['Hotel_IID'] == b['Hotel_IID'],
-                          decoratorProps: const DropDownDecoratorProps(
+                          decoratorProps: DropDownDecoratorProps(
                             decoration: InputDecoration(
                               labelText: 'Select Hotel',
-                              labelStyle: TextStyle(
+                              labelStyle: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
                               ),
-                              border: OutlineInputBorder(),
+                              border: const OutlineInputBorder(),
+                              errorText: _hotelError ? "Required" : null,
                             ),
                           ),
                           suffixProps: DropdownSuffixProps(
@@ -657,14 +683,16 @@ String selectedByPaymnet = 'NA';
                                   roomCategories,
                               itemAsString: (item) => item['CatName'] ?? '',
                               compareFn: (a, b) => a['CatCode'] == b['CatCode'],
-                              decoratorProps: const DropDownDecoratorProps(
+                              decoratorProps: DropDownDecoratorProps(
                                 decoration: InputDecoration(
                                   labelText: 'Select Category',
-                                  labelStyle: TextStyle(
+                                  labelStyle: const TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
                                   ),
-                                  border: OutlineInputBorder(),
+                                  border: const OutlineInputBorder(),
+                                  errorText:
+                                      _roomCategoryError ? "Required" : null,
                                 ),
                               ),
                               suffixProps: DropdownSuffixProps(
@@ -734,14 +762,15 @@ String selectedByPaymnet = 'NA';
                                 return '$rt - $mp';
                               },
                               compareFn: (a, b) => a['ID'] == b['ID'],
-                              decoratorProps: const DropDownDecoratorProps(
+                              decoratorProps: DropDownDecoratorProps(
                                 decoration: InputDecoration(
                                   labelText: 'Select Room Type',
-                                  labelStyle: TextStyle(
+                                  labelStyle: const TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
                                   ),
-                                  border: OutlineInputBorder(),
+                                  border: const OutlineInputBorder(),
+                                  errorText: _roomTypeError ? "Required" : null,
                                 ),
                               ),
                               dropdownBuilder: (context, selectedItem) {

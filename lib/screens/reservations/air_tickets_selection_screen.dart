@@ -96,6 +96,13 @@ class _AirTicketsSelectionScreenState
   int? _airTicketClass;
   String? _airTicketClassName;
 
+  // Validation error flags for required fields
+  bool _departureFromError = false;
+  bool _departureToError = false;
+  bool _airTicketClassError = false;
+  bool _arrivalDateError = false;
+  bool _departureDateError = false;
+
   Key _airTicketClassKey = UniqueKey();
 
   bool _isLoading = false;
@@ -335,11 +342,26 @@ String? _selectedContactPerson;
   }
 
   void _saveTicketSelection() {
-    if (_airTicketClass == null ||
-        _arrivalDateController.text == "" ||
-        _departureDateController.text == "") {
+    final bool departureFromMissing = _departureFromAirport == null;
+    final bool departureToMissing = _departureToAirport == null;
+    final bool classMissing = _airTicketClass == null;
+    final bool arrivalMissing = _arrivalDateController.text == "";
+    final bool departureMissing = _departureDateController.text == "";
+
+    if (departureFromMissing ||
+        departureToMissing ||
+        classMissing ||
+        arrivalMissing ||
+        departureMissing) {
+      setState(() {
+        _departureFromError = departureFromMissing;
+        _departureToError = departureToMissing;
+        _airTicketClassError = classMissing;
+        _arrivalDateError = arrivalMissing;
+        _departureDateError = departureMissing;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please complete all selections.")),
+        const SnackBar(content: Text("Please complete all required fields.")),
       );
       return;
     }
@@ -448,6 +470,12 @@ String? _selectedContactPerson;
       editMode = false;
       editIndex = null;
       _passportFiles = [];
+
+      _departureFromError = false;
+      _departureToError = false;
+      _airTicketClassError = false;
+      _arrivalDateError = false;
+      _departureDateError = false;
     });
   }
 
@@ -678,6 +706,7 @@ String? _selectedContactPerson;
                       CustomAirportField(
                         label: "From",
                         key: _departureFromAirportKey,
+                        hasError: _departureFromError,
                         prefixIcon: Icons.airplane_ticket_outlined,
                         suffixIcon: Icons.arrow_drop_down,
                         cityCountryText: _returnToAirport != null
@@ -687,6 +716,7 @@ String? _selectedContactPerson;
                         onAirportSelected: (selectedAirport) {
                           setState(() {
                             _departureFromAirport = selectedAirport;
+                            _departureFromError = false;
                           });
                         },
                       ),
@@ -694,6 +724,7 @@ String? _selectedContactPerson;
                       CustomAirportField(
                         label: "To",
                         key: _departureToAirportKey,
+                        hasError: _departureToError,
                         prefixIcon: Icons.airplane_ticket_outlined,
                         suffixIcon: Icons.arrow_drop_down,
                         cityCountryText: _returnToAirport != null
@@ -703,6 +734,7 @@ String? _selectedContactPerson;
                         onAirportSelected: (selectedAirport) {
                           setState(() {
                             _departureToAirport = selectedAirport;
+                            _departureToError = false;
                           });
                         },
                       ),
@@ -779,6 +811,7 @@ String? _selectedContactPerson;
                       const SizedBox(height: 20),
                       AirTicketClassSelector(
                         key: _airTicketClassKey,
+                        hasError: _airTicketClassError,
                         selectedClass: _airTicketClass == null
                             ? null
                             : {
@@ -789,6 +822,9 @@ String? _selectedContactPerson;
                           if (selectedClass != null) {
                             _airTicketClass = selectedClass['id'];
                             _airTicketClassName = selectedClass['type'];
+                            if (_airTicketClassError) {
+                              setState(() => _airTicketClassError = false);
+                            }
                           }
                         },
                       ),
@@ -805,9 +841,15 @@ String? _selectedContactPerson;
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8.0)),
                           prefixIcon: const Icon(Icons.calendar_today),
+                          errorText: _arrivalDateError ? "Required" : null,
                         ),
-                        onTap: () =>
-                            _selectDate(context, _arrivalDateController),
+                        onTap: () async {
+                          await _selectDate(context, _arrivalDateController);
+                          if (_arrivalDateController.text.isNotEmpty &&
+                              _arrivalDateError) {
+                            setState(() => _arrivalDateError = false);
+                          }
+                        },
                       ),
                       if (_arrivalDate.isNotEmpty)
                         Row(
@@ -841,9 +883,15 @@ String? _selectedContactPerson;
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8.0)),
                           prefixIcon: const Icon(Icons.calendar_today),
+                          errorText: _departureDateError ? "Required" : null,
                         ),
-                        onTap: () =>
-                            _selectDate(context, _departureDateController),
+                        onTap: () async {
+                          await _selectDate(context, _departureDateController);
+                          if (_departureDateController.text.isNotEmpty &&
+                              _departureDateError) {
+                            setState(() => _departureDateError = false);
+                          }
+                        },
                       ),
                       if (_departureDate.isNotEmpty)
                         Row(

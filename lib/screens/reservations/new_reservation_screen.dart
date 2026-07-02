@@ -6,6 +6,7 @@ import 'package:ballys_reservation_app/components/flight_card.dart';
 import 'package:ballys_reservation_app/components/guest_deatils_view_spGift.dart';
 import 'package:ballys_reservation_app/components/guest_details_card.dart';
 import 'package:ballys_reservation_app/components/hotel_selection.dart';
+import 'package:ballys_reservation_app/components/passport_upload_widget.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
@@ -28,6 +29,7 @@ import 'package:ballys_reservation_app/providers/reservation_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_flight_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_hotel_provider.dart';
+import 'package:ballys_reservation_app/providers/selected_passport_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_reservation_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -671,6 +673,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
   GuestReservationEntry _snapshotCurrentGuest() {
     final selectedHotels = ref.read(selectedHotelProvider);
     final selectedFlights = ref.read(selectedFlightProvider);
+    final selectedPassports = ref.read(selectedPassportProvider);
 
     return GuestReservationEntry(
       mid: _memberIdController.text.trim(),
@@ -681,6 +684,13 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
       departureDate: _departureDate,
       remarks: _remarksController.text,
       airTicketRequisition: _airTicketRequisition,
+      passportImages: selectedPassports
+          .map((f) => PassportImage(
+                path: f.path,
+                fileName: f.fileName,
+                isPdf: f.isPdf,
+              ))
+          .toList(),
     );
   }
 
@@ -709,6 +719,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
 
     ref.read(selectedGuestProvider.notifier).clearGuest();
     ref.read(newReservationProvider.notifier).resetState();
+    ref.read(selectedPassportProvider.notifier).clear();
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -752,6 +763,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
     ref.read(selectedFlightProvider.notifier).setFlights([]);
     ref.read(selectedGuestProvider.notifier).clearGuest();
     ref.read(newReservationProvider.notifier).resetState();
+    ref.read(selectedPassportProvider.notifier).clear();
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -789,6 +801,15 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
 
     ref.read(selectedHotelProvider.notifier).setHotels(entry.hotels);
     ref.read(selectedFlightProvider.notifier).setFlights(entry.flights);
+    ref.read(selectedPassportProvider.notifier).setFiles(
+          entry.passportImages
+              .map((p) => PassportFile(
+                    path: p.path,
+                    fileName: p.fileName,
+                    isPdf: p.isPdf,
+                  ))
+              .toList(),
+        );
   }
 
   void _removeGuestEntry(int index) {
@@ -953,6 +974,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
       ref.read(newReservationProvider.notifier).resetState();
       ref.read(memberSearchProvider.notifier).resetState();
       ref.read(selectedReservationProvider.notifier).clearSelectedReservation();
+      ref.read(selectedPassportProvider.notifier).clear();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

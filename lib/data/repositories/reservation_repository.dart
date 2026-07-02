@@ -92,6 +92,7 @@ print('Response from getReservations API: $response');
     final userName = await StorageUtil.getUserName();
     final deviceId = await DeviceId.get();
 print("test");
+print("test1 ${newReservation.passportImages}");
     final requestBody = {
       'bm_number': newReservation.bmNumber,
       'guest_name': newReservation.guestName,
@@ -113,7 +114,7 @@ print("test");
     };
 
     printLargeBody(jsonEncode(requestBody));
-
+print("test2 $requestBody");
     final response = await apiService.post('Reservation_InsertReservation', requestBody);
 print("response: $response");
     final status = response['Status'] as bool? ?? false;
@@ -256,9 +257,10 @@ print('Response from approve/reject API: $response');
   }
 
   void printLargeBody(String body) {
-    const chunkSize = 1024;
+    const chunkSize = 800;
     for (int i = 0; i < body.length; i += chunkSize) {
-     
+      final end = (i + chunkSize < body.length) ? i + chunkSize : body.length;
+      print(body.substring(i, end));
     }
   }
 

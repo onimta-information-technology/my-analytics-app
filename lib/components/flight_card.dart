@@ -108,7 +108,7 @@ class FlightCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      "Arrival Date: ${flight.arrivalDate != null ? DateFormat('yyyy-MM-dd').format(flight.departureDate!) : 'N/A'}",
+                      "Arrival Date: ${flight.arrivalDate != null ? DateFormat('yyyy-MM-dd').format(flight.arrivalDate!) : 'N/A'}",
                       style: const TextStyle(
                         fontSize: 19,
                         fontWeight: FontWeight.bold,

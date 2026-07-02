@@ -346,7 +346,9 @@ String? _selectedContactPerson;
     final bool departureToMissing = _departureToAirport == null;
     final bool classMissing = _airTicketClass == null;
     final bool arrivalMissing = _arrivalDateController.text == "";
-    final bool departureMissing = _departureDateController.text == "";
+    // Departure date is only required for round trips; optional for one-way.
+    final bool departureMissing =
+        _isRoundTrip && _departureDateController.text == "";
 
     if (departureFromMissing ||
         departureToMissing ||
@@ -402,8 +404,9 @@ String? _selectedContactPerson;
       guestCount: numberOfGuests,
       airTicketClass: _airTicketClass!,
       arrivalDate: DateFormat("yyyy-MM-dd").parse(_arrivalDateController.text),
-      departureDate:
-          DateFormat("yyyy-MM-dd").parse(_departureDateController.text),
+      departureDate: _departureDateController.text.isEmpty
+          ? null
+          : DateFormat("yyyy-MM-dd").parse(_departureDateController.text),
       silkRoute: _silkRouteFacility == "yes" ? 1 : 0,
       airportTransportation: _airportTranspotation == "yes" ? 1 : 0,
       airTicketClassName: _airTicketClassName!,
@@ -755,6 +758,9 @@ String? _selectedContactPerson;
                                     _isRoundTrip = value ?? false;
                                     if (_isRoundTrip) {
                                       _returnFromAirport = _departureToAirport;
+                                    } else {
+                                      // Departure date is optional for one-way.
+                                      _departureDateError = false;
                                     }
                                   });
                                 },
@@ -875,7 +881,9 @@ String? _selectedContactPerson;
                         controller: _departureDateController,
                         readOnly: true,
                         decoration: InputDecoration(
-                          labelText: "Departure Date",
+                          labelText: _isRoundTrip
+                              ? "Departure Date"
+                              : "Departure Date (Optional)",
                           labelStyle: const TextStyle(
                               fontSize: 20,
                               color: Color.fromARGB(255, 0, 0, 0),

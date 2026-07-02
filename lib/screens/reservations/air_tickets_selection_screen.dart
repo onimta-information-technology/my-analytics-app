@@ -12,7 +12,6 @@ import 'package:ballys_reservation_app/models/reservation/airport_cost_response.
 import 'package:ballys_reservation_app/models/reservation/flight_booking.dart';
 import 'package:ballys_reservation_app/providers/airports_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_flight_provider.dart';
-import 'package:ballys_reservation_app/providers/selected_passport_provider.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -67,7 +66,6 @@ class _AirTicketsSelectionScreenState
   void initState() {
     super.initState();
     flightList = List.from(ref.read(selectedFlightProvider));
-    _passportFiles = List.from(ref.read(selectedPassportProvider));
     _getAirports();
     _loadContactPersons();
     _arrivalDate = widget.arrivalDate;
@@ -433,7 +431,6 @@ String? _selectedContactPerson;
 
   void _acceptChanges() {
     ref.read(selectedFlightProvider.notifier).addFlights(flightList);
-    ref.read(selectedPassportProvider.notifier).setFiles(_passportFiles);
     Navigator.pop(context);
   }
 
@@ -475,6 +472,7 @@ String? _selectedContactPerson;
 
       editMode = false;
       editIndex = null;
+      _passportFiles = [];
 
       _departureFromError = false;
       _departureToError = false;

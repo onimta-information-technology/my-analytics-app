@@ -32,9 +32,13 @@ class LastThreeMonthsDetailPage extends ConsumerStatefulWidget {
       _LastThreeMonthsDetailPageState();
 }
 
+enum MemberTypeFilter { both, newMembers, oldMembers }
+
 class _LastThreeMonthsDetailPageState
     extends ConsumerState<LastThreeMonthsDetailPage> with ConnectivityMixin {
+  List<LastThreeMonthsDetailedData> allMembers = [];
   List<LastThreeMonthsDetailedData> filteredMembers = [];
+  MemberTypeFilter _memberFilter = MemberTypeFilter.both;
   String? currentLoadingMember;
   Set<String> expandedCards = {};
   bool? _memProfSH;
@@ -77,8 +81,30 @@ class _LastThreeMonthsDetailPageState
 
   void _loadMemberDetails() {
     final notifier = ref.read(lastThreeMonthsProvider.notifier);
-    filteredMembers = notifier.getDetailedDataForSM(widget.smCode);
+    allMembers = notifier.getDetailedDataForSM(widget.smCode);
+    _applyFilter();
     setState(() {});
+  }
+
+  void _applyFilter() {
+    switch (_memberFilter) {
+      case MemberTypeFilter.both:
+        filteredMembers = List.of(allMembers);
+        break;
+      case MemberTypeFilter.newMembers:
+        filteredMembers = allMembers.where((m) => m.isNewMember).toList();
+        break;
+      case MemberTypeFilter.oldMembers:
+        filteredMembers = allMembers.where((m) => !m.isNewMember).toList();
+        break;
+    }
+  }
+
+  void _onFilterChanged(MemberTypeFilter filter) {
+    setState(() {
+      _memberFilter = filter;
+      _applyFilter();
+    });
   }
 
   String _formatCurrency(double amount) {
@@ -224,7 +250,7 @@ class _LastThreeMonthsDetailPageState
       appBar: AppBar(title: const Text('Last 3 Months Details')),
       body: Stack(
         children: [
-          filteredMembers.isEmpty
+          allMembers.isEmpty
               ? const Center(
                   child: Text(
                     'No member details found',
@@ -236,6 +262,8 @@ class _LastThreeMonthsDetailPageState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      _buildFilterBar(),
+                      const SizedBox(height: 4),
                       // Top Card Section
                       Card(
                         elevation: 4,
@@ -305,14 +333,78 @@ class _LastThreeMonthsDetailPageState
                       const SizedBox(height: 16),
 
                       // Member Cards
-                      ...filteredMembers.map(
-                        (member) => _buildMemberCard(member, fontSettings),
-                      ),
+                      if (filteredMembers.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 32.0),
+                          child: Center(
+                            child: Text(
+                              'No members match this filter',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        ...filteredMembers.map(
+                          (member) => _buildMemberCard(member, fontSettings),
+                        ),
                     ],
                   ),
                 ),
           const Watermark(),
         ],
+      ),
+    );
+  }
+
+  // Segmented filter to show new members, old members, or both.
+  Widget _buildFilterBar() {
+    final newCount = allMembers.where((m) => m.isNewMember).length;
+    final oldCount = allMembers.length - newCount;
+
+    return SegmentedButton<MemberTypeFilter>(
+      segments: [
+        ButtonSegment(
+          value: MemberTypeFilter.both,
+          label: Text(
+            'Both (${allMembers.length})',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+          ),
+        ),
+        ButtonSegment(
+          value: MemberTypeFilter.newMembers,
+          label: Text(
+            'New ($newCount)',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+          ),
+        ),
+        ButtonSegment(
+          value: MemberTypeFilter.oldMembers,
+          label: Text(
+            'Old ($oldCount)',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+          ),
+        ),
+      ],
+      selected: {_memberFilter},
+      showSelectedIcon: false,
+      onSelectionChanged: (selection) => _onFilterChanged(selection.first),
+      style: ButtonStyle(
+        visualDensity: VisualDensity.compact,
+        backgroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Constants.kPrimaryColor;
+          }
+          return null;
+        }),
+        foregroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.white;
+          }
+          return null;
+        }),
       ),
     );
   }

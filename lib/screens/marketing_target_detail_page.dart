@@ -75,7 +75,7 @@ class _MarketingTargetDetailPageState
   }
 
   String _formatNumber(double v) {
-    if (v == 0) return 'N/A';
+    if (v == 0) return '0';
     return NumberFormat("#,##0").format(v);
   }
 

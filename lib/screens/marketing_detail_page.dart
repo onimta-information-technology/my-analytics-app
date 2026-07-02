@@ -100,7 +100,7 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> with 
   }
 
   String _formatCurrency(double amount) {
-    if (amount == 0) return 'N/A';
+    if (amount == 0) return '0';
     return NumberFormat("#,##0").format(amount);
   }
 
@@ -469,7 +469,7 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> with 
                           const SizedBox(height: 4),
                           Text(
                             member.winLost == 0
-                                ? 'N/A'
+                                ? '0'
                                 : _formatCurrency(member.winLost),
                             style: TextStyle(
                          
@@ -516,7 +516,7 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> with 
                   _buildDetailItem(
                     'Cash Out',
                     member.cashOut == 0
-                        ? 'N/A'
+                        ? '0'
                         : _formatCurrency(member.cashOut),
                     fontSettings,
                   ),

@@ -2126,12 +2126,12 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                               vertical: -5.0,
                             ),
                           ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return "Manual Reservation Number is required";
-                            }
-                            return null;
-                          },
+                          // validator: (value) {
+                          //   if (value == null || value.trim().isEmpty) {
+                          //     return "Manual Reservation Number is required";
+                          //   }
+                          //   return null;
+                          // },
                         ),
                         const SizedBox(height: 16.0),
 

@@ -167,6 +167,7 @@ class AirportRepository {
       double hotelId, int categoryId) async {
          final deviceId = await DeviceId.get();
          final spName = await StorageUtil.getStoredProcedureName();
+         print('Room Type Request: $spName');
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -202,7 +203,7 @@ class AirportRepository {
       "SpName": spName,
       "con": "1"
     });
-
+print('Room Type Response: $response');
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List &&
         response['CommonResult']['Table'].isNotEmpty) {

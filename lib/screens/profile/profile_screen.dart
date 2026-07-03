@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:ballys_reservation_app/components/dilog/add_EmailDialog.dart';
 import 'package:ballys_reservation_app/components/dilog/add_phone_dialog.dart';
 import 'package:ballys_reservation_app/components/dilog/add_whatsapp_dialog.dart';
-import 'package:ballys_reservation_app/components/dilog/follow_dialog.dart';
+import 'package:ballys_reservation_app/screens/follow_screen.dart';
 import 'package:ballys_reservation_app/components/dilog/set_primary_phone_dialog.dart';
 import 'package:ballys_reservation_app/components/dilog/set_primary_email_dialog.dart';
 import 'package:ballys_reservation_app/components/dilog/set_primary_whatsapp_dialog.dart';
@@ -681,17 +681,18 @@ bool _showFollowButton = false;
           borderRadius: BorderRadius.circular(30),
           onTap: () {
             debugPrint('Follow button tapped'); // temporary check
-            showDialog(
-              context: context,
-              builder: (context) => FollowDialog(
-                memberId: guest.mid,
-                onSubmit: (File? photo, String description, String contactStatus,
-                    String? customerResponse, String? remarks) {
-                  debugPrint(
-                      'Follow photo: ${photo?.path}, description: $description, '
-                      'contactStatus: $contactStatus, customerResponse: $customerResponse, '
-                      'remarks: $remarks');
-                },
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => FollowScreen(
+                  memberId: guest.mid,
+                  onSubmit: (File? photo, String description, String contactStatus,
+                      String? customerResponse, String? remarks) {
+                    debugPrint(
+                        'Follow photo: ${photo?.path}, description: $description, '
+                        'contactStatus: $contactStatus, customerResponse: $customerResponse, '
+                        'remarks: $remarks');
+                  },
+                ),
               ),
             );
           },

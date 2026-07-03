@@ -685,8 +685,12 @@ bool _showFollowButton = false;
               context: context,
               builder: (context) => FollowDialog(
                 memberId: guest.mid,
-                onSubmit: (File? photo, String description) {
-                  debugPrint('Follow photo: ${photo?.path}, description: $description');
+                onSubmit: (File? photo, String description, String contactStatus,
+                    String? customerResponse, String? remarks) {
+                  debugPrint(
+                      'Follow photo: ${photo?.path}, description: $description, '
+                      'contactStatus: $contactStatus, customerResponse: $customerResponse, '
+                      'remarks: $remarks');
                 },
               ),
             );

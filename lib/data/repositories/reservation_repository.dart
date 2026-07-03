@@ -92,7 +92,7 @@ print('Response from getReservations API: $response');
     final userName = await StorageUtil.getUserName();
     final deviceId = await DeviceId.get();
 print("test");
-
+print("passportImages: ${newReservation.passportImages}");
     final requestBody = {
       'bm_number': newReservation.bmNumber,
       'guest_name': newReservation.guestName,
@@ -113,7 +113,7 @@ print("test");
       'passport_images': newReservation.passportImages,
     };
 
-    printLargeBody(jsonEncode(requestBody));
+   // printLargeBody(jsonEncode(requestBody));
 print("test2");
     final response = await apiService.post('Reservation_InsertReservation', requestBody);
 print("response: $response");

@@ -3,9 +3,41 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 
+/// Contact status options. The customer response section is only shown when
+/// the status is [_kContacted].
+const String _kContacted = 'Contacted';
+const List<String> _kContactStatuses = <String>[
+  _kContacted,
+  'Not Reachable',
+  'No Answer',
+  'Wrong Number',
+];
+
+/// Positive customer responses (no mandatory remarks).
+const List<String> _kPositiveResponses = <String>[
+  'Interested in hearing promotions',
+  'Interested in visiting',
+];
+
+/// Negative customer responses (remarks field is mandatory).
+const List<String> _kNegativeResponses = <String>[
+  'Not interested',
+  'Bad experience',
+  'Already visits another casino',
+  'Financial reasons',
+  'Health reasons',
+  'Other',
+];
+
 class FollowDialog extends StatefulWidget {
   final String memberId;
-  final void Function(File? photo, String description)? onSubmit;
+  final void Function(
+    File? photo,
+    String description,
+    String contactStatus,
+    String? customerResponse,
+    String? remarks,
+  )? onSubmit;
 
   const FollowDialog({
     super.key,
@@ -19,9 +51,16 @@ class FollowDialog extends StatefulWidget {
 
 class _FollowDialogState extends State<FollowDialog> {
   final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _remarksController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   File? _selectedImage;
   bool _isSubmitting = false;
+  String? _contactStatus;
+  String? _customerResponse;
+
+  bool get _isContacted => _contactStatus == _kContacted;
+  bool get _isNegativeResponse =>
+      _customerResponse != null && _kNegativeResponses.contains(_customerResponse);
 
   Future<void> _pickImage(ImageSource source) async {
     final XFile? picked = await _picker.pickImage(
@@ -62,14 +101,59 @@ class _FollowDialogState extends State<FollowDialog> {
     );
   }
 
+  /// Non-selectable group header shown inside the customer response dropdown.
+  DropdownMenuItem<String> _buildResponseHeader(String label) {
+    return DropdownMenuItem<String>(
+      enabled: false,
+      value: null,
+      child: Text(
+        label,
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          color: Colors.grey.shade700,
+        ),
+      ),
+    );
+  }
+
+  DropdownMenuItem<String> _buildResponseItem(String value) {
+    return DropdownMenuItem<String>(
+      value: value,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 12),
+        child: Text(value),
+      ),
+    );
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
   Future<void> _handleSubmit() async {
     if (_descriptionController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please add a description'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showError('Please add a description');
+      return;
+    }
+
+    if (_contactStatus == null) {
+      _showError('Please select a contact status');
+      return;
+    }
+
+    if (_isContacted && _customerResponse == null) {
+      _showError('Please select a customer response');
+      return;
+    }
+
+    if (_isContacted && _isNegativeResponse &&
+        _remarksController.text.trim().isEmpty) {
+      _showError('Please add remarks for a negative response');
       return;
     }
 
@@ -86,7 +170,17 @@ class _FollowDialogState extends State<FollowDialog> {
 
     setState(() => _isSubmitting = false);
 
-    widget.onSubmit?.call(_selectedImage, _descriptionController.text.trim());
+    final String? customerResponse = _isContacted ? _customerResponse : null;
+    final String? remarks =
+        _isContacted && _isNegativeResponse ? _remarksController.text.trim() : null;
+
+    widget.onSubmit?.call(
+      _selectedImage,
+      _descriptionController.text.trim(),
+      _contactStatus!,
+      customerResponse,
+      remarks,
+    );
 
     if (mounted) {
       Navigator.of(context).pop();
@@ -102,6 +196,7 @@ class _FollowDialogState extends State<FollowDialog> {
   @override
   void dispose() {
     _descriptionController.dispose();
+    _remarksController.dispose();
     super.dispose();
   }
 
@@ -165,6 +260,68 @@ class _FollowDialogState extends State<FollowDialog> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _contactStatus,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: 'Contact Status *',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                items: _kContactStatuses
+                    .map((status) => DropdownMenuItem<String>(
+                          value: status,
+                          child: Text(status),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _contactStatus = value;
+                    // Reset the customer response section when leaving "Contacted".
+                    if (value != _kContacted) {
+                      _customerResponse = null;
+                      _remarksController.clear();
+                    }
+                  });
+                },
+              ),
+              if (_isContacted) ...[
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: _customerResponse,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    labelText: 'Customer Response *',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  items: [
+                    _buildResponseHeader('Positive Response'),
+                    ..._kPositiveResponses.map(_buildResponseItem),
+                    _buildResponseHeader('Negative Response'),
+                    ..._kNegativeResponses.map(_buildResponseItem),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _customerResponse = value;
+                      if (!_isNegativeResponse) {
+                        _remarksController.clear();
+                      }
+                    });
+                  },
+                ),
+                if (_isNegativeResponse) ...[
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _remarksController,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      labelText: 'Remarks *',
+                      hintText: 'Add remarks for the negative response',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ],
+              ],
               const SizedBox(height: 20),
               Row(
                 children: [

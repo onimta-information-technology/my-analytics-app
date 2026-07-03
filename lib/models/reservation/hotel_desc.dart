@@ -124,25 +124,22 @@ class HotelDescip {
 
   Map<String, dynamic> toJson() {
     return {
-      'Hotel': hotel,
-      'HotelName': hotelName,
-      'RoomCategory': roomCategoryId,
-      'RoomCategoryName': roomCategoryName,
-      'RoomType': roomTypeId,
-      'RoomTypeName': roomTypeName,
-      'GuestCount': guestCount,
-      'SelectedDateRange': selectedDateRange != null
-          ? "${DateFormat('dd/MM/yyyy').format(selectedDateRange!.start)} ~ ${DateFormat('dd/MM/yyyy').format(selectedDateRange!.end)}"
-          : null,
-      'ArrivalDate': arrivalDate?.toIso8601String(),
-      'DepartureDate': departureDate?.toIso8601String(),
-      'ChildrenCount': childrenCount,
-      'RoomCount': roomCount,
-      'NoOfNights': noOfNights,
-      'SelectedCost': _parseCostToDouble(selectedCost),
-      'CostIndex': costIndex,
-      'EC_LCO_Facility': ecLcoFacility,
-      'PaymentBy': paymentBy,
+      'hotel': hotel,
+      'hotel_name': hotelName,
+      'room_category': roomCategoryId,
+      'room_category_name': roomCategoryName,
+      'room_type': roomTypeId,
+      'room_type_name': roomTypeName,
+      'guest_count': guestCount,
+      'children_count': childrenCount,
+      'room_count': roomCount,
+      'no_of_nights': noOfNights,
+      'arrival_date': arrivalDate?.toIso8601String(),
+      'departure_date': departureDate?.toIso8601String(),
+      'selected_cost': _parseCostToDouble(selectedCost),
+      'cost_index': costIndex,
+      'ec_lco_facility': ecLcoFacility,
+      'payment_by': paymentBy,
     };
   }
 }

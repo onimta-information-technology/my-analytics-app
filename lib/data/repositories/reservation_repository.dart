@@ -126,6 +126,7 @@ print("bm_number: ${newReservation.bmNumber}");
 print("air_ticket_details: ${newReservation.airTicketDetails}");
 print("passport_images: ${newReservation.passportImages}");
     final requestBody = {
+      'master_id': '0',
       'bm_number': newReservation.bmNumber,
       'guest_name': newReservation.guestName,
       'arrival_date': newReservation.arrivalDate?.toIso8601String(),
@@ -135,13 +136,13 @@ print("passport_images: ${newReservation.passportImages}");
       'remarks': newReservation.remarks,
       'manual_reserv_no': newReservation.reservationnewnumber,
       'package_amount': double.tryParse(newReservation.packageAmount ?? '0') ?? 0.0,
-      'selected_marketing_person':"",
       'sales_code': salesCode,
       'user_name': userName,
       'device_id': deviceId,
+      'selected_marketing_person': "",
+      'guests': newReservation.guests,
       'room_details': newReservation.roomDetails,
       'air_ticket_details': newReservation.airTicketDetails,
-      'guests': newReservation.guests,
       'passport_images': newReservation.passportImages,
     };
 

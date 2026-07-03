@@ -73,8 +73,18 @@ class AirportSearchBottomSheet extends ConsumerWidget {
                         contentPadding: const EdgeInsets.symmetric(
                             vertical: 5.0, horizontal: 8.0),
                         title: Text(
-                          "${airports[index].airportName ?? "Unknown"} - ${airports[index].country ?? "Unknown"} (${airports[index].airportCode ?? "N/A"})",
+                          "${airports[index].airportName ?? "Unknown"} (${airports[index].airportCode ?? "N/A"})",
                           style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          [
+                            airports[index].cityName,
+                            airports[index].country,
+                            airports[index].countryAbbr,
+                          ]
+                              .where((e) => e != null && e.isNotEmpty)
+                              .join(" · "),
+                          style: const TextStyle(fontSize: 13.0),
                         ),
                       ),
                     ),

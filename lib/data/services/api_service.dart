@@ -120,7 +120,94 @@ print('API response for $endpoint: ${response.body}');
     }
   }
 
+  /// Performs an authenticated GET to [endpoint].
+  ///
+  /// Mirrors [post]'s token-refresh/retry flow but sends no body.
+  ///
+  /// Throws:
+  ///   [UnauthorizedException]  — session expired and refresh failed.
+  ///   [ServerException]        — 5xx from the server.
+  ///   [ApiException]           — any other non-200 status.
+  ///   [NetworkException]       — connectivity / socket error.
+  Future<Map<String, dynamic>> get(String endpoint) async {
+    try {
+      final token = await _tokenManager.getAccessToken();
+      var response = await _executeGet(endpoint, token);
+
+      // ── Token expired / invalid — attempt refresh then retry ─────────────
+      if (_isAuthFailure(response)) {
+        await _tokenManager.clearAccessToken();
+
+        final newToken = await _tokenManager.refreshToken();
+
+        if (newToken == null || newToken.isEmpty) {
+          await _forceLogout();
+          throw UnauthorizedException();
+        }
+
+        // One retry with the fresh token
+        response = await _executeGet(endpoint, newToken);
+
+        if (_isAuthFailure(response)) {
+          await _forceLogout();
+          throw UnauthorizedException();
+        }
+      }
+      print('API response for $endpoint: ${response.body}');
+
+      // ── Success ───────────────────────────────────────────────────────────
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+        final bodyStatusCode = decoded['statusCode'];
+
+        if (bodyStatusCode == null || bodyStatusCode == 200) {
+          return decoded;
+        }
+
+        throw ApiException(
+          'Request failed: $bodyStatusCode ${decoded['statusMsg']}',
+          statusCode: bodyStatusCode as int,
+        );
+      }
+
+      // ── Server error ──────────────────────────────────────────────────────
+      if (response.statusCode >= 500) {
+        throw ServerException(
+          response.reasonPhrase ?? 'Server error',
+          response.statusCode,
+        );
+      }
+
+      // ── Other HTTP error ──────────────────────────────────────────────────
+      throw ApiException(
+        'Request failed: ${response.statusCode} ${response.reasonPhrase}',
+        statusCode: response.statusCode,
+      );
+    } on http.ClientException catch (e) {
+      throw NetworkException(e.message);
+    } on ApiException {
+      rethrow; // Let typed exceptions propagate as-is
+    } catch (e) {
+      throw ApiException('Unexpected error: $e');
+    }
+  }
+
   // ── Private helpers ───────────────────────────────────────────────────────
+
+  /// Executes the HTTP GET and returns the raw response.
+  Future<http.Response> _executeGet(
+    String endpoint,
+    String? token,
+  ) async {
+    final baseUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+    return http.get(
+      Uri.parse('$baseUrl/$endpoint'),
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+    );
+  }
 
   /// Executes the HTTP POST and returns the raw response.
   Future<http.Response> _execute(

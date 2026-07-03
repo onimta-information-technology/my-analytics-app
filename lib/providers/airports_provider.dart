@@ -36,13 +36,17 @@ class AirportsNotifier extends StateNotifier<List<Airport>> {
     if (query.isEmpty) {
       state = visibleAirports;
     } else {
+      final q = query.toLowerCase();
+      bool matches(String? value) =>
+          value != null && value.toLowerCase().contains(q);
+
       state = allAirports
           .where((airport) =>
-              airport.airportName!
-                  .toLowerCase()
-                  .contains(query.toLowerCase()) ||
-              airport.country!.toLowerCase().contains(query.toLowerCase()) ||
-              airport.airportCode!.toLowerCase().contains(query.toLowerCase()))
+              matches(airport.airportCode) ||
+              matches(airport.cityName) ||
+              matches(airport.airportName) ||
+              matches(airport.country) ||
+              matches(airport.countryAbbr))
           .toList();
     }
   }

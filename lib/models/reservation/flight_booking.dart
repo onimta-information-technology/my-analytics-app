@@ -37,7 +37,7 @@ class FlightBooking {
       guestCount: json['guest_count'] ?? 0,
       airports: json['airports'] != null
           ? FlightAirport.fromJson(json['airports'])
-          : null,
+          : _parseFlatAirports(json),
       airTicketClass: json['air_ticket_class'] ?? 0,
       arrivalDate: _parseCustomDate(json['arrival_date']),
       departureDate: _parseCustomDate(json['departure_date']),
@@ -61,6 +61,39 @@ class FlightBooking {
     }
     // if (cost is String) return double.tryParse(cost);
     return "";
+  }
+
+  /// Builds a [FlightAirport] from the flattened `DF_/DT_/RF_/RT_` fields used
+  /// by the Reservation_GetAllReservations response (which has no nested
+  /// `airports` object). Returns null when none of the flat fields are present.
+  static FlightAirport? _parseFlatAirports(Map<String, dynamic> json) {
+    AirportInfo? mk(String prefix) {
+      if (json['${prefix}_AirportCode'] == null) return null;
+      return AirportInfo(
+        airportCode: json['${prefix}_AirportCode'] as String? ?? '',
+        cityName: json['${prefix}_CityName'] as String? ?? '',
+        airportName: json['${prefix}_AirportName'] as String? ?? '',
+        country: json['${prefix}_Country'] as String? ?? '',
+      );
+    }
+
+    final dFrom = mk('DF');
+    final dTo = mk('DT');
+    final rFrom = mk('RF');
+    final rTo = mk('RT');
+
+    if (dFrom == null && dTo == null && rFrom == null && rTo == null) {
+      return null;
+    }
+
+    return FlightAirport(
+      departure: (dFrom != null && dTo != null)
+          ? Departure(dFrom: dFrom, dTo: dTo)
+          : null,
+      returnFlight: (rFrom != null && rTo != null)
+          ? ReturnFlight(rFrom: rFrom, rTo: rTo)
+          : null,
+    );
   }
 
   static double? _parseCostToDouble(dynamic cost) {

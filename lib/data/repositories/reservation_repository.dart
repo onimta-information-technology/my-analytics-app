@@ -52,64 +52,28 @@ class ReservationRepository {
   }
 
   Future<Map<String, List<Reservation>>> getReservations() async {
-    final deviceId = await DeviceId.get();
-      final spName = await StorageUtil.getStoredProcedureName();
-     print('Using stored procedure: $spName');
-    final response = await apiService.post('CommonExecute', {
-      "HasReturnData": "T",
-      "Parameters": [
-        {
-          "Para_Data": 9019,
-          "Para_Direction": "Input",
-          "Para_Lenth": 1,
-          "Para_Name": "@Iid",
-          "Para_Type": "int",
-        },
-        {
-          "Para_Data": deviceId,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text30",
-          "Para_Type": "varchar",
-        },
-      ],
-      "SpName": spName,
-      "con": "1",
-    });
-print('Response from getReservations API: $response');
-    if (response['CommonResult'] != null &&
-        response['CommonResult']['Table'] is List &&
-        response['CommonResult']['Table'].isNotEmpty) {
-      final tableData = response['CommonResult']['Table'];
+    final response = await apiService.get('Reservation_GetAllReservations');
+    print('Response from getReservations API: $response');
 
-      Map<String, List<Reservation>> classifiedReservations = {
-        'Pending': [],
-        'Approved': [],
-        'Rejected': [],
-        'Checked': [],
-      };
+    final Map<String, List<Reservation>> classifiedReservations = {
+      'Pending': [],
+      'Approved': [],
+      'Rejected': [],
+      'Checked': [],
+    };
 
-      for (var json in tableData) {
-        Reservation reservation = Reservation.fromJson(json);
+    final status = response['Status'] as bool? ?? false;
+    final data = response['Data'];
 
-        switch (reservation.requestStatus) {
-          case 'Pending':
-            classifiedReservations['Pending']?.add(reservation);
-            break;
-          case 'Approved':
-            classifiedReservations['Approved']?.add(reservation);
-            break;
-          case 'Checked':
-            classifiedReservations['Checked']?.add(reservation);
-            break;
-          case 'Rejected':
-            classifiedReservations['Rejected']?.add(reservation);
-            break;
+    if (status && data is List) {
+      for (final item in data) {
+        if (item is Map<String, dynamic>) {
+          // The new response carries no approval status, so every record is
+          // treated as pending.
+          classifiedReservations['Pending']!
+              .add(Reservation.fromReservationData(item));
         }
       }
-
-
-
       return classifiedReservations;
     } else {
       throw Exception('Unexpected response structure');
@@ -125,8 +89,10 @@ print("test");
 print("bm_number: ${newReservation.bmNumber}");
 print("air_ticket_details: ${newReservation.airTicketDetails}");
 print("passport_images: ${newReservation.passportImages}");
+    final masterId = DateTime.now().millisecondsSinceEpoch.toString();
+
     final requestBody = {
-      'master_id': '0',
+      'master_id': masterId,
       'bm_number': newReservation.bmNumber,
       'guest_name': newReservation.guestName,
       'arrival_date': newReservation.arrivalDate?.toIso8601String(),

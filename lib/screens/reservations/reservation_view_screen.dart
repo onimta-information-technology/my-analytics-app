@@ -9,6 +9,7 @@ import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
+import 'package:ballys_reservation_app/models/guest_reservation_entry.dart';
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_booking.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_desc.dart';
@@ -646,6 +647,130 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
     return txt;
   }
 
+  // ── Guests section ─────────────────────────────────────────────────────
+  //
+  // A reservation number can carry more than one guest. The list shows a
+  // single card per reservation; here we expand every guest so all of them
+  // are visible when the card is opened.
+  Widget _buildGuestsSection(
+    List<GuestReservationEntry> guests,
+    FontSettings fontSettings,
+  ) {
+    if (guests.isEmpty) return const SizedBox.shrink();
+
+    final dateFormat = DateFormat('yyyy-MM-dd');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          guests.length == 1 ? "Guest" : "Guests (${guests.length})",
+          style: TextStyle(
+            fontSize: fontSettings.fontSize,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 6.0),
+        ...guests.asMap().entries.map((entry) {
+          final index = entry.key;
+          final guest = entry.value;
+          final hasAir = guest.airTicketRequisition == 'Yes';
+          final dateRange = (guest.arrivalDate != null &&
+                  guest.departureDate != null)
+              ? "${dateFormat.format(guest.arrivalDate!)} → ${dateFormat.format(guest.departureDate!)}"
+              : "";
+
+          return Card(
+            color: const Color.fromARGB(255, 228, 224, 224),
+            margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 14,
+                        backgroundColor: Colors.black,
+                        child: Text(
+                          "${index + 1}",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          guest.guestName.isNotEmpty
+                              ? guest.guestName
+                              : "Unnamed guest",
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                      if (hasAir)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.blue,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Text(
+                            "Air Ticket",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (guest.mid.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      "BM: ${guest.mid}",
+                      style: TextStyle(fontSize: fontSettings.fontSize - 3),
+                    ),
+                  ],
+                  if (dateRange.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      dateRange,
+                      style: TextStyle(fontSize: fontSettings.fontSize - 3),
+                    ),
+                  ],
+                  const SizedBox(height: 2),
+                  Text(
+                    "${guest.hotels.length} room(s) · ${guest.flights.length} ticket(s)",
+                    style: TextStyle(fontSize: fontSettings.fontSize - 3),
+                  ),
+                  if (guest.remarks.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      "Remarks: ${guest.remarks}",
+                      style: TextStyle(fontSize: fontSettings.fontSize - 3),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          );
+        }),
+        const SizedBox(height: 10.0),
+      ],
+    );
+  }
+
   // ── Actions ────────────────────────────────────────────────────────────
 
   Future<void> _checkReservation() async {
@@ -1144,6 +1269,12 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
                     showLastVisitDate: true,
                   ),
                   const SizedBox(height: 10.0),
+
+                  // ── All guests on this reservation ───────────────────
+                  _buildGuestsSection(
+                    selectedReservation?.guests ?? const [],
+                    fontSettings,
+                  ),
 
                   // ── Hotel & Rooms summary ────────────────────────────
                   ValueListenableBuilder<String>(

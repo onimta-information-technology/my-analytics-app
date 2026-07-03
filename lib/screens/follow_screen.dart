@@ -461,32 +461,43 @@ class _FollowScreenState extends State<FollowScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: _contactStatus,
-                isExpanded: true,
-                decoration: InputDecoration(
-                  labelText: 'Contact Status *',
-                  labelStyle: TextStyle(color: const Color.fromARGB(255, 0, 0, 0), fontSize: 20),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              const Text(
+                'Contact Status *',
+                style: TextStyle(
+                  color: Color.fromARGB(255, 0, 0, 0),
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
                 ),
-                items: _kContactStatuses
-                    .map((status) => DropdownMenuItem<String>(
-                          value: status,
-                          child: Text(status),
-                        ))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _contactStatus = value;
-                    // Reset the customer response section when leaving "Contacted".
-                    if (value != _kContacted) {
-                      _customerResponse = null;
-                      _isNegativeType = false;
-                      _remarksController.clear();
-                      _resetPositiveFollowUp();
-                    }
-                  });
-                },
+              ),
+              const SizedBox(height: 4),
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Column(
+                  children: _kContactStatuses
+                      .map((status) => _RadioListItem(
+                            label: status,
+                            value: status,
+                            groupValue: _contactStatus,
+                            onChanged: (value) {
+                              setState(() {
+                                _contactStatus = value;
+                                // Reset the customer response section when
+                                // leaving "Contacted".
+                                if (value != _kContacted) {
+                                  _customerResponse = null;
+                                  _isNegativeType = false;
+                                  _remarksController.clear();
+                                  _resetPositiveFollowUp();
+                                }
+                              });
+                            },
+                          ))
+                      .toList(),
+                ),
               ),
               if (_isRetryStatus) ...[
                 const SizedBox(height: 16),
@@ -628,20 +639,33 @@ class _FollowScreenState extends State<FollowScreen> {
                   //   ),
                   // ),
                   // const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: _positiveStatus,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: 'Status',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  const Text(
+                    'Status',
+                    style: TextStyle(
+                      color: Color.fromARGB(255, 0, 0, 0),
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
                     ),
-                    items: _kPositiveStatuses
-                        .map((status) => DropdownMenuItem<String>(
-                              value: status,
-                              child: Text(status),
-                            ))
-                        .toList(),
-                    onChanged: (value) => setState(() => _positiveStatus = value),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Column(
+                      children: _kPositiveStatuses
+                          .map((status) => _RadioListItem(
+                                label: status,
+                                value: status,
+                                groupValue: _positiveStatus,
+                                onChanged: (value) =>
+                                    setState(() => _positiveStatus = value),
+                              ))
+                          .toList(),
+                    ),
                   ),
                 ],
               ],
@@ -670,6 +694,60 @@ class _FollowScreenState extends State<FollowScreen> {
                   : const Text('Submit'),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A single radio option row, matching the style used on the
+/// Customer Due Diligence screen.
+class _RadioListItem extends StatelessWidget {
+  final String label;
+  final String value;
+  final String? groupValue;
+  final ValueChanged<String> onChanged;
+
+  const _RadioListItem({
+    required this.label,
+    required this.value,
+    required this.groupValue,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isSelected = groupValue == value;
+    return InkWell(
+      onTap: () => onChanged(value),
+      borderRadius: BorderRadius.circular(4),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          children: [
+            Radio<String>(
+              value: value,
+              groupValue: groupValue,
+              onChanged: (v) {
+                if (v != null) onChanged(v);
+              },
+              activeColor: Constants.kPrimaryColor,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight:
+                      isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected ? Constants.kPrimaryColor : Colors.black87,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

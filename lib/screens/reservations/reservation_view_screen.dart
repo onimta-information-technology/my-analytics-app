@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:ballys_reservation_app/components/flight_card.dart';
 import 'package:ballys_reservation_app/components/guest_deatils_view_spGift.dart';
@@ -13,6 +14,7 @@ import 'package:ballys_reservation_app/models/guest_reservation_entry.dart';
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_booking.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_desc.dart';
+import 'package:ballys_reservation_app/models/reservation/reservation_passport_image.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/hotels_provider.dart';
 import 'package:ballys_reservation_app/providers/reservation_provider.dart';
@@ -654,6 +656,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
   // are visible when the card is opened.
   Widget _buildGuestsSection(
     List<GuestReservationEntry> guests,
+    List<ReservationPassportImage> passportImages,
     FontSettings fontSettings,
   ) {
     if (guests.isEmpty) return const SizedBox.shrink();
@@ -761,6 +764,12 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
                       style: TextStyle(fontSize: fontSettings.fontSize - 3),
                     ),
                   ],
+                  _buildPassportThumbnails(
+                    passportImages
+                        .where((p) => p.guestBmNumber == guest.mid)
+                        .toList(),
+                    fontSettings,
+                  ),
                 ],
               ),
             ),
@@ -768,6 +777,125 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
         }),
         const SizedBox(height: 10.0),
       ],
+    );
+  }
+
+  /// Renders a guest's passport images as tappable thumbnails and PDFs as
+  /// labelled chips. Returns an empty widget when the guest has none.
+  Widget _buildPassportThumbnails(
+    List<ReservationPassportImage> images,
+    FontSettings fontSettings,
+  ) {
+    if (images.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 8),
+        Text(
+          "Passport",
+          style: TextStyle(
+            fontSize: fontSettings.fontSize - 3,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: images.map((img) {
+            final bytes = img.bytes;
+
+            if (img.isPdf || bytes == null) {
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.grey),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      img.isPdf
+                          ? Icons.picture_as_pdf
+                          : Icons.insert_drive_file,
+                      color: Colors.red,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 6),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 140),
+                      child: Text(
+                        img.fileName.isNotEmpty ? img.fileName : "Document",
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: fontSettings.fontSize - 4),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return GestureDetector(
+              onTap: () => _showPassportPreview(bytes, img.fileName),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Image.memory(
+                  bytes,
+                  width: 80,
+                  height: 80,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: 80,
+                    height: 80,
+                    color: Colors.grey.shade300,
+                    child: const Icon(Icons.broken_image),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  /// Full-screen, zoomable preview of a passport image.
+  void _showPassportPreview(Uint8List bytes, String fileName) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppBar(
+              automaticallyImplyLeading: false,
+              title: Text(
+                fileName.isNotEmpty ? fileName : "Passport",
+                style: const TextStyle(fontSize: 16),
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            Flexible(
+              child: InteractiveViewer(
+                maxScale: 5,
+                child: Image.memory(bytes),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1273,6 +1401,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
                   // ── All guests on this reservation ───────────────────
                   _buildGuestsSection(
                     selectedReservation?.guests ?? const [],
+                    selectedReservation?.passportImages ?? const [],
                     fontSettings,
                   ),
 

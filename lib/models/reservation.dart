@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:ballys_reservation_app/models/guest_reservation_entry.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_booking.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_desc.dart';
+import 'package:ballys_reservation_app/models/reservation/reservation_passport_image.dart';
 
 class Reservation {
   int idNo;
@@ -34,6 +35,10 @@ class Reservation {
   /// detail view can expand to show every guest.
   List<GuestReservationEntry> guests;
 
+  /// Passport images/PDFs returned by the API, each tagged with the owning
+  /// guest's BM number via [ReservationPassportImage.guestBmNumber].
+  List<ReservationPassportImage> passportImages;
+
   Reservation({
     required this.idNo,
     required this.reservNo,
@@ -60,6 +65,7 @@ class Reservation {
     required this.gRating,
     this.reservationnewnumber,
     this.guests = const [],
+    this.passportImages = const [],
   });
 
   factory Reservation.fromJson(Map<String, dynamic> json) {
@@ -206,6 +212,16 @@ class Reservation {
       }).toList();
     }
 
+    List<ReservationPassportImage> parsePassportImages(dynamic list) {
+      if (list is List) {
+        return list
+            .whereType<Map<String, dynamic>>()
+            .map((item) => ReservationPassportImage.fromJson(item))
+            .toList();
+      }
+      return [];
+    }
+
     final hasAir = json['has_air_ticket_reservation'] == true;
 
     return Reservation(
@@ -234,6 +250,7 @@ class Reservation {
       gRating: null,
       reservationnewnumber: json['manual_reserv_no'] as String? ?? '',
       guests: parseGuests(),
+      passportImages: parsePassportImages(json['passport_images']),
     );
   }
 

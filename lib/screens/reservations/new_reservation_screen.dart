@@ -25,8 +25,10 @@ import 'package:ballys_reservation_app/providers/hotels_provider.dart';
 import 'package:ballys_reservation_app/providers/member_search_provider.dart';
 import 'package:ballys_reservation_app/providers/new_reservation_provider.dart';
 import 'package:ballys_reservation_app/providers/reservation_provider.dart';
+import 'package:ballys_reservation_app/components/passport_upload_widget.dart';
 import 'package:ballys_reservation_app/providers/selected_flight_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+import 'package:ballys_reservation_app/providers/selected_passport_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_hotel_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_reservation_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
@@ -671,6 +673,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
   GuestReservationEntry _snapshotCurrentGuest() {
     final selectedHotels = ref.read(selectedHotelProvider);
     final selectedFlights = ref.read(selectedFlightProvider);
+    final selectedPassports = ref.read(selectedPassportProvider);
 
     return GuestReservationEntry(
       mid: _memberIdController.text.trim(),
@@ -681,6 +684,13 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
       departureDate: _departureDate,
       remarks: _remarksController.text,
       airTicketRequisition: _airTicketRequisition,
+      passportImages: selectedPassports
+          .map((f) => PassportImage(
+                path: f.path,
+                fileName: f.fileName,
+                isPdf: f.isPdf,
+              ))
+          .toList(),
     );
   }
 
@@ -708,6 +718,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
     });
 
     ref.read(selectedGuestProvider.notifier).clearGuest();
+    ref.read(selectedPassportProvider.notifier).setFiles([]);
     ref.read(newReservationProvider.notifier).resetState();
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -750,6 +761,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
 
     ref.read(selectedHotelProvider.notifier).setHotels([]);
     ref.read(selectedFlightProvider.notifier).setFlights([]);
+    ref.read(selectedPassportProvider.notifier).setFiles([]);
     ref.read(selectedGuestProvider.notifier).clearGuest();
     ref.read(newReservationProvider.notifier).resetState();
 
@@ -789,6 +801,15 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
 
     ref.read(selectedHotelProvider.notifier).setHotels(entry.hotels);
     ref.read(selectedFlightProvider.notifier).setFlights(entry.flights);
+    ref.read(selectedPassportProvider.notifier).setFiles(
+          entry.passportImages
+              .map((p) => PassportFile(
+                    path: p.path,
+                    fileName: p.fileName,
+                    isPdf: p.isPdf,
+                  ))
+              .toList(),
+        );
   }
 
   void _removeGuestEntry(int index) {
@@ -877,16 +898,18 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
       return;
     }
 
-    // For backward compatibility, the top-level bmNumber/guestName/
-    // roomDetails/airTicketDetails mirror the FIRST guest. The full
-    // multi-guest payload travels in `guests`.
+    // The top-level bmNumber/guestName/dates mirror the FIRST guest for
+    // backward compatibility. roomDetails/airTicketDetails/passportImages span
+    // ALL guests, each item tagged with its owner's BMNumber. The lightweight
+    // per-guest payload travels in `guests`.
     final firstGuest = allGuests.first;
 
     final reservation = NewReservation(
       bmNumber: firstGuest.mid,
       guestName: firstGuest.guestName,
       hotelName: "",
-      roomDetails: firstGuest.hotels.map((room) => room.toJson()).toList(),
+      roomDetails:
+          allGuests.expand((g) => g.toRoomDetailsJson()).toList(),
       noOfNights: 0,
       arrivalDate: firstGuest.arrivalDate,
       departureDate: firstGuest.departureDate,
@@ -895,7 +918,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
           : "0",
       remarks: firstGuest.remarks,
       airTicketDetails:
-          firstGuest.flights.map((ticket) => ticket.toJson()).toList(),
+          allGuests.expand((g) => g.toAirTicketDetailsJson()).toList(),
       reservationnewnumber: _reservationnewnumberController.text,
       packageAmount: _packageAmountController.text,
       guests: allGuests.map((g) => g.toJson()).toList(),
@@ -949,6 +972,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
       // Clear all provider state
       ref.read(selectedHotelProvider.notifier).setHotels([]);
       ref.read(selectedFlightProvider.notifier).setFlights([]);
+      ref.read(selectedPassportProvider.notifier).setFiles([]);
       ref.read(selectedGuestProvider.notifier).clearGuest();
       ref.read(newReservationProvider.notifier).resetState();
       ref.read(memberSearchProvider.notifier).resetState();
@@ -1090,6 +1114,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                   .clearSelectedReservation();
               ref.read(selectedHotelProvider.notifier).setHotels([]);
               ref.read(selectedFlightProvider.notifier).setFlights([]);
+              ref.read(selectedPassportProvider.notifier).setFiles([]);
             },
             child: Stack(
               children: [

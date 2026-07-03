@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 
 /// Model representing a single uploaded passport file.
 class PassportFile {
@@ -106,11 +107,22 @@ class _PassportUploadWidgetState extends State<PassportUploadWidget> {
 
   // ── Pickers ───────────────────────────────────────────────────────────────
 
+  // Passport pages only need to be legible, not full-resolution. Downscaling
+  // and compressing keeps the base64 payload small enough for the server to
+  // accept — full-res camera shots otherwise bloat the request body and the
+  // API rejects it ("Payload and BM Number are required.").
+  static const double _maxImageDimension = 1600;
+  static const int _imageQuality = 70;
+
   Future<void> _pickFromCamera() async {
     try {
-      final XFile? photo =
-          await _imagePicker.pickImage(source: ImageSource.camera);
-      if (photo != null) _addFile(photo.path, false);
+      final XFile? photo = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: _maxImageDimension,
+        maxHeight: _maxImageDimension,
+        imageQuality: _imageQuality,
+      );
+      if (photo != null) await _addFile(photo.path, false);
     } catch (e) {
       _showError("Could not open camera: $e");
     }
@@ -119,9 +131,13 @@ class _PassportUploadWidgetState extends State<PassportUploadWidget> {
   Future<void> _pickFromGallery() async {
     try {
       // Allow multiple image selection from gallery.
-      final List<XFile> photos = await _imagePicker.pickMultiImage();
+      final List<XFile> photos = await _imagePicker.pickMultiImage(
+        maxWidth: _maxImageDimension,
+        maxHeight: _maxImageDimension,
+        imageQuality: _imageQuality,
+      );
       for (final photo in photos) {
-        _addFile(photo.path, false);
+        await _addFile(photo.path, false);
       }
     } catch (e) {
       _showError("Could not open gallery: $e");
@@ -137,7 +153,7 @@ class _PassportUploadWidgetState extends State<PassportUploadWidget> {
       );
       if (result != null) {
         for (final file in result.files) {
-          if (file.path != null) _addFile(file.path!, true);
+          if (file.path != null) await _addFile(file.path!, true);
         }
       }
     } catch (e) {
@@ -147,11 +163,34 @@ class _PassportUploadWidgetState extends State<PassportUploadWidget> {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  void _addFile(String path, bool isPdf) {
+  Future<void> _addFile(String path, bool isPdf) async {
+    // The picker returns files in a volatile cache directory (image_picker
+    // scaled files especially get evicted before the reservation is saved).
+    // Copy into persistent app storage immediately so the path is still valid
+    // at save time, when the bytes are read for base64 encoding.
+    final originalName = path.split('/').last;
+    String persistentPath = path;
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final passportDir = Directory('${dir.path}/passport_uploads');
+      if (!await passportDir.exists()) {
+        await passportDir.create(recursive: true);
+      }
+      final destName =
+          '${DateTime.now().microsecondsSinceEpoch}_$originalName';
+      final dest = await File(path).copy('${passportDir.path}/$destName');
+      persistentPath = dest.path;
+    } catch (e) {
+      // Fall back to the original path if the copy fails; better to attempt
+      // the upload than to silently drop the file.
+      persistentPath = path;
+    }
+
+    if (!mounted) return;
     setState(() {
       _files.add(PassportFile(
-        path: path,
-        fileName: path.split('/').last,
+        path: persistentPath,
+        fileName: originalName,
         isPdf: isPdf,
       ));
     });

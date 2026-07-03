@@ -67,6 +67,28 @@ class GuestReservationEntry {
     return passportImages.map((p) => p.toJsonWithGuest(mid)).toList();
   }
 
+  /// Room details for this guest for the top-level `room_details` array,
+  /// each tagged with this guest's BM number.
+  List<Map<String, dynamic>> toRoomDetailsJson() {
+    return hotels
+        .map((h) => {
+              ...h.toJson(),
+              'BMNumber': mid,
+            })
+        .toList();
+  }
+
+  /// Air-ticket details for this guest for the top-level `air_ticket_details`
+  /// array, each tagged with this guest's BM number.
+  List<Map<String, dynamic>> toAirTicketDetailsJson() {
+    return flights
+        .map((f) => {
+              ...f.toJson(),
+              'BMNumber': mid,
+            })
+        .toList();
+  }
+
   GuestReservationEntry copyWith({
     String? mid,
     String? guestName,

@@ -12,6 +12,35 @@ class ReservationRepository {
 
   ReservationRepository(this.apiService);
 
+  /// Pretty-prints a request body to the terminal with the bulky base64
+  /// passport data redacted, so the full structure stays readable instead of
+  /// being truncated by the giant image blobs. Prints in chunks to avoid the
+  /// platform logger cutting off long output.
+  void debugPrintRequestBody(Map<String, dynamic> body) {
+    final redacted = Map<String, dynamic>.from(body);
+    final images = body['passport_images'];
+    if (images is List) {
+      redacted['passport_images'] = images.map((img) {
+        if (img is Map) {
+          final copy = Map<String, dynamic>.from(img);
+          final data = copy['Base64Data'];
+          if (data is String) {
+            copy['Base64Data'] = '<base64: ${data.length} chars>';
+          }
+          return copy;
+        }
+        return img;
+      }).toList();
+    }
+
+    final pretty = const JsonEncoder.withIndent('  ').convert(redacted);
+    const chunkSize = 800;
+    for (int i = 0; i < pretty.length; i += chunkSize) {
+      final end = (i + chunkSize < pretty.length) ? i + chunkSize : pretty.length;
+      print(pretty.substring(i, end));
+    }
+  }
+
   DateTime parseCustomDate(String dateString) {
     try {
       DateFormat format = DateFormat('yyyy/MM/dd');
@@ -92,7 +121,10 @@ print('Response from getReservations API: $response');
     final userName = await StorageUtil.getUserName();
     final deviceId = await DeviceId.get();
 print("test");
-print("passportImages: ${newReservation.passportImages}");
+///print("passportImages: ${newReservation.passportImages}");
+print("bm_number: ${newReservation.bmNumber}");
+print("air_ticket_details: ${newReservation.airTicketDetails}");
+print("passport_images: ${newReservation.passportImages}");
     final requestBody = {
       'bm_number': newReservation.bmNumber,
       'guest_name': newReservation.guestName,
@@ -113,7 +145,7 @@ print("passportImages: ${newReservation.passportImages}");
       'passport_images': newReservation.passportImages,
     };
 
-   // printLargeBody(jsonEncode(requestBody));
+  debugPrintRequestBody(requestBody);
 print("test2");
     final response = await apiService.post('Reservation_InsertReservation', requestBody);
 print("response: $response");
@@ -154,7 +186,7 @@ print("response: $response");
       'passport_images': newReservation.passportImages,
     };
 
-    printLargeBody(jsonEncode(requestBody));
+    debugPrintRequestBody(requestBody);
 
     final response = await apiService.post('UpdateReservation', requestBody);
 

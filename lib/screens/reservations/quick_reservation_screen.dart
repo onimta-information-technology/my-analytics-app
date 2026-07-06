@@ -103,23 +103,22 @@ class _HotelEntry {
     final nights =
         (arrDt != null && depDt != null) ? depDt.difference(arrDt).inDays : 0;
     return {
-      'Hotel': hotelId,
-      'HotelName': hotel,
-      'RoomCategory': roomCategoryId,
-      'RoomCategoryName': roomCategory,
-      'RoomType': roomTypeId,
-      'RoomTypeName': roomType,
-      'GuestCount': int.tryParse(noOfPax) ?? 1,
-      'ChildrenCount': 0,
-      'RoomCount': int.tryParse(noOfRooms) ?? 1,
-      'NoOfNights': nights,
-      'SelectedDateRange': '$arrival - $departure',
-      'ArrivalDate': arrDt?.toIso8601String(),
-      'DepartureDate': depDt?.toIso8601String(),
-      'SelectedCost': 0.0,
-      'CostIndex': 0,
-      'EC_LCO_Facility': eciLco,
-      'PaymentBy': paymentBy,
+      'hotel': hotelId,
+      'hotel_name': hotel,
+      'room_category': roomCategoryId,
+      'room_category_name': roomCategory,
+      'room_type': roomTypeId,
+      'room_type_name': roomType,
+      'guest_count': int.tryParse(noOfPax) ?? 1,
+      'children_count': 0,
+      'room_count': int.tryParse(noOfRooms) ?? 1,
+      'no_of_nights': nights,
+      'arrival_date': arrDt?.toIso8601String(),
+      'departure_date': depDt?.toIso8601String(),
+      'selected_cost': 0.0,
+      'cost_index': 0,
+      'ec_lco_facility': eciLco,
+      'payment_by': paymentBy,
     };
   }
 }
@@ -1213,18 +1212,19 @@ Remarks              : ${m['remarks']}''';
     final arrDate = m['arrDateObj'] as DateTime?;
     final depDate = m['depDateObj'] as DateTime?;
     return {
-      'GuestCount': int.tryParse(m['noOfSeats'] as String? ?? '1') ?? 1,
-      'AirTicketClass': m['classId'],
-      'AirTicketClassName': m['class'],
-      'AirLine': m['airline'],
-      'ContactPerson': m['hamoueContactPerson'],
-      'Visa': (m['visa'] as String?) == 'Yes',
-      'IsRoundTrip': m['isRoundTrip'] as bool? ?? false,
-      'SilkRoute': (m['skipRouteFacility'] as String?) == 'Yes' ? 1 : 0,
-      'AirportTransportation': (m['airportTransport'] as String?) == 'Yes' ? 1 : 0,
-      'ArrivalDate': arrDate?.toIso8601String(),
-      'DepartureDate': depDate?.toIso8601String(),
-      'SelectedCost': double.tryParse(m['cost'] as String? ?? '0') ?? 0.0,
+      'guest_count': int.tryParse(m['noOfSeats'] as String? ?? '1') ?? 1,
+      'air_ticket_class': m['classId'],
+      'air_ticket_class_name': m['class'],
+      'air_line': m['airline'],
+      'contact_person': m['hamoueContactPerson'],
+      'visa': (m['visa'] as String?) == 'Yes',
+      'is_round_trip': m['isRoundTrip'] as bool? ?? false,
+      'silk_route': (m['skipRouteFacility'] as String?) == 'Yes' ? 1 : 0,
+      'airport_transportation': (m['airportTransport'] as String?) == 'Yes' ? 1 : 0,
+      'arrival_date': arrDate?.toIso8601String(),
+      'departure_date': depDate?.toIso8601String(),
+      'selected_cost': double.tryParse(m['cost'] as String? ?? '0') ?? 0.0,
+      'BMNumber': m['memberId'],
       'DF_AirportCode': fromAirport?.airportCode,
       'DF_CityName': fromAirport?.cityName,
       'DF_AirportName': fromAirport?.airportName,
@@ -1346,7 +1346,10 @@ Remarks              : ${m['remarks']}''';
     final roomDetails = <Map<String, dynamic>>[];
     for (final m in allMembers) {
       final hotels = (m['hotels'] as List<_HotelEntry>?) ?? [];
-      roomDetails.addAll(hotels.map((h) => h.toApiJson()));
+      roomDetails.addAll(hotels.map((h) => {
+            ...h.toApiJson(),
+            'BMNumber': m['memberId'],
+          }));
     }
 
     final guests = allMembers
@@ -1367,8 +1370,9 @@ Remarks              : ${m['remarks']}''';
     final salesCode = await StorageUtil.getSalesCode();
     final userName = await StorageUtil.getUserName();
     final deviceId = await DeviceId.get();
-
+    final masterId = DateTime.now().millisecondsSinceEpoch.toString();
     final body = <String, dynamic>{
+       'master_id': masterId,
       'bm_number': primary['memberId'],
       'guest_name': primary['guestName'],
       'arrival_date': firstHotel?.arrivalDate?.toIso8601String(),
@@ -1394,10 +1398,11 @@ Remarks              : ${m['remarks']}''';
       'guests': guests,
       'passport_images': [],
     };
-
+print(" rrr : $body");
     setState(() => _isLoading = true);
     try {
       final apiService = ApiService(const FlutterSecureStorage());
+      
       final response =
           await apiService.post('Reservation_InsertReservation', body);
           print("test3 $response");
@@ -1466,8 +1471,10 @@ Remarks              : ${m['remarks']}''';
     final salesCode = await StorageUtil.getSalesCode();
     final userName = await StorageUtil.getUserName();
     final deviceId = await DeviceId.get();
+    final masterId = DateTime.now().millisecondsSinceEpoch.toString();
 print(" rrr : $airTicketDetails");
     final body = <String, dynamic>{
+      'master_id': masterId,
       'bm_number': primary['memberId'],
       'guest_name': primary['guestName'],
       'arrival_date':
@@ -1489,7 +1496,7 @@ print(" rrr : $airTicketDetails");
       'guests': guests,
       'passport_images': passportImages,
     };
-
+print(" rrr : $body");
     setState(() => _isLoading = true);
     try {
       final apiService = ApiService(const FlutterSecureStorage());

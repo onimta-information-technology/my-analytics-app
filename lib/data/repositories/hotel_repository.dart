@@ -14,6 +14,7 @@ class HotelRepository {
   Future<List<HotelResponse>> getAllHotels() async {
      final deviceId = await DeviceId.get();
       final spName = await StorageUtil.getStoredProcedureName();
+      print('Fetching all hotels with deviceId: $deviceId and spName: $spName');
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -35,7 +36,7 @@ class HotelRepository {
       "SpName": spName,
       "con": "1"
     });
-
+    print('API response for all hotels: $response');
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List &&
         response['CommonResult']['Table'].isNotEmpty) {

@@ -9,17 +9,17 @@ class HotelResponse {
 
   factory HotelResponse.fromJson(Map<String, dynamic> json) {
     return HotelResponse(
-      hotelId: json['Hotel_IID'],
-      hotelName: json['HotelName'],
+      hotelId: _toDouble(json['Hotel_IID']),
+      hotelName: json['HotelName']?.toString() ?? '',
     );
   }
 
-  static int? _toInt(dynamic value) {
-    if (value is int) return value;
-    if (value is String) {
-      return int.tryParse(value);
-    }
-    return null;
+  static double _toDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
   }
 
   Map<String, dynamic> toJson() {

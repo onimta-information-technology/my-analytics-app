@@ -2099,7 +2099,7 @@ class _AirportDropdown extends ConsumerWidget {
             .toList();
       },
       itemAsString: (a) =>
-          '${a.cityName ?? ''} (${a.airportCode ?? ''}) - ${a.country ?? ''}',
+          '${a.airportCode ?? ''} · ${a.cityName ?? ''} · ${a.airportName ?? ''} · ${a.country ?? ''}',
       compareFn: (a, b) => a.airportCode == b.airportCode,
       decoratorProps: DropDownDecoratorProps(
         decoration: _fieldDeco(
@@ -2148,14 +2148,15 @@ class _AirportDropdown extends ConsumerWidget {
               ),
             ),
           ),
+          // Show all four fields: code · city / airport name · country
           title: Text(
-            '${item.cityName ?? ''}, ${item.country ?? ''}',
+            '${item.airportCode ?? ''} · ${item.cityName ?? ''}',
             style:
                 const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
           ),
           subtitle: Text(
-            item.airportName ?? '',
-            style: const TextStyle(fontSize: 15, color: Colors.grey),
+            '${item.airportName ?? ''} · ${item.country ?? ''}',
+            style: const TextStyle(fontSize: 15, color: Color.fromARGB(255, 0, 0, 0)),
           ),
           selected: isSelected,
           tileColor: isFocused ? Colors.grey.shade100 : null,

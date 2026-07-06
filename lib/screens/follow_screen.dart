@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
+import 'package:ballys_reservation_app/providers/follow_up_provider.dart';
 
 /// Contact status options. The customer response section is only shown when
 /// the status is [_kContacted].
@@ -51,8 +53,9 @@ const List<String> _kPositiveStatuses = <String>[
   'Customer Confirmed',
 ];
 
-class FollowScreen extends StatefulWidget {
+class FollowScreen extends ConsumerStatefulWidget {
   final String memberId;
+  final String memberName;
   final void Function(
     File? photo,
     String description,
@@ -64,14 +67,15 @@ class FollowScreen extends StatefulWidget {
   const FollowScreen({
     super.key,
     required this.memberId,
+    required this.memberName,
     this.onSubmit,
   });
 
   @override
-  State<FollowScreen> createState() => _FollowScreenState();
+  ConsumerState<FollowScreen> createState() => _FollowScreenState();
 }
 
-class _FollowScreenState extends State<FollowScreen> {
+class _FollowScreenState extends ConsumerState<FollowScreen> {
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _remarksController = TextEditingController();
   final TextEditingController _packageOfferedController = TextEditingController();
@@ -180,20 +184,40 @@ class _FollowScreenState extends State<FollowScreen> {
 
     setState(() => _isSubmitting = true);
 
-    // TODO: Replace this block with the real API call once the endpoint is ready.
-    // Example:
-    // await followRepository.submitFollow(
-    //   memberId: widget.memberId,
-    //   photo: _selectedImage,
-    //   description: _descriptionController.text.trim(),
-    // );
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    setState(() => _isSubmitting = false);
-
     final String? customerResponse = _isContacted ? _customerResponse : null;
     final String? remarks =
         _isContacted && _isNegativeResponse ? _remarksController.text.trim() : null;
+    final String? responseType =
+        _isContacted ? (_isNegativeType ? 'Negative' : 'Positive') : null;
+    final List<String> checklistItems =
+        _isContacted && _isPositiveResponse ? _checkedItems.toList() : const <String>[];
+    final String? positiveStatus =
+        _isContacted && _isPositiveResponse ? _positiveStatus : null;
+
+    try {
+      await ref.read(followUpRepositoryProvider).saveFollowUp(
+            memberId: widget.memberId,
+            memberName: widget.memberName,
+            description: _descriptionController.text.trim(),
+            contactStatus: _contactStatus!,
+            responseType: responseType,
+            customerResponse: customerResponse,
+            remarks: remarks,
+            checklistItems: checklistItems,
+            positiveStatus: positiveStatus,
+            plannedVisitDate: _plannedVisitDate,
+            followUpDate: _followUpDate,
+            photo: _selectedImage,
+          );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      _showError('Failed to save follow-up: $e');
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => _isSubmitting = false);
 
     widget.onSubmit?.call(
       _selectedImage,
@@ -203,15 +227,13 @@ class _FollowScreenState extends State<FollowScreen> {
       remarks,
     );
 
-    if (mounted) {
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Follow-up saved'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    }
+    Navigator.of(context).pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Follow-up saved'),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
   /// Opens the response picker. The Positive/Negative toggle sits at the top

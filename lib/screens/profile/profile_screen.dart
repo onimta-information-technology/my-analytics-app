@@ -685,6 +685,7 @@ bool _showFollowButton = false;
               MaterialPageRoute(
                 builder: (context) => FollowScreen(
                   memberId: guest.mid,
+                  memberName: guest.memberName,
                   onSubmit: (File? photo, String description, String contactStatus,
                       String? customerResponse, String? remarks) {
                     debugPrint(

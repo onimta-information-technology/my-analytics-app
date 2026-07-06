@@ -118,7 +118,7 @@ print("passport_images: ${newReservation.passportImages}");
       'no_of_nights': newReservation.noOfNights,
       'has_air_ticket_reservation': newReservation.hasAirTicketReservation == '1',
       'remarks': newReservation.remarks,
-      'manual_reserv_no': newReservation.reservationnewnumber,
+      'manual_reserv_no': "",
       'package_amount': newReservation.packageAmount ?? '',
       'sales_code': salesCode,
       'user_name': userName,

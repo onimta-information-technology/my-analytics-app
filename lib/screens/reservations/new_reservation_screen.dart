@@ -2133,33 +2133,33 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                           maxLines: 5,
                           keyboardType: TextInputType.multiline,
                         ),
-                        const SizedBox(height: 10.0),
-                        TextFormField(
-                          controller: _reservationnewnumberController,
-                          readOnly: _isEditMode,
-                          style: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: fontSettings.fontWeight,
-                          ),
-                          decoration: InputDecoration(
-                            labelText: "Manual Reservation No",
-                            labelStyle: TextStyle(
-                              fontSize: fontSettings.fontSize,
-                              fontWeight: fontSettings.fontWeight,
-                            ),
-                            border: const OutlineInputBorder(),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12.0,
-                              vertical: -5.0,
-                            ),
-                          ),
-                          // validator: (value) {
-                          //   if (value == null || value.trim().isEmpty) {
-                          //     return "Manual Reservation Number is required";
-                          //   }
-                          //   return null;
-                          // },
-                        ),
+                        //const SizedBox(height: 10.0),
+                        // TextFormField(
+                        //   controller: _reservationnewnumberController,
+                        //   readOnly: _isEditMode,
+                        //   style: TextStyle(
+                        //     fontSize: fontSettings.fontSize,
+                        //     fontWeight: fontSettings.fontWeight,
+                        //   ),
+                        //   decoration: InputDecoration(
+                        //     labelText: "Manual Reservation No",
+                        //     labelStyle: TextStyle(
+                        //       fontSize: fontSettings.fontSize,
+                        //       fontWeight: fontSettings.fontWeight,
+                        //     ),
+                        //     border: const OutlineInputBorder(),
+                        //     contentPadding: const EdgeInsets.symmetric(
+                        //       horizontal: 12.0,
+                        //       vertical: -5.0,
+                        //     ),
+                        //   ),
+                        //   // validator: (value) {
+                        //   //   if (value == null || value.trim().isEmpty) {
+                        //   //     return "Manual Reservation Number is required";
+                        //   //   }
+                        //   //   return null;
+                        //   // },
+                        // ),
                         const SizedBox(height: 16.0),
 
                         // ── Add Guest / Add New Guest Buttons ──

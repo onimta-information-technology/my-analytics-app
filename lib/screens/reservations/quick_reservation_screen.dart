@@ -148,7 +148,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
   final _sharedMidNumber = TextEditingController();
   final _sharedGuestName = TextEditingController();
   final _sharedPackageAmount = TextEditingController();
-  final _sharedReservationNo = TextEditingController();
+  // final _sharedReservationNo = TextEditingController();
   bool _sharedGuestCardVisible = false;
 
   // ── HOTEL members list ──────────────────────────────────────────────────────
@@ -261,7 +261,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _sharedMidNumber,
       _sharedGuestName,
       _sharedPackageAmount,
-      _sharedReservationNo,
+      // _sharedReservationNo,
       _h_noOfRooms,
       _h_noOfPax,
       _h_mealPlan,
@@ -437,7 +437,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
 
   void _resetHotelFields() {
     _sharedPackageAmount.clear();
-    _sharedReservationNo.clear();
+    // _sharedReservationNo.clear();
     _h_noOfRooms.text = '1';
     _h_noOfPax.text = '1';
     _h_mealPlan.clear();
@@ -627,7 +627,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
         'guestName': _sharedGuestName.text,
         'memberId': _sharedMemberId.text,
         'packageAmount': _sharedPackageAmount.text,
-        'reservationNo': _sharedReservationNo.text,
+        // 'reservationNo': _sharedReservationNo.text,
         'hotels': hotels,
       });
       _resetSharedGuest();
@@ -657,7 +657,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       'guestName': _sharedGuestName.text,
       'memberId': _sharedMemberId.text,
       'packageAmount': _sharedPackageAmount.text,
-      'reservationNo': _sharedReservationNo.text,
+      // 'reservationNo': _sharedReservationNo.text,
       // display strings (used for copy text)
       'fromAirport': _a_fromAirport != null
           ? '${_a_fromAirport!.cityName ?? ''} (${_a_fromAirport!.airportCode ?? ''})'
@@ -713,7 +713,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
         'guestName': _sharedGuestName.text,
         'memberId': _sharedMemberId.text,
         'packageAmount': _sharedPackageAmount.text,
-        'reservationNo': _sharedReservationNo.text,
+        // 'reservationNo': _sharedReservationNo.text,
         'hotels': hotels,
       });
       _resetSharedGuest();
@@ -734,7 +734,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _airMembers.add(_captureCurrentAirMember());
       _resetSharedGuest();
       _sharedPackageAmount.clear();
-      _sharedReservationNo.clear();
+      // _sharedReservationNo.clear();
       _a_noOfSeats.text = '1';
       _a_selectedClass = null;
       _a_classKey = UniqueKey();
@@ -1052,7 +1052,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       'guestName': _sharedGuestName.text,
       'memberId': _sharedMemberId.text,
       'packageAmount': _sharedPackageAmount.text,
-      'reservationNo': _sharedReservationNo.text,
+      // 'reservationNo': _sharedReservationNo.text,
       'hotels': currentHotels,
     };
 
@@ -1115,7 +1115,7 @@ Remarks              : ${m['remarks']}''';
       'guestName': _sharedGuestName.text,
       'memberId': _sharedMemberId.text,
       'packageAmount': _sharedPackageAmount.text,
-      'reservationNo': _sharedReservationNo.text,
+      // 'reservationNo': _sharedReservationNo.text,
       'fromAirport': (fromCode.isNotEmpty && fromCity.isNotEmpty)
           ? '$fromCity ($fromCode)'
           : '',
@@ -1279,7 +1279,7 @@ Remarks              : ${m['remarks']}''';
       _airMembers.clear();
       _resetSharedGuest();
       _sharedPackageAmount.clear();
-      _sharedReservationNo.clear();
+      // _sharedReservationNo.clear();
       _a_noOfSeats.text = '1';
       _a_selectedClass = null;
       _a_classKey = UniqueKey();
@@ -1333,7 +1333,7 @@ Remarks              : ${m['remarks']}''';
           'guestName': _sharedGuestName.text,
           'memberId': _sharedMemberId.text,
           'packageAmount': _sharedPackageAmount.text,
-          'reservationNo': _sharedReservationNo.text,
+          // 'reservationNo': _sharedReservationNo.text,
           'hotels': currentHotels,
         },
     ];
@@ -1396,7 +1396,7 @@ Remarks              : ${m['remarks']}''';
           : 0,
       'has_air_ticket_reservation': false,
       'remarks': remarksForMember(primary),
-      'manual_reserv_no': primary['reservationNo'] ?? '',
+      'manual_reserv_no': '',
       'package_amount': primary['packageAmount'] as String? ?? '',
       'selected_marketing_person': '',
       'sales_code': salesCode,
@@ -1493,7 +1493,7 @@ print(" rrr : $airTicketDetails");
       'no_of_nights': 0,
       'has_air_ticket_reservation': true,
       'remarks': primary['remarks'] ?? '',
-      'manual_reserv_no': primary['reservationNo'] ?? '',
+      'manual_reserv_no': '',
       'package_amount': primary['packageAmount'] as String? ?? '',
       'selected_marketing_person': '',
       'sales_code': salesCode,
@@ -2423,16 +2423,16 @@ class _HotelForm extends StatelessWidget {
               accent: accent,
             ),
           ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: state._sharedReservationNo,
-            style: kInputTextStyle,
-            decoration: _fieldDeco(
-              'Manual Reservation No',
-              icon: Icons.confirmation_number_outlined,
-              accent: accent,
-            ),
-          ),
+          // const SizedBox(height: 12),
+          // TextFormField(
+          //   controller: state._sharedReservationNo,
+          //   style: kInputTextStyle,
+          //   decoration: _fieldDeco(
+          //     'Manual Reservation No',
+          //     icon: Icons.confirmation_number_outlined,
+          //     accent: accent,
+          //   ),
+          // ),
           const SizedBox(height: 12),
 
           // ── Pending hotels list ─────────────────────────────────────────────
@@ -2977,16 +2977,16 @@ class _AirForm extends StatelessWidget {
               accent: accent,
             ),
           ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: state._sharedReservationNo,
-            style: kInputTextStyle,
-            decoration: _fieldDeco(
-              'Manual Reservation No',
-              icon: Icons.confirmation_number_outlined,
-              accent: accent,
-            ),
-          ),
+          // const SizedBox(height: 12),
+          // TextFormField(
+          //   controller: state._sharedReservationNo,
+          //   style: kInputTextStyle,
+          //   decoration: _fieldDeco(
+          //     'Manual Reservation No',
+          //     icon: Icons.confirmation_number_outlined,
+          //     accent: accent,
+          //   ),
+          // ),
           const SizedBox(height: 16),
           _dateField(
             context,

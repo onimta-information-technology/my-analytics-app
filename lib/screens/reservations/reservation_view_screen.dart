@@ -1741,26 +1741,26 @@ TextFormField(
                     keyboardType: TextInputType.multiline,
                   ),
                   const SizedBox(height: 16.0),
-TextFormField(
-    controller: _reservationnewnumberController,
-    readOnly: true,
-    style: TextStyle(
-      fontSize: fontSettings.fontSize,
-      fontWeight: fontSettings.fontWeight,
-    ),
-    decoration: InputDecoration(
-      labelText: "Manual Reservation No",
-      labelStyle: TextStyle(
-        fontSize: fontSettings.fontSize,
-        fontWeight: fontSettings.fontWeight,
-      ),
-      border: const OutlineInputBorder(),
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 12.0,
-        vertical: -5.0,
-      ),
-    ),
-),
+// TextFormField(
+//     controller: _reservationnewnumberController,
+//     readOnly: true,
+//     style: TextStyle(
+//       fontSize: fontSettings.fontSize,
+//       fontWeight: fontSettings.fontWeight,
+//     ),
+//     decoration: InputDecoration(
+//       labelText: "Manual Reservation No",
+//       labelStyle: TextStyle(
+//         fontSize: fontSettings.fontSize,
+//         fontWeight: fontSettings.fontWeight,
+//       ),
+//       border: const OutlineInputBorder(),
+//       contentPadding: const EdgeInsets.symmetric(
+//         horizontal: 12.0,
+//         vertical: -5.0,
+//       ),
+//     ),
+// ),
 
 const SizedBox(height: 10.0),
 if (selectedReservation?.requestStatus == 'Approved')

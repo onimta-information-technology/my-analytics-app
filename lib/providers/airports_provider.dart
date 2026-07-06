@@ -40,7 +40,7 @@ class AirportsNotifier extends StateNotifier<List<Airport>> {
       bool matches(String? value) =>
           value != null && value.toLowerCase().contains(q);
 
-      state = allAirports
+      final results = allAirports
           .where((airport) =>
               matches(airport.airportCode) ||
               matches(airport.cityName) ||
@@ -48,6 +48,13 @@ class AirportsNotifier extends StateNotifier<List<Airport>> {
               matches(airport.country) ||
               matches(airport.countryAbbr))
           .toList();
+
+      // Alphabetical order by airport name.
+      results.sort((a, b) => (a.airportName ?? '')
+          .toLowerCase()
+          .compareTo((b.airportName ?? '').toLowerCase()));
+
+      state = results;
     }
   }
 }

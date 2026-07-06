@@ -2086,9 +2086,15 @@ class _AirportDropdown extends ConsumerWidget {
       selectedItem: selectedAirport,
       items: (filter, _) {
         final notifier = ref.read(airportsProvider.notifier);
-        if (filter.isEmpty) return airports;
+        if (filter.isEmpty) {
+          final initial = [...airports];
+          initial.sort((a, b) => (a.airportName ?? '')
+              .toLowerCase()
+              .compareTo((b.airportName ?? '').toLowerCase()));
+          return initial;
+        }
         final lf = filter.toLowerCase();
-        return notifier.allAirports
+        final results = notifier.allAirports
             .where(
               (a) =>
                   (a.airportCode ?? '').toLowerCase().contains(lf) ||
@@ -2097,6 +2103,13 @@ class _AirportDropdown extends ConsumerWidget {
                   (a.country ?? '').toLowerCase().contains(lf),
             )
             .toList();
+
+        // Alphabetical order by airport name.
+        results.sort((a, b) => (a.airportName ?? '')
+            .toLowerCase()
+            .compareTo((b.airportName ?? '').toLowerCase()));
+
+        return results;
       },
       itemAsString: (a) =>
           '${a.airportCode ?? ''} · ${a.cityName ?? ''} · ${a.airportName ?? ''} · ${a.country ?? ''}',
@@ -2135,28 +2148,20 @@ class _AirportDropdown extends ConsumerWidget {
           ),
         ),
         itemBuilder: (ctx, item, isSelected, isFocused) => ListTile(
-          leading: CircleAvatar(
-            backgroundColor: accent.withOpacity(0.12),
-            child: Text(
-              (item.airportCode ?? '').length > 3
-                  ? (item.airportCode ?? '').substring(0, 3)
-                  : (item.airportCode ?? ''),
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: accent,
-              ),
-            ),
-          ),
-          // Show all four fields: code · city / airport name · country
+          // Same display as the new reservation screen airport search.
           title: Text(
-            '${item.airportCode ?? ''} · ${item.cityName ?? ''}',
-            style:
-                const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+            '${item.airportName ?? "Unknown"} (${item.airportCode ?? "N/A"})',
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           subtitle: Text(
-            '${item.airportName ?? ''} · ${item.country ?? ''}',
-            style: const TextStyle(fontSize: 15, color: Color.fromARGB(255, 0, 0, 0)),
+            [
+              item.cityName,
+              item.country,
+              item.countryAbbr,
+            ]
+                .where((e) => e != null && e.isNotEmpty)
+                .join(" · "),
+            style: const TextStyle(fontSize: 13.0),
           ),
           selected: isSelected,
           tileColor: isFocused ? Colors.grey.shade100 : null,

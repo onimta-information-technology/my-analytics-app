@@ -6,6 +6,7 @@ import 'package:ballys_reservation_app/components/flight_card.dart';
 import 'package:ballys_reservation_app/components/guest_deatils_view_spGift.dart';
 import 'package:ballys_reservation_app/components/guest_details_card.dart';
 import 'package:ballys_reservation_app/components/hotel_selection.dart';
+import 'package:ballys_reservation_app/components/package_amount_field.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
@@ -1551,12 +1552,13 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                           showLastVisitDate: true,
                         ),
  const SizedBox(height: 10.0),
-                          TextFormField(
+                          PackageAmountField(
                           controller: _packageAmountController,
-                          readOnly: _isEditMode,
-                          style: TextStyle(
+                          enabled: !_isEditMode,
+                          textStyle: TextStyle(
                             fontSize: fontSettings.fontSize,
                             fontWeight: fontSettings.fontWeight,
+                            color: Colors.black,
                           ),
                           decoration: InputDecoration(
                             labelText: "Package Amount *",

@@ -80,6 +80,24 @@ class ReservationRepository {
     }
   }
 
+  /// Fetches the predefined package amounts (e.g. `"IND 10,000"`,
+  /// `"USD 25,000"`) from `GetPackageAmounts_MyAnalytics`. Returns an empty
+  /// list when the request fails or the payload is unexpected, so the caller
+  /// can fall back to free-text entry.
+  Future<List<String>> getPackageAmounts() async {
+    try {
+      final response = await apiService.get('GetPackageAmounts_MyAnalytics');
+      final status = response['Status'] as bool? ?? false;
+      final data = response['Data'];
+      if (status && data is List) {
+        return data.map((e) => e.toString()).toList();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
   Future<Reservation?> saveReservation(NewReservation newReservation) async {
     final salesCode = await StorageUtil.getSalesCode();
     final userName = await StorageUtil.getUserName();
@@ -101,7 +119,7 @@ print("passport_images: ${newReservation.passportImages}");
       'has_air_ticket_reservation': newReservation.hasAirTicketReservation == '1',
       'remarks': newReservation.remarks,
       'manual_reserv_no': newReservation.reservationnewnumber,
-      'package_amount': double.tryParse(newReservation.packageAmount ?? '0') ?? 0.0,
+      'package_amount': newReservation.packageAmount ?? '',
       'sales_code': salesCode,
       'user_name': userName,
       'device_id': deviceId,
@@ -142,7 +160,7 @@ print("response: $response");
       'remarks': newReservation.remarks,
       'reservation_no': newReservation.reservationNo,
       'manual_reserv_no': newReservation.reservationnewnumber,
-      'package_amount': double.tryParse(newReservation.packageAmount ?? '0') ?? 0.0,
+      'package_amount': newReservation.packageAmount ?? '',
       'selected_marketing_person': newReservation.selectedMarketingPerson,
       'sales_code': salesCode,
       'user_name': userName,

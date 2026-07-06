@@ -10,6 +10,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:ballys_reservation_app/components/air_ticket_class_selector.dart';
 import 'package:ballys_reservation_app/components/passport_upload_widget.dart';
+import 'package:ballys_reservation_app/components/package_amount_field.dart';
 
 import 'package:ballys_reservation_app/components/bottom_sheets/member_search-new_sheet.dart';
 import 'package:ballys_reservation_app/components/guest_deatils_view_spGift.dart';
@@ -1396,8 +1397,7 @@ Remarks              : ${m['remarks']}''';
       'has_air_ticket_reservation': false,
       'remarks': remarksForMember(primary),
       'manual_reserv_no': primary['reservationNo'] ?? '',
-      'package_amount':
-          double.tryParse(primary['packageAmount'] as String? ?? '0') ?? 0.0,
+      'package_amount': primary['packageAmount'] as String? ?? '',
       'selected_marketing_person': '',
       'sales_code': salesCode,
       'user_name': userName,
@@ -1494,8 +1494,7 @@ print(" rrr : $airTicketDetails");
       'has_air_ticket_reservation': true,
       'remarks': primary['remarks'] ?? '',
       'manual_reserv_no': primary['reservationNo'] ?? '',
-      'package_amount':
-          double.tryParse(primary['packageAmount'] as String? ?? '0') ?? 0.0,
+      'package_amount': primary['packageAmount'] as String? ?? '',
       'selected_marketing_person': '',
       'sales_code': salesCode,
       'user_name': userName,
@@ -2414,15 +2413,15 @@ class _HotelForm extends StatelessWidget {
                 showLastVisitDate: true,
               ),
             ),
-          TextFormField(
+          PackageAmountField(
             controller: state._sharedPackageAmount,
-            style: kInputTextStyle,
+            textStyle: kInputTextStyle,
+            accent: accent,
             decoration: _fieldDeco(
               'Package Amount',
               icon: Icons.currency_rupee,
               accent: accent,
             ),
-            keyboardType: TextInputType.number,
           ),
           const SizedBox(height: 12),
           TextFormField(
@@ -2968,15 +2967,15 @@ class _AirForm extends StatelessWidget {
                 showLastVisitDate: true,
               ),
             ),
-          TextFormField(
+          PackageAmountField(
             controller: state._sharedPackageAmount,
-            style: kInputTextStyle,
+            textStyle: kInputTextStyle,
+            accent: accent,
             decoration: _fieldDeco(
               'Package Amount',
               icon: Icons.currency_rupee,
               accent: accent,
             ),
-            keyboardType: TextInputType.number,
           ),
           const SizedBox(height: 12),
           TextFormField(

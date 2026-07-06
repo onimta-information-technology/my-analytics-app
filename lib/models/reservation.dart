@@ -30,6 +30,9 @@ class Reservation {
   String? gRating;
   String? reservationnewnumber;
 
+  /// Package amount as stored in the DB (varchar), e.g. `"IND 10,000"`.
+  String? packageAmount;
+
   /// All guests attached to this reservation. A single reservation number can
   /// carry multiple guests; the reservations list shows one card while the
   /// detail view can expand to show every guest.
@@ -64,6 +67,7 @@ class Reservation {
     required this.returnStatus,
     required this.gRating,
     this.reservationnewnumber,
+    this.packageAmount,
     this.guests = const [],
     this.passportImages = const [],
   });
@@ -122,6 +126,7 @@ class Reservation {
       returnStatus: json['ReturnStatus'] as String? ?? '',
       gRating: json['G_Rating'] as String? ?? '',
       reservationnewnumber: json['Manual_Reserv_No'] as String? ?? '',
+      packageAmount: json['Package_Amount']?.toString(),
     );
   }
 
@@ -249,6 +254,7 @@ class Reservation {
       returnStatus: '',
       gRating: null,
       reservationnewnumber: json['manual_reserv_no'] as String? ?? '',
+      packageAmount: json['package_amount']?.toString(),
       guests: parseGuests(),
       passportImages: parsePassportImages(json['passport_images']),
     );
@@ -283,6 +289,7 @@ class Reservation {
       'ReturnStatus': returnStatus,
       'G_Rating': gRating,
       'Manual_Reserv_No': reservationnewnumber,
+      'Package_Amount': packageAmount,
     };
   }
 

@@ -57,6 +57,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
       TextEditingController();
   final TextEditingController _remarksController = TextEditingController();
   final TextEditingController _reservationnewnumberController = TextEditingController();
+  final TextEditingController _packageAmountController = TextEditingController();
   String _airTicketRequisition = "No";
   bool _isLoading = false;
   bool _isGuestLoading = false;
@@ -113,6 +114,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
     _memberNameController.dispose();
     _arrivalDateController.dispose();
     _departureDateController.dispose();
+    _packageAmountController.dispose();
     super.dispose();
   }
 
@@ -741,7 +743,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
                   if (guest.mid.isNotEmpty) ...[
                     const SizedBox(height: 6),
                     Text(
-                      "BM: ${guest.mid}",
+                      "${guest.mid}",
                       style: TextStyle(fontSize: fontSettings.fontSize - 3),
                     ),
                   ],
@@ -1154,6 +1156,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
       _airTicketRequisition = hasAirTickets ? "Yes" : "No";
       _remarksController.text = selectedReservation.remarks;
       _reservationnewnumberController.text = selectedReservation.reservationnewnumber!;
+      _packageAmountController.text = selectedReservation.packageAmount ?? '';
     }
 
     final fontSettings = ref.watch(fontSettingsProvider);
@@ -1237,43 +1240,43 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
             ),
           ],
         ),
-        actions: [
-          PopScope(
-            onPopInvokedWithResult: (bool didPop, dynamic result) {
-              ref
-                  .read(selectedReservationProvider.notifier)
-                  .clearSelectedReservation();
-              ref.read(selectedHotelProvider.notifier).setHotels([]);
-              ref.read(selectedFlightProvider.notifier).setFlights([]);
-            },
-            child: Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: (selectedReservation?.requestStatus == 'Pending')
-                  ? IconButton(
-                      onPressed: () async {
-                        Future<void> navigateToEdit() async {
-                          final result = await context.push(
-                            "/reservationMain/reservations/new-reservation",
-                          );
-                          if (result == true && mounted) {
-                            Navigator.of(context).pop(true);
-                          }
-                        }
+        // actions: [
+        //   PopScope(
+        //     onPopInvokedWithResult: (bool didPop, dynamic result) {
+        //       ref
+        //           .read(selectedReservationProvider.notifier)
+        //           .clearSelectedReservation();
+        //       ref.read(selectedHotelProvider.notifier).setHotels([]);
+        //       ref.read(selectedFlightProvider.notifier).setFlights([]);
+        //     },
+        //     child: Padding(
+        //       padding: const EdgeInsets.only(right: 8.0),
+        //       child: (selectedReservation?.requestStatus == 'Pending')
+        //           ? IconButton(
+        //               onPressed: () async {
+        //                 Future<void> navigateToEdit() async {
+        //                   final result = await context.push(
+        //                     "/reservationMain/reservations/new-reservation",
+        //                   );
+        //                   if (result == true && mounted) {
+        //                     Navigator.of(context).pop(true);
+        //                   }
+        //                 }
 
-                        if (_memberIdController.text.isNotEmpty &&
-                            !_guestDataLoaded) {
-                          await _loadGuestDataForView();
-                          await navigateToEdit();
-                        } else {
-                          await navigateToEdit();
-                        }
-                      },
-                      icon: const Icon(Icons.mode_edit_outline_sharp),
-                    )
-                  : const SizedBox.shrink(),
-            ),
-          ),
-        ],
+        //                 if (_memberIdController.text.isNotEmpty &&
+        //                     !_guestDataLoaded) {
+        //                   await _loadGuestDataForView();
+        //                   await navigateToEdit();
+        //                 } else {
+        //                   await navigateToEdit();
+        //                 }
+        //               },
+        //               icon: const Icon(Icons.mode_edit_outline_sharp),
+        //             )
+        //           : const SizedBox.shrink(),
+        //     ),
+        //   ),
+        // ],
       ),
       body: Stack(
         children: [
@@ -1385,7 +1388,28 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
                     ),
                   ),
                   const SizedBox(height: 10.0),
-
+// const SizedBox(height: 16.0),
+TextFormField(
+    controller: _packageAmountController,
+    readOnly: true,
+    style: TextStyle(
+      fontSize: fontSettings.fontSize,
+      fontWeight: fontSettings.fontWeight,
+    ),
+    decoration: InputDecoration(
+      labelText: "Package Amount",
+      labelStyle: TextStyle(
+        fontSize: fontSettings.fontSize,
+        fontWeight: fontSettings.fontWeight,
+      ),
+      border: const OutlineInputBorder(),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 12.0,
+        vertical: -5.0,
+      ),
+    ),
+),
+      const SizedBox(height: 10.0),
                   // ── Guest card ───────────────────────────────────────
                   GuestDisplayCardSpecialGiftview(
                     memberIdText: _memberIdController.text,
@@ -1737,6 +1761,7 @@ TextFormField(
       ),
     ),
 ),
+
 const SizedBox(height: 10.0),
 if (selectedReservation?.requestStatus == 'Approved')
   ReservationPdfButton(

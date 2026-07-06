@@ -381,14 +381,14 @@ final filteredReservations = (snapshot.data ?? []).where((reservation) {
                       horizontal: 16,
                       vertical: 12,
                     ),
-                    title: Text(
-                      'Reservation: ${reservation.reservNo}',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: fontSettings.fontSize,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    // title: Text(
+                    //   'Reservation: ${reservation.reservNo}',
+                    //   style: TextStyle(
+                    //     color: Colors.black,
+                    //     fontSize: fontSettings.fontSize,
+                    //     fontWeight: FontWeight.bold,
+                    //   ),
+                    // ),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

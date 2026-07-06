@@ -1352,6 +1352,15 @@ Remarks              : ${m['remarks']}''';
           }));
     }
 
+    // Pull the first non-empty remark from a member's hotel entries.
+    String remarksForMember(Map<String, dynamic> m) {
+      final hotels = (m['hotels'] as List<_HotelEntry>?) ?? [];
+      for (final h in hotels) {
+        if (h.remarks.trim().isNotEmpty) return h.remarks.trim();
+      }
+      return '';
+    }
+
     final guests = allMembers
         .map((m) => {
               'BMNumber': m['memberId'],
@@ -1359,7 +1368,7 @@ Remarks              : ${m['remarks']}''';
               'ArrivalDate': null,
               'DepartureDate': null,
               'HasAirTicketReservation': false,
-              'Remarks': '',
+              'Remarks': remarksForMember(m),
             })
         .toList();
 
@@ -1385,7 +1394,7 @@ Remarks              : ${m['remarks']}''';
               .inDays
           : 0,
       'has_air_ticket_reservation': false,
-      'remarks': '',
+      'remarks': remarksForMember(primary),
       'manual_reserv_no': primary['reservationNo'] ?? '',
       'package_amount':
           double.tryParse(primary['packageAmount'] as String? ?? '0') ?? 0.0,

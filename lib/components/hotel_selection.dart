@@ -4,6 +4,7 @@ import 'package:ballys_reservation_app/models/reservation/hotel_cost_response.da
 import 'package:ballys_reservation_app/models/reservation/hotel_desc.dart';
 import 'package:ballys_reservation_app/providers/hotels_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_hotel_provider.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -37,10 +38,28 @@ class _HotelAndRoomSelectionBottomSheetState
 
   final ValueNotifier<String> costNotifier = ValueNotifier<String>("0");
 
+  /// Bellagio (bty.world) swaps the "Payment By" options to the Beyond
+  /// Borders wording.
+  bool _isBellagio = false;
+
   @override
   void initState() {
     super.initState();
     hotelList = List.from(ref.read(selectedHotelProvider));
+    _loadBrand();
+  }
+
+  Future<void> _loadBrand() async {
+    final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+    if (!mounted) return;
+    setState(() {
+      _isBellagio = apiUrl.contains('bty.world');
+      // Bellagio uses "N/A" as the payment default instead of "NA".
+      if (_isBellagio &&
+          (selectedByPaymnet.isEmpty || selectedByPaymnet == 'NA')) {
+        selectedByPaymnet = 'N/A';
+      }
+    });
   }
 
   @override
@@ -429,7 +448,7 @@ String selectedByPaymnet = 'NA';
       editMode = false;
       editIndex = null;
       selectedEcLcoFacility = 'NA';
-      selectedByPaymnet = 'NA';
+      selectedByPaymnet = _isBellagio ? 'N/A' : 'NA';
 
       _dateRangeError = false;
       _hotelError = false;
@@ -862,14 +881,21 @@ DropdownButtonFormField<String>(
     color: Colors.black,
   ),
   icon: const Icon(Icons.arrow_drop_down, size: 30),
-  items: const [
-    DropdownMenuItem(value: 'NA',        child: Text('NA')),
-    DropdownMenuItem(value: 'By Guest',       child: Text('By Guest')),
-    DropdownMenuItem(value: 'By Hamoos ',       child: Text('By Hamoos')),
-    DropdownMenuItem(value: 'By Guest & Hamoos', child: Text('By Guest & Hamoos')),
-  ],
+  items: _isBellagio
+      ? const [
+          DropdownMenuItem(value: 'N/A',               child: Text('N/A')),
+          DropdownMenuItem(value: 'By Guest',          child: Text('By Guest')),
+          DropdownMenuItem(value: 'By Beyond Borders', child: Text('By Beyond Borders')),
+          DropdownMenuItem(value: 'By Guest & Beyond', child: Text('By Guest & Beyond')),
+        ]
+      : const [
+          DropdownMenuItem(value: 'NA',                child: Text('NA')),
+          DropdownMenuItem(value: 'By Guest',          child: Text('By Guest')),
+          DropdownMenuItem(value: 'By Hamoos ',        child: Text('By Hamoos')),
+          DropdownMenuItem(value: 'By Guest & Hamoos', child: Text('By Guest & Hamoos')),
+        ],
   onChanged: (value) {
-    setState(() => selectedByPaymnet = value ?? 'NA');
+    setState(() => selectedByPaymnet = value ?? (_isBellagio ? 'N/A' : 'NA'));
   },
 ),
 const SizedBox(height: 16),

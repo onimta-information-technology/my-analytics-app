@@ -30,6 +30,7 @@ import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/data/repositories/contact_person_repository.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
+import 'package:ballys_reservation_app/utils/amount_util.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 
 enum _Section { airTicket, hotel }
@@ -226,6 +227,9 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
   List<String> _hamoueContactPersons = [];
   String? _a_hamoueContactPerson;
 
+  /// Bellagio (bty.world) hides the Hamoue contact person dropdown.
+  bool _isBellagio = false;
+
   // ── Air ticket — passport bio data page uploads (NEW) ──────────────────────
   List<PassportFile> _a_passportFiles = [];
   Key _a_passportUploadKey = UniqueKey();
@@ -339,6 +343,18 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
 
   Future<void> _loadContactPersons() async {
     try {
+      final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+      if (mounted) {
+        setState(() {
+          _isBellagio = apiUrl.contains('bty.world');
+          // Bellagio uses "N/A" as the payment default instead of "NA".
+          if (_isBellagio &&
+              (_h_paymentBy.text.isEmpty || _h_paymentBy.text == 'NA')) {
+            _h_paymentBy.text = 'N/A';
+          }
+        });
+      }
+
       final repo = ContactPersonRepository(ApiService(const FlutterSecureStorage()));
       final persons = await repo.getContactPersons();
       if (mounted) setState(() => _hamoueContactPersons = persons);
@@ -441,7 +457,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     _h_noOfRooms.text = '1';
     _h_noOfPax.text = '1';
     _h_mealPlan.clear();
-    _h_paymentBy.text = 'NA';
+    _h_paymentBy.text = _isBellagio ? 'N/A' : 'NA';
     _h_remarks.clear();
     _h_marketingPerson.clear();
     _h_approvedBy.clear();
@@ -582,7 +598,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _h_noOfRooms.text = '1';
       _h_noOfPax.text = '1';
       _h_mealPlan.clear();
-      _h_paymentBy.text = 'NA';
+      _h_paymentBy.text = _isBellagio ? 'N/A' : 'NA';
       _h_remarks.clear();
       _h_marketingPerson.clear();
       _h_approvedBy.clear();
@@ -1397,7 +1413,7 @@ Remarks              : ${m['remarks']}''';
       'has_air_ticket_reservation': false,
       'remarks': remarksForMember(primary),
       'manual_reserv_no': '',
-      'package_amount': primary['packageAmount'] as String? ?? '',
+      'package_amount': packageAmountToInt(primary['packageAmount'] as String?),
       'selected_marketing_person': '',
       'sales_code': salesCode,
       'user_name': userName,
@@ -1494,7 +1510,7 @@ print(" rrr : $airTicketDetails");
       'has_air_ticket_reservation': true,
       'remarks': primary['remarks'] ?? '',
       'manual_reserv_no': '',
-      'package_amount': primary['packageAmount'] as String? ?? '',
+      'package_amount': packageAmountToInt(primary['packageAmount'] as String?),
       'selected_marketing_person': '',
       'sales_code': salesCode,
       'user_name': userName,
@@ -2834,14 +2850,22 @@ class _HotelForm extends StatelessWidget {
             label: 'Payment By',
             accent: accent,
             child: _ChipSelector(
-              options: const [
-                'NA',
-                'By Guest',
-                'By Hamoos',
-                'By Guest & Hamoos',
-              ],
+              key: ValueKey('payment_by_${state._isBellagio}'),
+              options: state._isBellagio
+                  ? const [
+                      'N/A',
+                      'By Guest',
+                      'By Beyond Borders',
+                      'By Guest & Beyond',
+                    ]
+                  : const [
+                      'NA',
+                      'By Guest',
+                      'By Hamoos',
+                      'By Guest & Hamoos',
+                    ],
               selected: state._h_paymentBy.text.isEmpty
-                  ? 'NA'
+                  ? (state._isBellagio ? 'N/A' : 'NA')
                   : state._h_paymentBy.text,
               accent: accent,
               onChanged: (v) =>
@@ -3277,21 +3301,23 @@ class _AirForm extends StatelessWidget {
           const SizedBox(height: 12),
 
           // ── Hamoue contact person (NEW, hardcoded test values) ──────────────
-          DropdownButtonFormField<String>(
-            value: state._a_hamoueContactPerson,
-            style: kInputTextStyle,
-            decoration: _fieldDeco(
-              'Hamoue Contact Person',
-              icon: Icons.support_agent_rounded,
-              accent: accent,
+          if (!state._isBellagio) ...[
+            DropdownButtonFormField<String>(
+              value: state._a_hamoueContactPerson,
+              style: kInputTextStyle,
+              decoration: _fieldDeco(
+                'Hamoue Contact Person',
+                icon: Icons.support_agent_rounded,
+                accent: accent,
+              ),
+              items: state._hamoueContactPersons
+                  .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                  .toList(),
+              onChanged: (v) =>
+                  state.setState(() => state._a_hamoueContactPerson = v),
             ),
-            items: state._hamoueContactPersons
-                .map((p) => DropdownMenuItem(value: p, child: Text(p)))
-                .toList(),
-            onChanged: (v) =>
-                state.setState(() => state._a_hamoueContactPerson = v),
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
+          ],
 
           // ── Passport bio data page upload (NEW) ──────────────────────────────
           Container(
@@ -3430,6 +3456,7 @@ class _ChipSelector extends StatefulWidget {
   final Color accent;
   final ValueChanged<String> onChanged;
   const _ChipSelector({
+    super.key,
     required this.options,
     required this.selected,
     required this.accent,

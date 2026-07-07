@@ -6,6 +6,7 @@ import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/airport_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/contact_person_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:ballys_reservation_app/models/airport_search_response.dart';
 import 'package:ballys_reservation_app/models/reservation/airport_cost_response.dart';
@@ -63,15 +64,24 @@ class _AirTicketsSelectionScreenState
   List<String> _contactPersons = [];
   List<PassportFile> _passportFiles = [];
 
+  /// Bellagio (bty.world) hides the Hamoos contact person dropdown.
+  bool _isBellagio = false;
+
   @override
   void initState() {
     super.initState();
     flightList = List.from(ref.read(selectedFlightProvider));
     _passportFiles = List.from(ref.read(selectedPassportProvider));
     _getAirports();
+    _loadBrand();
     _loadContactPersons();
     _arrivalDate = widget.arrivalDate;
     _departureDate = widget.departureDate;
+  }
+
+  Future<void> _loadBrand() async {
+    final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+    if (mounted) setState(() => _isBellagio = apiUrl.contains('bty.world'));
   }
 
   Future<void> _loadContactPersons() async {
@@ -941,6 +951,7 @@ String? _selectedContactPerson;
 //   ),
 // ),
 // const SizedBox(height: 5),
+if (!_isBellagio)
 DropdownSearch<String>(
   items: (filter, infiniteScrollProps) => _contactPersons
       .where((item) => item.toLowerCase().contains(filter.toLowerCase()))

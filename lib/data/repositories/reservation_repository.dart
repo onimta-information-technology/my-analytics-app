@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/reservation.dart';
+import 'package:ballys_reservation_app/utils/amount_util.dart';
 import 'package:ballys_reservation_app/models/reservation/new_reservation.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -81,12 +82,19 @@ class ReservationRepository {
   }
 
   /// Fetches the predefined package amounts (e.g. `"IND 10,000"`,
-  /// `"USD 25,000"`) from `GetPackageAmounts_MyAnalytics`. Returns an empty
-  /// list when the request fails or the payload is unexpected, so the caller
-  /// can fall back to free-text entry.
+  /// `"USD 25,000"`). Returns an empty list when the request fails or the
+  /// payload is unexpected, so the caller can fall back to free-text entry.
+  ///
+  /// The endpoint differs per brand: Bellagio (bty.world) exposes it as
+  /// `MyAnalytics_GetPackageAmounts`, while Ballys uses the reversed
+  /// `GetPackageAmounts_MyAnalytics`.
   Future<List<String>> getPackageAmounts() async {
     try {
-      final response = await apiService.get('GetPackageAmounts_MyAnalytics');
+      final baseUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+      final endpoint = baseUrl.contains('bty.world')
+          ? 'MyAnalytics_GetPackageAmounts'
+          : 'GetPackageAmounts_MyAnalytics';
+      final response = await apiService.get(endpoint);
       final status = response['Status'] as bool? ?? false;
       final data = response['Data'];
       if (status && data is List) {
@@ -119,7 +127,7 @@ print("passport_images: ${newReservation.passportImages}");
       'has_air_ticket_reservation': newReservation.hasAirTicketReservation == '1',
       'remarks': newReservation.remarks,
       'manual_reserv_no': "",
-      'package_amount': newReservation.packageAmount ?? '',
+      'package_amount': packageAmountToInt(newReservation.packageAmount),
       'sales_code': salesCode,
       'user_name': userName,
       'device_id': deviceId,
@@ -160,7 +168,7 @@ print("response: $response");
       'remarks': newReservation.remarks,
       'reservation_no': newReservation.reservationNo,
       'manual_reserv_no': newReservation.reservationnewnumber,
-      'package_amount': newReservation.packageAmount ?? '',
+      'package_amount': packageAmountToInt(newReservation.packageAmount),
       'selected_marketing_person': newReservation.selectedMarketingPerson,
       'sales_code': salesCode,
       'user_name': userName,

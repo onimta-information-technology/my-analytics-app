@@ -17,13 +17,30 @@ class Airport {
 
   factory Airport.fromJson(Map<String, dynamic> json) {
     return Airport(
-      airportCode: json['AirportCode'] as String?,
-      cityName: json['Cityname'] as String?,
-      airportName: json['AirportName'] as String?,
-      country: json['Country'] as String?,
-      countryAbbr: json['CountryAbbr'] as String?,
-      worldAreaCode: (json['WorldAreaCode'] as num?)?.toDouble(),
+      airportCode: _asString(json['AirportCode']),
+      cityName: _asString(json['Cityname']),
+      airportName: _asString(json['AirportName']),
+      country: _asString(json['Country']),
+      countryAbbr: _asString(json['CountryAbbr']),
+      worldAreaCode: _asDouble(json['WorldAreaCode']),
     );
+  }
+
+  /// Coerces any JSON value to a nullable String without throwing on
+  /// unexpected types (some rows in the airport feed send numbers/nulls).
+  static String? _asString(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    return value.toString();
+  }
+
+  /// Coerces any JSON value to a nullable double, tolerating numbers sent as
+  /// strings. Returns null instead of throwing on unparseable values.
+  static double? _asDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
   }
 
   Map<String, dynamic> toJson() {

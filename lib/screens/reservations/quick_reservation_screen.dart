@@ -2856,7 +2856,7 @@ class _HotelForm extends StatelessWidget {
                       'N/A',
                       'By Guest',
                       'By Beyond Borders',
-                      'By Guest & Beyond',
+                      'By Guest & Beyond Borders',
                     ]
                   : const [
                       'NA',

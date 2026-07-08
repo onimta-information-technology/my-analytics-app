@@ -886,7 +886,7 @@ DropdownButtonFormField<String>(
           DropdownMenuItem(value: 'N/A',               child: Text('N/A')),
           DropdownMenuItem(value: 'By Guest',          child: Text('By Guest')),
           DropdownMenuItem(value: 'By Beyond Borders', child: Text('By Beyond Borders')),
-          DropdownMenuItem(value: 'By Guest & Beyond', child: Text('By Guest & Beyond')),
+          DropdownMenuItem(value: 'By Guest & Beyond', child: Text('By Guest & Beyond Borders')),
         ]
       : const [
           DropdownMenuItem(value: 'NA',                child: Text('NA')),

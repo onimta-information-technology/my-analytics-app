@@ -46,10 +46,13 @@ print('Airport Response: $response');
 
       if (tableData.length > 0) {
         for (var json in tableData) {
-          Airport airportResponse = Airport.fromJson(json);
-          airports.add(airportResponse);
+          try {
+            airports.add(Airport.fromJson(json as Map<String, dynamic>));
+          } catch (e) {
+            // Skip malformed rows so one bad entry can't drop the whole list.
+            print('Skipping malformed airport row: $e -> $json');
+          }
         }
-      
 
         return airports;
       } else {

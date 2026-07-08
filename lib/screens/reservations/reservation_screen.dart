@@ -3,6 +3,8 @@ import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/models/reservation.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/reservation_provider.dart';
+import 'package:ballys_reservation_app/providers/selected_flight_provider.dart';
+import 'package:ballys_reservation_app/providers/selected_hotel_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_reservation_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -229,6 +231,15 @@ title: _isSearching
             IconButton(
               icon: const Icon(Icons.add_rounded, size: 35),
               onPressed: () async {
+                // Always start a fresh "New Reservation" — clear any
+                // reservation/hotels/flights left selected by the view screen
+                // so NewReservationScreen doesn't open in Update mode or show
+                // the previously-viewed hotel & air-ticket data.
+                ref
+                    .read(selectedReservationProvider.notifier)
+                    .clearSelectedReservation();
+                ref.read(selectedHotelProvider.notifier).setHotels([]);
+                ref.read(selectedFlightProvider.notifier).setFlights([]);
                 final result = await context.push(
                   '/reservationMain/reservations/new-reservation',
                 );

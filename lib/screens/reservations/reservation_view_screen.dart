@@ -1174,6 +1174,14 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
+            // Clear the selected reservation + its hotels/flights so the next
+            // "New Reservation" doesn't inherit them (Update mode / stale
+            // hotel & air-ticket data).
+            ref
+                .read(selectedReservationProvider.notifier)
+                .clearSelectedReservation();
+            ref.read(selectedHotelProvider.notifier).setHotels([]);
+            ref.read(selectedFlightProvider.notifier).setFlights([]);
             if (context.canPop()) {
               context.pop();
             } else {

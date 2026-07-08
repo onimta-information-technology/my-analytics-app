@@ -1583,6 +1583,32 @@ TextFormField(
                                           fontWeight: fontSettings.fontWeight,
                                         ),
                                       ),
+                                      if (hotel.ecLcoFacility != null &&
+                                          hotel.ecLcoFacility!
+                                              .trim()
+                                              .isNotEmpty) ...[
+                                        const SizedBox(height: 5),
+                                        Text(
+                                          "EC/LCO Facility: ${hotel.ecLcoFacility}",
+                                          style: TextStyle(
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
+                                      ],
+                                      if (hotel.paymentBy != null &&
+                                          hotel.paymentBy!
+                                              .trim()
+                                              .isNotEmpty) ...[
+                                        const SizedBox(height: 5),
+                                        Text(
+                                          "Payment By: ${hotel.paymentBy}",
+                                          style: TextStyle(
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
+                                      ],
                                     ],
                                   ),
                                 ),

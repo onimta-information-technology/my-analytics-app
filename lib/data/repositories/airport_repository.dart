@@ -36,7 +36,7 @@ class AirportRepository {
       "SpName": spName,
       "con": "1"
     });
-
+print('Airport Response: $response');
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List &&
         response['CommonResult']['Table'].isNotEmpty) {

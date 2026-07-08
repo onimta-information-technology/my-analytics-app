@@ -130,6 +130,41 @@ class FlightCard extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    if (flight.contactPerson != null &&
+                        (flight.contactPerson as String).trim().isNotEmpty) ...[
+                      const SizedBox(height: 5),
+                      Text(
+                        "Contact Person: ${flight.contactPerson}",
+                        style: const TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 5),
+                    Text(
+                      "Visa: ${flight.visa == true ? 'Yes' : 'No'}",
+                      style: const TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      "Airport Transportation: ${flight.airportTransportation == 1 ? 'Yes' : 'No'}",
+                      style: const TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      "Silk Route: ${flight.silkRoute == 1 ? 'Yes' : 'No'}",
+                      style: const TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
               ),

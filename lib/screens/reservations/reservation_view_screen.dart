@@ -744,26 +744,26 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
                     const SizedBox(height: 6),
                     Text(
                       "${guest.mid}",
-                      style: TextStyle(fontSize: fontSettings.fontSize - 3),
+                      style: TextStyle(fontSize: fontSettings.fontSize,fontWeight: fontSettings.fontWeight),
                     ),
                   ],
                   if (dateRange.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(
                       dateRange,
-                      style: TextStyle(fontSize: fontSettings.fontSize - 3),
+                      style: TextStyle(fontSize: fontSettings.fontSize,fontWeight: fontSettings.fontWeight),
                     ),
                   ],
                   const SizedBox(height: 2),
                   Text(
-                    "${guest.hotels.length} room(s) · ${guest.flights.length} ticket(s)",
-                    style: TextStyle(fontSize: fontSettings.fontSize - 3),
+                    "${guest.hotels.length} rooms · ${guest.flights.length} tickets",
+                    style: TextStyle(fontSize: fontSettings.fontSize,fontWeight: fontSettings.fontWeight),
                   ),
                   if (guest.remarks.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(
                       "Remarks: ${guest.remarks}",
-                      style: TextStyle(fontSize: fontSettings.fontSize - 3),
+                      style: TextStyle(fontSize: fontSettings.fontSize,fontWeight: fontSettings.fontWeight),
                     ),
                   ],
                   _buildPassportThumbnails(

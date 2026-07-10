@@ -744,6 +744,10 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> with Con
   late List<Guest> _filtered;
   final _searchCtrl = TextEditingController();
 
+  // ── Profile access gating (mirrors MarketingDetailPage) ──
+  bool? _memProfSH;
+  String? _userMarketingCode;
+
   // ── Rating mode (mirrors ProfileScreen + MemberVisits) ──
   bool _useBadgeForRating = false;
 
@@ -783,6 +787,7 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> with Con
     _filtered = widget.guests;
     _searchCtrl.addListener(_onSearch);
     _loadRatingMode();
+    _loadAccessSettings();
   }
 
   Future<void> _loadRatingMode() async {
@@ -792,6 +797,35 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> with Con
         _useBadgeForRating = apiUrl.contains('bty.world');
       });
     }
+  }
+
+  Future<void> _loadAccessSettings() async {
+    final memProfSH = await StorageUtil.getMemProfSH();
+    final userMarketingCode = await StorageUtil.getMarketingCode();
+    if (mounted) {
+      setState(() {
+        _memProfSH = memProfSH;
+        _userMarketingCode = userMarketingCode;
+      });
+    }
+  }
+
+  // When memProfSH is null or true, every member is accessible.
+  // When memProfSH is false, only members in the logged-in user's
+  // marketing group can be opened.
+  
+  bool _hasPermissionToViewMember(Guest guest) {
+    if (_memProfSH == null || _memProfSH == true) {
+      return true;
+    }
+   
+    if (_memProfSH == false) {
+      return _userMarketingCode != null &&
+          (guest.mGroup ?? '').isNotEmpty &&
+          _userMarketingCode == guest.mGroup;
+    }
+
+    return true;
   }
 
   Color _getRatingColor(String? rating) {
@@ -944,7 +978,8 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> with Con
                       child: InkWell(
                         borderRadius: BorderRadius.circular(10),
                         onTap: () {
-                          if (widget.disableNavigation) {
+                          if (widget.disableNavigation ||
+                              !_hasPermissionToViewMember(guest)) {
                             _showAccessDeniedDialog();
                             return;
                           }

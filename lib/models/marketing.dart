@@ -236,6 +236,10 @@ class MarketingDetailedData {
   final double winLost;
   final String sm;
   final String smName;
+  // NEW columns — not present on every member row, so both are nullable and
+  // parsed defensively. `pkgStatus == 'Y'` drives the package badge in the UI.
+  final double? gActDrop;
+  final String? pkgStatus;
 
   MarketingDetailedData({
     required this.memId,
@@ -248,7 +252,12 @@ class MarketingDetailedData {
     required this.winLost,
     required this.sm,
     required this.smName,
+    this.gActDrop,
+    this.pkgStatus,
   });
+
+  // True when the member has an active package (PKG_Status == "Y").
+  bool get hasPackage => (pkgStatus ?? '').trim().toUpperCase() == 'Y';
 
   factory MarketingDetailedData.fromJson(Map<String, dynamic> json) {
     return MarketingDetailedData(
@@ -262,6 +271,13 @@ class MarketingDetailedData {
       winLost: (json['WinLost'] as num?)?.toDouble() ?? 0.0,
       sm: json['SM']?.toString() ?? '',
       smName: json['SM_Name']?.toString() ?? '',
+      // Absent on members without a package — leave null when the key is missing.
+      gActDrop: json.containsKey('G_ActDrop')
+          ? _toDouble(json['G_ActDrop'])
+          : null,
+      pkgStatus: json.containsKey('PKG_Status')
+          ? _toStr(json['PKG_Status'])
+          : null,
     );
   }
 
@@ -277,11 +293,13 @@ class MarketingDetailedData {
       'WinLost': winLost,
       'SM': sm,
       'SM_Name': smName,
+      if (gActDrop != null) 'G_ActDrop': gActDrop,
+      if (pkgStatus != null) 'PKG_Status': pkgStatus,
     };
   }
 
   @override
   String toString() {
-    return 'MarketingDetailedData{memId: $memId, mName: $mName, mDrop: $mDrop, cashOut: $cashOut, comm: $comm, paidComm: $paidComm, balanceComm: $balanceComm, winLost: $winLost, sm: $sm, smName: $smName}';
+    return 'MarketingDetailedData{memId: $memId, mName: $mName, mDrop: $mDrop, cashOut: $cashOut, comm: $comm, paidComm: $paidComm, balanceComm: $balanceComm, winLost: $winLost, sm: $sm, smName: $smName, gActDrop: $gActDrop, pkgStatus: $pkgStatus}';
   }
 }

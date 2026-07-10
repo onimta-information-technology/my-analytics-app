@@ -379,6 +379,15 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> with 
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
+                  // Package badge, pinned to the top-right of the card.
+                  if (member.hasPackage)
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: _buildPackageBadge(),
+                      ),
+                    ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -508,6 +517,12 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> with 
               child: Column(
                 children: [
                   const Divider(height: 1),
+                  if (member.gActDrop != null)
+                    _buildDetailItem(
+                      'Actual Drop',
+                      _formatCurrency(member.gActDrop!),
+                      fontSettings,
+                    ),
                   _buildDetailItem(
                     'MDrop',
                     _formatCurrency(member.mDrop),
@@ -540,6 +555,34 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> with 
                 ],
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  // Small pill shown next to the member name when PKG_Status == "Y".
+  Widget _buildPackageBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.green.shade400),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.card_giftcard, size: 13, color: Colors.green.shade700),
+          const SizedBox(width: 4),
+          Text(
+            'PACKAGE',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: const Color.fromARGB(255, 15, 11, 52),
+              letterSpacing: 0.3,
+            ),
+          ),
         ],
       ),
     );

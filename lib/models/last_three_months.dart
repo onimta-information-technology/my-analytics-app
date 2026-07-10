@@ -72,6 +72,11 @@ class LastThreeMonthsDetailedData {
   /// (show a "NEW" badge on the detail page); 0 is an existing member.
   final int gStatus;
 
+  /// NEW columns — not present on every member row, so both are nullable and
+  /// parsed defensively. `pkgStatus == 'Y'` drives the package badge in the UI.
+  final double? gActDrop;
+  final String? pkgStatus;
+
   const LastThreeMonthsDetailedData({
     required this.memId,
     required this.mDrop,
@@ -84,12 +89,17 @@ class LastThreeMonthsDetailedData {
     required this.balanceComm,
     required this.winLost,
     this.gStatus = 0,
+    this.gActDrop,
+    this.pkgStatus,
   });
 
   bool get isPositive => winLost >= 0;
 
   /// True when this member is flagged as a new member (`G_Status == 1`).
   bool get isNewMember => gStatus == 1;
+
+  /// True when the member has an active package (`PKG_Status == "Y"`).
+  bool get hasPackage => (pkgStatus ?? '').trim().toUpperCase() == 'Y';
 
   factory LastThreeMonthsDetailedData.fromJson(Map<String, dynamic> json) {
     return LastThreeMonthsDetailedData(
@@ -104,6 +114,11 @@ class LastThreeMonthsDetailedData {
       balanceComm: _toDouble(json['BalanceComm']),
       winLost: _toDouble(json['WinLost']),
       gStatus: _toInt(json['G_Status']),
+      // Absent on members without a package — leave null when the key is missing.
+      gActDrop:
+          json.containsKey('G_ActDrop') ? _toDouble(json['G_ActDrop']) : null,
+      pkgStatus:
+          json.containsKey('PKG_Status') ? json['PKG_Status']?.toString() : null,
     );
   }
 

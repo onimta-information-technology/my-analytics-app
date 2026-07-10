@@ -436,6 +436,34 @@ class _LastThreeMonthsDetailPageState
     );
   }
 
+  // Package badge shown at the top-right of the card when PKG_Status == "Y".
+  Widget _buildPackageBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.green.shade400),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.card_giftcard, size: 13, color: Colors.green.shade700),
+          const SizedBox(width: 4),
+          Text(
+            'PACKAGE',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.green.shade700,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMemberCard(LastThreeMonthsDetailedData member, fontSettings) {
     final isExpanded = expandedCards.contains(member.memId);
     final isLoading = currentLoadingMember == member.memId;
@@ -462,6 +490,15 @@ class _LastThreeMonthsDetailPageState
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
+                  // Package badge, pinned to the top-right of the card.
+                  if (member.hasPackage)
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: _buildPackageBadge(),
+                      ),
+                    ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -593,6 +630,12 @@ class _LastThreeMonthsDetailPageState
               child: Column(
                 children: [
                   const Divider(height: 1),
+                  if (member.gActDrop != null)
+                    _buildDetailItem(
+                      'Actual Drop',
+                      _formatCurrency(member.gActDrop!),
+                      fontSettings,
+                    ),
                   _buildDetailItem(
                     'MDrop',
                     _formatCurrency(member.mDrop),

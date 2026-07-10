@@ -1093,18 +1093,63 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
+        backgroundColor: const Color(0xFFF4F5F7),
         appBar: AppBar(
-          backgroundColor: !_isEditMode ? Colors.white : Colors.green,
-          foregroundColor: !_isEditMode ? Colors.black : Colors.white,
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          elevation: 0.5,
+          surfaceTintColor: Colors.transparent,
+          shadowColor: Colors.black.withValues(alpha: 0.15),
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: !_isEditMode
+                    ? const [
+                        Constants.kPrimaryColor,
+                        Constants.kSecondaryColor,
+                      ]
+                    : const [
+                        Color(0xFF2E7D5B),
+                        Color(0xFF1B5E3F),
+                      ],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
+            ),
+          ),
           title: Text(
             !_isEditMode ? "New Reservation" : "Update Reservation",
             style: TextStyle(
               fontSize: 18 * (fontSettings.fontSize / 16),
-              fontWeight: fontSettings.fontWeight,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              letterSpacing: 0.3,
             ),
           ),
         ),
-        body: Form(
+        body: Theme(
+          data: Theme.of(context).copyWith(
+            inputDecorationTheme: InputDecorationTheme(
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFDADDE3)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFDADDE3)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                  color: Constants.kPrimaryColor,
+                  width: 1.6,
+                ),
+              ),
+            ),
+          ),
+          child: Form(
           key: _formKey,
           child: PopScope(
             onPopInvokedWithResult: (bool didPop, dynamic result) {
@@ -1140,7 +1185,10 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                                 fontSize: fontSettings.fontSize,
                                 fontWeight: fontSettings.fontWeight,
                               ),
-                              border: const OutlineInputBorder(),
+                              border: const OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(12)),
+                              ),
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 12.0,
                                 vertical: -5.0,
@@ -1244,8 +1292,14 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                               final i = mapEntry.key;
                               final g = mapEntry.value;
                               return Card(
-                                color: const Color.fromARGB(
-                                    255, 235, 245, 233),
+                                elevation: 0,
+                                color: const Color(0xFFEFF7F1),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  side: const BorderSide(
+                                    color: Color(0xFFCADFD1),
+                                  ),
+                                ),
                                 margin: const EdgeInsets.symmetric(
                                   horizontal: 3,
                                   vertical: 6,
@@ -1346,7 +1400,10 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                                           fontWeight:
                                               fontSettings.fontWeight,
                                         ),
-                                        border: const OutlineInputBorder(),
+                                        border: const OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(12)),
+                              ),
                                         contentPadding:
                                             const EdgeInsets.symmetric(
                                           horizontal: 12.0,
@@ -1368,7 +1425,10 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                                           fontWeight:
                                               fontSettings.fontWeight,
                                         ),
-                                        border: const OutlineInputBorder(),
+                                        border: const OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(12)),
+                              ),
                                         contentPadding:
                                             const EdgeInsets.symmetric(
                                           horizontal: 12.0,
@@ -1505,7 +1565,10 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                               fontSize: fontSettings.fontSize,
                               fontWeight: fontSettings.fontWeight,
                             ),
-                            border: const OutlineInputBorder(),
+                            border: const OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(12)),
+                            ),
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 12.0,
                               vertical: -5.0,
@@ -1566,7 +1629,10 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                               fontSize: fontSettings.fontSize,
                               fontWeight: fontSettings.fontWeight,
                             ),
-                            border: const OutlineInputBorder(),
+                            border: const OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(12)),
+                            ),
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 12.0,
                               vertical: -5.0,
@@ -1595,7 +1661,10 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                               fontSize: fontSettings.fontSize,
                               fontWeight: fontSettings.fontWeight,
                             ),
-                            border: const OutlineInputBorder(),
+                            border: const OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(12)),
+                            ),
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 12.0,
                               vertical: -5.0,
@@ -1633,7 +1702,10 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                               fontSize: fontSettings.fontSize,
                               fontWeight: fontSettings.fontWeight,
                             ),
-                            border: const OutlineInputBorder(),
+                            border: const OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(12)),
+                            ),
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 12.0,
                               vertical: -5.0,
@@ -1731,10 +1803,12 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                                             fontSettings.fontWeight,
                                       ),
                                       border: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12),
                                         borderSide: BorderSide(
                                           color: _airTicketError != null
                                               ? Colors.red
-                                              : Colors.grey,
+                                              : const Color(0xFFDADDE3),
                                         ),
                                       ),
                                       contentPadding:
@@ -1743,17 +1817,22 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                                         vertical: -5.0,
                                       ),
                                       enabledBorder: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12),
                                         borderSide: BorderSide(
                                           color: _airTicketError != null
                                               ? Colors.red
-                                              : Colors.grey,
+                                              : const Color(0xFFDADDE3),
                                         ),
                                       ),
                                       focusedBorder: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12),
                                         borderSide: BorderSide(
                                           color: _airTicketError != null
                                               ? Colors.red
-                                              : Colors.blue,
+                                              : Constants.kPrimaryColor,
+                                          width: 1.6,
                                         ),
                                       ),
                                       suffixIcon: IconButton(
@@ -1833,10 +1912,11 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                                       fontWeight: fontSettings.fontWeight,
                                     ),
                                     border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
                                       borderSide: BorderSide(
                                         color: _hotelError != null
                                             ? Colors.red
-                                            : Colors.grey,
+                                            : const Color(0xFFDADDE3),
                                       ),
                                     ),
                                     contentPadding:
@@ -1845,18 +1925,20 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                                       vertical: -5.0,
                                     ),
                                     enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
                                       borderSide: BorderSide(
                                         color: _hotelError != null
                                             ? Colors.red
-                                            : Colors.grey,
+                                            : const Color(0xFFDADDE3),
                                       ),
                                     ),
                                     focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
                                       borderSide: BorderSide(
                                         color: _hotelError != null
                                             ? Colors.red
-                                            : const Color.fromARGB(
-                                                255, 103, 4, 125),
+                                            : Constants.kPrimaryColor,
+                                        width: 1.6,
                                       ),
                                     ),
                                     suffixIcon: IconButton(
@@ -1906,8 +1988,15 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                                   return SizedBox(
                                     width: double.infinity,
                                     child: Card(
-                                      color: const Color.fromARGB(
-                                          255, 228, 224, 224),
+                                      elevation: 0,
+                                      color: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(14),
+                                        side: const BorderSide(
+                                          color: Color(0xFFE4D9C2),
+                                        ),
+                                      ),
                                       margin: const EdgeInsets.symmetric(
                                         horizontal: 3,
                                         vertical: 8,
@@ -1925,6 +2014,8 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                                                     fontSettings.fontSize *
                                                         1.125,
                                                 fontWeight: FontWeight.bold,
+                                                color:
+                                                    const Color(0xFF1F2430),
                                               ),
                                             ),
                                             const SizedBox(height: 8),
@@ -2094,6 +2185,8 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                                                 fontSize:
                                                     fontSettings.fontSize,
                                                 fontWeight: FontWeight.bold,
+                                                color: const Color(
+                                                    0xFFB07A1E),
                                               ),
                                             ),
                                           ],
@@ -2302,6 +2395,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
               ],
             ),
           ),
+        ),
         ),
       ),
     );

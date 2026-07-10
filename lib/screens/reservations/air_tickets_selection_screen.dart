@@ -67,6 +67,10 @@ class _AirTicketsSelectionScreenState
   /// Bellagio (bty.world) hides the Hamoos contact person dropdown.
   bool _isBellagio = false;
 
+  /// Ballys (non–bty.world) shows extra air-ticket options: Meal, Extra
+  /// Legroom Seat and Gold Route.
+  bool _isBallys = false;
+
   @override
   void initState() {
     super.initState();
@@ -81,7 +85,12 @@ class _AirTicketsSelectionScreenState
 
   Future<void> _loadBrand() async {
     final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
-    if (mounted) setState(() => _isBellagio = apiUrl.contains('bty.world'));
+    if (mounted) {
+      setState(() {
+        _isBellagio = apiUrl.contains('bty.world');
+        _isBallys = !_isBellagio;
+      });
+    }
   }
 
   Future<void> _loadContactPersons() async {
@@ -120,6 +129,9 @@ class _AirTicketsSelectionScreenState
   bool _isLoading = false;
   bool _isRoundTrip = false;
   bool _visa = false;
+  bool _meal = false;
+  bool _extraLegroomSeat = false;
+  bool _goldRoute = false;
   bool editMode = false;
   int? editIndex;
 
@@ -332,6 +344,9 @@ String? _selectedContactPerson;
       _airportTranspotation = flight.airportTransportation == 1 ? "Yes" : "No";
       _isRoundTrip = flight.isRoundTrip;
       _visa = flight.visa;
+      _meal = flight.meal;
+      _extraLegroomSeat = flight.extraLegroomSeat;
+      _goldRoute = flight.goldRoute;
       _selectedContactPerson = flight.contactPerson;
 
       _departureFromAirport = flight.airports!.departure?.dFrom.toAirport();
@@ -427,6 +442,9 @@ String? _selectedContactPerson;
       airLine: airLineNotifier.value,
       contactPerson: _selectedContactPerson,
       visa: _visa,
+      meal: _meal,
+      extraLegroomSeat: _extraLegroomSeat,
+      goldRoute: _goldRoute,
       airports: airport,
     );
 
@@ -445,6 +463,65 @@ String? _selectedContactPerson;
     ref.read(selectedFlightProvider.notifier).addFlights(flightList);
     ref.read(selectedPassportProvider.notifier).setFiles(_passportFiles);
     Navigator.pop(context);
+  }
+
+  /// Lays [options] out two per row, with 16px vertical gaps between rows. A
+  /// trailing odd option keeps the left column, leaving the right column empty.
+  List<Widget> _buildOptionGrid(List<Widget> options) {
+    final rows = <Widget>[];
+    for (var i = 0; i < options.length; i += 2) {
+      rows.add(Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: options[i]),
+          Expanded(
+            child:
+                i + 1 < options.length ? options[i + 1] : const SizedBox(),
+          ),
+        ],
+      ));
+      if (i + 2 < options.length) {
+        rows.add(const SizedBox(height: 16));
+      }
+    }
+    return rows;
+  }
+
+  /// A labelled Yes/No radio group, sized to fill its column so several can be
+  /// laid out side by side in a [Row].
+  Widget _buildYesNoOption({
+    required String label,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Row(
+          children: [
+            Radio<bool>(
+              value: true,
+              groupValue: value,
+              onChanged: (v) => onChanged(v!),
+            ),
+            const Text("Yes", style: TextStyle(fontSize: 16)),
+            Radio<bool>(
+              value: false,
+              groupValue: value,
+              onChanged: (v) => onChanged(v!),
+            ),
+            const Text("No", style: TextStyle(fontSize: 16)),
+          ],
+        ),
+      ],
+    );
   }
 
   void _clearSelectedCost() {
@@ -468,6 +545,9 @@ String? _selectedContactPerson;
       _airportTranspotation = "No";
       _isRoundTrip = false;
       _visa = false;
+      _meal = false;
+      _extraLegroomSeat = false;
+      _goldRoute = false;
       _selectedContactPerson = null;
 
       _departureFromAirport = null;
@@ -982,107 +1062,46 @@ DropdownSearch<String>(
   ),
 ),
                       const SizedBox(height: 16),
-                      const Align(
-                        alignment: Alignment.topLeft,
-                        child: Text(
-                          "Silk Route Facility",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      ..._buildOptionGrid([
+                        _buildYesNoOption(
+                          label: "Visa",
+                          value: _visa,
+                          onChanged: (value) => setState(() => _visa = value),
                         ),
-                      ),
-                      Row(
-                        children: [
-                          Radio<String>(
-                            value: "Yes",
-                            groupValue: _silkRouteFacility,
-                            onChanged: (value) {
-                              setState(() {
-                                _silkRouteFacility = value!;
-                              });
-                            },
-                          ),
-                          const Text("Yes", style: TextStyle(fontSize: 16)),
-                          Radio<String>(
-                            value: "No",
-                            groupValue: _silkRouteFacility,
-                            onChanged: (value) {
-                              setState(() {
-                                _silkRouteFacility = value!;
-                              });
-                            },
-                          ),
-                          const Text("No", style: TextStyle(fontSize: 16)),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      const Align(
-                        alignment: Alignment.topLeft,
-                        child: Text(
-                          "Airport Transpotation",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        _buildYesNoOption(
+                          label: "Airport Transpotation",
+                          value: _airportTranspotation == "Yes",
+                          onChanged: (value) => setState(() =>
+                              _airportTranspotation = value ? "Yes" : "No"),
                         ),
-                      ),
-                      Row(
-                        children: [
-                          Radio<String>(
-                            value: "Yes",
-                            groupValue: _airportTranspotation,
-                            onChanged: (value) {
-                              setState(() {
-                                _airportTranspotation = value!;
-                              });
-                            },
-                          ),
-                          const Text("Yes", style: TextStyle(fontSize: 16)),
-                          Radio<String>(
-                            value: "No",
-                            groupValue: _airportTranspotation,
-                            onChanged: (value) {
-                              setState(() {
-                                _airportTranspotation = value!;
-                              });
-                            },
-                          ),
-                          const Text("No", style: TextStyle(fontSize: 16)),
-                        ],
-                      ),
-                      /////////
-                      /// const SizedBox(height: 16),
-                      const Align(
-                        alignment: Alignment.topLeft,
-                        child: Text(
-                          "Visa",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          _buildYesNoOption(
+                          label: "Silk Route Facility",
+                          value: _silkRouteFacility == "Yes",
+                          onChanged: (value) => setState(() =>
+                              _silkRouteFacility = value ? "Yes" : "No"),
                         ),
-                      ),
-                      Row(
-                        children: [
-                          Radio<bool>(
-                            value: true,
-                            groupValue: _visa,
-                            onChanged: (value) {
-                              setState(() => _visa = value!);
-                            },
+                      
+                        if (_isBallys) ...[
+                          _buildYesNoOption(
+                            label: "Meal",
+                            value: _meal,
+                            onChanged: (value) =>
+                                setState(() => _meal = value),
                           ),
-                          const Text("Yes", style: TextStyle(fontSize: 16)),
-                          Radio<bool>(
-                            value: false,
-                            groupValue: _visa,
-                            onChanged: (value) {
-                              setState(() => _visa = value!);
-                            },
+                          _buildYesNoOption(
+                            label: "Extra Legroom Seat",
+                            value: _extraLegroomSeat,
+                            onChanged: (value) =>
+                                setState(() => _extraLegroomSeat = value),
                           ),
-                          const Text("No", style: TextStyle(fontSize: 16)),
+                          _buildYesNoOption(
+                            label: "Gold Route",
+                            value: _goldRoute,
+                            onChanged: (value) =>
+                                setState(() => _goldRoute = value),
+                          ),
                         ],
-                      ),
+                      ]),
                       const SizedBox(height: 35),
                       SizedBox(
                         width: double.infinity,

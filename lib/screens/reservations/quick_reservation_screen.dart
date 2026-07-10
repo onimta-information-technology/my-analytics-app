@@ -222,6 +222,10 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
   String _a_skipRouteFacility = 'No';
   String _a_airportTransport = 'No';
   String _a_visa = 'No';
+  // Ballys-only air ticket options (hidden for Bellagio)
+  String _a_meal = 'No';
+  String _a_extraLegroomSeat = 'No';
+  String _a_goldRoute = 'No';
 
   // ── Air ticket — Hamoue contact person dropdown ───────────────────────────
   List<String> _hamoueContactPersons = [];
@@ -699,6 +703,9 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       'skipRouteFacility': _a_skipRouteFacility,
       'airportTransport': _a_airportTransport,
       'visa': _a_visa,
+      'meal': _a_meal,
+      'extraLegroomSeat': _a_extraLegroomSeat,
+      'goldRoute': _a_goldRoute,
       'hamoueContactPerson': _a_hamoueContactPerson ?? '',
       'passportFiles': _a_passportFiles.map((f) => f.fileName).join(', '),
       // typed fields used when building API body
@@ -774,6 +781,9 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _a_skipRouteFacility = 'No';
       _a_airportTransport = 'No';
       _a_visa = 'No';
+      _a_meal = 'No';
+      _a_extraLegroomSeat = 'No';
+      _a_goldRoute = 'No';
       _a_hamoueContactPerson = null;
       _a_passportFiles = [];
       _a_passportUploadKey = UniqueKey();
@@ -1117,6 +1127,9 @@ Round Trip           : ${isRound ? 'Yes' : 'No'}
 Slik Route Facility : ${m['skipRouteFacility']}
 Airport Transport   : ${m['airportTransport']}
 Visa                     : ${m['visa']}
+Meal                     : ${m['meal']}
+Extra Legroom Seat  : ${m['extraLegroomSeat']}
+Gold Route            : ${m['goldRoute']}
 Hamoue Contact   : ${(m['hamoueContactPerson'] as String? ?? '').isEmpty ? 'NA' : m['hamoueContactPerson']}
 Passport File/s      : ${(m['passportFiles'] as String? ?? '').isEmpty ? 'None' : m['passportFiles']}
 Remarks              : ${m['remarks']}''';
@@ -1156,6 +1169,9 @@ Remarks              : ${m['remarks']}''';
       'skipRouteFacility': _a_skipRouteFacility,
       'airportTransport': _a_airportTransport,
       'visa': _a_visa,
+      'meal': _a_meal,
+      'extraLegroomSeat': _a_extraLegroomSeat,
+      'goldRoute': _a_goldRoute,
       'hamoueContactPerson': _a_hamoueContactPerson ?? '',
       'passportFiles': _a_passportFiles.map((f) => f.fileName).join(', '),
     };
@@ -1235,6 +1251,9 @@ Remarks              : ${m['remarks']}''';
       'air_line': m['airline'],
       'contact_person': m['hamoueContactPerson'],
       'visa': (m['visa'] as String?) == 'Yes',
+      'meal': (m['meal'] as String?) == 'Yes',
+      'extra_legroom_seat': (m['extraLegroomSeat'] as String?) == 'Yes',
+      'gold_route': (m['goldRoute'] as String?) == 'Yes',
       'is_round_trip': m['isRoundTrip'] as bool? ?? false,
       'silk_route': (m['skipRouteFacility'] as String?) == 'Yes' ? 1 : 0,
       'airport_transportation': (m['airportTransport'] as String?) == 'Yes' ? 1 : 0,
@@ -1319,6 +1338,9 @@ Remarks              : ${m['remarks']}''';
       _a_skipRouteFacility = 'No';
       _a_airportTransport = 'No';
       _a_visa = 'No';
+      _a_meal = 'No';
+      _a_extraLegroomSeat = 'No';
+      _a_goldRoute = 'No';
       _a_hamoueContactPerson = null;
       _a_passportFiles = [];
       _a_passportUploadKey = UniqueKey();
@@ -1415,6 +1437,7 @@ Remarks              : ${m['remarks']}''';
       'manual_reserv_no': '',
       'package_amount': packageAmountToInt(primary['packageAmount'] as String?),
       'selected_marketing_person': '',
+      "reservation_status":"Pending",
       'sales_code': salesCode,
       'user_name': userName,
       'device_id': deviceId,
@@ -1512,6 +1535,7 @@ print(" rrr : $airTicketDetails");
       'manual_reserv_no': '',
       'package_amount': packageAmountToInt(primary['packageAmount'] as String?),
       'selected_marketing_person': '',
+      "reservation_status":"Pending",
       'sales_code': salesCode,
       'user_name': userName,
       'device_id': deviceId,
@@ -3298,6 +3322,34 @@ class _AirForm extends StatelessWidget {
             accent: accent,
             onChanged: (v) => state.setState(() => state._a_visa = v),
           ),
+          // Ballys-only options (hidden for Bellagio)
+          if (!state._isBellagio) ...[
+            const SizedBox(height: 10),
+            _YesNoRadioRow(
+              label: 'Meal',
+              icon: Icons.restaurant_rounded,
+              value: state._a_meal,
+              accent: accent,
+              onChanged: (v) => state.setState(() => state._a_meal = v),
+            ),
+            const SizedBox(height: 10),
+            _YesNoRadioRow(
+              label: 'Extra Legroom Seat',
+              icon: Icons.airline_seat_legroom_extra_rounded,
+              value: state._a_extraLegroomSeat,
+              accent: accent,
+              onChanged: (v) =>
+                  state.setState(() => state._a_extraLegroomSeat = v),
+            ),
+            const SizedBox(height: 10),
+            _YesNoRadioRow(
+              label: 'Gold Route',
+              icon: Icons.route_rounded,
+              value: state._a_goldRoute,
+              accent: accent,
+              onChanged: (v) => state.setState(() => state._a_goldRoute = v),
+            ),
+          ],
           const SizedBox(height: 12),
 
           // ── Hamoue contact person (NEW, hardcoded test values) ──────────────

@@ -132,6 +132,7 @@ print("passport_images: ${newReservation.passportImages}");
       'user_name': userName,
       'device_id': deviceId,
       'selected_marketing_person': "",
+      "reservation_status":"Pending",
       'guests': newReservation.guests,
       'room_details': newReservation.roomDetails,
       'air_ticket_details': newReservation.airTicketDetails,
@@ -177,6 +178,7 @@ print("response: $response");
       'air_ticket_details': newReservation.airTicketDetails,
       'guests': newReservation.guests,
       'passport_images': newReservation.passportImages,
+      'reservation_status': "Pending",
     };
 
     debugPrintRequestBody(requestBody);

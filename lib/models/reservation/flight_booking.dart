@@ -15,6 +15,9 @@ class FlightBooking {
   final String? airLine;
   final String? contactPerson;
   final bool visa;
+  final bool meal;
+  final bool extraLegroomSeat;
+  final bool goldRoute;
 
   FlightBooking({
     required this.guestCount,
@@ -30,6 +33,9 @@ class FlightBooking {
     this.airLine,
     this.contactPerson,
     this.visa = false,
+    this.meal = false,
+    this.extraLegroomSeat = false,
+    this.goldRoute = false,
   });
 
   factory FlightBooking.fromJson(Map<String, dynamic> json) {
@@ -49,6 +55,9 @@ class FlightBooking {
       airLine: json['air_line'] as String?,
       contactPerson: json['contact_person'] as String?,
       visa: json['visa'] as bool? ?? false,
+      meal: json['meal'] as bool? ?? false,
+      extraLegroomSeat: json['extra_legroom_seat'] as bool? ?? false,
+      goldRoute: json['gold_route'] as bool? ?? false,
     );
   }
 
@@ -127,6 +136,9 @@ class FlightBooking {
       'air_line': airLine,
       'contact_person': contactPerson,
       'visa': visa,
+      'meal': meal,
+      'extra_legroom_seat': extraLegroomSeat,
+      'gold_route': goldRoute,
       'is_round_trip': isRoundTrip,
       'silk_route': silkRoute,
       'airport_transportation': airportTransportation,

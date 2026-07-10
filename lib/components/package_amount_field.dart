@@ -277,7 +277,24 @@ class _PackageAmountFieldState extends ConsumerState<PackageAmountField> {
       selected: selected,
       selectedColor: widget.accent.withOpacity(0.20),
       onSelected: widget.enabled
-          ? (_) => setState(() => _currencyFilter = value)
+          ? (_) => setState(() {
+                _currencyFilter = value;
+                // Changing the currency filter must clear a previously picked
+                // amount that belongs to a different currency, otherwise the
+                // stale value stays selected and written to the controller.
+                if (value != null &&
+                    _selected != null &&
+                    !_selected!.startsWith('$value ')) {
+                  _selected = null;
+                  widget.controller.text = '';
+                }
+                // Keep an in-progress "Other amount" tagged with the newly
+                // chosen currency so the value stays consistent.
+                if (value != null && _isOther) {
+                  _otherCurrency = value;
+                  _updateOtherValue();
+                }
+              })
           : null,
     );
   }

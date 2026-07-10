@@ -1394,6 +1394,8 @@ Future<String> sendSpecialGiftWhatsapp({
     required String createdBy,
   }) async {
     try {
+        final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+      final casino = apiUrl.contains('bty.world') ? 'bellagio' : 'ballys';
       print('Sending special gift WhatsApp message...');
       print('WhatsApp: $whatsappNumber, BM: $bmNumber, Name: $memberName');
       print('Gift Value: $giftValue, Chip: $chipType, For: $giftFor');
@@ -1412,6 +1414,7 @@ Future<String> sendSpecialGiftWhatsapp({
           'chip_type': chipType,
           'gift_for': giftFor,
           'created_by': createdBy,
+          'casino': casino
         }),
       );
 

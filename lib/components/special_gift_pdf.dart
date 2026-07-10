@@ -176,7 +176,7 @@ class DirectWhatsAppPdfService {
                     child: pw.Column(
                       children: [
                         pw.Text(
-                          'SPECIAL GIFT REQUEST - Bally\'s Casino',
+                          'SPECIAL GIFT REQUEST',
                           style: pw.TextStyle(
                             fontSize: 18,
                             fontWeight: pw.FontWeight.bold,

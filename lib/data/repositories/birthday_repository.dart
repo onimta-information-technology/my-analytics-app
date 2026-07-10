@@ -387,6 +387,10 @@ class BirthdayRepository {
       final deviceId = await DeviceId.get();
       final mCode = await StorageUtil.getMarketingCode();
 
+      // Bellagio (bty.world) vs Bally's, resolved from the logged-in API url.
+      final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+      final casino = apiUrl.contains('bty.world') ? 'bellagio' : 'ballys';
+
       // First, save gift data via sp_CRM_Common_API
       await saveGiftData(
         salesCode: salesCode ?? '',
@@ -410,7 +414,8 @@ class BirthdayRepository {
           'whatsapp_number': whatsappNumber,
           'member_name': mname,
           'gift_value': gift,
-          'created_by': userName
+          'created_by': userName,
+          'casino': casino
         }),
       );
 
@@ -513,8 +518,12 @@ Future<String> sendWhatsappMessagetpPriceincrease({
       final deviceId = await DeviceId.get();
       final mCode = await StorageUtil.getMarketingCode();
 
+      // Bellagio (bty.world) vs Bally's, resolved from the logged-in API url.
+      final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+      final casino = apiUrl.contains('bty.world') ? 'bellagio' : 'ballys';
+
       // First, save gift data via sp_CRM_Common_API
-   
+
 
       // Then proceed with the Laravel API call and WhatsApp
       final response = await http.post(
@@ -530,7 +539,8 @@ Future<String> sendWhatsappMessagetpPriceincrease({
           "prev_gift_value": prvamount,
               "chip_type": chiptype,
               "gift_for": "BirthDay gift",
-          'created_by': userName
+          'created_by': userName,
+          'casino': casino
         }),
       );
 

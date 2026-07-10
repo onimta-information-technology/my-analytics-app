@@ -42,10 +42,125 @@ List<String> _prefixes = [];
   List<Guest> originalMembers = [];
   List<Guest> inactiveMembers = [];
 bool _isNumericOnlyLocation = false;
+
+  // ── Profile access gating (mirrors MarketingDetailPage) ──
+  bool? _memProfSH;
+  String? _userMarketingCode;
+
   @override
   void initState() {
     super.initState();
     _loadLocationPrefix();
+    _loadAccessSettings();
+  }
+
+  Future<void> _loadAccessSettings() async {
+    final memProfSH = await StorageUtil.getMemProfSH();
+    final userMarketingCode = await StorageUtil.getMarketingCode();
+    if (mounted) {
+      setState(() {
+        _memProfSH = memProfSH;
+        _userMarketingCode = userMarketingCode;
+      });
+    }
+  }
+
+  // When memProfSH is null or true, every member is accessible.
+  // When memProfSH is false, only members in the logged-in user's
+  // marketing group can be opened.
+  bool _hasPermissionToViewMember(String? mGroup) {
+    if (_memProfSH == null || _memProfSH == true) {
+      return true;
+    }
+
+    if (_memProfSH == false) {
+      return _userMarketingCode != null &&
+          (mGroup ?? '').isNotEmpty &&
+          _userMarketingCode == mGroup;
+    }
+
+    return true;
+  }
+
+  void _showAccessDeniedDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.lock_outline,
+                    size: 50,
+                    color: Colors.red.shade400,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  "Access Denied",
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C3E50),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade400,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      "Got It",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 Future<void> _loadLocationPrefix() async {
   final location = await StorageUtil.getCurrentLocation();
@@ -326,6 +441,11 @@ Future<void> _openMemberSearchBottomSheet(int iid) async {
                                 return InkWell(
                                   onTap: () {
                                     final guest = guests[index];
+                                    if (!_hasPermissionToViewMember(
+                                        guest.mGroup)) {
+                                      _showAccessDeniedDialog();
+                                      return;
+                                    }
                                     ref
                                         .read(selectedGuestProvider.notifier)
                                         .setSelectedGuest(

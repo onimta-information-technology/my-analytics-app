@@ -226,6 +226,8 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
 
   DateTime? _a_arrDate;
   DateTime? _a_depDate;
+  static const String _defaultToAirportCode = 'CMB';
+
   Airport? _a_fromAirport;
   Airport? _a_toAirport;
   Airport? _a_returnFromAirport;
@@ -390,7 +392,25 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       final airports = ref.read(airportsProvider);
       if (airports.isEmpty)
         await ref.read(airportsProvider.notifier).getAllAirports();
+      _applyDefaultToAirport();
     } catch (_) {}
+  }
+
+  /// The arrival ("To") airport defaults to CMB from the loaded list; the user
+  /// can still pick another airport.
+  void _applyDefaultToAirport() {
+    if (_a_toAirport != null) return;
+    final cmb =
+        ref.read(airportsProvider.notifier).findByCode(_defaultToAirportCode);
+    if (cmb == null || !mounted) return;
+    setState(() {
+      _a_toAirport = cmb;
+      _a_toAirportKey = UniqueKey();
+      if (_a_isRoundTrip) {
+        _a_returnFromAirport = cmb;
+        _a_returnFromAirportKey = UniqueKey();
+      }
+    });
   }
 
   Future<void> _loadContactPersons() async {
@@ -818,7 +838,8 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _a_arrDate = null;
       _a_depDate = null;
       _a_fromAirport = null;
-      _a_toAirport = null;
+      _a_toAirport =
+          ref.read(airportsProvider.notifier).findByCode(_defaultToAirportCode);
       _a_returnFromAirport = null;
       _a_returnToAirport = null;
       _a_isRoundTrip = false;
@@ -1582,7 +1603,8 @@ Contact Number     : ${m['contactNumber']}''';
       _a_arrDate = null;
       _a_depDate = null;
       _a_fromAirport = null;
-      _a_toAirport = null;
+      _a_toAirport =
+          ref.read(airportsProvider.notifier).findByCode(_defaultToAirportCode);
       _a_returnFromAirport = null;
       _a_returnToAirport = null;
       _a_isRoundTrip = false;

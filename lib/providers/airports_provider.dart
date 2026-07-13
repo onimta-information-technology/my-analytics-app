@@ -32,6 +32,17 @@ class AirportsNotifier extends StateNotifier<List<Airport>> {
     }
   }
 
+  /// Looks up a loaded airport by its IATA code, e.g. "CMB".
+  Airport? findByCode(String code) {
+    final target = code.trim().toLowerCase();
+    for (final airport in allAirports) {
+      if ((airport.airportCode ?? '').trim().toLowerCase() == target) {
+        return airport;
+      }
+    }
+    return null;
+  }
+
   void filterAirports(String query) {
     if (query.isEmpty) {
       state = visibleAirports;

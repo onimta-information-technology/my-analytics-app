@@ -101,6 +101,8 @@ class _AirTicketsSelectionScreenState
     } catch (_) {}
   }
 
+  static const String _defaultToAirportCode = "CMB";
+
   Airport? _departureFromAirport;
   Airport? _departureToAirport;
   Airport? _returnFromAirport;
@@ -551,7 +553,9 @@ String? _selectedContactPerson;
       _selectedContactPerson = null;
 
       _departureFromAirport = null;
-      _departureToAirport = null;
+      _departureToAirport = ref
+          .read(airportsProvider.notifier)
+          .findByCode(_defaultToAirportCode);
       _returnFromAirport = null;
       _returnToAirport = null;
 
@@ -612,7 +616,21 @@ String? _selectedContactPerson;
       }
 
       ref.read(airportsProvider.notifier).filterAirports("");
+      _applyDefaultDepartureToAirport();
     } catch (e) {}
+  }
+
+  /// Departure "To" defaults to CMB (from the loaded airport list); the user
+  /// can still pick another airport.
+  void _applyDefaultDepartureToAirport() {
+    if (_departureToAirport != null) return;
+    final cmb = ref.read(airportsProvider.notifier).findByCode(_defaultToAirportCode);
+    if (cmb == null || !mounted) return;
+    setState(() {
+      _departureToAirport = cmb;
+      _departureToError = false;
+      _departureToAirportKey = UniqueKey();
+    });
   }
 
   Future<void> _selectDate(
@@ -804,7 +822,7 @@ String? _selectedContactPerson;
                         hasError: _departureFromError,
                         prefixIcon: Icons.airplane_ticket_outlined,
                         suffixIcon: Icons.arrow_drop_down,
-                        cityCountryText: _returnToAirport != null
+                        cityCountryText: _departureFromAirport != null
                             ? "${_departureFromAirport!.cityName} - ${_departureFromAirport!.country}"
                             : null,
                         airportNameText: _departureFromAirport?.airportCode,
@@ -822,7 +840,7 @@ String? _selectedContactPerson;
                         hasError: _departureToError,
                         prefixIcon: Icons.airplane_ticket_outlined,
                         suffixIcon: Icons.arrow_drop_down,
-                        cityCountryText: _returnToAirport != null
+                        cityCountryText: _departureToAirport != null
                             ? "${_departureToAirport!.cityName} - ${_departureToAirport!.country}"
                             : null,
                         airportNameText: _departureToAirport?.airportCode,

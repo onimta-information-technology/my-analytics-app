@@ -921,15 +921,11 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
 
     try {
       setState(() => _isLoading = true);
-      final currentUserName = await StorageUtil.getUserName();
       final success = await ref
           .read(reservationProvider.notifier)
-          .approveOrRejectReservation(
-            memberID: selectedReservation.mid,
-            reservationNo: selectedReservation.reservNo,
-            currentUName: currentUserName ?? '',
+          .updateReservationStatus(
+            reservation: selectedReservation,
             status: "Checked",
-            remarks: remarks,
           );
 
       if (success) {
@@ -973,15 +969,11 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
 
     try {
       setState(() => _isLoading = true);
-      final currentUserName = await StorageUtil.getUserName();
       final success = await ref
           .read(reservationProvider.notifier)
-          .approveOrRejectReservation(
-            memberID: selectedReservation.mid,
-            reservationNo: selectedReservation.reservNo,
-            currentUName: currentUserName ?? '',
+          .updateReservationStatus(
+            reservation: selectedReservation,
             status: "Approved",
-            remarks: remarks,
           );
 
       if (success) {
@@ -1030,15 +1022,11 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
 
     try {
       setState(() => _isLoading = true);
-      final currentUserName = await StorageUtil.getUserName();
       final success = await ref
           .read(reservationProvider.notifier)
-          .approveOrRejectReservation(
-            memberID: selectedReservation.mid,
-            reservationNo: selectedReservation.reservNo,
-            currentUName: currentUserName ?? '',
+          .updateReservationStatus(
+            reservation: selectedReservation,
             status: "Rejected",
-            remarks: remarks,
           );
 
       if (success) {
@@ -1089,15 +1077,11 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
 
     try {
       setState(() => _isLoading = true);
-      final currentUserName = await StorageUtil.getUserName();
       final success = await ref
           .read(reservationProvider.notifier)
-          .approveOrRejectReservation(
-            memberID: selectedReservation.mid,
-            reservationNo: selectedReservation.reservNo,
-            currentUName: currentUserName ?? '',
+          .updateReservationStatus(
+            reservation: selectedReservation,
             status: "Rejected",
-            remarks: remarks,
           );
 
       if (success) {

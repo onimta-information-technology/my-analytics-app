@@ -27,6 +27,28 @@ void clearReservations() {
   }
   // Add this method to your ReservationNotifier class
 
+  /// Re-posts the reservation to the insert endpoint with a new
+  /// `reservation_status` and refreshes the list on success.
+  Future<bool> updateReservationStatus({
+    required Reservation reservation,
+    required String status,
+  }) async {
+    try {
+      final success = await reservationRepository.updateReservationStatus(
+        reservation: reservation,
+        status: status,
+      );
+
+      if (success) {
+        await getReservationData();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
   Future<bool> approveOrRejectReservation({
     required String memberID,
     required String reservationNo,

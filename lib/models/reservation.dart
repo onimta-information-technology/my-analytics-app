@@ -249,6 +249,16 @@ class Reservation {
 
     final hasAir = json['has_air_ticket_reservation'] == true;
 
+    // Approval state as stored by the insert endpoint: "Pending" / "Checked" /
+    // "Approved" / "Rejected". Blank rows fall back to Pending.
+    final rawStatus = (json['reservation_status'] ??
+            json['Reservation_Status'] ??
+            json['ReservationStatus'])
+        ?.toString()
+        .trim();
+    final reservationStatus =
+        (rawStatus == null || rawStatus.isEmpty) ? 'Pending' : rawStatus;
+
     return Reservation(
       idNo: toInt(json['master_id']),
       reservNo: json['master_id']?.toString() ?? '',
@@ -262,10 +272,10 @@ class Reservation {
       remarks: json['remarks'] as String? ?? '',
       reqBy: json['user_name'] as String? ?? '',
       insertDate: parseDate(json['arrival_date']) ?? DateTime.now(),
-      isApp: false,
+      isApp: reservationStatus == 'Approved',
       isAppTime: DateTime.now(),
       isAppBy: null,
-      requestStatus: 'Pending',
+      requestStatus: reservationStatus,
       isAppRemarks: '',
       hotelDescip: parseRooms(json['room_details']),
       airticketDescrip: parseFlights(json['air_ticket_details']),

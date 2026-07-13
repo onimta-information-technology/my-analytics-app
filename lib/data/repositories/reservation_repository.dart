@@ -69,10 +69,14 @@ class ReservationRepository {
     if (status && data is List) {
       for (final item in data) {
         if (item is Map<String, dynamic>) {
-          // The new response carries no approval status, so every record is
-          // treated as pending.
-          classifiedReservations['Pending']!
-              .add(Reservation.fromReservationData(item));
+          final reservation = Reservation.fromReservationData(item);
+          // Bucket on the `reservation_status` the API returns; anything
+          // unrecognised (or blank) shows up under Pending.
+          final bucket =
+              classifiedReservations.containsKey(reservation.requestStatus)
+                  ? reservation.requestStatus
+                  : 'Pending';
+          classifiedReservations[bucket]!.add(reservation);
         }
       }
       return classifiedReservations;
@@ -153,6 +157,92 @@ print("response: $response");
     } else {
       throw Exception(response['Message'] ?? 'Failed to save reservation');
     }
+  }
+
+  /// Re-posts an existing reservation to `Reservation_InsertReservation` with a
+  /// new `reservation_status` ("Checked" / "Approved" / "Rejected").
+  ///
+  /// Every other field is sent exactly as the reservation already holds it, and
+  /// `master_id` carries the existing id so the backend updates that record
+  /// rather than creating a new one.
+  Future<bool> updateReservationStatus({
+    required Reservation reservation,
+    required String status,
+  }) async {
+    final salesCode = await StorageUtil.getSalesCode();
+    final userName = await StorageUtil.getUserName();
+    final deviceId = await DeviceId.get();
+
+    final guests = reservation.guests;
+
+    // Older payloads carry no per-guest breakdown; fall back to the
+    // reservation-level rooms / flights tagged with the primary BM number.
+    final roomDetails = guests.isNotEmpty
+        ? [for (final g in guests) ...g.toRoomDetailsJson()]
+        : reservation.hotelDescip
+            .map((h) => {...h.toJson(), 'BMNumber': reservation.mid})
+            .toList();
+
+    final airTicketDetails = guests.isNotEmpty
+        ? [for (final g in guests) ...g.toAirTicketDetailsJson()]
+        : reservation.airticketDescrip
+            .map((f) => {...f.toJson(), 'BMNumber': reservation.mid})
+            .toList();
+
+    final currency = (reservation.currencyType?.trim().isNotEmpty ?? false)
+        ? reservation.currencyType!.trim()
+        : packageAmountCurrency(reservation.packageAmount);
+
+    final requestBody = {
+      'master_id': reservation.reservNo,
+      'bm_number': reservation.mid,
+      'guest_name': reservation.mName,
+      'arrival_date': reservation.arrDate.toIso8601String(),
+      'departure_date': reservation.depDate.toIso8601String(),
+      'no_of_nights': reservation.noOfNights,
+      'has_air_ticket_reservation':
+          reservation.airticketReservationStatus == '1',
+      'remarks': reservation.remarks,
+      'manual_reserv_no': reservation.reservationnewnumber ?? '',
+      'package_amount': packageAmountToInt(reservation.packageAmount),
+      'currency_type': currency,
+      'sales_code': salesCode,
+      'user_name': userName,
+      'device_id': deviceId,
+      'selected_marketing_person': '',
+      'reservation_status': status,
+      'guests': guests.isNotEmpty
+          ? guests.map((g) => g.toJson()).toList()
+          : [
+              {
+                'BMNumber': reservation.mid,
+                'GuestName': reservation.mName,
+                'ArrivalDate': reservation.arrDate.toIso8601String(),
+                'DepartureDate': reservation.depDate.toIso8601String(),
+                'HasAirTicketReservation':
+                    reservation.airticketReservationStatus == '1',
+                'Remarks': reservation.remarks,
+              }
+            ],
+      'room_details': roomDetails,
+      'air_ticket_details': airTicketDetails,
+      'passport_images': reservation.passportImages
+          .map((p) => {
+                'GuestBMNumber': p.guestBmNumber,
+                'FileName': p.fileName,
+                'IsPdf': p.isPdf,
+                'Base64Data': p.base64Data,
+              })
+          .toList(),
+    };
+
+    debugPrintRequestBody(requestBody);
+
+    final response =
+        await apiService.post('Reservation_InsertReservation', requestBody);
+    print('Reservation status update ($status) response: $response');
+
+    return response['Status'] as bool? ?? false;
   }
 
   Future<Reservation?> updateReservation(NewReservation newReservation) async {

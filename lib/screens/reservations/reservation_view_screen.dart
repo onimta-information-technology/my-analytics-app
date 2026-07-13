@@ -1247,11 +1247,32 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
                   ? IconButton(
                       onPressed: () async {
                         Future<void> navigateToEdit() async {
+                          final reservationBeforeEdit = ref.read(
+                            selectedReservationProvider,
+                          );
                           final result = await context.push(
                             "/reservationMain/reservations/new-reservation",
                           );
-                          if (result == true && mounted) {
+                          if (!mounted) return;
+                          if (result == true) {
                             Navigator.of(context).pop(true);
+                            return;
+                          }
+                          // Cancelled: NewReservationScreen's PopScope clears the
+                          // shared selection providers on pop, so put them back or
+                          // this screen renders with no reservation.
+                          if (reservationBeforeEdit != null) {
+                            ref
+                                .read(selectedReservationProvider.notifier)
+                                .setSelectedReservation(reservationBeforeEdit);
+                            ref
+                                .read(selectedHotelProvider.notifier)
+                                .setHotels(reservationBeforeEdit.hotelDescip);
+                            ref
+                                .read(selectedFlightProvider.notifier)
+                                .setFlights(
+                                  reservationBeforeEdit.airticketDescrip,
+                                );
                           }
                         }
 

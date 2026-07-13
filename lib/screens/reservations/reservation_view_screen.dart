@@ -1156,7 +1156,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
       _airTicketRequisition = hasAirTickets ? "Yes" : "No";
       _remarksController.text = selectedReservation.remarks;
       _reservationnewnumberController.text = selectedReservation.reservationnewnumber!;
-      _packageAmountController.text = selectedReservation.packageAmount ?? '';
+      _packageAmountController.text = selectedReservation.packageAmountDisplay;
     }
 
     final fontSettings = ref.watch(fontSettingsProvider);
@@ -1248,43 +1248,43 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
             ),
           ],
         ),
-        // actions: [
-        //   PopScope(
-        //     onPopInvokedWithResult: (bool didPop, dynamic result) {
-        //       ref
-        //           .read(selectedReservationProvider.notifier)
-        //           .clearSelectedReservation();
-        //       ref.read(selectedHotelProvider.notifier).setHotels([]);
-        //       ref.read(selectedFlightProvider.notifier).setFlights([]);
-        //     },
-        //     child: Padding(
-        //       padding: const EdgeInsets.only(right: 8.0),
-        //       child: (selectedReservation?.requestStatus == 'Pending')
-        //           ? IconButton(
-        //               onPressed: () async {
-        //                 Future<void> navigateToEdit() async {
-        //                   final result = await context.push(
-        //                     "/reservationMain/reservations/new-reservation",
-        //                   );
-        //                   if (result == true && mounted) {
-        //                     Navigator.of(context).pop(true);
-        //                   }
-        //                 }
+        actions: [
+          PopScope(
+            onPopInvokedWithResult: (bool didPop, dynamic result) {
+              ref
+                  .read(selectedReservationProvider.notifier)
+                  .clearSelectedReservation();
+              ref.read(selectedHotelProvider.notifier).setHotels([]);
+              ref.read(selectedFlightProvider.notifier).setFlights([]);
+            },
+            child: Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: (selectedReservation?.requestStatus == 'Pending')
+                  ? IconButton(
+                      onPressed: () async {
+                        Future<void> navigateToEdit() async {
+                          final result = await context.push(
+                            "/reservationMain/reservations/new-reservation",
+                          );
+                          if (result == true && mounted) {
+                            Navigator.of(context).pop(true);
+                          }
+                        }
 
-        //                 if (_memberIdController.text.isNotEmpty &&
-        //                     !_guestDataLoaded) {
-        //                   await _loadGuestDataForView();
-        //                   await navigateToEdit();
-        //                 } else {
-        //                   await navigateToEdit();
-        //                 }
-        //               },
-        //               icon: const Icon(Icons.mode_edit_outline_sharp),
-        //             )
-        //           : const SizedBox.shrink(),
-        //     ),
-        //   ),
-        // ],
+                        if (_memberIdController.text.isNotEmpty &&
+                            !_guestDataLoaded) {
+                          await _loadGuestDataForView();
+                          await navigateToEdit();
+                        } else {
+                          await navigateToEdit();
+                        }
+                      },
+                      icon: const Icon(Icons.mode_edit_outline_sharp),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ),
+        ],
       ),
       body: Stack(
         children: [

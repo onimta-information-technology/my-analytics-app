@@ -33,6 +33,10 @@ class Reservation {
   /// Package amount as stored in the DB (varchar), e.g. `"IND 10,000"`.
   String? packageAmount;
 
+  /// Currency the [packageAmount] is expressed in, e.g. `"IND"` / `"USD"`.
+  /// Sent as `currency_type` on insert/update and returned by the API.
+  String? currencyType;
+
   /// All guests attached to this reservation. A single reservation number can
   /// carry multiple guests; the reservations list shows one card while the
   /// detail view can expand to show every guest.
@@ -68,9 +72,23 @@ class Reservation {
     required this.gRating,
     this.reservationnewnumber,
     this.packageAmount,
+    this.currencyType,
     this.guests = const [],
     this.passportImages = const [],
   });
+
+  /// The package amount as it should be shown to the user: currency + amount
+  /// (e.g. `"IND 10,000"`). Falls back to the bare amount when the API returns
+  /// no currency, and avoids doubling the prefix for legacy rows where the
+  /// currency is already baked into the amount string.
+  String get packageAmountDisplay {
+    final amount = packageAmount?.trim() ?? '';
+    final currency = currencyType?.trim() ?? '';
+    if (amount.isEmpty) return '';
+    if (currency.isEmpty) return amount;
+    if (amount.toUpperCase().startsWith(currency.toUpperCase())) return amount;
+    return '$currency $amount';
+  }
 
   factory Reservation.fromJson(Map<String, dynamic> json) {
     DateTime? parseDate(String? date) =>
@@ -127,6 +145,8 @@ class Reservation {
       gRating: json['G_Rating'] as String? ?? '',
       reservationnewnumber: json['Manual_Reserv_No'] as String? ?? '',
       packageAmount: json['Package_Amount']?.toString(),
+      currencyType:
+          (json['Currency_Type'] ?? json['currency_type'])?.toString(),
     );
   }
 
@@ -255,6 +275,8 @@ class Reservation {
       gRating: null,
       reservationnewnumber: json['manual_reserv_no'] as String? ?? '',
       packageAmount: json['package_amount']?.toString(),
+      currencyType:
+          (json['currency_type'] ?? json['Currency_Type'])?.toString(),
       guests: parseGuests(),
       passportImages: parsePassportImages(json['passport_images']),
     );
@@ -290,6 +312,7 @@ class Reservation {
       'G_Rating': gRating,
       'Manual_Reserv_No': reservationnewnumber,
       'Package_Amount': packageAmount,
+      'Currency_Type': currencyType,
     };
   }
 

@@ -441,21 +441,21 @@ class _LastThreeMonthsDetailPageState
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: Colors.green.shade50,
+        color:  const Color.fromARGB(255, 12, 24, 162),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.green.shade400),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.card_giftcard, size: 13, color: Colors.green.shade700),
+          Icon(Icons.card_giftcard, size: 13, color: const Color.fromARGB(255, 255, 255, 255)),
           const SizedBox(width: 4),
           Text(
             'PACKAGE',
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.bold,
-              color: Colors.green.shade700,
+              color: const Color.fromARGB(255, 255, 255, 255),
               letterSpacing: 0.3,
             ),
           ),

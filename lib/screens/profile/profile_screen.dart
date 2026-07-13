@@ -30,6 +30,7 @@ import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -409,6 +410,85 @@ bool _showFollowButton = false;
       }
     }
     return null;
+  }
+
+  /// Strips spaces, dashes and brackets so the number can be used in a URI.
+  /// Keeps a leading '+' when present.
+  String _sanitizeNumber(String number) {
+    final trimmed = number.trim();
+    final digits = trimmed.replaceAll(RegExp(r'[^0-9]'), '');
+    return trimmed.startsWith('+') ? '+$digits' : digits;
+  }
+
+  Future<void> _launchPhoneCall(String number) async {
+    final uri = Uri(scheme: 'tel', path: _sanitizeNumber(number));
+    if (!await launchUrl(uri) && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the phone app')),
+      );
+    }
+  }
+
+  Future<void> _launchWhatsApp(String number) async {
+    // wa.me expects the number without a leading '+' or any separators.
+    final uri = Uri.parse(
+      'https://wa.me/${_sanitizeNumber(number).replaceAll('+', '')}',
+    );
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication) &&
+        mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open WhatsApp')),
+      );
+    }
+  }
+
+  void _showContactActionSheet(String number) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
+                child: Text(
+                  number,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.call, color: Colors.blue),
+                title: const Text('Call'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _launchPhoneCall(number);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.chat, color: Colors.green),
+                title: const Text('WhatsApp'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _launchWhatsApp(number);
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _showSetPrimaryPhoneDialog() {
@@ -1215,6 +1295,15 @@ bool _showFollowButton = false;
                                                   final primaryWhatsApp =
                                                       _getPrimaryWhatsApp();
 
+                                                  final isContactNumber =
+                                                      (isPhone ||
+                                                          isPhone2 ||
+                                                          isPhone3 ||
+                                                          iswhatsapp ||
+                                                          iswhatsapp2 ||
+                                                          iswhatsapp3) &&
+                                                      detail.trim().isNotEmpty;
+
                                                   bool isPrimary = false;
                                                   if (detail.isNotEmpty) {
                                                     if ((isPhone ||
@@ -1848,27 +1937,62 @@ bool _showFollowButton = false;
                                                                   );
                                                                 }
                                                               }
+                                                            : isContactNumber
+                                                            ? () =>
+                                                                  _showContactActionSheet(
+                                                                    detail,
+                                                                  )
                                                             : null,
                                                         child: Padding(
                                                           padding:
                                                               const EdgeInsets.all(
                                                                 8.0,
                                                               ),
-                                                          child: Text(
-                                                            entry
-                                                                .details['Detail']!,
-                                                            textAlign:
-                                                                TextAlign.end,
-                                                            style: TextStyle(
-                                                              color:
-                                                                  Colors.black,
-                                                              fontSize:
-                                                                  fontSettings
-                                                                      .fontSize,
-                                                              fontWeight:
-                                                                  fontSettings
-                                                                      .fontWeight,
-                                                            ),
+                                                          child: Row(
+                                                            mainAxisAlignment:
+                                                                MainAxisAlignment
+                                                                    .end,
+                                                            children: [
+                                                              if (isContactNumber) ...[
+                                                                const Icon(
+                                                                  Icons.call,
+                                                                  size: 18,
+                                                                  color: Color.fromARGB(
+                                                                    255,
+                                                                    230,
+                                                                    0,
+                                                                    0,
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(
+                                                                  width: 6,
+                                                                ),
+                                                              ],
+                                                              Flexible(
+                                                                child: Text(
+                                                                  entry
+                                                                      .details['Detail']!,
+                                                                  textAlign:
+                                                                      TextAlign
+                                                                          .end,
+                                                                  style: TextStyle(
+                                                                    color: Colors
+                                                                        .black,
+                                                                    fontSize:
+                                                                        fontSettings
+                                                                            .fontSize,
+                                                                    fontWeight:
+                                                                        fontSettings
+                                                                            .fontWeight,
+                                                                    // decoration:
+                                                                    //     isContactNumber
+                                                                    //     ? TextDecoration
+                                                                    //           .underline
+                                                                    //     : null,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ],
                                                           ),
                                                         ),
                                                       ),

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:ballys_reservation_app/components/bottom_sheets/member_search-new_sheet.dart';
 import 'package:ballys_reservation_app/components/bottom_sheets/member_search_by_mid_bottom_sheet.dart';
@@ -21,6 +22,7 @@ import 'package:ballys_reservation_app/models/reservation/flight_booking.dart';
 
 import 'package:ballys_reservation_app/models/reservation/hotel_desc.dart';
 import 'package:ballys_reservation_app/models/reservation/new_reservation.dart';
+import 'package:ballys_reservation_app/models/reservation/reservation_passport_image.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/hotels_provider.dart';
 import 'package:ballys_reservation_app/providers/member_search_provider.dart';
@@ -40,6 +42,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 
 class NewReservationScreen extends ConsumerStatefulWidget {
   const NewReservationScreen({super.key});
@@ -105,7 +108,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
       if (selectedReservation != null) {
         _isEditMode = true;
         _populateFields(selectedReservation);
-        _loadGuestDataInEditMode();
+        _loadGuestEntriesForEdit(selectedReservation);
       }
     });
   }
@@ -170,76 +173,116 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
     }
   }
 
-  Future<void> _loadGuestDataInEditMode() async {
-    if (!_isEditMode || _memberIdController.text.isEmpty) return;
+  /// Loads the reservation's guests as guest cards — each carrying its own
+  /// hotels, air tickets, dates and passports — so an update shows exactly who
+  /// booked what, and leaves the form blank for adding a further guest.
+  Future<void> _loadGuestEntriesForEdit(Reservation reservation) async {
+    setState(() => _isLoading = true);
 
-    final currentSelectedGuest = ref.read(selectedGuestProvider);
-    if (currentSelectedGuest != null &&
-        currentSelectedGuest.mid == _memberIdController.text) {
-      return;
+    final entries = <GuestReservationEntry>[];
+
+    if (reservation.guests.isNotEmpty) {
+      for (final guest in reservation.guests) {
+        entries.add(
+          GuestReservationEntry(
+            mid: guest.mid,
+            guestName: guest.guestName,
+            hotels: List<HotelDescip>.from(guest.hotels),
+            flights: List<FlightBooking>.from(guest.flights),
+            arrivalDate: guest.arrivalDate ?? reservation.arrDate,
+            departureDate: guest.departureDate ?? reservation.depDate,
+            remarks: guest.remarks,
+            airTicketRequisition: guest.airTicketRequisition,
+            passportImages: await _materializePassports(
+              reservation.passportImages
+                  .where((p) => p.guestBmNumber == guest.mid),
+            ),
+          ),
+        );
+      }
+    } else {
+      // Reservations made before the multi-guest payload carry no per-guest
+      // breakdown: every hotel and flight belongs to the single member on the
+      // reservation.
+      entries.add(
+        GuestReservationEntry(
+          mid: reservation.mid,
+          guestName: reservation.mName,
+          hotels: List<HotelDescip>.from(reservation.hotelDescip),
+          flights: List<FlightBooking>.from(reservation.airticketDescrip),
+          arrivalDate: reservation.arrDate,
+          departureDate: reservation.depDate,
+          remarks: reservation.remarks,
+          airTicketRequisition:
+              reservation.airticketDescrip.isNotEmpty ? "Yes" : "No",
+          passportImages:
+              await _materializePassports(reservation.passportImages),
+        ),
+      );
     }
+
+    if (!mounted) return;
+
+    setState(() {
+      _guestEntries
+        ..clear()
+        ..addAll(entries);
+      _isLoading = false;
+    });
+
+    // The view screen fills these with every hotel/flight on the reservation to
+    // render its summary. They now live on the guest cards, so start the form
+    // empty for the next guest.
+    ref.read(selectedHotelProvider.notifier).setHotels([]);
+    ref.read(selectedFlightProvider.notifier).setFlights([]);
+    ref.read(selectedPassportProvider.notifier).setFiles([]);
+    ref.read(selectedGuestProvider.notifier).clearGuest();
+  }
+
+  /// Writes API passport images (base64) to disk so they behave like freshly
+  /// picked files: the upload widget can show them and they get re-encoded on
+  /// save, which keeps existing passports attached when the record is replaced.
+  Future<List<PassportImage>> _materializePassports(
+    Iterable<ReservationPassportImage> images,
+  ) async {
+    final result = <PassportImage>[];
 
     try {
-      setState(() => _isLoading = true);
+      final dir = await getApplicationDocumentsDirectory();
+      final passportDir = Directory('${dir.path}/passport_uploads');
+      if (!await passportDir.exists()) {
+        await passportDir.create(recursive: true);
+      }
 
-      GuestRepository guestRepository = GuestRepository(
-        ApiService(const FlutterSecureStorage()),
-      );
-
-      List<GuestSearchResponse> guests = await guestRepository.searchGuest(
-        9021,
-        _memberIdController.text,
-      );
-
-      if (guests.isNotEmpty) {
-        final guestResponse = guests.first;
-        ref.read(selectedGuestProvider.notifier).setSelectedGuest(
-              Guest(
-                mid: guestResponse.mid ?? _memberIdController.text,
-                memberName:
-                    guestResponse.mName ?? _memberNameController.text,
-                country: "",
-                lastVisitDate: guestResponse.lvd?.toString() ?? "",
-                gift: "",
-                age: 0,
-                gRating: guestResponse.gRating ?? "",
-                mGroup: "",
-                gName: guestResponse.gName ?? "",
-                memImage2: guestResponse.memImage2,
-              ),
-            );
+      for (final image in images) {
+        final bytes = image.bytes;
+        if (bytes == null) continue;
+        final fileName = image.fileName.isNotEmpty
+            ? image.fileName
+            : 'passport${image.isPdf ? '.pdf' : '.jpg'}';
+        final file = File(
+          '${passportDir.path}/${DateTime.now().microsecondsSinceEpoch}_$fileName',
+        );
+        await file.writeAsBytes(bytes);
+        result.add(
+          PassportImage(
+            path: file.path,
+            fileName: fileName,
+            isPdf: image.isPdf,
+          ),
+        );
       }
     } catch (_) {
-    } finally {
-      setState(() => _isLoading = false);
+      // Nothing to attach; the guest keeps whatever passports get picked next.
     }
+
+    return result;
   }
 
   void _populateFields(Reservation selectedReservation) {
     _reservationNoController.text = selectedReservation.reservNo;
-    _memberIdController.text = selectedReservation.mid;
-    _memberNameController.text = selectedReservation.mName;
     _noOfNightsController.text = selectedReservation.noOfNights.toString();
-    final DateFormat dateFormat = DateFormat('yyyy-MM-dd');
-    _arrivalDate = selectedReservation.arrDate;
-    _arrivalDateController.text =
-        dateFormat.format(selectedReservation.arrDate);
-    _departureDate = selectedReservation.depDate;
-    _departureDateController.text =
-        dateFormat.format(selectedReservation.depDate);
-
-    final String status = selectedReservation.airticketReservationStatus
-        .toString()
-        .toUpperCase()
-        .trim();
-    final bool hasAirTickets = status == "T" ||
-        status == "TRUE" ||
-        status == "YES" ||
-        status == "Y" ||
-        status == "1";
-
-    _airTicketRequisition = hasAirTickets ? "Yes" : "No";
-    _remarksController.text = selectedReservation.remarks;
+    _packageAmountController.text = selectedReservation.packageAmountDisplay;
     _reservationnewnumberController.text =
         selectedReservation.reservationnewnumber ?? '';
   }
@@ -647,6 +690,21 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
       return false;
     }
 
+    // Rooms and air tickets are matched back to their owner by BM number, so
+    // the same member twice would merge into one guest on the API side.
+    final mid = _memberIdController.text.trim();
+    final duplicateIndex =
+        _guestEntries.indexWhere((g) => g.mid.trim() == mid);
+    if (duplicateIndex != -1 && duplicateIndex != _editingGuestIndex) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$mid is already added to this reservation'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return false;
+    }
+
     final selectedHotels = ref.read(selectedHotelProvider);
     final selectedFlights = ref.read(selectedFlightProvider);
     if (selectedHotels.isEmpty && selectedFlights.isEmpty) {
@@ -838,23 +896,79 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
     return parts.join(", ");
   }
 
-  void _confirmReservation() async {
-    if (_isEditMode) {
-      if (!_validateUpdateFields()) return;
-    } else {
-      // In multi-guest mode, the form-level validator on Member ID/Name
-      // only applies to whatever guest is currently on screen. If there
-      // are already-added guests and the current fields are empty, that's
-      // fine — it just means the user finished adding guests and is ready
-      // to submit without a "dangling" extra guest.
-      final hasDanglingGuestFields =
-          _memberIdController.text.trim().isNotEmpty ||
-              _memberNameController.text.trim().isNotEmpty;
+  /// One line per hotel this guest booked, e.g.
+  /// "Hilton Colombo — Deluxe, 2 Rooms, 3 Nights".
+  List<String> _hotelLines(GuestReservationEntry entry) {
+    return entry.hotels.map((hotel) {
+      final name = hotel.hotelName?.trim();
+      final rooms = hotel.roomCount ?? 0;
+      final nights = hotel.noOfNights ?? 0;
+      final details = [
+        if (hotel.roomCategoryName?.trim().isNotEmpty ?? false)
+          hotel.roomCategoryName!.trim(),
+        if (rooms > 0) rooms == 1 ? "1 Room" : "$rooms Rooms",
+        if (nights > 0) nights == 1 ? "1 Night" : "$nights Nights",
+      ];
+      final title = (name != null && name.isNotEmpty) ? name : "Hotel";
+      return details.isEmpty ? title : "$title — ${details.join(', ')}";
+    }).toList();
+  }
 
-      if (_guestEntries.isEmpty || hasDanglingGuestFields) {
-        if (!_formKey.currentState!.validate()) return;
-        if (!_validateUpdateFields()) return;
-      }
+  /// One line per air ticket this guest booked, e.g.
+  /// "CMB → SIN — Round Trip, Business".
+  List<String> _flightLines(GuestReservationEntry entry) {
+    return entry.flights.map((flight) {
+      final from = flight.airports?.departure?.dFrom.airportCode.trim() ?? '';
+      final to = flight.airports?.departure?.dTo.airportCode.trim() ?? '';
+      final route =
+          (from.isEmpty && to.isEmpty) ? "Air Ticket" : "$from → $to";
+      final details = [
+        if (flight.isRoundTrip) "Round Trip",
+        if (flight.airTicketClassName.trim().isNotEmpty)
+          flight.airTicketClassName.trim(),
+      ];
+      return details.isEmpty ? route : "$route — ${details.join(', ')}";
+    }).toList();
+  }
+
+  /// A single hotel / air-ticket row on a guest card: the icon is what tells
+  /// the two apart at a glance.
+  Widget _bookingLine({
+    required IconData icon,
+    required Color color,
+    required String label,
+    required double fontSize,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: fontSize + 2, color: color),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(fontSize: fontSize, color: Colors.black87),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmReservation() async {
+    // The form-level validator on Member ID/Name only applies to whatever guest
+    // is currently on screen. If guests have already been added and the current
+    // fields are empty, that's fine — it just means the user is ready to submit
+    // without a "dangling" extra guest. Update works the same way: the existing
+    // guests are already loaded as cards.
+    final hasDanglingGuestFields = _memberIdController.text.trim().isNotEmpty ||
+        _memberNameController.text.trim().isNotEmpty;
+
+    if (_guestEntries.isEmpty || hasDanglingGuestFields) {
+      if (!_formKey.currentState!.validate()) return;
+      if (!_validateUpdateFields()) return;
     }
 
     final selectedHotels = ref.read(selectedHotelProvider);
@@ -888,7 +1002,15 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
       }
       if (hasError) return;
 
-      allGuests.add(_snapshotCurrentGuest());
+      // The on-screen guest is either one pulled back from a card for editing
+      // (replace it in place — appending would submit that guest twice) or a
+      // brand-new one the user never pressed "Add Guest" for.
+      if (_editingGuestIndex != null &&
+          _editingGuestIndex! < allGuests.length) {
+        allGuests[_editingGuestIndex!] = _snapshotCurrentGuest();
+      } else {
+        allGuests.add(_snapshotCurrentGuest());
+      }
     }
 
     if (allGuests.isEmpty) {
@@ -945,7 +1067,9 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
           ? await reservationRepository.saveReservation(reservation)
           : await reservationRepository.updateReservation(reservation);
 
-      if (response != null) {
+      // On update the caller reloads the list from the API; adding here would
+      // show the reservation twice until that reload lands.
+      if (response != null && !_isEditMode) {
         ref.read(reservationProvider.notifier).addReservationToPending(response);
       }
 
@@ -983,8 +1107,12 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Reservation saved successfully'),
+          SnackBar(
+            content: Text(
+              _isEditMode
+                  ? 'Reservation updated successfully'
+                  : 'Reservation saved successfully',
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -1293,13 +1421,22 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                                 _guestEntries.asMap().entries.map((mapEntry) {
                               final i = mapEntry.key;
                               final g = mapEntry.value;
+                              // This guest is currently loaded into the form
+                              // below; the form overwrites this card on save
+                              // rather than adding a second guest.
+                              final isEditing = _editingGuestIndex == i;
                               return Card(
                                 elevation: 0,
-                                color: const Color(0xFFEFF7F1),
+                                color: isEditing
+                                    ? const Color(0xFFFFF4E5)
+                                    : const Color(0xFFEFF7F1),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),
-                                  side: const BorderSide(
-                                    color: Color(0xFFCADFD1),
+                                  side: BorderSide(
+                                    color: isEditing
+                                        ? Colors.deepOrange
+                                        : const Color(0xFFCADFD1),
+                                    width: isEditing ? 1.6 : 1,
                                   ),
                                 ),
                                 margin: const EdgeInsets.symmetric(
@@ -1354,13 +1491,32 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                            Text(
-                                              g.guestName,
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize:
-                                                    fontSettings.fontSize,
-                                              ),
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    g.guestName,
+                                                    style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: fontSettings
+                                                          .fontSize,
+                                                    ),
+                                                  ),
+                                                ),
+                                                if (isEditing)
+                                                  Text(
+                                                    "EDITING BELOW",
+                                                    style: TextStyle(
+                                                      fontSize: fontSettings
+                                                              .fontSize *
+                                                          0.75,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Colors.deepOrange,
+                                                    ),
+                                                  ),
+                                              ],
                                             ),
                                             const SizedBox(height: 4),
                                             Text(
@@ -1370,6 +1526,27 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                                                 fontSize: fontSettings
                                                         .fontSize*0.90,
                                                 fontWeight: fontSettings.fontWeight
+                                              ),
+                                            ),
+                                            // Spell out what this guest booked
+                                            // so a hotel is never mistaken for
+                                            // an air ticket.
+                                            ..._hotelLines(g).map(
+                                              (line) => _bookingLine(
+                                                icon: Icons.hotel,
+                                                color: Constants.kSecondaryColor,
+                                                label: line,
+                                                fontSize:
+                                                    fontSettings.fontSize * 0.85,
+                                              ),
+                                            ),
+                                            ..._flightLines(g).map(
+                                              (line) => _bookingLine(
+                                                icon: Icons.flight_takeoff,
+                                                color: Colors.deepOrange,
+                                                label: line,
+                                                fontSize:
+                                                    fontSettings.fontSize * 0.85,
                                               ),
                                             ),
                                           ],
@@ -1387,33 +1564,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                         Row(
                           children: [
                             Expanded(
-                              child: _isEditMode
-                                  ? TextFormField(
-                                      controller: _memberIdController,
-                                      readOnly: true,
-                                      style: TextStyle(
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
-                                      ),
-                                      decoration: InputDecoration(
-                                        labelText: "MID *",
-                                        labelStyle: TextStyle(
-                                          fontSize: fontSettings.fontSize,
-                                          fontWeight:
-                                              fontSettings.fontWeight,
-                                        ),
-                                        border: const OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(12)),
-                              ),
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                          horizontal: 12.0,
-                                          vertical: -5.0,
-                                        ),
-                                      ),
-                                    )
-                                  : TextFormField(
+                              child: TextFormField(
                                       controller: _memberIdNumberController,
                                       keyboardType: TextInputType.number,
                                       style: TextStyle(
@@ -1524,18 +1675,15 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                             ),
                             const SizedBox(width: 10.0),
                             ElevatedButton(
-                              onPressed: _isEditMode
-                                  ? _navigateToProfile
-                                  : (newReservation.bmNumber == null
-                                      ? null
-                                      : () => context.push('/home/profile')),
+                              onPressed: _memberIdController.text.trim().isEmpty
+                                  ? null
+                                  : _navigateToProfile,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: _isEditMode
-                                    ? const Color.fromARGB(255, 70, 70, 70)
-                                    : (newReservation.bmNumber == null
+                                backgroundColor:
+                                    _memberIdController.text.trim().isEmpty
                                         ? Colors.grey.shade400
                                         : const Color.fromARGB(
-                                            255, 70, 70, 70)),
+                                            255, 70, 70, 70),
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -1556,7 +1704,6 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                         TextFormField(
                           autofocus: false,
                           controller: _memberNameController,
-                          readOnly: _isEditMode,
                           style: TextStyle(
                             fontSize: fontSettings.fontSize,
                             fontWeight: fontSettings.fontWeight,
@@ -1575,16 +1722,14 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                               horizontal: 12.0,
                               vertical: -5.0,
                             ),
-                            suffixIcon: !_isEditMode
-                                ? IconButton(
-                                    icon: const Icon(Icons.search),
-                                    onPressed: () {
-                                      FocusScope.of(context)
-                                          .requestFocus(FocusNode());
-                                      _openMemberSearchBottomSheet(8003);
-                                    },
-                                  )
-                                : null,
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.search),
+                              onPressed: () {
+                                FocusScope.of(context)
+                                    .requestFocus(FocusNode());
+                                _openMemberSearchBottomSheet(8003);
+                              },
+                            ),
                           ),
                           validator: (value) {
                             // Same exemption as Member ID above.
@@ -1598,14 +1743,12 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                             }
                             return null;
                           },
-                          onChanged: !_isEditMode
-                              ? (value) {
-                                  _memberIdController.text = '';
-                                  ref
-                                      .read(newReservationProvider.notifier)
-                                      .resetState();
-                                }
-                              : null,
+                          onChanged: (value) {
+                            _memberIdController.text = '';
+                            ref
+                                .read(newReservationProvider.notifier)
+                                .resetState();
+                          },
                         ),
 
                         // ── Guest Card ─────────────────────────
@@ -1619,7 +1762,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
  const SizedBox(height: 10.0),
                           PackageAmountField(
                           controller: _packageAmountController,
-                          enabled: !_isEditMode,
+                          enabled: true,
                           textStyle: TextStyle(
                             fontSize: fontSettings.fontSize,
                             fontWeight: fontSettings.fontWeight,
@@ -2258,8 +2401,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                         const SizedBox(height: 16.0),
 
                         // ── Add Guest / Add New Guest Buttons ──
-                        if (!_isEditMode) ...[
-                          Column(
+                        Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               OutlinedButton(
@@ -2336,8 +2478,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10.0),
-                        ],
+                        const SizedBox(height: 10.0),
 
                         // ── Confirm / Update Button ────────────
                         SizedBox(

@@ -110,44 +110,54 @@ class ReservationRepository {
     }
   }
 
-  Future<Reservation?> saveReservation(NewReservation newReservation) async {
+  /// Builds the `Reservation_InsertReservation` payload shared by insert and
+  /// update. [masterId] is a fresh timestamp when inserting, or the existing
+  /// reservation id when updating — the backend replaces the record with that
+  /// id, so both paths send the exact same structure.
+  Future<Map<String, dynamic>> _buildReservationBody(
+    NewReservation newReservation, {
+    required String masterId,
+  }) async {
     final salesCode = await StorageUtil.getSalesCode();
     final userName = await StorageUtil.getUserName();
     final deviceId = await DeviceId.get();
-print("test");
-///print("passportImages: ${newReservation.passportImages}");
-print("bm_number: ${newReservation.bmNumber}");
-print("air_ticket_details: ${newReservation.airTicketDetails}");
-print("passport_images: ${newReservation.passportImages}");
-    final masterId = DateTime.now().millisecondsSinceEpoch.toString();
 
-    final requestBody = {
+    return {
       'master_id': masterId,
       'bm_number': newReservation.bmNumber,
       'guest_name': newReservation.guestName,
       'arrival_date': newReservation.arrivalDate?.toIso8601String(),
       'departure_date': newReservation.departureDate?.toIso8601String(),
       'no_of_nights': newReservation.noOfNights,
-      'has_air_ticket_reservation': newReservation.hasAirTicketReservation == '1',
+      'has_air_ticket_reservation':
+          newReservation.hasAirTicketReservation == '1',
       'remarks': newReservation.remarks,
-      'manual_reserv_no': "",
+      'manual_reserv_no': newReservation.reservationnewnumber ?? '',
       'package_amount': packageAmountToInt(newReservation.packageAmount),
       'currency_type': packageAmountCurrency(newReservation.packageAmount),
       'sales_code': salesCode,
       'user_name': userName,
       'device_id': deviceId,
-      'selected_marketing_person': "",
-      "reservation_status":"Pending",
+      'selected_marketing_person':
+          newReservation.selectedMarketingPerson ?? '',
+      'reservation_status': 'Pending',
       'guests': newReservation.guests,
       'room_details': newReservation.roomDetails,
       'air_ticket_details': newReservation.airTicketDetails,
       'passport_images': newReservation.passportImages,
     };
+  }
 
-  debugPrintRequestBody(requestBody);
-print("test2");
-    final response = await apiService.post('Reservation_InsertReservation', requestBody);
-print("response: $response");
+  Future<Reservation?> saveReservation(NewReservation newReservation) async {
+    final requestBody = await _buildReservationBody(
+      newReservation,
+      masterId: DateTime.now().millisecondsSinceEpoch.toString(),
+    );
+
+    debugPrintRequestBody(requestBody);
+
+    final response =
+        await apiService.post('Reservation_InsertReservation', requestBody);
     final status = response['Status'] as bool? ?? false;
     print('Reservation save status: $status');
     if (status) {
@@ -245,45 +255,31 @@ print("response: $response");
     return response['Status'] as bool? ?? false;
   }
 
+  /// Saves an edited reservation through the same endpoint as a new one. The
+  /// existing reservation id travels as `master_id`, so the backend overwrites
+  /// that record (guests, rooms, air tickets and passports included) instead of
+  /// creating a second one.
   Future<Reservation?> updateReservation(NewReservation newReservation) async {
-    final salesCode = await StorageUtil.getSalesCode();
-    final userName = await StorageUtil.getUserName();
-    final deviceId = await DeviceId.get();
+    final masterId = newReservation.reservationNo ?? '';
+    if (masterId.isEmpty) {
+      throw Exception('Cannot update a reservation without a reservation no');
+    }
 
-    final requestBody = {
-      'bm_number': newReservation.bmNumber,
-      'guest_name': newReservation.guestName,
-      'arrival_date': newReservation.arrivalDate?.toIso8601String(),
-      'departure_date': newReservation.departureDate?.toIso8601String(),
-      'no_of_nights': newReservation.noOfNights,
-      'has_air_ticket_reservation': newReservation.hasAirTicketReservation == '1',
-      'remarks': newReservation.remarks,
-      'reservation_no': newReservation.reservationNo,
-      'manual_reserv_no': newReservation.reservationnewnumber,
-      'package_amount': packageAmountToInt(newReservation.packageAmount),
-      'currency_type': packageAmountCurrency(newReservation.packageAmount),
-      'selected_marketing_person': newReservation.selectedMarketingPerson,
-      'sales_code': salesCode,
-      'user_name': userName,
-      'device_id': deviceId,
-      'room_details': newReservation.roomDetails,
-      'air_ticket_details': newReservation.airTicketDetails,
-      'guests': newReservation.guests,
-      'passport_images': newReservation.passportImages,
-      'reservation_status': "Pending",
-    };
+    final requestBody =
+        await _buildReservationBody(newReservation, masterId: masterId);
 
     debugPrintRequestBody(requestBody);
 
-    final response = await apiService.post('UpdateReservation', requestBody);
-
-    if (response['Table'] is List && (response['Table'] as List).isNotEmpty) {
-      final table = response['Table'][0];
-      final reservationResponse = Reservation.fromJson(table);
-      if (reservationResponse.reservNo != '') return reservationResponse;
-      return null;
+    final response =
+        await apiService.post('Reservation_InsertReservation', requestBody);
+    final status = response['Status'] as bool? ?? false;
+    print('Reservation update status: $status');
+    if (status) {
+      return Reservation.fromJson({
+        'Reserv_No': (response['ReservationId'] ?? masterId).toString(),
+      });
     } else {
-      throw Exception('Unexpected response structure');
+      throw Exception(response['Message'] ?? 'Failed to update reservation');
     }
   }
   // Add this method to your ReservationRepository class

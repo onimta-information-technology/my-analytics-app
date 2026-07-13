@@ -86,6 +86,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
   String? _hotelError;
   String? _airTicketError;
   bool _isNumericOnlyLocation = false;
+  bool _isGuestLoading = false;
   List<String> _prefixes = ["BM", "BL", "BN"];
 
   // ── Multi-guest support ───────────────────────────────────────────────
@@ -841,6 +842,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
     final entry = _guestEntries[index];
 
     setState(() {
+      _isGuestLoading = true;
       _editingGuestIndex = index;
       _memberIdController.text = entry.mid;
       _memberNameController.text = entry.guestName;
@@ -871,6 +873,46 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                   ))
               .toList(),
         );
+
+    // The guest card renders from selectedGuestProvider, which was cleared when
+    // the guest was added, so its profile has to be fetched again.
+    _loadGuestProfile(entry.mid, entry.guestName);
+  }
+
+  /// Fills selectedGuestProvider (rating / last visit / photo) for the member
+  /// currently in the form.
+  Future<void> _loadGuestProfile(String mid, String guestName) async {
+    if (mid.isEmpty) {
+      ref.read(selectedGuestProvider.notifier).clearGuest();
+      if (mounted) setState(() => _isGuestLoading = false);
+      return;
+    }
+
+    try {
+      final guestRepository = GuestRepository(
+        ApiService(const FlutterSecureStorage()),
+      );
+      final guests = await guestRepository.searchGuest(9021, mid);
+
+      final g = guests.isNotEmpty ? guests.first : null;
+      ref.read(selectedGuestProvider.notifier).setSelectedGuest(
+            Guest(
+              mid: g?.mid ?? mid,
+              memberName: g?.mName ?? guestName,
+              country: "",
+              lastVisitDate: g?.lvd?.toString() ?? "",
+              age: 0,
+              gRating: g?.gRating ?? "",
+              mGroup: g?.mGroup ?? "",
+              gName: g?.gName ?? "",
+              memImage2: g?.memImage2,
+            ),
+          );
+    } catch (_) {
+      // Leave the card on the ID/name already in the form.
+    } finally {
+      if (mounted) setState(() => _isGuestLoading = false);
+    }
   }
 
   void _removeGuestEntry(int index) {
@@ -1757,6 +1799,7 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                           memberNameText: _memberNameController.text,
                           showCard: _memberIdController.text.isNotEmpty &&
                               _memberNameController.text.isNotEmpty,
+                          isLoading: _isGuestLoading,
                           showLastVisitDate: true,
                         ),
  const SizedBox(height: 10.0),

@@ -1258,9 +1258,9 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
                             Navigator.of(context).pop(true);
                             return;
                           }
-                          // Cancelled: NewReservationScreen's PopScope clears the
-                          // shared selection providers on pop, so put them back or
-                          // this screen renders with no reservation.
+                          // Cancelled: NewReservationScreen clears the shared
+                          // selection providers on pop, so put them back or this
+                          // screen renders with no reservation and no guest.
                           if (reservationBeforeEdit != null) {
                             ref
                                 .read(selectedReservationProvider.notifier)
@@ -1273,6 +1273,8 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
                                 .setFlights(
                                   reservationBeforeEdit.airticketDescrip,
                                 );
+                            _guestDataLoaded = false;
+                            await _loadGuestDataForView();
                           }
                         }
 

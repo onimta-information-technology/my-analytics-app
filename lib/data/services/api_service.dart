@@ -147,7 +147,7 @@ print('API response for $endpoint: ${response.body}');
 
         // One retry with the fresh token
         response = await _executeGet(endpoint, newToken);
-
+print('API response for $endpoint: ${response.body}');
         if (_isAuthFailure(response)) {
           await _forceLogout();
           throw UnauthorizedException();

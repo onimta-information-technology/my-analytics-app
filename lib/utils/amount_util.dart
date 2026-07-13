@@ -18,3 +18,14 @@ String packageAmountToInt(String? raw) {
   if (value == null) return '';
   return value.toInt().toString();
 }
+
+/// Extracts the currency prefix of a package-amount display string, e.g.
+/// `"IND 10,000"` -> `"IND"`, `"USD 25,000"` -> `"USD"`.
+///
+/// Returns an empty string when the amount carries no currency (a bare number
+/// typed into the fallback field), so the API receives `""` rather than null.
+String packageAmountCurrency(String? raw) {
+  if (raw == null) return '';
+  final match = RegExp(r'^\s*([A-Za-z]+)').firstMatch(raw);
+  return match?.group(1)?.toUpperCase() ?? '';
+}

@@ -1507,7 +1507,7 @@ Contact Number     : ${m['contactNumber']}''';
       'contact_person': m['hamoueContactPerson'],
       'visa': (m['visa'] as String?) == 'Yes',
       'meal': (m['meal'] as String?) == 'Yes',
-      'extra_legroom_seat': (m['extraLegroomSeat'] as String?) == 'Yes',
+      'extra_leg_room_seat': (m['extraLegroomSeat'] as String?) == 'Yes',
       'gold_route': (m['goldRoute'] as String?) == 'Yes',
       'is_round_trip': m['isRoundTrip'] as bool? ?? false,
       'silk_route': (m['skipRouteFacility'] as String?) == 'Yes' ? 1 : 0,
@@ -1811,6 +1811,8 @@ Contact Number     : ${m['contactNumber']}''';
       'remarks': remarksForMember(primary),
       'manual_reserv_no': '',
       'package_amount': packageAmountToInt(primary['packageAmount'] as String?),
+      'currency_type':
+          packageAmountCurrency(primary['packageAmount'] as String?),
       'selected_marketing_person': '',
       "reservation_status":"Pending",
       'sales_code': salesCode,
@@ -1909,6 +1911,8 @@ print(" rrr : $airTicketDetails");
       'remarks': primary['remarks'] ?? '',
       'manual_reserv_no': '',
       'package_amount': packageAmountToInt(primary['packageAmount'] as String?),
+      'currency_type':
+          packageAmountCurrency(primary['packageAmount'] as String?),
       'selected_marketing_person': '',
       "reservation_status":"Pending",
       'sales_code': salesCode,

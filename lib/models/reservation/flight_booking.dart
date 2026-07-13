@@ -56,7 +56,7 @@ class FlightBooking {
       contactPerson: json['contact_person'] as String?,
       visa: json['visa'] as bool? ?? false,
       meal: json['meal'] as bool? ?? false,
-      extraLegroomSeat: json['extra_legroom_seat'] as bool? ?? false,
+      extraLegroomSeat: json['extra_leg_room_seat'] as bool? ?? false,
       goldRoute: json['gold_route'] as bool? ?? false,
     );
   }
@@ -137,7 +137,7 @@ class FlightBooking {
       'contact_person': contactPerson,
       'visa': visa,
       'meal': meal,
-      'extra_legroom_seat': extraLegroomSeat,
+      'extra_leg_room_seat': extraLegroomSeat,
       'gold_route': goldRoute,
       'is_round_trip': isRoundTrip,
       'silk_route': silkRoute,

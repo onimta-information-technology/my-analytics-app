@@ -14,6 +14,7 @@ import 'package:ballys_reservation_app/components/package_amount_field.dart';
 
 import 'package:ballys_reservation_app/components/bottom_sheets/member_search-new_sheet.dart';
 import 'package:ballys_reservation_app/components/guest_deatils_view_spGift.dart';
+import 'package:ballys_reservation_app/components/location_search_field.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/hotel_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/airport_repository.dart';
@@ -33,7 +34,23 @@ import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/amount_util.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 
-enum _Section { airTicket, hotel }
+enum _Section { airTicket, hotel, transport }
+
+// Transport tab dropdown options.
+const List<String> kCarTypes = [
+  'Normal Car',
+  'SUV / Jeep',
+  'Voxy',
+  'Prado',
+  'Benz',
+  'Limousine',
+  'Alphard',
+];
+
+const List<String> kHireTypes = [
+  'Pickup',
+  'Drop',
+];
 
 const TextStyle kInputTextStyle = TextStyle(
   fontSize: 17,
@@ -138,6 +155,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
 
   final _hotelFormKey = GlobalKey<FormState>();
   final _airFormKey = GlobalKey<FormState>();
+  final _transportFormKey = GlobalKey<FormState>();
 
   bool _isLoading = false;
 
@@ -238,11 +256,31 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
   List<PassportFile> _a_passportFiles = [];
   Key _a_passportUploadKey = UniqueKey();
 
+  // ── TRANSPORT members list (Bellagio only) ─────────────────────────────────
+  List<Map<String, dynamic>> _transportMembers = [];
+
+  final _t_pickupDateCtrl = TextEditingController();
+  final _t_pickupTimeCtrl = TextEditingController();
+  final _t_pickupLocationCtrl = TextEditingController();
+  final _t_dropLocationCtrl = TextEditingController();
+  final _t_noOfVehicles = TextEditingController(text: '1');
+  final _t_noOfPassengers = TextEditingController(text: '1');
+  final _t_contactNumber = TextEditingController();
+
+  DateTime? _t_pickupDate;
+  TimeOfDay? _t_pickupTime;
+  String? _t_carType;
+  String? _t_hireType;
+  String _t_pickupPlaceId = '';
+  String _t_dropPlaceId = '';
+
   static const _hotelColor = Color(0xFFE65C00);
   static const _airColor = Color(0xFF0277BD);
+  static const _transportColor = Color(0xFF2E7D32);
 
   final _hotelScrollCtrl = ScrollController();
   final _airScrollCtrl = ScrollController();
+  final _transportScrollCtrl = ScrollController();
 
   Color get _accentColor {
     switch (_activeSection) {
@@ -250,6 +288,8 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
         return _hotelColor;
       case _Section.airTicket:
         return _airColor;
+      case _Section.transport:
+        return _transportColor;
     }
   }
 
@@ -283,11 +323,19 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _a_arrCtrl,
       _a_depCtrl,
       _a_remarksCtrl,
+      _t_pickupDateCtrl,
+      _t_pickupTimeCtrl,
+      _t_pickupLocationCtrl,
+      _t_dropLocationCtrl,
+      _t_noOfVehicles,
+      _t_noOfPassengers,
+      _t_contactNumber,
     ]) {
       c.dispose();
     }
     _hotelScrollCtrl.dispose();
     _airScrollCtrl.dispose();
+    _transportScrollCtrl.dispose();
     super.dispose();
   }
 
@@ -792,6 +840,81 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     _scrollToTop(_airScrollCtrl);
   }
 
+  // ── TRANSPORT ───────────────────────────────────────────────────────────────
+  Map<String, dynamic> _captureCurrentTransportMember() {
+    return {
+      'guestName': _sharedGuestName.text,
+      'memberId': _sharedMemberId.text,
+      'pickupDate': _t_pickupDateCtrl.text,
+      'pickupTime': _t_pickupTimeCtrl.text,
+      'carType': _t_carType ?? '',
+      'hireType': _t_hireType ?? '',
+      'pickupLocation': _t_pickupLocationCtrl.text,
+      'dropLocation': _t_dropLocationCtrl.text,
+      'noOfVehicles': _t_noOfVehicles.text,
+      'noOfPassengers': _t_noOfPassengers.text,
+      'contactNumber': _t_contactNumber.text,
+      // typed fields used when building the API body
+      'pickupDateObj': _t_pickupDate,
+      'pickupTimeObj': _t_pickupTime,
+      'pickupPlaceId': _t_pickupPlaceId,
+      'dropPlaceId': _t_dropPlaceId,
+    };
+  }
+
+  void _resetTransportFields() {
+    _t_pickupDateCtrl.clear();
+    _t_pickupTimeCtrl.clear();
+    _t_pickupLocationCtrl.clear();
+    _t_dropLocationCtrl.clear();
+    _t_noOfVehicles.text = '1';
+    _t_noOfPassengers.text = '1';
+    _t_contactNumber.clear();
+    _t_pickupDate = null;
+    _t_pickupTime = null;
+    _t_carType = null;
+    _t_hireType = null;
+    _t_pickupPlaceId = '';
+    _t_dropPlaceId = '';
+  }
+
+  void _applyAndAddTransportMember() {
+    if (_sharedGuestName.text.trim().isEmpty &&
+        _sharedMemberId.text.trim().isEmpty) {
+      _showRequiredSnack();
+      return;
+    }
+    setState(() {
+      _transportMembers.add(_captureCurrentTransportMember());
+      _resetSharedGuest();
+      _resetTransportFields();
+    });
+    _showAddedSnack(_transportMembers.length, _transportColor);
+    _scrollToTop(_transportScrollCtrl);
+  }
+
+  void _addMemberWithSameDetailsTransport() {
+    if (_sharedGuestName.text.trim().isEmpty &&
+        _sharedMemberId.text.trim().isEmpty) {
+      _showRequiredSnack();
+      return;
+    }
+    setState(() {
+      _transportMembers.add(_captureCurrentTransportMember());
+      _resetSharedGuest();
+    });
+    _showAddedSnack(_transportMembers.length, _transportColor);
+    _scrollToTop(_transportScrollCtrl);
+  }
+
+  void _clearAllTransportForm() {
+    setState(() {
+      _transportMembers.clear();
+      _resetSharedGuest();
+      _resetTransportFields();
+    });
+  }
+
   // ── Guest search ─────────────────────────────────────────────────────────────
   Future<void> _openGuestSearch({
     required int iid,
@@ -1023,8 +1146,102 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     return result;
   }
 
+  Future<TimeOfDay?> _pickTime(
+    BuildContext context, {
+    String label = 'Select Time',
+    TimeOfDay? initial,
+  }) async {
+    final now = DateTime.now();
+    DateTime picked = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      initial?.hour ?? now.hour,
+      initial?.minute ?? now.minute,
+    );
+    TimeOfDay? result;
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 8),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+          ),
+          const Divider(height: 1),
+          SizedBox(
+            height: 220,
+            child: CupertinoDatePicker(
+              mode: CupertinoDatePickerMode.time,
+              initialDateTime: picked,
+              use24hFormat: false,
+              onDateTimeChanged: (d) => picked = d,
+            ),
+          ),
+          const Divider(height: 1),
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
+                  ),
+                ),
+              ),
+              const VerticalDivider(width: 1),
+              Expanded(
+                child: TextButton(
+                  onPressed: () {
+                    result =
+                        TimeOfDay(hour: picked.hour, minute: picked.minute);
+                    Navigator.pop(context);
+                  },
+                  child: const Text(
+                    'Confirm',
+                    style: TextStyle(
+                      color: Colors.blue,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+    return result;
+  }
+
   String _fmt(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  String _fmtTime(TimeOfDay t) {
+    final period = t.hour >= 12 ? 'PM' : 'AM';
+    final h12 = t.hour % 12 == 0 ? 12 : t.hour % 12;
+    return '${h12.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')} $period';
+  }
 
   // ── Message builders — HOTEL ─────────────────────────────────────────────────
   String _singleHotelEntryText(_HotelEntry h, {int? hotelIndex}) {
@@ -1191,6 +1408,41 @@ Remarks              : ${m['remarks']}''';
     return buf.toString();
   }
 
+  // ── Message builders — TRANSPORT ─────────────────────────────────────────────
+  String _singleTransportText(Map<String, dynamic> m) {
+    return '''
+*TRANSPORT REQUEST*
+Membership No      : ${m['memberId']}
+Guest Name         : ${m['guestName']}
+Pickup Date        : ${m['pickupDate']}
+Pickup Time        : ${m['pickupTime']}
+Car Type           : ${m['carType']}
+Hire Type          : ${m['hireType']}
+Pickup Location    : ${m['pickupLocation']}
+Drop Location      : ${m['dropLocation']}
+No of Vehicles     : ${m['noOfVehicles']}
+No of Passengers   : ${m['noOfPassengers']}
+Contact Number     : ${m['contactNumber']}''';
+  }
+
+  String _buildTransportText() {
+    final current = _captureCurrentTransportMember();
+    if (_transportMembers.isEmpty) return _singleTransportText(current);
+    final all = [
+      ..._transportMembers,
+      if ((current['guestName'] as String).isNotEmpty ||
+          (current['memberId'] as String).isNotEmpty)
+        current,
+    ];
+    final buf = StringBuffer();
+    for (int i = 0; i < all.length; i++) {
+      if (i > 0) buf.writeln('\n');
+      buf.writeln('*── Member ${i + 1} ──*');
+      buf.write(_singleTransportText(all[i]));
+    }
+    return buf.toString();
+  }
+
   void _copyToClipboard(String text) {
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1217,6 +1469,9 @@ Remarks              : ${m['remarks']}''';
         break;
       case _Section.airTicket:
         _copyToClipboard(_buildAirText());
+        break;
+      case _Section.transport:
+        _copyToClipboard(_buildTransportText());
         break;
     }
   }
@@ -1348,11 +1603,131 @@ Remarks              : ${m['remarks']}''';
   }
 
   Future<void> _onSave() async {
-    if (_activeSection == _Section.hotel) {
-      await _saveHotelSection();
-    } else {
-      await _saveAirSection();
+    switch (_activeSection) {
+      case _Section.hotel:
+        await _saveHotelSection();
+        break;
+      case _Section.airTicket:
+        await _saveAirSection();
+        break;
+      case _Section.transport:
+        await _saveTransportSection();
+        break;
     }
+  }
+
+  Future<void> _saveTransportSection() async {
+    final hasCurrentGuest = _sharedGuestName.text.trim().isNotEmpty ||
+        _sharedMemberId.text.trim().isNotEmpty;
+
+    final allMembers = <Map<String, dynamic>>[
+      ..._transportMembers,
+      if (hasCurrentGuest) _captureCurrentTransportMember(),
+    ];
+
+    if (allMembers.isEmpty) {
+      _showSaveErrorSnack('Please add at least one guest before saving');
+      return;
+    }
+
+    final transportDetails =
+        allMembers.map((m) => _transportMemberToDetail(m)).toList();
+
+    final guests = allMembers
+        .map((m) => {
+              'BMNumber': m['memberId'],
+              'GuestName': m['guestName'],
+              'PickupDate': _pickupIso(m),
+              'ContactNumber': m['contactNumber'],
+            })
+        .toList();
+
+    final primary = allMembers.first;
+    final salesCode = await StorageUtil.getSalesCode();
+    final userName = await StorageUtil.getUserName();
+    final deviceId = await DeviceId.get();
+    final masterId = DateTime.now().millisecondsSinceEpoch.toString();
+
+    final body = <String, dynamic>{
+      'master_id': masterId,
+      'bm_number': primary['memberId'],
+      'guest_name': primary['guestName'],
+      'pickup_date': _pickupIso(primary),
+      'contact_number': primary['contactNumber'],
+      'reservation_status': 'Pending',
+      'sales_code': salesCode,
+      'user_name': userName,
+      'device_id': deviceId,
+      'transport_details': transportDetails,
+      'guests': guests,
+    };
+
+    setState(() => _isLoading = true);
+    try {
+      print('Saving transport reservation: $body');
+      final apiService = ApiService(const FlutterSecureStorage());
+      final response = await apiService.post('savetransport', body);
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      final status = response['Status'] as bool? ?? false;
+      if (status) {
+        _clearAllTransportForm();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Row(children: [
+            const Icon(Icons.check_circle, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+                child: Text(response['Message'] as String? ??
+                    'Transport reservation saved successfully')),
+          ]),
+          backgroundColor: Colors.green.shade700,
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ));
+      } else {
+        _showSaveErrorSnack(response['Message'] as String? ??
+            'Failed to save transport reservation');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      _showSaveErrorSnack(e.toString());
+    }
+  }
+
+  /// Pickup date and time combined into a single ISO timestamp.
+  String? _pickupIso(Map<String, dynamic> m) {
+    final date = m['pickupDateObj'] as DateTime?;
+    if (date == null) return null;
+    final time = m['pickupTimeObj'] as TimeOfDay?;
+    return DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time?.hour ?? 0,
+      time?.minute ?? 0,
+    ).toIso8601String();
+  }
+
+  Map<String, dynamic> _transportMemberToDetail(Map<String, dynamic> m) {
+    return {
+      'BMNumber': m['memberId'],
+      'guest_name': m['guestName'],
+      'pickup_date': _pickupIso(m),
+      'pickup_time': m['pickupTime'],
+      'car_type': m['carType'],
+      'hire_type': m['hireType'],
+      'pickup_location': m['pickupLocation'],
+      'pickup_place_id': m['pickupPlaceId'],
+      'drop_location': m['dropLocation'],
+      'drop_place_id': m['dropPlaceId'],
+      'no_of_vehicles': int.tryParse(m['noOfVehicles'] as String? ?? '1') ?? 1,
+      'no_of_passengers':
+          int.tryParse(m['noOfPassengers'] as String? ?? '1') ?? 1,
+      'contact_number': m['contactNumber'],
+    };
   }
 
   Future<void> _saveHotelSection() async {
@@ -1635,15 +2010,29 @@ print(" rrr : $body");
                       const SizedBox(width: 8),
                       _sectionTab(
                           _Section.hotel, Icons.hotel_rounded, 'Hotel'),
+                      // Transport is a Bellagio-only section.
+                      if (_isBellagio) ...[
+                        const SizedBox(width: 8),
+                        _sectionTab(
+                          _Section.transport,
+                          Icons.directions_car_rounded,
+                          'Transport',
+                        ),
+                      ],
                     ],
                   ),
                 ),
                 Expanded(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 250),
-                    child: _activeSection == _Section.hotel
-                        ? _HotelForm(key: const ValueKey('hotel'), state: this)
-                        : _AirForm(key: const ValueKey('air'), state: this),
+                    child: switch (_activeSection) {
+                      _Section.hotel =>
+                        _HotelForm(key: const ValueKey('hotel'), state: this),
+                      _Section.airTicket =>
+                        _AirForm(key: const ValueKey('air'), state: this),
+                      _Section.transport => _TransportForm(
+                          key: const ValueKey('transport'), state: this),
+                    },
                   ),
                 ),
               ],
@@ -3293,7 +3682,7 @@ class _AirForm extends StatelessWidget {
 
           // ── Additional facilities (NEW) ──────────────────────────────────────
           _sectionHeader(
-            'Additional Facilities',
+            'Amentities',
             accent,
             Icons.checklist_rtl_rounded,
           ),
@@ -3414,6 +3803,242 @@ class _AirForm extends StatelessWidget {
             textBuilder: state._singleAirText,
             onRemove: (i) =>
                 () => state.setState(() => state._airMembers.removeAt(i)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TRANSPORT FORM (Bellagio only)
+// ─────────────────────────────────────────────────────────────────────────────
+class _TransportForm extends StatelessWidget {
+  final _QuickReservationScreenState state;
+  const _TransportForm({super.key, required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = _QuickReservationScreenState._transportColor;
+    return Form(
+      key: state._transportFormKey,
+      child: ListView(
+        controller: state._transportScrollCtrl,
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
+        children: [
+          _sectionHeader(
+            'Transport Request',
+            accent,
+            Icons.directions_car_rounded,
+          ),
+          _guestIdentityRow(
+            context: context,
+            memberIdCtrl: state._sharedMemberId,
+            memberIdNumberCtrl: state._sharedMidNumber,
+            memberNameCtrl: state._sharedGuestName,
+            accent: accent,
+            midLabel: 'Membership No *',
+            nameLabel: 'Guest Name',
+            onSearchById: () => state._openGuestSearch(
+              iid: 8002,
+              onCardVisible: () =>
+                  state.setState(() => state._sharedGuestCardVisible = true),
+            ),
+            onSearchByName: () => state._openGuestSearch(
+              iid: 8003,
+              onCardVisible: () =>
+                  state.setState(() => state._sharedGuestCardVisible = true),
+            ),
+            onProfileTap: () => state._navigateToProfile(
+              state._sharedMemberId.text,
+              state._sharedGuestName.text,
+            ),
+            profileEnabled: state._sharedGuestCardVisible,
+            isNumericOnly: state._isNumericOnlyLocation,
+            prefixes: state._prefixes,
+            selectedPrefix: state._selectedPrefix,
+            onPrefixChanged: (v) => state.setState(() {
+              state._selectedPrefix = v;
+              state._sharedMemberId.text = '$v${state._sharedMidNumber.text}';
+            }),
+          ),
+          const SizedBox(height: 12),
+          if (state._sharedGuestCardVisible &&
+              state._sharedMemberId.text.isNotEmpty &&
+              state._sharedGuestName.text.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: GuestDisplayCardSpecialGiftview(
+                memberIdText: state._sharedMemberId.text,
+                memberNameText: state._sharedGuestName.text,
+                showCard: true,
+                showLastVisitDate: true,
+              ),
+            ),
+          // ── Pickup date & time ───────────────────────────────────────────────
+          _dateField(
+            context,
+            'Pickup Date *',
+            state._t_pickupDateCtrl,
+            accent,
+            () async {
+              final d = await state._pickDate(
+                context,
+                label: 'Select Pickup Date',
+                initial: state._t_pickupDate,
+              );
+              if (d != null) {
+                state.setState(() {
+                  state._t_pickupDate = d;
+                  state._t_pickupDateCtrl.text = state._fmt(d);
+                });
+              }
+            },
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: state._t_pickupTimeCtrl,
+            readOnly: true,
+            style: kInputTextStyle,
+            decoration: _fieldDeco(
+              'Pickup Time *',
+              icon: Icons.access_time_rounded,
+              accent: accent,
+            ).copyWith(
+              suffixIcon: Icon(Icons.arrow_drop_down, color: accent),
+            ),
+            onTap: () async {
+              final t = await state._pickTime(
+                context,
+                label: 'Select Pickup Time',
+                initial: state._t_pickupTime,
+              );
+              if (t != null) {
+                state.setState(() {
+                  state._t_pickupTime = t;
+                  state._t_pickupTimeCtrl.text = state._fmtTime(t);
+                });
+              }
+            },
+          ),
+          const SizedBox(height: 12),
+
+          // ── Car type / hire type ─────────────────────────────────────────────
+          DropdownButtonFormField<String>(
+            value: state._t_carType,
+            style: kInputTextStyle,
+            isExpanded: true,
+            decoration: _fieldDeco(
+              'Car Type *',
+              icon: Icons.directions_car_filled_outlined,
+              accent: accent,
+            ),
+            items: kCarTypes
+                .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                .toList(),
+            onChanged: (v) => state.setState(() => state._t_carType = v),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: state._t_hireType,
+            style: kInputTextStyle,
+            isExpanded: true,
+            decoration: _fieldDeco(
+              'Hire Type *',
+              icon: Icons.assignment_outlined,
+              accent: accent,
+            ),
+            items: kHireTypes
+                .map((h) => DropdownMenuItem(value: h, child: Text(h)))
+                .toList(),
+            onChanged: (v) => state.setState(() => state._t_hireType = v),
+          ),
+          const SizedBox(height: 12),
+
+          // ── Pickup / drop locations (Google Places) ──────────────────────────
+          _LabeledCard(
+            label: 'Locations',
+            accent: accent,
+            child: Column(
+              children: [
+                LocationSearchField(
+                  controller: state._t_pickupLocationCtrl,
+                  textStyle: kInputTextStyle,
+                  accent: accent,
+                  sheetTitle: 'Search Pickup Location',
+                  decoration: _fieldDeco(
+                    'Pickup Location *',
+                    icon: Icons.my_location_rounded,
+                    accent: accent,
+                  ),
+                  onSelected: (description, placeId) => state.setState(() {
+                    state._t_pickupLocationCtrl.text = description;
+                    state._t_pickupPlaceId = placeId;
+                  }),
+                ),
+                const SizedBox(height: 10),
+                LocationSearchField(
+                  controller: state._t_dropLocationCtrl,
+                  textStyle: kInputTextStyle,
+                  accent: accent,
+                  sheetTitle: 'Search Drop Location',
+                  decoration: _fieldDeco(
+                    'Drop Location *',
+                    icon: Icons.place_rounded,
+                    accent: accent,
+                  ),
+                  onSelected: (description, placeId) => state.setState(() {
+                    state._t_dropLocationCtrl.text = description;
+                    state._t_dropPlaceId = placeId;
+                  }),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // ── Vehicles / passengers ────────────────────────────────────────────
+          _rowPair(
+            _StepperField(
+              controller: state._t_noOfVehicles,
+              label: 'No of Vehicles',
+              icon: Icons.local_taxi_outlined,
+              accent: accent,
+            ),
+            _StepperField(
+              controller: state._t_noOfPassengers,
+              label: 'Passengers',
+              icon: Icons.group_outlined,
+              accent: accent,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // ── Contact number ───────────────────────────────────────────────────
+          TextFormField(
+            controller: state._t_contactNumber,
+            style: kInputTextStyle,
+            keyboardType: TextInputType.phone,
+            decoration: _fieldDeco(
+              'Contact Number *',
+              icon: Icons.phone_rounded,
+              accent: accent,
+            ),
+          ),
+
+          const SizedBox(height: 16),
+          _actionButtons(
+            accent: accent,
+            onApplyAndAdd: state._applyAndAddTransportMember,
+            onSameDetails: state._addMemberWithSameDetailsTransport,
+          ),
+          const SizedBox(height: 20),
+          _addedMembersSection(
+            members: state._transportMembers,
+            accent: accent,
+            textBuilder: state._singleTransportText,
+            onRemove: (i) => () =>
+                state.setState(() => state._transportMembers.removeAt(i)),
           ),
         ],
       ),

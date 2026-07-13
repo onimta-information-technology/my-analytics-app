@@ -291,6 +291,8 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
         return HotelAndRoomSelectionBottomSheet(
           HotelRepository(ApiService(const FlutterSecureStorage())),
           onClose: () => Navigator.pop(context), // ← X button callback
+          reservationArrivalDate: _arrivalDate,
+          reservationDepartureDate: _departureDate,
         );
       },
     );

@@ -14,9 +14,17 @@ class HotelAndRoomSelectionBottomSheet extends ConsumerStatefulWidget {
   final HotelRepository hotelRepository;
   final VoidCallback? onClose;
 
+  /// Arrival / departure dates already picked on the reservation form. When
+  /// both are set the sheet offers a checkbox that copies them into the
+  /// hotel date range.
+  final DateTime? reservationArrivalDate;
+  final DateTime? reservationDepartureDate;
+
   const HotelAndRoomSelectionBottomSheet(
     this.hotelRepository, {
     this.onClose,
+    this.reservationArrivalDate,
+    this.reservationDepartureDate,
     super.key,
   });
 
@@ -111,6 +119,51 @@ String selectedByPaymnet = 'NA';
   bool _hotelError = false;
   bool _roomCategoryError = false;
   bool _roomTypeError = false;
+
+  /// When true the date range mirrors the reservation arrival / departure
+  /// dates and the range picker is locked.
+  bool _useReservationDates = false;
+
+  bool get _hasReservationDates =>
+      widget.reservationArrivalDate != null &&
+      widget.reservationDepartureDate != null;
+
+  String _formatRange(DateTime start, DateTime end) =>
+      "${DateFormat('yyyy-MM-dd').format(start)} - ${DateFormat('yyyy-MM-dd').format(end)}";
+
+  void _applyReservationDates() {
+    final start = widget.reservationArrivalDate!;
+    final end = widget.reservationDepartureDate!;
+    final range = DateTimeRange(start: start, end: end);
+    setState(() {
+      selectedDateRange = range;
+      arrivalDate = start;
+      departureDate = end;
+      numberOfNights = range.duration.inDays;
+      _dateRangeError = false;
+      _dateRangeController.text = _formatRange(start, end);
+    });
+    _clearSelectedCost();
+  }
+
+  void _toggleUseReservationDates(bool? value) {
+    final checked = value ?? false;
+    setState(() => _useReservationDates = checked);
+
+    if (checked) {
+      _applyReservationDates();
+      return;
+    }
+
+    setState(() {
+      selectedDateRange = null;
+      arrivalDate = null;
+      departureDate = null;
+      numberOfNights = null;
+      _dateRangeController.text = "";
+    });
+    _clearSelectedCost();
+  }
 
   void _selectDateRange(BuildContext context) async {
     DateTimeRange? pickedDateRange = await showDateRangePicker(
@@ -291,8 +344,19 @@ String selectedByPaymnet = 'NA';
       numberOfNights = hotel.noOfNights;
       arrivalDate = hotel.arrivalDate;
       departureDate = hotel.departureDate;
-      _dateRangeController.text =
-          "${DateFormat('yyyy-MM-dd').format(hotel.selectedDateRange.start)} - ${DateFormat('yyyy-MM-dd').format(hotel.selectedDateRange.end)}";
+      _dateRangeController.text = _formatRange(
+        hotel.selectedDateRange.start,
+        hotel.selectedDateRange.end,
+      );
+      _useReservationDates = _hasReservationDates &&
+          DateUtils.isSameDay(
+            hotel.arrivalDate,
+            widget.reservationArrivalDate,
+          ) &&
+          DateUtils.isSameDay(
+            hotel.departureDate,
+            widget.reservationDepartureDate,
+          );
 
       selectedHotelId = hotel.hotel;
       selectedHotelName = hotel.hotelName;
@@ -414,6 +478,11 @@ String selectedByPaymnet = 'NA';
   }
 
   void _clearSelection() {
+    // Keep the "same as reservation dates" choice sticky across adds so a
+    // second hotel on the same stay does not need the dates re-picked.
+    final bool keepReservationDates =
+        _useReservationDates && _hasReservationDates;
+
     setState(() {
       numberOfAdults = 1;
       numberOfChildren = 0;
@@ -450,11 +519,16 @@ String selectedByPaymnet = 'NA';
       selectedEcLcoFacility = 'NA';
       selectedByPaymnet = _isBellagio ? 'N/A' : 'NA';
 
+      _useReservationDates = false;
       _dateRangeError = false;
       _hotelError = false;
       _roomCategoryError = false;
       _roomTypeError = false;
     });
+
+    if (keepReservationDates) {
+      _toggleUseReservationDates(true);
+    }
   }
 
   void _showCostCalculator(BuildContext context) async {
@@ -582,6 +656,7 @@ String selectedByPaymnet = 'NA';
                         TextFormField(
                           controller: _dateRangeController,
                           readOnly: true,
+                          enabled: !_useReservationDates,
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -596,7 +671,39 @@ String selectedByPaymnet = 'NA';
                             errorText: _dateRangeError ? "Required" : null,
                             suffixIcon: IconButton(
                               icon: const Icon(Icons.calendar_today),
-                              onPressed: () => _selectDateRange(context),
+                              onPressed: _useReservationDates
+                                  ? null
+                                  : () => _selectDateRange(context),
+                            ),
+                          ),
+                        ),
+
+                        // ── Same as reservation dates ──────────
+                        CheckboxListTile(
+                          value: _useReservationDates,
+                          onChanged: _hasReservationDates
+                              ? _toggleUseReservationDates
+                              : null,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                          title: const Text(
+                            "Same as Arrival & Departure Date",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          subtitle: Text(
+                            _hasReservationDates
+                                ? _formatRange(
+                                    widget.reservationArrivalDate!,
+                                    widget.reservationDepartureDate!,
+                                  )
+                                : "Pick the reservation Arrival & Departure dates first",
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontStyle: FontStyle.italic,
                             ),
                           ),
                         ),

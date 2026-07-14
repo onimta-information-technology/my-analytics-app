@@ -261,6 +261,27 @@ class _FollowUpCard extends StatelessWidget {
                         ],
                       ),
                     ],
+                    if (item.loginBy != null && item.loginBy!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.person_outline,
+                              size: 16, color: Colors.black54),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              "Followed by: ${item.loginBy!}",
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 17,
+                                color: Color.fromARGB(255, 0, 0, 0),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 6,

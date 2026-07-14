@@ -186,7 +186,7 @@ class _FollowScreenState extends ConsumerState<FollowScreen> {
 
     final String? customerResponse = _isContacted ? _customerResponse : null;
     final String? remarks =
-        _isContacted && _isNegativeResponse ? _remarksController.text.trim() : null;
+        _isContacted && _isNegativeResponse ? _remarksController.text.trim() : "";
     final String? responseType =
         _isContacted ? (_isNegativeType ? 'Negative' : 'Positive') : null;
     final List<String> checklistItems =

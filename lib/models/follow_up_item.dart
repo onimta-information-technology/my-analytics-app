@@ -16,6 +16,9 @@ class FollowUpItem {
   final List<String> checklistItems;
   final String? positiveStatus;
 
+  /// The user who requested/saved the follow-up (`Login_By` on the wire).
+  final String? loginBy;
+
   /// When the follow-up was saved. Null when the API sends no date.
   final DateTime? createdDate;
 
@@ -37,6 +40,7 @@ class FollowUpItem {
     this.remarks,
     this.checklistItems = const <String>[],
     this.positiveStatus,
+    this.loginBy,
     this.createdDate,
     this.photoBase64,
   });
@@ -93,6 +97,7 @@ class FollowUpItem {
           .map((e) => e.toString())
           .toList(),
       positiveStatus: json['PositiveStatus'] as String?,
+      loginBy: (json['Login_By'] ?? json['LoginBy'])?.toString(),
       createdDate: _parseCreatedDate(json),
       photoBase64: json['Photo'] as String?,
     );

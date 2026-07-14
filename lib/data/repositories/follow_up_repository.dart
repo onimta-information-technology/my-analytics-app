@@ -5,6 +5,7 @@ import 'package:ballys_reservation_app/data/services/api_service.dart';
 // import 'package:ballys_reservation_app/models/reservation.dart';
 import 'package:ballys_reservation_app/models/follow_up_item.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 
 /// Repository for the follow-up (CRM) endpoint.
 ///
@@ -34,6 +35,9 @@ class FollowUpRepository {
     File? photo,
   }) async {
     final deviceId = await DeviceId.get();
+    final userName = await StorageUtil.getUserName();
+    final salesCode = await StorageUtil.getSalesCode();
+    final marketingCode = await StorageUtil.getMarketingCode();
 
     String? photoBase64;
     if (photo != null) {
@@ -53,6 +57,9 @@ class FollowUpRepository {
       'PositiveStatus': positiveStatus,
       'Photo': photoBase64,
       'DeviceId': deviceId,
+      'Login_By': userName,
+      'Sales_Code': salesCode,
+      'Marketing_Code': marketingCode,
       'CreatedDate': DateTime.now().toIso8601String(),
     };
     // Log a readable copy: the full base64 photo would swamp the terminal, so

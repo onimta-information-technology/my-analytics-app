@@ -55,6 +55,8 @@ import 'package:ballys_reservation_app/screens/reservations/new_reservation_scre
 import 'package:ballys_reservation_app/screens/reservations/quick_reservation_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/reservation_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/reservation_view_screen.dart';
+import 'package:ballys_reservation_app/screens/reservations/transport_screen.dart';
+import 'package:ballys_reservation_app/screens/reservations/transport_view_screen.dart';
 import 'package:ballys_reservation_app/screens/settings_screen.dart';
 import 'package:ballys_reservation_app/screens/support_screen.dart';
 import 'package:ballys_reservation_app/screens/viewBirthdayGiftRequest.dart';
@@ -473,6 +475,38 @@ class AppNavigation {
           );
         },
       ),
+    ),
+
+    // Transport (Bellagio only)
+    GoRoute(
+      path: 'transport',
+      pageBuilder: (context, state) => CustomTransitionPage(
+        fullscreenDialog: false,
+        key: state.pageKey,
+        child: const TransportScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+            child: child,
+          );
+        },
+      ),
+      routes: [
+        GoRoute(
+          path: 'transport-view',
+          pageBuilder: (context, state) => CustomTransitionPage(
+            fullscreenDialog: false,
+            key: state.pageKey,
+            child: const TransportViewScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(
+                opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+                child: child,
+              );
+            },
+          ),
+        ),
+      ],
     ),
 
   ],

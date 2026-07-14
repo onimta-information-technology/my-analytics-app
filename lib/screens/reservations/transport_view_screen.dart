@@ -119,128 +119,167 @@ class TransportViewScreen extends ConsumerWidget {
     TransportReservation transport,
     FontSettings fontSettings,
   ) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Constants.kPrimaryColor.withOpacity(0.35),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '${transport.mid} - ${transport.guestName}',
-                    style: TextStyle(
-                      fontSize: fontSettings.fontSize + 2,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
+            // ── Highlighted header band ──────────────────────────────────
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Constants.kPrimaryColor,
+                    Color.fromARGB(255, 168, 116, 30),
+                  ],
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.22),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.directions_car_filled,
+                      color: Colors.white,
+                      size: 26,
                     ),
                   ),
-                ),
-                // Container(
-                //   padding:
-                //       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                //   decoration: BoxDecoration(
-                //     color: _statusColor(transport.reservationStatus),
-                //     borderRadius: BorderRadius.circular(12),
-                //   ),
-                //   child: Row(
-                //     mainAxisSize: MainAxisSize.min,
-                //     children: [
-                //       Icon(
-                //         _statusIcon(transport.reservationStatus),
-                //         size: 18,
-                //         color: Colors.white,
-                //       ),
-                //       const SizedBox(width: 4),
-                //       Text(
-                //         transport.reservationStatus,
-                //         style: TextStyle(
-                //           fontSize: fontSettings.fontSize,
-                //           color: Colors.white,
-                //           fontWeight: FontWeight.bold,
-                //         ),
-                //       ),
-                //     ],
-                //   ),
-                // ),
-              ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${transport.guestName} - ${transport.mid}',
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize + 2,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        // const SizedBox(height: 2),
+                        // Text(
+                        //   'Member ID: ${transport.mid}',
+                        //   style: TextStyle(
+                        //     fontSize: fontSettings.fontSize - 2,
+                        //     color: Colors.white70,
+                        //     fontWeight: FontWeight.w600,
+                        //   ),
+                        // ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const Divider(height: 24),
-            _infoRow(
-              Icons.event,
-              'Pickup',
-              _formatDateTime(transport.pickupDate),
-              Colors.blueGrey,
-              fontSettings,
+
+            // ── Stat strip ───────────────────────────────────────────────
+            Container(
+              color: const Color.fromARGB(255, 250, 244, 232),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _statTile(
+                      Icons.local_taxi,
+                      '${transport.totalVehicles}',
+                      'Vehicles',
+                      fontSettings,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _statTile(
+                      Icons.people,
+                      '${transport.totalPassengers}',
+                      'Passengers',
+                      fontSettings,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _statTile(
+                      Icons.route,
+                      '${transport.details.length}',
+                      'Trips',
+                      fontSettings,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            _infoRow(
-              Icons.phone,
-              'Contact',
-              transport.contactNumber,
-              Colors.green,
-              fontSettings,
-            ),
-            _infoRow(
-              Icons.person_outline,
-              'Requested by',
-              transport.userName,
-              Colors.blue,
-              fontSettings,
-            ),
-            _infoRow(
-              Icons.badge_outlined,
-              'Sales code',
-              transport.salesCode,
-              Colors.indigo,
-              fontSettings,
-            ),
-            _infoRow(
-              Icons.schedule,
-              'Requested',
-              _formatDateTime(transport.createdDate),
-              Colors.blueGrey,
-              fontSettings,
-            ),
-            _infoRow(
-              Icons.confirmation_number_outlined,
-              'Request ID',
-              transport.masterId,
-              Colors.brown,
-              fontSettings,
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: _statTile(
-                    Icons.local_taxi,
-                    '${transport.totalVehicles}',
-                    'Vehicles',
+
+            // ── Details body ─────────────────────────────────────────────
+            Container(
+              width: double.infinity,
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _infoRow(
+                    Icons.event,
+                    'Pickup',
+                    _formatDateTime(transport.pickupDate),
+                    Colors.blueGrey,
                     fontSettings,
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _statTile(
-                    Icons.people,
-                    '${transport.totalPassengers}',
-                    'Passengers',
+                  _infoRow(
+                    Icons.phone,
+                    'Contact',
+                    transport.contactNumber,
+                    Colors.green,
                     fontSettings,
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _statTile(
-                    Icons.route,
-                    '${transport.details.length}',
-                    'Trips',
+                  _infoRow(
+                    Icons.person_outline,
+                    'Requested by',
+                    transport.userName,
+                    Colors.blue,
                     fontSettings,
                   ),
-                ),
-              ],
+                  _infoRow(
+                    Icons.badge_outlined,
+                    'Sales code',
+                    transport.salesCode,
+                    Colors.indigo,
+                    fontSettings,
+                  ),
+                  _infoRow(
+                    Icons.schedule,
+                    'Requested',
+                    _formatDateTime(transport.createdDate),
+                    Colors.blueGrey,
+                    fontSettings,
+                  ),
+                  _infoRow(
+                    Icons.confirmation_number_outlined,
+                    'Request ID',
+                    transport.masterId,
+                    Colors.brown,
+                    fontSettings,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -417,9 +456,9 @@ class TransportViewScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Constants.kPrimaryColor.withOpacity(0.45)),
       ),
       child: Column(
         children: [

@@ -1670,7 +1670,7 @@ Contact Number     : ${m['contactNumber']}''';
 
     final guests = allMembers
         .map((m) => {
-              'BMNumber': m['memberId'],
+              'MID': m['memberId'],
               'GuestName': m['guestName'],
               'PickupDate': _pickupIso(m),
               'ContactNumber': m['contactNumber'],
@@ -1685,7 +1685,7 @@ Contact Number     : ${m['contactNumber']}''';
 
     final body = <String, dynamic>{
       'master_id': masterId,
-      'bm_number': primary['memberId'],
+      'MID': primary['memberId'],
       'guest_name': primary['guestName'],
       'pickup_date': _pickupIso(primary),
       'contact_number': primary['contactNumber'],
@@ -1701,7 +1701,7 @@ Contact Number     : ${m['contactNumber']}''';
     try {
       _logLong('Saving transport reservation', body);
       final apiService = ApiService(const FlutterSecureStorage());
-      final response = await apiService.post('savetransport', body);
+      final response = await apiService.post('Transport_Insert', body);
       if (!mounted) return;
       setState(() => _isLoading = false);
       final status = response['Status'] as bool? ?? false;
@@ -1748,7 +1748,7 @@ Contact Number     : ${m['contactNumber']}''';
 
   Map<String, dynamic> _transportMemberToDetail(Map<String, dynamic> m) {
     return {
-      'BMNumber': m['memberId'],
+      'MID': m['memberId'],
       'guest_name': m['guestName'],
       'pickup_date': _pickupIso(m),
       'pickup_time': m['pickupTime'],

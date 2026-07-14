@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 // import 'package:ballys_reservation_app/models/reservation.dart';
+import 'package:ballys_reservation_app/models/follow_up_item.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 
 /// Repository for the follow-up (CRM) endpoint.
@@ -63,6 +64,22 @@ class FollowUpRepository {
     print('Follow-up request body: ${jsonEncode(logBody)}');
 
     return apiService.post('followup_Insert', body);
+  }
+
+  /// Fetches every saved follow-up from `GetAllFollowup`.
+  ///
+  /// The endpoint answers `{ "Status": true, "Data": [ ... ] }`; a false or
+  /// missing `Status` is treated as an empty list rather than an error, since
+  /// the API has no error payload of its own.
+  Future<List<FollowUpItem>> fetchAllFollowUps() async {
+    final response = await apiService.get('GetAllFollowup');
+
+    if (response['Status'] != true) return const <FollowUpItem>[];
+
+    final data = response['Data'] as List<dynamic>? ?? const [];
+    return data
+        .map((e) => FollowUpItem.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// Returns an ISO `yyyy-MM-dd` date string, or null when [date] is null.

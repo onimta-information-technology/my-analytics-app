@@ -24,6 +24,9 @@ import 'package:ballys_reservation_app/screens/birthday_gift_price_increase_scre
 import 'package:ballys_reservation_app/screens/birthday_screen.dart';
 import 'package:ballys_reservation_app/screens/daily_walking_guests/daily_walking_guests%20_screen.dart';
 import 'package:ballys_reservation_app/screens/chat_screen.dart';
+import 'package:ballys_reservation_app/models/follow_up_item.dart';
+import 'package:ballys_reservation_app/screens/follow_up_view_screen.dart';
+import 'package:ballys_reservation_app/screens/follow_ups_screen.dart';
 import 'package:ballys_reservation_app/screens/gifts/gifts_main.dart';
 import 'package:ballys_reservation_app/screens/gifts/guest_gifts_screen.dart';
 import 'package:ballys_reservation_app/screens/gifts/gifts_screen.dart';
@@ -609,7 +612,46 @@ class AppNavigation {
                   },
             ),
           ),
-           
+          GoRoute(
+            path: '/followups',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              fullscreenDialog: true,
+              key: state.pageKey,
+              child: const FollowUpsScreen(),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                    return FadeTransition(
+                      opacity: CurveTween(
+                        curve: Curves.easeInOutCirc,
+                      ).animate(animation),
+                      child: child,
+                    );
+                  },
+            ),
+            routes: [
+              GoRoute(
+                path: 'view',
+                pageBuilder: (context, state) {
+                  final item = state.extra as FollowUpItem;
+                  return CustomTransitionPage(
+                    fullscreenDialog: false,
+                    key: state.pageKey,
+                    child: FollowUpViewScreen(item: item),
+                    transitionsBuilder:
+                        (context, animation, secondaryAnimation, child) {
+                          return FadeTransition(
+                            opacity: CurveTween(
+                              curve: Curves.easeInOutCirc,
+                            ).animate(animation),
+                            child: child,
+                          );
+                        },
+                  );
+                },
+              ),
+            ],
+          ),
+
         ]),
           GoRoute(
             path: '/gifts',

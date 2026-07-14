@@ -77,12 +77,12 @@ class _InactiveMembermainScreenState extends ConsumerState<InactiveMembermainScr
                       ),
                     ),
 
-                    // ── Quick Reservation ────────────────────────────────────
+                    // ── Followed ────────────────────────────────────────────
                     Expanded(
                       child: GestureDetector(
-                        // onTap: () {
-                        //   context.go('/reservationMain/quick-reservation');
-                        // },
+                        onTap: () {
+                          context.go('/inctiveMemberMain/followups');
+                        },
                         child: Card(
                           color: const Color.fromARGB(255, 4, 158, 143),
                           child: Padding(

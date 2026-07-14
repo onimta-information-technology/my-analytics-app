@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -1638,6 +1639,18 @@ Contact Number     : ${m['contactNumber']}''';
     }
   }
 
+  // debugPrint truncates long lines, so emit the payload in chunks.
+  void _logLong(String label, Object? payload) {
+    final text = const JsonEncoder.withIndent('  ').convert(payload);
+    debugPrint('===== $label =====');
+    for (final line in text.split('\n')) {
+      for (var i = 0; i < line.length; i += 800) {
+        debugPrint(line.substring(i, math.min(i + 800, line.length)));
+      }
+    }
+    debugPrint('===== end $label =====');
+  }
+
   Future<void> _saveTransportSection() async {
     final hasCurrentGuest = _sharedGuestName.text.trim().isNotEmpty ||
         _sharedMemberId.text.trim().isNotEmpty;
@@ -1681,12 +1694,12 @@ Contact Number     : ${m['contactNumber']}''';
       'user_name': userName,
       'device_id': deviceId,
       'transport_details': transportDetails,
-      'guests': guests,
+      // 'guests': guests,
     };
 
     setState(() => _isLoading = true);
     try {
-      print('Saving transport reservation: $body');
+      _logLong('Saving transport reservation', body);
       final apiService = ApiService(const FlutterSecureStorage());
       final response = await apiService.post('savetransport', body);
       if (!mounted) return;

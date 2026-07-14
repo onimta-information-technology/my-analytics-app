@@ -871,33 +871,9 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
   void _showPassportPreview(Uint8List bytes, String fileName) {
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        insetPadding: const EdgeInsets.all(12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppBar(
-              automaticallyImplyLeading: false,
-              title: Text(
-                fileName.isNotEmpty ? fileName : "Passport",
-                style: const TextStyle(fontSize: 16),
-              ),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-            Flexible(
-              child: InteractiveViewer(
-                maxScale: 5,
-                child: Image.memory(bytes),
-              ),
-            ),
-          ],
-        ),
-      ),
+      barrierColor: Colors.black87,
+      builder: (context) =>
+          _PassportPreviewDialog(bytes: bytes, fileName: fileName),
     );
   }
 
@@ -1958,6 +1934,130 @@ const SizedBox(height: 10.0),
             ),
           const Watermark(),
         ],
+      ),
+    );
+  }
+}
+
+/// Full-screen passport viewer with pinch-zoom and in-app rotation.
+///
+/// The phone itself stays locked to portrait (iPhone only declares portrait in
+/// Info.plist), so a landscape passport is turned inside the viewer instead:
+/// it opens already rotated a quarter turn so the page fills the screen, and
+/// the rotate button turns it further.
+class _PassportPreviewDialog extends StatefulWidget {
+  const _PassportPreviewDialog({required this.bytes, required this.fileName});
+
+  final Uint8List bytes;
+  final String fileName;
+
+  @override
+  State<_PassportPreviewDialog> createState() => _PassportPreviewDialogState();
+}
+
+class _PassportPreviewDialogState extends State<_PassportPreviewDialog> {
+  final TransformationController _transformation = TransformationController();
+  int _quarterTurns = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _turnIfLandscape();
+  }
+
+  @override
+  void dispose() {
+    _transformation.dispose();
+    super.dispose();
+  }
+
+  /// Decodes just enough of the image to learn its aspect ratio. The listener
+  /// can fire synchronously when the thumbnail already warmed the image cache,
+  /// so the turn is applied after the frame rather than during initState.
+  void _turnIfLandscape() {
+    final stream = MemoryImage(
+      widget.bytes,
+    ).resolve(const ImageConfiguration());
+    late final ImageStreamListener listener;
+    listener = ImageStreamListener((info, _) {
+      final isLandscape = info.image.width > info.image.height;
+      info.dispose();
+      stream.removeListener(listener);
+      if (!isLandscape) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _quarterTurns = 1);
+      });
+    }, onError: (_, __) => stream.removeListener(listener));
+    stream.addListener(listener);
+  }
+
+  void _rotate() {
+    setState(() {
+      _quarterTurns = (_quarterTurns + 1) % 4;
+      _transformation.value = Matrix4.identity();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: EdgeInsets.zero,
+      backgroundColor: Colors.black,
+      child: SafeArea(
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      widget.fileName.isNotEmpty
+                          ? widget.fileName
+                          : "Passport",
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: "Rotate",
+                  icon: const Icon(Icons.rotate_90_degrees_cw,
+                      color: Colors.white),
+                  onPressed: _rotate,
+                ),
+                IconButton(
+                  tooltip: "Close",
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            Expanded(
+              child: InteractiveViewer(
+                transformationController: _transformation,
+                maxScale: 5,
+                child: RotatedBox(
+                  quarterTurns: _quarterTurns,
+                  child: Image.memory(
+                    widget.bytes,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => const Center(
+                      child: Icon(
+                        Icons.broken_image,
+                        color: Colors.white54,
+                        size: 48,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

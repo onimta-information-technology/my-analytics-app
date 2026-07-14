@@ -41,8 +41,8 @@ class FollowUpRepository {
     }
 
     final body = <String, Object?>{
-      'MemberId': memberId,
-      'MemberName': memberName,
+      'MId': memberId,
+      'MName': memberName,
       'Description': description,
       'ContactStatus': contactStatus,
       'ResponseType': responseType,
@@ -62,7 +62,7 @@ class FollowUpRepository {
     }
     print('Follow-up request body: ${jsonEncode(logBody)}');
 
-    return apiService.post('savefollowUp', body);
+    return apiService.post('followup_Insert', body);
   }
 
   /// Returns an ISO `yyyy-MM-dd` date string, or null when [date] is null.

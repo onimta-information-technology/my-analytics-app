@@ -184,15 +184,15 @@ class _FollowScreenState extends ConsumerState<FollowScreen> {
 
     setState(() => _isSubmitting = true);
 
-    final String? customerResponse = _isContacted ? _customerResponse : null;
+    final String? customerResponse = _isContacted ? _customerResponse : "";
     final String? remarks =
         _isContacted && _isNegativeResponse ? _remarksController.text.trim() : "";
     final String? responseType =
-        _isContacted ? (_isNegativeType ? 'Negative' : 'Positive') : null;
+        _isContacted ? (_isNegativeType ? 'Negative' : 'Positive') : "";
     final List<String> checklistItems =
         _isContacted && _isPositiveResponse ? _checkedItems.toList() : const <String>[];
     final String? positiveStatus =
-        _isContacted && _isPositiveResponse ? _positiveStatus : null;
+        _isContacted && _isPositiveResponse ? _positiveStatus : "";
 
     try {
       await ref.read(followUpRepositoryProvider).saveFollowUp(

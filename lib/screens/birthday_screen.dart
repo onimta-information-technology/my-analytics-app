@@ -7,6 +7,7 @@ import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -37,6 +38,13 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
 
   // DOB strip selection
   String? _selectedMid;
+
+  // ── Marketing-group gating (mirrors MembersScreen) ──
+  // Only applies for Bellagio logins. Sales code AD001 sees every birthday.
+  // Otherwise only members in the logged-in user's marketing group are shown.
+  String? _userMarketingCode;
+  String? _userSalesCode;
+  bool _isBellagio = false;
 
   // scroll-sync state
   final ScrollController _stripScrollController = ScrollController();
@@ -73,8 +81,39 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
       _listControllers[i].addListener(() => _onListScroll(tabIndex));
     }
 
+    _loadAccessSettings();
     _fetchBirthdays();
   }
+
+  Future<void> _loadAccessSettings() async {
+    final userMarketingCode = await StorageUtil.getMarketingCode();
+    final userSalesCode = await StorageUtil.getSalesCode();
+    final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+    if (mounted) {
+      setState(() {
+        _userMarketingCode = userMarketingCode;
+        _userSalesCode = userSalesCode;
+        _isBellagio = apiUrl.contains('bty.world');
+      });
+    }
+  }
+
+  // Group gating only applies for Bellagio logins. For Ballys, every birthday
+  // is shown. Within Bellagio, sales code AD001 sees every birthday; otherwise
+  // only members in the logged-in user's marketing group are shown.
+  List<Birthday> _applyGroupFilter(List<Birthday> list) {
+    if (!_isBellagio) return list;
+    if (_userSalesCode == 'AD001') return list;
+    return list
+        .where(
+          (b) =>
+              _userMarketingCode != null &&
+              (b.mGroup ?? '').isNotEmpty &&
+              _userMarketingCode == b.mGroup,
+        )
+        .toList();
+  }
+
   @override
   void onConnectivityRestored() {
    _refreshBirthdays();
@@ -136,21 +175,25 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
 
   List<Birthday> _getCurrentFilteredList(int tabIndex) {
     final birthdayData = ref.read(birthdayProvider);
-    final raw = tabIndex == 0
-        ? birthdayData['past']!
-        : tabIndex == 1
-        ? _recentBirthdays
-        : birthdayData['upcoming']!;
+    final raw = _applyGroupFilter(
+      tabIndex == 0
+          ? birthdayData['past']!
+          : tabIndex == 1
+          ? _recentBirthdays
+          : birthdayData['upcoming']!,
+    );
     return _filterBirthdays(applyMidFilter(raw, _getAllBirthdays()));
   }
 
   List<Birthday> _getCurrentTabBirthdays(int tabIndex) {
     final birthdayData = ref.read(birthdayProvider);
-    return tabIndex == 0
-        ? birthdayData['past']!
-        : tabIndex == 1
-        ? _recentBirthdays
-        : birthdayData['upcoming']!;
+    return _applyGroupFilter(
+      tabIndex == 0
+          ? birthdayData['past']!
+          : tabIndex == 1
+          ? _recentBirthdays
+          : birthdayData['upcoming']!,
+    );
   }
 
   void _scrollStripToKey(String key, List<Birthday> tabBirthdays) {
@@ -190,11 +233,11 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
 
   List<Birthday> _getAllBirthdays() {
     final birthdayData = ref.read(birthdayProvider);
-    return [
+    return _applyGroupFilter([
       ...birthdayData['past']!,
       ..._recentBirthdays,
       ...birthdayData['upcoming']!,
-    ];
+    ]);
   }
 
   Future<void> _fetchBirthdays() async {
@@ -543,11 +586,13 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
           Column(
             children: [
               _buildDobStrip(
-                _tabController.index == 0
-                    ? birthdayData['past']!
-                    : _tabController.index == 1
-                    ? _recentBirthdays
-                    : birthdayData['upcoming']!,
+                _applyGroupFilter(
+                  _tabController.index == 0
+                      ? birthdayData['past']!
+                      : _tabController.index == 1
+                      ? _recentBirthdays
+                      : birthdayData['upcoming']!,
+                ),
               ),
               Expanded(
                 child: TabBarView(
@@ -555,19 +600,28 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                   children: [
                     _buildBirthdayList(
                       _filterBirthdays(
-                        applyMidFilter(birthdayData['past']!, allBirthdays),
+                        applyMidFilter(
+                          _applyGroupFilter(birthdayData['past']!),
+                          allBirthdays,
+                        ),
                       ),
                       tabIndex: 0,
                     ),
                     _buildBirthdayList(
                       _filterBirthdays(
-                        applyMidFilter(_recentBirthdays, allBirthdays),
+                        applyMidFilter(
+                          _applyGroupFilter(_recentBirthdays),
+                          allBirthdays,
+                        ),
                       ),
                       tabIndex: 1,
                     ),
                     _buildBirthdayList(
                       _filterBirthdays(
-                        applyMidFilter(birthdayData['upcoming']!, allBirthdays),
+                        applyMidFilter(
+                          _applyGroupFilter(birthdayData['upcoming']!),
+                          allBirthdays,
+                        ),
                       ),
                       tabIndex: 2,
                     ),

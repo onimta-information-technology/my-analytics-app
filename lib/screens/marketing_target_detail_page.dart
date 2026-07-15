@@ -39,6 +39,7 @@ class _MarketingTargetDetailPageState
   String? _loadingMemberId;
   bool? _memProfSH;
   String? _userMarketingCode;
+  String? _userSalesCode;
 
   @override
   void initState() {
@@ -49,23 +50,30 @@ class _MarketingTargetDetailPageState
   Future<void> _loadAccessSettings() async {
     final memProfSH = await StorageUtil.getMemProfSH();
     final userMarketingCode = await StorageUtil.getMarketingCode();
+    final userSalesCode = await StorageUtil.getSalesCode();
     if (mounted) {
       setState(() {
         _memProfSH = memProfSH;
         _userMarketingCode = userMarketingCode;
+        _userSalesCode = userSalesCode;
       });
     }
   }
 
   bool _hasPermissionToViewMember(MarketingTargetDetail row) {
-    // When memProfSH is null or true, every member is accessible.
-    if (_memProfSH == null || _memProfSH == true) {
+    // Sales code AD001 can view every member profile.
+    if (_userSalesCode == 'AD001') {
       return true;
     }
 
+    // When memProfSH is null or true, every member is accessible.
+    // if (_memProfSH == null || _memProfSH == true) {
+    //   return true;
+    // }
+
     // When memProfSH is false, only members in the logged-in user's
     // marketing group can be opened.
-    if (_memProfSH == false) {
+    if (_userSalesCode != 'AD001') {
       return _userMarketingCode != null &&
           row.gcode.isNotEmpty &&
           _userMarketingCode == row.gcode;

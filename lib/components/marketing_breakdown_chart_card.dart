@@ -747,6 +747,7 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> with Con
   // ── Profile access gating (mirrors MarketingDetailPage) ──
   bool? _memProfSH;
   String? _userMarketingCode;
+  String? _userSalesCode;
 
   // ── Rating mode (mirrors ProfileScreen + MemberVisits) ──
   bool _useBadgeForRating = false;
@@ -802,24 +803,31 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> with Con
   Future<void> _loadAccessSettings() async {
     final memProfSH = await StorageUtil.getMemProfSH();
     final userMarketingCode = await StorageUtil.getMarketingCode();
+    final userSalesCode = await StorageUtil.getSalesCode();
     if (mounted) {
       setState(() {
         _memProfSH = memProfSH;
         _userMarketingCode = userMarketingCode;
+        _userSalesCode = userSalesCode;
       });
     }
   }
 
-  // When memProfSH is null or true, every member is accessible.
+  // Sales code AD001 can view every member profile.
+  // Otherwise, when memProfSH is null or true, every member is accessible.
   // When memProfSH is false, only members in the logged-in user's
   // marketing group can be opened.
-  
+
   bool _hasPermissionToViewMember(Guest guest) {
-    if (_memProfSH == null || _memProfSH == true) {
+    if (_userSalesCode == 'AD001') {
       return true;
     }
-   
-    if (_memProfSH == false) {
+
+    // if (_memProfSH == null || _memProfSH == true) {
+    //   return true;
+    // }
+
+    if (_userSalesCode != 'AD001') {
       return _userMarketingCode != null &&
           (guest.mGroup ?? '').isNotEmpty &&
           _userMarketingCode == guest.mGroup;

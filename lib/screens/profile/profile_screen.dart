@@ -48,6 +48,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   bool _nogiftamount = false;
   bool? _memProfSH;
   String? _userMarketingCode;
+  String? _userSalesCode;
   bool _useBadgeForRating = false;
 bool _showFollowButton = false;
   @override
@@ -57,6 +58,7 @@ bool _showFollowButton = false;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       _memProfSH = await StorageUtil.getMemProfSH();
       _userMarketingCode = await StorageUtil.getMarketingCode();
+      _userSalesCode = await StorageUtil.getSalesCode();
 
       // Check if we should use badge instead of rating image
       final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
@@ -104,6 +106,10 @@ bool _showFollowButton = false;
     debugPrint('Guest mGroup: ${guest?.mGroup}');
     debugPrint('User marketing code: $_userMarketingCode');
     debugPrint('memProfSH: $_memProfSH');
+
+    if (_userSalesCode == 'AD001') {
+      return true;
+    }
 
     if (_memProfSH == null || _memProfSH == true || guest?.mGroup == "W") {
       return true;

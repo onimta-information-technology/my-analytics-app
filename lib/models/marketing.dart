@@ -27,12 +27,22 @@ class MarketingPerformance {
   final bool isPositive;
   final double displayValue;
 
+  // Guest counts straight from the performance row (Table): new guests
+  // (N_Reg), old/existing guests (O_Reg) and package guests (PKG_G). Mirrors
+  // the badges on the "Last 3 Months Performance" card.
+  final int newReg;
+  final int oldReg;
+  final int pkgG;
+
   MarketingPerformance({
     required this.sm,
     required this.smName,
     required this.winLost,
     required this.isPositive,
     required this.displayValue,
+    this.newReg = 0,
+    this.oldReg = 0,
+    this.pkgG = 0,
   });
 
   factory MarketingPerformance.fromJson(Map<String, dynamic> json) {
@@ -46,6 +56,9 @@ class MarketingPerformance {
       winLost: winLostValue,
       isPositive: isPositiveValue,
       displayValue: displayValueK,
+      newReg: _toInt(json['N_Reg']),
+      oldReg: _toInt(json['O_Reg']),
+      pkgG: _toInt(json['PKG_G']),
     );
   }
 
@@ -56,12 +69,15 @@ class MarketingPerformance {
       'WinLost': winLost,
       'isPositive': isPositive,
       'displayValue': displayValue,
+      'N_Reg': newReg,
+      'O_Reg': oldReg,
+      'PKG_G': pkgG,
     };
   }
 
   @override
   String toString() {
-    return 'MarketingPerformance{sm: $sm, smName: $smName, winLost: $winLost, isPositive: $isPositive, displayValue: $displayValue}';
+    return 'MarketingPerformance{sm: $sm, smName: $smName, winLost: $winLost, isPositive: $isPositive, displayValue: $displayValue, newReg: $newReg, oldReg: $oldReg, pkgG: $pkgG}';
   }
 }
 
@@ -74,6 +90,12 @@ class MarketingResult {
   final bool isPositive;
   final double displayValue;
 
+  // Guest counts straight from the result row (Table2): new guests (N_Reg),
+  // old/existing guests (O_Reg) and package guests (PKG_G).
+  final int newReg;
+  final int oldReg;
+  final int pkgG;
+
   MarketingResult({
     required this.sm,
     required this.smName,
@@ -82,6 +104,9 @@ class MarketingResult {
     required this.winLost,
     required this.isPositive,
     required this.displayValue,
+    this.newReg = 0,
+    this.oldReg = 0,
+    this.pkgG = 0,
   });
 
   factory MarketingResult.fromJson(Map<String, dynamic> json) {
@@ -97,6 +122,9 @@ class MarketingResult {
       winLost: winLostValue,
       isPositive: isPositiveValue,
       displayValue: displayValueK,
+      newReg: _toInt(json['N_Reg']),
+      oldReg: _toInt(json['O_Reg']),
+      pkgG: _toInt(json['PKG_G']),
     );
   }
 
@@ -109,12 +137,15 @@ class MarketingResult {
       'WinLost': winLost,
       'isPositive': isPositive,
       'displayValue': displayValue,
+      'N_Reg': newReg,
+      'O_Reg': oldReg,
+      'PKG_G': pkgG,
     };
   }
 
   @override
   String toString() {
-    return 'MarketingResult{sm: $sm, smName: $smName, mDrop: $mDrop, cashOut: $cashOut, winLost: $winLost, isPositive: $isPositive, displayValue: $displayValue}';
+    return 'MarketingResult{sm: $sm, smName: $smName, mDrop: $mDrop, cashOut: $cashOut, winLost: $winLost, isPositive: $isPositive, displayValue: $displayValue, newReg: $newReg, oldReg: $oldReg, pkgG: $pkgG}';
   }
 }
 
@@ -236,6 +267,9 @@ class MarketingDetailedData {
   final double winLost;
   final String sm;
   final String smName;
+  // Guest status from `G_Status`: 1 means this member is a new member
+  // (show a "NEW" badge on the detail page); 0 is an existing member.
+  final int gStatus;
   // NEW columns — not present on every member row, so both are nullable and
   // parsed defensively. `pkgStatus == 'Y'` drives the package badge in the UI.
   final double? gActDrop;
@@ -252,9 +286,13 @@ class MarketingDetailedData {
     required this.winLost,
     required this.sm,
     required this.smName,
+    this.gStatus = 0,
     this.gActDrop,
     this.pkgStatus,
   });
+
+  // True when this member is flagged as a new member (`G_Status == 1`).
+  bool get isNewMember => gStatus == 1;
 
   // True when the member has an active package (PKG_Status == "Y").
   bool get hasPackage => (pkgStatus ?? '').trim().toUpperCase() == 'Y';
@@ -271,6 +309,7 @@ class MarketingDetailedData {
       winLost: (json['WinLost'] as num?)?.toDouble() ?? 0.0,
       sm: json['SM']?.toString() ?? '',
       smName: json['SM_Name']?.toString() ?? '',
+      gStatus: _toInt(json['G_Status']),
       // Absent on members without a package — leave null when the key is missing.
       gActDrop: json.containsKey('G_ActDrop')
           ? _toDouble(json['G_ActDrop'])
@@ -293,6 +332,7 @@ class MarketingDetailedData {
       'WinLost': winLost,
       'SM': sm,
       'SM_Name': smName,
+      'G_Status': gStatus,
       if (gActDrop != null) 'G_ActDrop': gActDrop,
       if (pkgStatus != null) 'PKG_Status': pkgStatus,
     };

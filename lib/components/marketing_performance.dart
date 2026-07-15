@@ -161,6 +161,25 @@ class _MarketingPerformanceWidgetState
     final bool tabsEnabled = _tabsEnabled && !marketingState.isLoading;
     final dataWithPercentages = _calculatePercentages(currentData);
 
+    // Guest-count totals for the summary line under the title (new / old /
+    // package guests), mirroring the "Last 3 Months Performance" card.
+    // Both MarketingPerformance and MarketingResult expose newReg/oldReg/pkgG.
+    int totalNewReg = 0;
+    int totalOldReg = 0;
+    int totalPkgG = 0;
+    for (final item in currentData) {
+      if (item is MarketingPerformance) {
+        totalNewReg += item.newReg;
+        totalOldReg += item.oldReg;
+        totalPkgG += item.pkgG;
+      } else if (item is MarketingResult) {
+        totalNewReg += item.newReg;
+        totalOldReg += item.oldReg;
+        totalPkgG += item.pkgG;
+      }
+    }
+    final int totalGuestCount = totalNewReg + totalOldReg;
+
     final positiveData = dataWithPercentages
         .where((item) => item.isPositive)
         .toList()
@@ -205,14 +224,36 @@ class _MarketingPerformanceWidgetState
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Expanded(
-                  child: Text(
-                    "MARKETING PERFORMANCE",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "MARKETING PERFORMANCE",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      // Guest-count summary (new / old / package) — shown for
+                      // the Performance & Result views once data has loaded,
+                      // same treatment as the "Last 3 Months Performance" card.
+                      if (!isTargetView &&
+                          !marketingState.isLoading &&
+                          currentData.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            "$totalGuestCount guest${totalGuestCount == 1 ? '' : 's'} this period "
+                            "($totalNewReg new, $totalOldReg old, $totalPkgG package)",
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 IconButton(
@@ -416,9 +457,10 @@ class _MarketingPerformanceWidgetState
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 if (!isTargetView)
-                  Row(
-                    children: [
-                      Row(
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
                         children: [
                           Container(
                             width: 12,
@@ -430,11 +472,7 @@ class _MarketingPerformanceWidgetState
                           ),
                           const SizedBox(width: 4),
                           const Text("WIN"),
-                        ],
-                      ),
-                      const SizedBox(width: 20),
-                      Row(
-                        children: [
+                          const SizedBox(width: 20),
                           Container(
                             width: 12,
                             height: 12,
@@ -445,9 +483,30 @@ class _MarketingPerformanceWidgetState
                           ),
                           const SizedBox(width: 4),
                           const Text("LOST"),
+                          const SizedBox(width: 20),
+                          Text("N",
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green[700])),
+                          const SizedBox(width: 4),
+                          const Text("NEW"),
+                          const SizedBox(width: 12),
+                          Text("O",
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue[700])),
+                          const SizedBox(width: 4),
+                          const Text("OLD"),
+                          const SizedBox(width: 12),
+                          Text("P",
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.deepPurple[400])),
+                          const SizedBox(width: 4),
+                          const Text("PACKAGE"),
                         ],
                       ),
-                    ],
+                    ),
                   )
                 else
                   // Target legend
@@ -480,12 +539,12 @@ class _MarketingPerformanceWidgetState
                           !_refreshEnabled || marketingState.isLoading
                               ? null
                               : _refreshCurrentTab,
-                      icon: const Icon(Icons.refresh,
-                          size: 14, color: Colors.white),
+                      // icon: const Icon(Icons.refresh,
+                      //     size: 14, color: Colors.white),
                       label: const Text(
                         "Refresh",
                         style:
-                            TextStyle(fontSize: 16, color: Colors.white),
+                            TextStyle(fontSize: 14, color: Colors.white),
                       ),
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero,
@@ -672,13 +731,26 @@ Widget _buildViewTypeButton(
               children: [
                 SizedBox(
                   width: 200,
-                  child: Text(
-                    performance.smName,
-                    style: TextStyle(
-                      fontSize: fontSettings.fontSize,
-                      fontWeight: fontSettings.fontWeight,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        performance.smName,
+                        style: TextStyle(
+                          fontSize: fontSettings.fontSize,
+                          fontWeight: fontSettings.fontWeight,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      // New / old / package guest badges for this SM
+                      // (N_Reg / O_Reg / PKG_G).
+                      _buildGuestBadges(
+                        newReg: performance.newReg,
+                        oldReg: performance.oldReg,
+                        pkgG: performance.pkgG,
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 4),
@@ -749,14 +821,27 @@ Widget _buildViewTypeButton(
                     children: [
                       Expanded(
                         flex: 3,
-                        child: Text(
-                          result.smName,
-                          style: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: fontSettings.fontWeight,
-                            color: Colors.black87,
-                          ),
-                          overflow: TextOverflow.ellipsis,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              result.smName,
+                              style: TextStyle(
+                                fontSize: fontSettings.fontSize,
+                                fontWeight: fontSettings.fontWeight,
+                                color: Colors.black87,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            // New / old / package guest badges for this SM
+                            // (N_Reg / O_Reg / PKG_G).
+                            _buildGuestBadges(
+                              newReg: result.newReg,
+                              oldReg: result.oldReg,
+                              pkgG: result.pkgG,
+                            ),
+                          ],
                         ),
                       ),
                       Icon(Icons.arrow_forward_ios,
@@ -986,6 +1071,79 @@ Widget _buildViewTypeButton(
               fontFamily: 'monospace',
             fontFeatures: const [FontFeature.tabularFigures()],
               color: valueColor ?? Colors.black87,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Guest-count badges (new / old / package) ─────────────────────────────
+  // Row of N / O / P pills shown under the SM name, mirroring the
+  // "Last 3 Months Performance" card. Values come from N_Reg / O_Reg / PKG_G.
+  Widget _buildGuestBadges({
+    required int newReg,
+    required int oldReg,
+    required int pkgG,
+  }) {
+    return Row(
+      children: [
+        _buildRegBadge(
+          count: newReg,
+          label: 'N',
+          background: Colors.green[50]!,
+          foreground: Colors.green[700]!,
+        ),
+        const SizedBox(width: 4),
+        _buildRegBadge(
+          count: oldReg,
+          label: 'O',
+          background: Colors.blue[50]!,
+          foreground: Colors.blue[700]!,
+        ),
+        const SizedBox(width: 4),
+        _buildRegBadge(
+          count: pkgG,
+          label: 'P',
+          background: Colors.deepPurple[50]!,
+          foreground: Colors.deepPurple[400]!,
+        ),
+      ],
+    );
+  }
+
+  // Small pill showing a guest count with a single-letter label
+  // (N = new, O = old, P = package).
+  Widget _buildRegBadge({
+    required int count,
+    required String label,
+    required Color background,
+    required Color foreground,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: foreground,
+            ),
+          ),
+          const SizedBox(width: 3),
+          Text(
+            '$count',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: foreground,
             ),
           ),
         ],

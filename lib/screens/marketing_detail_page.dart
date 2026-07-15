@@ -35,8 +35,12 @@ class MarketingDetailPage extends ConsumerStatefulWidget {
       _MarketingDetailPageState();
 }
 
+enum MemberTypeFilter { both, newMembers, oldMembers, packageMembers }
+
 class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> with ConnectivityMixin{
+  List<MarketingDetailedData> allMembers = [];
   List<MarketingDetailedData> filteredMembers = [];
+  MemberTypeFilter _memberFilter = MemberTypeFilter.both;
   String? currentLoadingMember;
   Set<String> expandedCards = {};
   bool? _memProfSH;
@@ -87,8 +91,33 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> with 
 
   void _loadMemberDetails() {
     final notifier = ref.read(marketingProvider.notifier);
-    filteredMembers = notifier.getDetailedDataForSM(widget.smCode);
+    allMembers = notifier.getDetailedDataForSM(widget.smCode);
+    _applyFilter();
     setState(() {});
+  }
+
+  void _applyFilter() {
+    switch (_memberFilter) {
+      case MemberTypeFilter.both:
+        filteredMembers = List.of(allMembers);
+        break;
+      case MemberTypeFilter.newMembers:
+        filteredMembers = allMembers.where((m) => m.isNewMember).toList();
+        break;
+      case MemberTypeFilter.oldMembers:
+        filteredMembers = allMembers.where((m) => !m.isNewMember).toList();
+        break;
+      case MemberTypeFilter.packageMembers:
+        filteredMembers = allMembers.where((m) => m.hasPackage).toList();
+        break;
+    }
+  }
+
+  void _onFilterChanged(MemberTypeFilter filter) {
+    setState(() {
+      _memberFilter = filter;
+      _applyFilter();
+    });
   }
 
   String _getTabTitle() {
@@ -249,7 +278,7 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> with 
       appBar: AppBar(title: Text('${_getTabTitle()} Marketing Details')),
       body: Stack(
         children: [
-          filteredMembers.isEmpty
+          allMembers.isEmpty
               ? const Center(
                   child: Text(
                     'No member details found',
@@ -261,6 +290,8 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> with 
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      _buildFilterBar(),
+                      const SizedBox(height: 8),
                       // Top Card Section
                       Card(
                         elevation: 4,
@@ -348,9 +379,23 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> with 
                       const SizedBox(height: 16),
 
                       // Member Cards
-                      ...filteredMembers.map(
-                        (member) => _buildMemberCard(member, fontSettings),
-                      ),
+                      if (filteredMembers.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 32.0),
+                          child: Center(
+                            child: Text(
+                              'No members match this filter',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        ...filteredMembers.map(
+                          (member) => _buildMemberCard(member, fontSettings),
+                        ),
                     ],
                   ),
                 ),
@@ -445,17 +490,31 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> with 
     color: Color.fromARGB(255, 230, 0, 0),
   ),
 ],
-                                  Flexible(
-  child: Text(
-    member.memId,
-    style: TextStyle(
-      fontSize: fontSettings.fontSize + 2,
-      fontWeight: FontWeight.bold,
-      color: isLoading ? Colors.grey : Colors.blue,
-    ),
-  ),
-),
-
+                                  Expanded(
+                                    child: Wrap(
+                                      crossAxisAlignment:
+                                          WrapCrossAlignment.center,
+                                      spacing: 4,
+                                      runSpacing: 2,
+                                      children: [
+                                        Text(
+                                          member.memId,
+                                          maxLines: 1,
+                                          softWrap: false,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: fontSettings.fontSize + 2,
+                                            fontWeight: FontWeight.bold,
+                                            color: isLoading
+                                                ? Colors.grey
+                                                : Colors.blue,
+                                          ),
+                                        ),
+                                        if (member.isNewMember)
+                                          _buildNewMemberBadge(),
+                                      ],
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -563,6 +622,84 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> with 
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  // Segmented filter to show new members, old members, package or all.
+  Widget _buildFilterBar() {
+    final newCount = allMembers.where((m) => m.isNewMember).length;
+    final oldCount = allMembers.length - newCount;
+    final packageCount = allMembers.where((m) => m.hasPackage).length;
+
+    return SegmentedButton<MemberTypeFilter>(
+      segments: [
+        ButtonSegment(
+          value: MemberTypeFilter.both,
+          label: Text(
+            'All(${allMembers.length})',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+          ),
+        ),
+        ButtonSegment(
+          value: MemberTypeFilter.newMembers,
+          label: Text(
+            'New($newCount)',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+          ),
+        ),
+        ButtonSegment(
+          value: MemberTypeFilter.oldMembers,
+          label: Text(
+            'Old($oldCount)',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+          ),
+        ),
+        ButtonSegment(
+          value: MemberTypeFilter.packageMembers,
+          label: Text(
+            'Pkg($packageCount)',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+          ),
+        ),
+      ],
+      selected: {_memberFilter},
+      showSelectedIcon: false,
+      onSelectionChanged: (selection) => _onFilterChanged(selection.first),
+      style: ButtonStyle(
+        visualDensity: VisualDensity.compact,
+        backgroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Constants.kPrimaryColor;
+          }
+          return null;
+        }),
+        foregroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.white;
+          }
+          return null;
+        }),
+      ),
+    );
+  }
+
+  // "NEW" badge shown when the member's G_Status == 1.
+  Widget _buildNewMemberBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.green,
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: const Text(
+        'NEW',
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w900,
+          color: Colors.white,
+          letterSpacing: 0.5,
+        ),
       ),
     );
   }

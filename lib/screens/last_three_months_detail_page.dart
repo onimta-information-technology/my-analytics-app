@@ -32,7 +32,7 @@ class LastThreeMonthsDetailPage extends ConsumerStatefulWidget {
       _LastThreeMonthsDetailPageState();
 }
 
-enum MemberTypeFilter { both, newMembers, oldMembers }
+enum MemberTypeFilter { both, newMembers, oldMembers, packageMembers }
 
 class _LastThreeMonthsDetailPageState
     extends ConsumerState<LastThreeMonthsDetailPage> with ConnectivityMixin {
@@ -104,6 +104,9 @@ class _LastThreeMonthsDetailPageState
         break;
       case MemberTypeFilter.oldMembers:
         filteredMembers = allMembers.where((m) => !m.isNewMember).toList();
+        break;
+      case MemberTypeFilter.packageMembers:
+        filteredMembers = allMembers.where((m) => m.hasPackage).toList();
         break;
     }
   }
@@ -266,7 +269,7 @@ class _LastThreeMonthsDetailPageState
                   ),
                 )
               : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(8.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -371,28 +374,36 @@ class _LastThreeMonthsDetailPageState
   Widget _buildFilterBar() {
     final newCount = allMembers.where((m) => m.isNewMember).length;
     final oldCount = allMembers.length - newCount;
+    final packageCount = allMembers.where((m) => m.hasPackage).length;
 
     return SegmentedButton<MemberTypeFilter>(
       segments: [
         ButtonSegment(
           value: MemberTypeFilter.both,
           label: Text(
-            'Both (${allMembers.length})',
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+            'All(${allMembers.length})',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
           ),
         ),
         ButtonSegment(
           value: MemberTypeFilter.newMembers,
           label: Text(
-            'New ($newCount)',
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+            'New($newCount)',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
           ),
         ),
         ButtonSegment(
           value: MemberTypeFilter.oldMembers,
           label: Text(
-            'Old ($oldCount)',
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+            'Old($oldCount)',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+          ),
+        ),
+        ButtonSegment(
+          value: MemberTypeFilter.packageMembers,
+          label: Text(
+            'Pkg($packageCount)',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
           ),
         ),
       ],

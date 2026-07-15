@@ -32,11 +32,13 @@ void clearReservations() {
   Future<bool> updateReservationStatus({
     required Reservation reservation,
     required String status,
+    required String remarks,
   }) async {
     try {
       final success = await reservationRepository.updateReservationStatus(
         reservation: reservation,
         status: status,
+        remarks: remarks,
       );
 
       if (success) {

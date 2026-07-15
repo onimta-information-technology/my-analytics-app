@@ -902,6 +902,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
           .updateReservationStatus(
             reservation: selectedReservation,
             status: "Checked",
+            remarks: remarks,
           );
 
       if (success) {
@@ -950,6 +951,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
           .updateReservationStatus(
             reservation: selectedReservation,
             status: "Approved",
+            remarks: remarks,
           );
 
       if (success) {
@@ -1003,6 +1005,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
           .updateReservationStatus(
             reservation: selectedReservation,
             status: "Rejected",
+            remarks: remarks,
           );
 
       if (success) {
@@ -1058,6 +1061,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
           .updateReservationStatus(
             reservation: selectedReservation,
             status: "Rejected",
+            remarks: remarks,
           );
 
       if (success) {

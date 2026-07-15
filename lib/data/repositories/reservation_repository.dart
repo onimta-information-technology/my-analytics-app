@@ -178,6 +178,7 @@ class ReservationRepository {
   Future<bool> updateReservationStatus({
     required Reservation reservation,
     required String status,
+    required String remarks,
   }) async {
     final salesCode = await StorageUtil.getSalesCode();
     final userName = await StorageUtil.getUserName();
@@ -212,7 +213,7 @@ class ReservationRepository {
       'no_of_nights': reservation.noOfNights,
       'has_air_ticket_reservation':
           reservation.airticketReservationStatus == '1',
-      'remarks': reservation.remarks,
+      'remarks': remarks,
       'manual_reserv_no': reservation.reservationnewnumber ?? '',
       'package_amount': packageAmountToInt(reservation.packageAmount),
       'currency_type': currency,

@@ -1102,6 +1102,77 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
       setState(() => _isLoading = false);
     }
   }
+  // Reverse is allowed for anyone who can check or approve reservations.
+  bool get _canReverse => _hasResChk || _hasResApp;
+
+  // ── Reverse: send the reservation back to Pending ──────────────────────
+  Future<void> _reverseReservation() async {
+    if (!_canReverse) {
+      _showAccessDeniedDialog();
+      return;
+    }
+
+    final selectedReservation = ref.watch(selectedReservationProvider);
+    if (selectedReservation == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Reverse Reservation'),
+        content: const Text(
+          'Are you sure you want to reverse this reservation back to Pending?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Reverse'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      setState(() => _isLoading = true);
+      final success = await ref
+          .read(reservationProvider.notifier)
+          .updateReservationStatus(
+            reservation: selectedReservation,
+            status: "Pending",
+            remarks: "",
+          );
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Reservation reversed to Pending'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        if (mounted) Navigator.of(context).pop(true);
+      } else {
+        throw Exception('Failed to reverse reservation');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to reverse reservation: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
   // ── Build ──────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
@@ -1998,6 +2069,36 @@ const SizedBox(height: 10.0),
                         ),
                       ],
                     ),
+
+                  // ── Reverse: send an actioned reservation back to Pending ─
+                  if (isActioned && _canReverse) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _reverseReservation,
+                        icon: const Icon(Icons.undo, size: 20),
+                        label: const Text(
+                          "REVERSE",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 16,
+                            horizontal: 20,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
 
                   const SizedBox(height: 16),
                 ],

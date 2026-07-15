@@ -1900,12 +1900,13 @@ const SizedBox(height: 10.0),
                         fontSettings.fontSize,
                         fontSettings.fontWeight,
                       ),
-                    if (_hasStageData(
-                      selectedReservation.approvedStatus,
-                      selectedReservation.approvedBy,
-                      selectedReservation.approvedTime,
-                      selectedReservation.approvedRemark,
-                    ))
+                    if (selectedReservation.requestStatus != 'Checked' &&
+                        _hasStageData(
+                          selectedReservation.approvedStatus,
+                          selectedReservation.approvedBy,
+                          selectedReservation.approvedTime,
+                          selectedReservation.approvedRemark,
+                        ))
                       _buildActionInfoCard(
                         'Approved',
                         selectedReservation.approvedBy,
@@ -1914,12 +1915,13 @@ const SizedBox(height: 10.0),
                         fontSettings.fontSize,
                         fontSettings.fontWeight,
                       ),
-                    if (_hasStageData(
-                      selectedReservation.rejectedStatus,
-                      selectedReservation.rejectedBy,
-                      selectedReservation.rejectedTime,
-                      selectedReservation.rejectedRemark,
-                    ))
+                    if (selectedReservation.requestStatus != 'Checked' &&
+                        _hasStageData(
+                          selectedReservation.rejectedStatus,
+                          selectedReservation.rejectedBy,
+                          selectedReservation.rejectedTime,
+                          selectedReservation.rejectedRemark,
+                        ))
                       _buildActionInfoCard(
                         'Rejected',
                         selectedReservation.rejectedBy,

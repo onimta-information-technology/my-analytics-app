@@ -1147,7 +1147,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
           .updateReservationStatus(
             reservation: selectedReservation,
             status: "Pending",
-            remarks: "",
+            remarks: _remarksController.text,
           );
 
       if (success) {

@@ -501,6 +501,64 @@ class _ReservationPdfButtonState extends State<ReservationPdfButton> {
       );
     }
 
+    // ══════════════════════════════════════════════════════════════════════
+    // ── Guest Cards — one card per guest on the reservation ───────────────
+    // ══════════════════════════════════════════════════════════════════════
+    pw.Widget guestCards() {
+      if (widget.reservation.guests.isEmpty) {
+        return pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          child: pw.Text('No guests.', style: valueStyle),
+        );
+      }
+
+      return pw.Column(
+        children: widget.reservation.guests.map((guest) {
+          final arr = guest.arrivalDate != null
+              ? _fmtDate(guest.arrivalDate!)
+              : 'N/A';
+          final dep = guest.departureDate != null
+              ? _fmtDate(guest.departureDate!)
+              : 'N/A';
+          return pw.Container(
+            width: double.infinity,
+            margin: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 6),
+            decoration: pw.BoxDecoration(
+              color: cardBg,
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+              border: pw.Border.all(color: cardBorder, width: 0.5),
+            ),
+            padding: const pw.EdgeInsets.all(12),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  guest.guestName.isNotEmpty ? guest.guestName : 'N/A',
+                  style: cardTitleStyle,
+                ),
+                pw.SizedBox(height: 5),
+                cardRichRow('Member ID', guest.mid.isNotEmpty ? guest.mid : 'N/A'),
+                pw.SizedBox(height: 4),
+                pw.Row(
+                  children: [
+                    pw.Text('Arrival: $arr', style: cardValueStyle),
+                    pw.SizedBox(width: 16),
+                    pw.Text('Departure: $dep', style: cardValueStyle),
+                  ],
+                ),
+                pw.SizedBox(height: 4),
+                cardRichRow('Air Ticket', guest.airTicketRequisition),
+                if (guest.remarks.trim().isNotEmpty) ...[
+                  pw.SizedBox(height: 4),
+                  cardRichRow('Remarks', guest.remarks),
+                ],
+              ],
+            ),
+          );
+        }).toList(),
+      );
+    }
+
     // ── Page ──────────────────────────────────────────────────────────────
     pdf.addPage(
       pw.MultiPage(
@@ -537,10 +595,33 @@ class _ReservationPdfButtonState extends State<ReservationPdfButton> {
           kv('Member ID',   widget.reservation.mid),
           kv('Member Name', widget.reservation.mName),
           kv('Rating',      widget.reservation.gRating ?? 'N/A'),
-          kv('Remarks',      widget.reservation.remarks ?? 'N/A'),
+          kv('Requested By', widget.reservation.reqBy.trim().isNotEmpty
+              ? widget.reservation.reqBy
+              : 'N/A'),
+          kv('Reservation Date', _fmtDate(widget.reservation.reservDate)),
+          kv('Package Amount', widget.reservation.packageAmountDisplay.trim().isNotEmpty
+              ? widget.reservation.packageAmountDisplay
+              : 'N/A'),
+          kv('Air Ticket', widget.reservation.airticketReservationStatus.trim().isNotEmpty
+              ? widget.reservation.airticketReservationStatus
+              : 'N/A'),
+          kv('Remarks',      widget.reservation.remarks.trim().isNotEmpty
+              ? widget.reservation.remarks
+              : 'N/A'),
           divider(),
 
-          // 2. Hotel & Room Details — card layout matching view screen
+          // 2. Guest Details — one card per guest attached to the reservation
+          if (widget.reservation.guests.isNotEmpty) ...[
+            sectionHeader('Guest Details'),
+            pw.SizedBox(height: 2),
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 6),
+              child: guestCards(),
+            ),
+            divider(),
+          ],
+
+          // 3. Hotel & Room Details — card layout matching view screen
           sectionHeader('Hotel & Room Details'),
           pw.SizedBox(height: 2),
           pw.Padding(

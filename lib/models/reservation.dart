@@ -37,6 +37,28 @@ class Reservation {
   /// Sent as `currency_type` on insert/update and returned by the API.
   String? currencyType;
 
+  /// Per-stage audit trail returned by `Reservation_GetAllReservations`.
+  /// Each workflow stage (Pending → Checked → Approved/Rejected) records who
+  /// actioned it, when, and their remark. Fields are null when that stage has
+  /// not happened yet (or on the legacy `fromJson` path).
+  String? pendingBy;
+  DateTime? pendingTime;
+
+  String? checkedStatus;
+  String? checkedBy;
+  String? checkedRemark;
+  DateTime? checkedTime;
+
+  String? approvedStatus;
+  String? approvedBy;
+  String? approvedRemark;
+  DateTime? approvedTime;
+
+  String? rejectedStatus;
+  String? rejectedBy;
+  String? rejectedRemark;
+  DateTime? rejectedTime;
+
   /// All guests attached to this reservation. A single reservation number can
   /// carry multiple guests; the reservations list shows one card while the
   /// detail view can expand to show every guest.
@@ -73,6 +95,20 @@ class Reservation {
     this.reservationnewnumber,
     this.packageAmount,
     this.currencyType,
+    this.pendingBy,
+    this.pendingTime,
+    this.checkedStatus,
+    this.checkedBy,
+    this.checkedRemark,
+    this.checkedTime,
+    this.approvedStatus,
+    this.approvedBy,
+    this.approvedRemark,
+    this.approvedTime,
+    this.rejectedStatus,
+    this.rejectedBy,
+    this.rejectedRemark,
+    this.rejectedTime,
     this.guests = const [],
     this.passportImages = const [],
   });
@@ -88,6 +124,37 @@ class Reservation {
     if (currency.isEmpty) return amount;
     if (amount.toUpperCase().startsWith(currency.toUpperCase())) return amount;
     return '$currency $amount';
+  }
+
+  /// Who actioned the reservation into its current [requestStatus], picked
+  /// from the matching per-stage audit field. Falls back to the legacy
+  /// [isAppBy] for the old response shape.
+  String? get actionBy {
+    switch (requestStatus) {
+      case 'Checked':
+        return checkedBy ?? isAppBy;
+      case 'Approved':
+        return approvedBy ?? isAppBy;
+      case 'Rejected':
+        return rejectedBy ?? isAppBy;
+      default:
+        return isAppBy;
+    }
+  }
+
+  /// When the reservation reached its current [requestStatus]. Null when the
+  /// stage carries no timestamp (avoids showing a bogus "now").
+  DateTime? get actionTime {
+    switch (requestStatus) {
+      case 'Checked':
+        return checkedTime;
+      case 'Approved':
+        return approvedTime;
+      case 'Rejected':
+        return rejectedTime;
+      default:
+        return null;
+    }
   }
 
   factory Reservation.fromJson(Map<String, dynamic> json) {
@@ -271,7 +338,9 @@ class Reservation {
       airticketReservationStatus: hasAir ? '1' : '0',
       remarks: json['remarks'] as String? ?? '',
       reqBy: json['user_name'] as String? ?? '',
-      insertDate: parseDate(json['arrival_date']) ?? DateTime.now(),
+      insertDate: parseDate(json['created_date']) ??
+          parseDate(json['arrival_date']) ??
+          DateTime.now(),
       isApp: reservationStatus == 'Approved',
       isAppTime: DateTime.now(),
       isAppBy: null,
@@ -287,6 +356,20 @@ class Reservation {
       packageAmount: json['package_amount']?.toString(),
       currencyType:
           (json['currency_type'] ?? json['Currency_Type'])?.toString(),
+      pendingBy: json['pending_by'] as String?,
+      pendingTime: parseDate(json['pending_time']),
+      checkedStatus: json['checked_status'] as String?,
+      checkedBy: json['checked_by'] as String?,
+      checkedRemark: json['checked_remark'] as String?,
+      checkedTime: parseDate(json['checked_time']),
+      approvedStatus: json['approved_status'] as String?,
+      approvedBy: json['approved_by'] as String?,
+      approvedRemark: json['approved_remark'] as String?,
+      approvedTime: parseDate(json['approved_time']),
+      rejectedStatus: json['rejected_status'] as String?,
+      rejectedBy: json['rejected_by'] as String?,
+      rejectedRemark: json['rejected_remark'] as String?,
+      rejectedTime: parseDate(json['rejected_time']),
       guests: parseGuests(),
       passportImages: parsePassportImages(json['passport_images']),
     );

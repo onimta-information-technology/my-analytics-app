@@ -455,10 +455,14 @@ final filteredReservations = (snapshot.data ?? []).where((reservation) {
                               Icon(
                                 reservation.requestStatus == 'Approved'
                                     ? Icons.check_circle_outline
+                                    : reservation.requestStatus == 'Checked'
+                                    ? Icons.fact_check_outlined
                                     : Icons.cancel_outlined,
                                 size: 20,
                                 color: reservation.requestStatus == 'Approved'
                                     ? Colors.green
+                                    : reservation.requestStatus == 'Checked'
+                                    ? Colors.blue
                                     : Colors.red,
                               ),
                               const SizedBox(width: 4),
@@ -472,14 +476,16 @@ final filteredReservations = (snapshot.data ?? []).where((reservation) {
                               ),
                               Expanded(
                                 child: Text(
-                                  reservation.isAppBy ?? 'N/A',
+                                  reservation.actionBy ?? 'N/A',
                                   style: TextStyle(
                                     fontSize: fontSettings.fontSize + 2,
                                     fontWeight: fontSettings.fontWeight,
-                                    
+
                                     color:
                                         reservation.requestStatus == 'Approved'
                                         ? Colors.green[700]
+                                        : reservation.requestStatus == 'Checked'
+                                        ? Colors.blue[700]
                                         : Colors.red[700],
                                   ),
                                   overflow: TextOverflow.ellipsis,
@@ -508,26 +514,33 @@ final filteredReservations = (snapshot.data ?? []).where((reservation) {
                         ),
                         const SizedBox(height: 4),
                         // Approved or Rejected time
-                        if (isApprovedOrRejected) ...[
+                        if (isApprovedOrRejected &&
+                            reservation.actionTime != null) ...[
                           const SizedBox(height: 3),
                           Row(
                             children: [
                               Icon(
                                 reservation.requestStatus == 'Approved'
                                     ? Icons.check_circle_outline
+                                    : reservation.requestStatus == 'Checked'
+                                    ? Icons.fact_check_outlined
                                     : Icons.cancel_outlined,
                                 size: 20,
                                 color: reservation.requestStatus == 'Approved'
                                     ? Colors.green
+                                    : reservation.requestStatus == 'Checked'
+                                    ? Colors.blue
                                     : Colors.red,
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                '${reservation.requestStatus}: ${_formatDateTime(reservation.isAppTime)}',
+                                '${reservation.requestStatus}: ${_formatDateTime(reservation.actionTime!)}',
                                 style: TextStyle(
                                   fontSize: fontSettings.fontSize + 1,
                                   color: reservation.requestStatus == 'Approved'
                                       ? Colors.green[700]
+                                      : reservation.requestStatus == 'Checked'
+                                      ? Colors.blue[700]
                                       : Colors.red[700],
                                   fontWeight: fontSettings.fontWeight,
                                 ),

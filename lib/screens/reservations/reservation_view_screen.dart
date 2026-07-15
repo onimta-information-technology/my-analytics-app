@@ -173,11 +173,25 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
     }
   }
 
+  // A stage (checked/approved/rejected) is worth showing when any of its
+  // audit fields carries data.
+  bool _hasStageData(
+    String? status,
+    String? by,
+    DateTime? time,
+    String? remark,
+  ) {
+    return (status != null && status.trim().isNotEmpty) ||
+        (by != null && by.trim().isNotEmpty) ||
+        time != null ||
+        (remark != null && remark.trim().isNotEmpty);
+  }
+
   // ── Action Info Card ───────────────────────────────────────────────────
   Widget _buildActionInfoCard(
     String status,
     String? actionBy,
-    DateTime actionTime,
+    DateTime? actionTime,
     String actionRemarks,
     double fontSize,
     FontWeight fontWeight,
@@ -247,7 +261,9 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
                   icon: Icons.access_time_outlined,
                   iconColor: color,
                   label: '$status On',
-                  value: _formatDateTime(actionTime),
+                  value: actionTime != null
+                      ? _formatDateTime(actionTime)
+                      : 'N/A',
                   valueColor: darkColor,
                   fontSize: fontSize,
                   fontWeight: fontWeight,
@@ -1792,17 +1808,84 @@ if (selectedReservation?.requestStatus == 'Approved')
   ),
 const SizedBox(height: 10.0),
                   // ════════════════════════════════════════════════════
-                  // ── Action Info Card (Checked / Approved / Rejected) ─
+                  // ── Action Info Cards (Checked / Approved / Rejected) ─
                   // ════════════════════════════════════════════════════
-                  if (isActioned && selectedReservation != null)
-                    _buildActionInfoCard(
-                      currentStatus,
-                      selectedReservation.isAppBy,
-                      selectedReservation.isAppTime,
-                      selectedReservation.isAppRemarks,
-                      fontSettings.fontSize,
-                      fontSettings.fontWeight,
-                    ),
+                  // Each workflow stage carries its own actioner, time and
+                  // remark. Show a card for every stage that has happened so
+                  // the full audit trail is visible.
+                  if (selectedReservation != null) ...[
+                    if (_hasStageData(
+                      selectedReservation.checkedStatus,
+                      selectedReservation.checkedBy,
+                      selectedReservation.checkedTime,
+                      selectedReservation.checkedRemark,
+                    ))
+                      _buildActionInfoCard(
+                        'Checked',
+                        selectedReservation.checkedBy,
+                        selectedReservation.checkedTime,
+                        selectedReservation.checkedRemark ?? '',
+                        fontSettings.fontSize,
+                        fontSettings.fontWeight,
+                      ),
+                    if (_hasStageData(
+                      selectedReservation.approvedStatus,
+                      selectedReservation.approvedBy,
+                      selectedReservation.approvedTime,
+                      selectedReservation.approvedRemark,
+                    ))
+                      _buildActionInfoCard(
+                        'Approved',
+                        selectedReservation.approvedBy,
+                        selectedReservation.approvedTime,
+                        selectedReservation.approvedRemark ?? '',
+                        fontSettings.fontSize,
+                        fontSettings.fontWeight,
+                      ),
+                    if (_hasStageData(
+                      selectedReservation.rejectedStatus,
+                      selectedReservation.rejectedBy,
+                      selectedReservation.rejectedTime,
+                      selectedReservation.rejectedRemark,
+                    ))
+                      _buildActionInfoCard(
+                        'Rejected',
+                        selectedReservation.rejectedBy,
+                        selectedReservation.rejectedTime,
+                        selectedReservation.rejectedRemark ?? '',
+                        fontSettings.fontSize,
+                        fontSettings.fontWeight,
+                      ),
+                    // Fallback for the legacy response shape that only carries
+                    // a single is-approved audit field.
+                    if (isActioned &&
+                        !_hasStageData(
+                          selectedReservation.checkedStatus,
+                          selectedReservation.checkedBy,
+                          selectedReservation.checkedTime,
+                          selectedReservation.checkedRemark,
+                        ) &&
+                        !_hasStageData(
+                          selectedReservation.approvedStatus,
+                          selectedReservation.approvedBy,
+                          selectedReservation.approvedTime,
+                          selectedReservation.approvedRemark,
+                        ) &&
+                        !_hasStageData(
+                          selectedReservation.rejectedStatus,
+                          selectedReservation.rejectedBy,
+                          selectedReservation.rejectedTime,
+                          selectedReservation.rejectedRemark,
+                        ))
+                      _buildActionInfoCard(
+                        currentStatus,
+                        selectedReservation.isAppBy,
+                        selectedReservation.isAppTime,
+                        selectedReservation.isAppRemarks,
+                        fontSettings.fontSize,
+                        fontSettings.fontWeight,
+                      ),
+                  ],
 
                   // ── Pending: Check + Reject ──────────────────────────
                   if (selectedReservation?.requestStatus == 'Pending')

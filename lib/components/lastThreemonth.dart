@@ -88,6 +88,7 @@ class _LastThreeMonthsGuestCardState
   // each performance row) — no longer derived from the detail rows.
   List<_ItemWithPercentage> _calculatePercentages(
     List<LastThreeMonthsPerformance> data,
+    Map<String, Set<String>> packageMembersBySm,
   ) {
     if (data.isEmpty) return [];
 
@@ -118,6 +119,7 @@ class _LastThreeMonthsGuestCardState
         percentage: (percentage * 100).round() / 100,
         newReg: item.newReg,
         oldReg: item.oldReg,
+        packageReg: packageMembersBySm[item.sm]?.length ?? 0,
       );
     }).toList();
   }
@@ -156,8 +158,21 @@ class _LastThreeMonthsGuestCardState
         .fold<int>(0, (sum, p) => sum + p.oldReg);
     final totalGuestCount = totalNewReg + totalOldReg;
 
+    // Package guests are counted from the detail rows (PKG_Status == 'Y').
+    // Group distinct memIds per SM so a guest with multiple rows isn't
+    // double-counted, then the overall total is the sum of the per-SM sets.
+    final packageMembersBySm = <String, Set<String>>{};
+    for (final d in lastThreeMonthsState.detailedData) {
+      if (d.hasPackage) {
+        packageMembersBySm.putIfAbsent(d.sm, () => <String>{}).add(d.memId);
+      }
+    }
+    final packageGuestCount = packageMembersBySm.values
+        .fold<int>(0, (sum, members) => sum + members.length);
+
     final dataWithPercentages = _calculatePercentages(
       lastThreeMonthsState.performanceData,
+      packageMembersBySm,
     );
 
     final positiveData = dataWithPercentages
@@ -204,7 +219,7 @@ class _LastThreeMonthsGuestCardState
                           padding: const EdgeInsets.only(top: 2),
                           child: Text(
                             "$totalGuestCount guest${totalGuestCount == 1 ? '' : 's'} this period "
-                            "($totalNewReg new, $totalOldReg old)",
+                            "($totalNewReg new, $totalOldReg old, $packageGuestCount package)",
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.grey[600],
@@ -368,6 +383,13 @@ class _LastThreeMonthsGuestCardState
                         fontWeight: FontWeight.bold, color: Colors.blue[700])),
                 const SizedBox(width: 4),
                 const Text("OLD"),
+                const SizedBox(width: 12),
+                Text("P",
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.deepPurple[400])),
+                const SizedBox(width: 4),
+                const Text("PACKAGE"),
               ],
             ),
           ],
@@ -381,6 +403,7 @@ class _LastThreeMonthsGuestCardState
     final percentage = itemWithPercentage.percentage;
     final newReg = itemWithPercentage.newReg;
     final oldReg = itemWithPercentage.oldReg;
+    final packageReg = itemWithPercentage.packageReg;
     final double barWidthFactor = (percentage / 100.0).clamp(0.0, 1.0);
 
     return Consumer(
@@ -395,13 +418,46 @@ class _LastThreeMonthsGuestCardState
               children: [
                 SizedBox(
                   width: 200,
-                  child: Text(
-                    performance.smName,
-                    style: TextStyle(
-                      fontSize: fontSettings.fontSize,
-                      fontWeight: fontSettings.fontWeight,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        performance.smName,
+                        style: TextStyle(
+                          fontSize: fontSettings.fontSize,
+                          fontWeight: fontSettings.fontWeight,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      // New / old / package guest count badges for this SM
+                      // (N_Reg / O_Reg / PKG_Status) — shown on a second row
+                      // below the SM name.
+                      Row(
+                        children: [
+                          _buildRegBadge(
+                            count: newReg,
+                            label: 'N',
+                            background: Colors.green[50]!,
+                            foreground: Colors.green[700]!,
+                          ),
+                          const SizedBox(width: 4),
+                          _buildRegBadge(
+                            count: oldReg,
+                            label: 'O',
+                            background: Colors.blue[50]!,
+                            foreground: Colors.blue[700]!,
+                          ),
+                          const SizedBox(width: 4),
+                          _buildRegBadge(
+                            count: packageReg,
+                            label: 'P',
+                            background: Colors.deepPurple[50]!,
+                            foreground: Colors.deepPurple[400]!,
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 5),
@@ -429,21 +485,6 @@ class _LastThreeMonthsGuestCardState
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                // New / old guest count badges for this SM (N_Reg / O_Reg).
-                _buildRegBadge(
-                  count: newReg,
-                  label: 'N',
-                  background: Colors.green[50]!,
-                  foreground: Colors.green[700]!,
-                ),
-                const SizedBox(width: 4),
-                _buildRegBadge(
-                  count: oldReg,
-                  label: 'O',
-                  background: Colors.blue[50]!,
-                  foreground: Colors.blue[700]!,
                 ),
                 const SizedBox(width: 8),
                 Icon(Icons.arrow_forward_ios,
@@ -526,11 +567,13 @@ class _ItemWithPercentage {
   final double percentage;
   final int newReg;
   final int oldReg;
+  final int packageReg;
 
   _ItemWithPercentage({
     required this.item,
     required this.percentage,
     required this.newReg,
     required this.oldReg,
+    required this.packageReg,
   });
 }

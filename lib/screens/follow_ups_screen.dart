@@ -346,7 +346,7 @@ class _Chip extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 15,
+          fontSize: 17,
           fontWeight: FontWeight.w900,
           color: color,
         ),

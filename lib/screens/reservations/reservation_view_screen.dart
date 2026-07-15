@@ -1884,7 +1884,8 @@ const SizedBox(height: 10.0),
                   // Each workflow stage carries its own actioner, time and
                   // remark. Show a card for every stage that has happened so
                   // the full audit trail is visible.
-                  if (selectedReservation != null) ...[
+                  if (selectedReservation != null &&
+                      selectedReservation.requestStatus != 'Pending') ...[
                     if (_hasStageData(
                       selectedReservation.checkedStatus,
                       selectedReservation.checkedBy,

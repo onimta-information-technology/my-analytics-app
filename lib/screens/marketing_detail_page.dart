@@ -588,6 +588,7 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> with 
                       'Actual Drop',
                       _formatCurrency(member.gActDrop!),
                       fontSettings,
+                      valueColor: const Color.fromARGB(255, 189, 20, 255),
                     ),
                   _buildDetailItem(
                     'MDrop',

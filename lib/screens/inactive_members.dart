@@ -59,6 +59,8 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
     });
     final appMode = ref.read(appmodeSettingsProvider).appMode;
     final salesCode = await StorageUtil.getSalesCode();
+    final marketingCode = await StorageUtil.getMarketingCode();
+    final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
 
     final inactiveMembers_ = await widget.inactiveMembersRepository
         .getInactiveMembers(
@@ -67,11 +69,38 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
           appMode,
           salesCode!,
         );
+    final filtered = _applyGroupFilter(
+      inactiveMembers_,
+      salesCode,
+      marketingCode,
+      apiUrl.contains('bty.world'),
+    );
     setState(() {
-      originalMembers = inactiveMembers_;
+      originalMembers = filtered;
       inactiveMembers = List<Guest>.from(originalMembers);
       _isLoading = false;
     });
+  }
+
+  // Group gating only applies for Bellagio logins. For Ballys, every member is
+  // shown. Within Bellagio, sales codes AD001 and "MKT CC" see every member;
+  // otherwise only members in the logged-in user's marketing group are shown.
+  List<Guest> _applyGroupFilter(
+    List<Guest> list,
+    String? salesCode,
+    String? marketingCode,
+    bool isBellagio,
+  ) {
+    if (!isBellagio) return list;
+    if (salesCode == 'AD001' || salesCode == 'MKT CC') return list;
+    return list
+        .where(
+          (g) =>
+              marketingCode != null &&
+              (g.mGroup ?? '').isNotEmpty &&
+              marketingCode == g.mGroup,
+        )
+        .toList();
   }
 
   // final Map<String, String> ratingImageMap = {

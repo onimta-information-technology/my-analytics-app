@@ -1886,12 +1886,13 @@ const SizedBox(height: 10.0),
                   // the full audit trail is visible.
                   if (selectedReservation != null &&
                       selectedReservation.requestStatus != 'Pending') ...[
-                    if (_hasStageData(
-                      selectedReservation.checkedStatus,
-                      selectedReservation.checkedBy,
-                      selectedReservation.checkedTime,
-                      selectedReservation.checkedRemark,
-                    ))
+                    if (selectedReservation.requestStatus != 'Rejected' &&
+                        _hasStageData(
+                          selectedReservation.checkedStatus,
+                          selectedReservation.checkedBy,
+                          selectedReservation.checkedTime,
+                          selectedReservation.checkedRemark,
+                        ))
                       _buildActionInfoCard(
                         'Checked',
                         selectedReservation.checkedBy,
@@ -1901,6 +1902,7 @@ const SizedBox(height: 10.0),
                         fontSettings.fontWeight,
                       ),
                     if (selectedReservation.requestStatus != 'Checked' &&
+                        selectedReservation.requestStatus != 'Rejected' &&
                         _hasStageData(
                           selectedReservation.approvedStatus,
                           selectedReservation.approvedBy,

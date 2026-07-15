@@ -5,6 +5,7 @@ import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ballys_reservation_app/models/Guest/daily_walking_guest.dart';
@@ -26,10 +27,47 @@ class _DailyWalkingGuestScreenState
   bool _isFirstLoad = true;
   bool _isRefreshing = false;
 
+  // ── Marketing-group gating ──
+  // Only applies for Bellagio logins. Sales codes AD001 and "MKT CC" see every
+  // guest. Otherwise only guests in the logged-in user's marketing group show.
+  String? _userMarketingCode;
+  String? _userSalesCode;
+  bool _isBellagio = false;
+
   @override
   void initState() {
     super.initState();
+    _loadAccessSettings();
     _loadGuests();
+  }
+
+  Future<void> _loadAccessSettings() async {
+    final userMarketingCode = await StorageUtil.getMarketingCode();
+    final userSalesCode = await StorageUtil.getSalesCode();
+    final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+    if (mounted) {
+      setState(() {
+        _userMarketingCode = userMarketingCode;
+        _userSalesCode = userSalesCode;
+        _isBellagio = apiUrl.contains('bty.world');
+      });
+    }
+  }
+
+  // Group gating only applies for Bellagio logins. For Ballys, every guest is
+  // shown. Within Bellagio, sales codes AD001 and "MKT CC" see every guest;
+  // otherwise only guests in the logged-in user's marketing group are shown.
+  List<DailyWalkingGuest> _applyGroupFilter(List<DailyWalkingGuest> list) {
+    if (!_isBellagio) return list;
+    if (_userSalesCode == 'AD001') return list;
+    return list
+        .where(
+          (g) =>
+              _userMarketingCode != null &&
+              g.mgroup.isNotEmpty &&
+              _userMarketingCode == g.mgroup,
+        )
+        .toList();
   }
   @override
   void onConnectivityRestored() {
@@ -127,7 +165,7 @@ class _DailyWalkingGuestScreenState
 
   @override
   Widget build(BuildContext context) {
-    final guests = ref.watch(dailyWalkingProvider);
+    final guests = _applyGroupFilter(ref.watch(dailyWalkingProvider));
     final fontSettings = ref.watch(fontSettingsProvider);
 
     final showSpinner = (_isFirstLoad && guests.isEmpty) || _isRefreshing;

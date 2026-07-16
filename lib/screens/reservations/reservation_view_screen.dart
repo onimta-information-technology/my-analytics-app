@@ -66,6 +66,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
   bool _isAD001 = false;
   bool _hasResChk = false;
   bool _hasResApp = false;
+  String? _currentUserName;
 
   @override
   void initState() {
@@ -98,12 +99,14 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
     final salesCode = await StorageUtil.getSalesCode();
     final resChk = await StorageUtil.getResChk();
     final resApp = await StorageUtil.getResApp();
+    final userName = await StorageUtil.getUserName();
 
     if (mounted) {
       setState(() {
         _isAD001 = salesCode?.trim().toUpperCase() == 'AD001';
         _hasResChk = resChk == true;
         _hasResApp = resApp == true;
+        _currentUserName = userName;
       });
     }
   }
@@ -120,6 +123,14 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
 
   bool get _canCheckOrReject => _hasResChk;
   bool get _canApproveOrRejectChecked => _hasResApp;
+
+  // The edit icon belongs to whoever raised the request — nobody else can
+  // change the reservation's contents.
+  bool _isRequester(String? reqBy) {
+    final user = (_currentUserName ?? '').trim();
+    if (user.isEmpty) return false;
+    return user.toLowerCase() == (reqBy ?? '').trim().toLowerCase();
+  }
 
   // ── Format DateTime ────────────────────────────────────────────────────
   String _formatDateTime(DateTime dt) {
@@ -1310,7 +1321,9 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
             },
             child: Padding(
               padding: const EdgeInsets.only(right: 8.0),
-              child: (selectedReservation?.requestStatus == 'Pending')
+              child:
+                  (selectedReservation?.requestStatus == 'Pending' &&
+                      _isRequester(selectedReservation?.reqBy))
                   ? IconButton(
                       onPressed: () async {
                         Future<void> navigateToEdit() async {

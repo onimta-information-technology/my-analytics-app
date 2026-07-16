@@ -52,11 +52,11 @@ class TransportState {
 
   /// Requests still awaiting a taxi/driver assignment.
   List<TransportReservation> get pendingReservations =>
-      reservations.where((r) => !r.isConfirmed).toList();
+      reservations.where((r) => !r.isAssigned).toList();
 
-  /// Requests transport staff have already confirmed and assigned.
-  List<TransportReservation> get confirmedReservations =>
-      reservations.where((r) => r.isConfirmed).toList();
+  /// Requests transport staff have already assigned a taxi/driver to.
+  List<TransportReservation> get assignedReservations =>
+      reservations.where((r) => r.isAssigned).toList();
 
   TransportState copyWith({
     List<TransportReservation>? reservations,

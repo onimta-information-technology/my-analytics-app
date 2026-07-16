@@ -39,8 +39,9 @@ class TransportReservation {
     required this.details,
   });
 
-  /// True once the request has been confirmed/assigned by transport staff.
-  bool get isConfirmed => reservationStatus.toLowerCase() == 'confirmed';
+  /// True once transport staff have assigned a taxi/driver to the request.
+  bool get isAssigned =>
+      reservationStatus.toLowerCase() == 'transport assigned';
 
   factory TransportReservation.fromJson(Map<String, dynamic> json) {
     final rawDetails = json['transport_details'];

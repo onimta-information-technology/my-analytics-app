@@ -278,7 +278,7 @@ class TransportViewScreen extends ConsumerWidget {
                     Colors.brown,
                     fontSettings,
                   ),
-                  if (transport.isConfirmed) ...[
+                  if (transport.isAssigned) ...[
                     const Divider(height: 20),
                     _infoRow(
                       Icons.person_outline,

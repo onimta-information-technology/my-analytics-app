@@ -1689,7 +1689,7 @@ Contact Number     : ${m['contactNumber']}''';
       'guest_name': primary['guestName'],
       'pickup_date': _pickupIso(primary),
       'contact_number': primary['contactNumber'],
-      'reservation_status': 'Pending',
+      'reservation_status': 'Requested',
       'sales_code': salesCode,
       'user_name': userName,
       'device_id': deviceId,

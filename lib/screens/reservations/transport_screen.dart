@@ -61,7 +61,7 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'Confirmed':
+      case 'Transport Assigned':
         return Colors.blue;
       default:
         return Colors.orange;
@@ -70,7 +70,7 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
 
   IconData _getStatusIcon(String status) {
     switch (status) {
-      case 'Confirmed':
+      case 'Transport Assigned':
         return Icons.fact_check;
       default:
         return Icons.hourglass_bottom;
@@ -89,8 +89,8 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
           r.contactNumber.toLowerCase().contains(_searchQuery);
     }).toList();
 
-    final pending = reservations.where((r) => !r.isConfirmed).toList();
-    final confirmed = reservations.where((r) => r.isConfirmed).toList();
+    final pending = reservations.where((r) => !r.isAssigned).toList();
+    final assigned = reservations.where((r) => r.isAssigned).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -143,7 +143,7 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
           indicatorColor: Colors.pink,
           tabs: [
             _buildTab('Pending', pending.length, Colors.orange),
-            _buildTab('Confirmed', confirmed.length, Colors.blue),
+            _buildTab('Assigned', assigned.length, Colors.blue),
           ],
         ),
       ),
@@ -153,7 +153,7 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
             controller: _tabController,
             children: [
               _buildTransportList(pending, isLoading: transportState.isLoading),
-              _buildTransportList(confirmed,
+              _buildTransportList(assigned,
                   isLoading: transportState.isLoading),
             ],
           ),
@@ -273,48 +273,58 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
               Colors.blueGrey,
             ),
 
-            // ✅ Show taxi/driver assignment only in the Confirmed tab
-            if (reservation.isConfirmed) ...[
-              const SizedBox(height: 4),
-              _iconRow(
-                Icons.person_outline,
-                'Received by: ${reservation.receivedBy ?? 'N/A'}',
-                fontSettings.fontSize + 1,
-                fontSettings.fontWeight,
-                Colors.blue,
-              ),
-              const SizedBox(height: 4),
-              _iconRow(
-                Icons.fact_check,
-                'Received: ${_formatDateTime(reservation.receivedDate)}',
-                fontSettings.fontSize + 1,
-                fontSettings.fontWeight,
-                Colors.blue,
-              ),
-              const SizedBox(height: 4),
-              _iconRow(
-                Icons.local_taxi,
-                'Taxi plate: ${reservation.taxiPlateNumber ?? 'N/A'}',
-                fontSettings.fontSize + 1,
-                fontSettings.fontWeight,
-                Colors.indigo,
-              ),
-              const SizedBox(height: 4),
-              _iconRow(
-                Icons.badge_outlined,
-                'Driver: ${reservation.driverName ?? 'N/A'}',
-                fontSettings.fontSize + 1,
-                fontSettings.fontWeight,
-                Colors.indigo,
-              ),
-              const SizedBox(height: 4),
-              _iconRow(
-                Icons.phone_in_talk,
-                'Driver phone: ${reservation.driverPhoneNumber ?? 'N/A'}',
-                fontSettings.fontSize + 1,
-                fontSettings.fontWeight,
-                Colors.green,
-              ),
+            // ✅ Show taxi/driver assignment only in the Assigned tab
+            if (reservation.isAssigned) ...[
+              if ((reservation.receivedBy ?? '').trim().isNotEmpty) ...[
+                const SizedBox(height: 4),
+                _iconRow(
+                  Icons.person_outline,
+                  'Received by: ${reservation.receivedBy!.trim()}',
+                  fontSettings.fontSize + 1,
+                  fontSettings.fontWeight,
+                  Colors.blue,
+                ),
+              ],
+              if (reservation.receivedDate != null) ...[
+                const SizedBox(height: 4),
+                _iconRow(
+                  Icons.fact_check,
+                  'Received: ${_formatDateTime(reservation.receivedDate)}',
+                  fontSettings.fontSize + 1,
+                  fontSettings.fontWeight,
+                  Colors.blue,
+                ),
+              ],
+              if ((reservation.taxiPlateNumber ?? '').trim().isNotEmpty) ...[
+                const SizedBox(height: 4),
+                _iconRow(
+                  Icons.local_taxi,
+                  'Taxi plate: ${reservation.taxiPlateNumber!.trim()}',
+                  fontSettings.fontSize + 1,
+                  fontSettings.fontWeight,
+                  Colors.indigo,
+                ),
+              ],
+              if ((reservation.driverName ?? '').trim().isNotEmpty) ...[
+                const SizedBox(height: 4),
+                _iconRow(
+                  Icons.badge_outlined,
+                  'Driver: ${reservation.driverName!.trim()}',
+                  fontSettings.fontSize + 1,
+                  fontSettings.fontWeight,
+                  Colors.indigo,
+                ),
+              ],
+              if ((reservation.driverPhoneNumber ?? '').trim().isNotEmpty) ...[
+                const SizedBox(height: 4),
+                _iconRow(
+                  Icons.phone_in_talk,
+                  'Driver phone: ${reservation.driverPhoneNumber!.trim()}',
+                  fontSettings.fontSize + 1,
+                  fontSettings.fontWeight,
+                  Colors.green,
+                ),
+              ],
             ],
 
             const SizedBox(height: 8),
@@ -332,12 +342,12 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
                     children: [
                       Icon(
                         _getStatusIcon(reservation.reservationStatus),
-                        size: 16,
+                        size: 14,
                         color: Colors.white,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 2),
                       Text(
-                        reservation.isConfirmed ? 'Confirmed' : 'Pending',
+                        reservation.isAssigned ? 'Assigned' : 'Pending',
                         style: TextStyle(
                           fontSize: fontSettings.fontSize,
                           color: Colors.white,

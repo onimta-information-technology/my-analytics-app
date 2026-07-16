@@ -51,34 +51,34 @@ void clearReservations() {
     }
   }
 
-  Future<bool> approveOrRejectReservation({
-    required String memberID,
-    required String reservationNo,
-    required String currentUName,
-    required String status,
-    required String remarks,
-  }) async {
-    try {
+  // Future<bool> approveOrRejectReservation({
+  //   required String memberID,
+  //   required String reservationNo,
+  //   required String currentUName,
+  //   required String status,
+  //   required String remarks,
+  // }) async {
+  //   try {
       
-      final success = await reservationRepository.approveOrRejectReservation(
-        memberID: memberID,
-        reservationNo: reservationNo,
-        currentUName: currentUName,
-        status: status,
-        remarks: remarks,
-      );
+  //     final success = await reservationRepository.approveOrRejectReservation(
+  //       memberID: memberID,
+  //       reservationNo: reservationNo,
+  //       currentUName: currentUName,
+  //       status: status,
+  //       remarks: remarks,
+  //     );
 
-      if (success) {
-        // Refresh the reservation data after successful approve/reject
-        await getReservationData();
-        return true;
-      }
-      return false;
-    } catch (e) {
+  //     if (success) {
+  //       // Refresh the reservation data after successful approve/reject
+  //       await getReservationData();
+  //       return true;
+  //     }
+  //     return false;
+  //   } catch (e) {
    
-      return false;
-    }
-  }
+  //     return false;
+  //   }
+  // }
 }
 
 final flutterSecureStorageProvider = Provider(

@@ -285,92 +285,92 @@ class ReservationRepository {
   }
   // Add this method to your ReservationRepository class
 
-  Future<bool> approveOrRejectReservation({
-    required String memberID,
-    required String reservationNo,
-    required String currentUName,
-    required String status,
-    required String remarks,
+//   Future<bool> approveOrRejectReservation({
+//     required String memberID,
+//     required String reservationNo,
+//     required String currentUName,
+//     required String status,
+//     required String remarks,
 
-  }) async {
-    final deviceId = await DeviceId.get();
-    final spName = await StorageUtil.getStoredProcedureName();
-print('Approving/Rejecting reservation with status: $status');
-print('Member ID: $memberID, Reservation No: $reservationNo, Current User: $currentUName, Remarks: $remarks');
-    final requestBody = {
-      "HasReturnData": "T",
-      "Parameters": [
-        {
-          "Para_Data": 8014,
-          "Para_Direction": "Input",
-          "Para_Lenth": 1,
-          "Para_Name": "@Iid",
-          "Para_Type": "int",
-        },
-        {
-          "Para_Data": memberID,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text1",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": reservationNo,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text12",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": currentUName,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text13",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": status,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text14",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": remarks,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text15",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": deviceId,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text30",
-          "Para_Type": "varchar",
-        },
-      ],
-      "SpName": spName,
-      "con": "1",
-    };
-
-
-    printLargeBody(jsonEncode(requestBody));
+//   }) async {
+//     final deviceId = await DeviceId.get();
+//     final spName = await StorageUtil.getStoredProcedureName();
+// print('Approving/Rejecting reservation with status: $status');
+// print('Member ID: $memberID, Reservation No: $reservationNo, Current User: $currentUName, Remarks: $remarks');
+//     final requestBody = {
+//       "HasReturnData": "T",
+//       "Parameters": [
+//         {
+//           "Para_Data": 8014,
+//           "Para_Direction": "Input",
+//           "Para_Lenth": 1,
+//           "Para_Name": "@Iid",
+//           "Para_Type": "int",
+//         },
+//         {
+//           "Para_Data": memberID,
+//           "Para_Direction": "Input",
+//           "Para_Lenth": 100,
+//           "Para_Name": "@Text1",
+//           "Para_Type": "varchar",
+//         },
+//         {
+//           "Para_Data": reservationNo,
+//           "Para_Direction": "Input",
+//           "Para_Lenth": 100,
+//           "Para_Name": "@Text12",
+//           "Para_Type": "varchar",
+//         },
+//         {
+//           "Para_Data": currentUName,
+//           "Para_Direction": "Input",
+//           "Para_Lenth": 100,
+//           "Para_Name": "@Text13",
+//           "Para_Type": "varchar",
+//         },
+//         {
+//           "Para_Data": status,
+//           "Para_Direction": "Input",
+//           "Para_Lenth": 100,
+//           "Para_Name": "@Text14",
+//           "Para_Type": "varchar",
+//         },
+//         {
+//           "Para_Data": remarks,
+//           "Para_Direction": "Input",
+//           "Para_Lenth": 100,
+//           "Para_Name": "@Text15",
+//           "Para_Type": "varchar",
+//         },
+//         {
+//           "Para_Data": deviceId,
+//           "Para_Direction": "Input",
+//           "Para_Lenth": 100,
+//           "Para_Name": "@Text30",
+//           "Para_Type": "varchar",
+//         },
+//       ],
+//       "SpName": spName,
+//       "con": "1",
+//     };
 
 
-    try {
-      final response = await apiService.post('CommonExecute', requestBody);
-print('Response from approve/reject API: $response');
-      if (response['CommonResult'] != null) {
-        return true;
-      } else {
-        return false;
-      }
-    } catch (e) {
+//     printLargeBody(jsonEncode(requestBody));
+
+
+//     try {
+//       final response = await apiService.post('CommonExecute', requestBody);
+// print('Response from approve/reject API: $response');
+//       if (response['CommonResult'] != null) {
+//         return true;
+//       } else {
+//         return false;
+//       }
+//     } catch (e) {
     
-      return false;
-    }
-  }
+//       return false;
+//     }
+//   }
 
   // void printLargeBody(String body) {
   //   const chunkSize = 1024;

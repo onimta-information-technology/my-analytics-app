@@ -50,13 +50,8 @@ class TransportState {
     this.error,
   });
 
-  /// Requests still awaiting a taxi/driver assignment.
-  List<TransportReservation> get pendingReservations =>
-      reservations.where((r) => !r.isAssigned).toList();
-
-  /// Requests transport staff have already assigned a taxi/driver to.
-  List<TransportReservation> get assignedReservations =>
-      reservations.where((r) => r.isAssigned).toList();
+  List<TransportReservation> byStatus(TransportStatus status) =>
+      reservations.where((r) => r.status == status).toList();
 
   TransportState copyWith({
     List<TransportReservation>? reservations,

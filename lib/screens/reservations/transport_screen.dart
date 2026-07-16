@@ -30,7 +30,8 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController =
+        TabController(length: TransportStatus.values.length, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadTransportData();
     });
@@ -59,20 +60,24 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
     return '$day/$month/${dt.year}  $hourStr:$minute $period';
   }
 
-  Color _getStatusColor(String status) {
+  Color _getStatusColor(TransportStatus status) {
     switch (status) {
-      case 'Transport Assigned':
+      case TransportStatus.transportAssigned:
         return Colors.blue;
-      default:
+      case TransportStatus.pendingTransport:
+        return Colors.purple;
+      case TransportStatus.requested:
         return Colors.orange;
     }
   }
 
-  IconData _getStatusIcon(String status) {
+  IconData _getStatusIcon(TransportStatus status) {
     switch (status) {
-      case 'Transport Assigned':
+      case TransportStatus.transportAssigned:
         return Icons.fact_check;
-      default:
+      case TransportStatus.pendingTransport:
+        return Icons.event_available;
+      case TransportStatus.requested:
         return Icons.hourglass_bottom;
     }
   }
@@ -89,8 +94,10 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
           r.contactNumber.toLowerCase().contains(_searchQuery);
     }).toList();
 
-    final pending = reservations.where((r) => !r.isAssigned).toList();
-    final assigned = reservations.where((r) => r.isAssigned).toList();
+    final byStatus = {
+      for (final status in TransportStatus.values)
+        status: reservations.where((r) => r.status == status).toList(),
+    };
 
     return Scaffold(
       appBar: AppBar(
@@ -141,9 +148,15 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.pink,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
           tabs: [
-            _buildTab('Pending', pending.length, Colors.orange),
-            _buildTab('Assigned', assigned.length, Colors.blue),
+            for (final status in TransportStatus.values)
+              _buildTab(
+                status.label,
+                byStatus[status]!.length,
+                _getStatusColor(status),
+              ),
           ],
         ),
       ),
@@ -152,9 +165,9 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
           TabBarView(
             controller: _tabController,
             children: [
-              _buildTransportList(pending, isLoading: transportState.isLoading),
-              _buildTransportList(assigned,
-                  isLoading: transportState.isLoading),
+              for (final status in TransportStatus.values)
+                _buildTransportList(byStatus[status]!,
+                    isLoading: transportState.isLoading),
             ],
           ),
           if (transportState.isLoading)
@@ -330,31 +343,36 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
             const SizedBox(height: 8),
             Row(
               children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _getStatusColor(reservation.reservationStatus),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        _getStatusIcon(reservation.reservationStatus),
-                        size: 14,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 2),
-                      Text(
-                        reservation.isAssigned ? 'Assigned' : 'Pending',
-                        style: TextStyle(
-                          fontSize: fontSettings.fontSize,
+                Flexible(
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(reservation.status),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _getStatusIcon(reservation.status),
+                          size: 14,
                           color: Colors.white,
-                          fontWeight: FontWeight.bold,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 2),
+                        Flexible(
+                          child: Text(
+                            reservation.status.label,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: fontSettings.fontSize,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),

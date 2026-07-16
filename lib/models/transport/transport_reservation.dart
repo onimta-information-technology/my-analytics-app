@@ -39,9 +39,21 @@ class TransportReservation {
     required this.details,
   });
 
+  /// Anything the API doesn't recognise falls back to [TransportStatus.requested]
+  /// so a request is never dropped from every tab.
+  TransportStatus get status {
+    switch (reservationStatus.trim().toLowerCase()) {
+      case 'transport assigned':
+        return TransportStatus.transportAssigned;
+      case 'pending transport':
+        return TransportStatus.pendingTransport;
+      default:
+        return TransportStatus.requested;
+    }
+  }
+
   /// True once transport staff have assigned a taxi/driver to the request.
-  bool get isAssigned =>
-      reservationStatus.toLowerCase() == 'transport assigned';
+  bool get isAssigned => status == TransportStatus.transportAssigned;
 
   factory TransportReservation.fromJson(Map<String, dynamic> json) {
     final rawDetails = json['transport_details'];
@@ -79,6 +91,23 @@ class TransportReservation {
   /// Total passengers across every leg of this request.
   int get totalPassengers =>
       details.fold(0, (sum, d) => sum + d.noOfPassengers);
+}
+
+/// The `reservation_status` values the API returns, one per tab.
+enum TransportStatus {
+  /// Not assigned to a taxi/driver yet.
+  requested('Requested'),
+
+  /// Assigned for today.
+  transportAssigned('Transport Assigned'),
+
+  /// Assigned for a future date.
+  pendingTransport('Pending Transport');
+
+  const TransportStatus(this.label);
+
+  /// Full status name, as shown on the tabs and status chips.
+  final String label;
 }
 
 class TransportDetail {

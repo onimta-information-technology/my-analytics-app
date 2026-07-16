@@ -274,6 +274,9 @@ class MarketingDetailedData {
   // parsed defensively. `pkgStatus == 'Y'` drives the package badge in the UI.
   final double? gActDrop;
   final String? pkgStatus;
+  // `G_Rating` arrives as text and is not always a number — the API sends the
+  // literal "INFINITY" when the rating has no upper bound (zero divisor).
+  final String? gRating;
 
   MarketingDetailedData({
     required this.memId,
@@ -289,6 +292,7 @@ class MarketingDetailedData {
     this.gStatus = 0,
     this.gActDrop,
     this.pkgStatus,
+    this.gRating,
   });
 
   // True when this member is flagged as a new member (`G_Status == 1`).
@@ -296,6 +300,13 @@ class MarketingDetailedData {
 
   // True when the member has an active package (PKG_Status == "Y").
   bool get hasPackage => (pkgStatus ?? '').trim().toUpperCase() == 'Y';
+
+  // Rating tier text ready for display (GOLD / PLATINUM / INFINITY / …).
+  // Null when the column is missing or blank so the UI can skip the badge.
+  String? get ratingDisplay {
+    final raw = (gRating ?? '').trim();
+    return raw.isEmpty ? null : raw.toUpperCase();
+  }
 
   factory MarketingDetailedData.fromJson(Map<String, dynamic> json) {
     return MarketingDetailedData(
@@ -317,6 +328,7 @@ class MarketingDetailedData {
       pkgStatus: json.containsKey('PKG_Status')
           ? _toStr(json['PKG_Status'])
           : null,
+      gRating: json.containsKey('G_Rating') ? _toStr(json['G_Rating']) : null,
     );
   }
 
@@ -335,6 +347,7 @@ class MarketingDetailedData {
       'G_Status': gStatus,
       if (gActDrop != null) 'G_ActDrop': gActDrop,
       if (pkgStatus != null) 'PKG_Status': pkgStatus,
+      if (gRating != null) 'G_Rating': gRating,
     };
   }
 

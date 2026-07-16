@@ -431,13 +431,24 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> with 
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
-                  // Package badge, pinned to the top-right of the card.
-                  if (member.hasPackage)
-                    Align(
-                      alignment: Alignment.topRight,
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: _buildPackageBadge(),
+                  // Top strip of the card: G_Rating on the left, package badge
+                  // on the right. Rendered whenever either side has something
+                  // to show.
+                  if (member.ratingDisplay != null || member.hasPackage)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          if (member.ratingDisplay != null)
+                            _buildRatingBadge(member.ratingDisplay!)
+                          else
+                            const SizedBox.shrink(),
+                          if (member.hasPackage)
+                            _buildPackageBadge()
+                          else
+                            const SizedBox.shrink(),
+                        ],
                       ),
                     ),
                   Row(
@@ -700,6 +711,57 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> with 
           fontWeight: FontWeight.w900,
           color: Colors.white,
           letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+
+  // Tier colour for `G_Rating`, matching the rating badges on the members /
+  // inactive-members / profile screens.
+  Color _getRatingColor(String? rating) {
+    switch ((rating ?? '').toUpperCase()) {
+      case 'GOLD':
+        return const Color(0xFFDAA520);
+      case 'PLATINUM':
+        return const Color(0xFF707070);
+      case 'DIAMOND':
+        return const Color(0xFF1565C0);
+      case 'SILVER':
+        return const Color(0xFF9E9E9E);
+      case 'INFINITY':
+        return const Color(0xFF4A148C);
+      case 'PREMIER':
+        return const Color(0xFF1B5E20);
+      case 'RAFFELS CLUB':
+        return const Color(0xFF880E4F);
+      case 'CLASSIC':
+        return const Color(0xFF5D4037);
+      default:
+        return const Color(0xFF5D4037);
+    }
+  }
+
+  // Rating pill from `G_Rating`, shown on the left of the package badge row.
+  Widget _buildRatingBadge(String rating) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: _getRatingColor(rating),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.25),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Text(
+        rating,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );

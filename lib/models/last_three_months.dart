@@ -77,6 +77,9 @@ class LastThreeMonthsDetailedData {
   final double? gActDrop;
   final String? pkgStatus;
 
+  /// Membership tier from `G_Rating` (GOLD / PLATINUM / DIAMOND / INFINITY / …).
+  final String? gRating;
+
   const LastThreeMonthsDetailedData({
     required this.memId,
     required this.mDrop,
@@ -91,6 +94,7 @@ class LastThreeMonthsDetailedData {
     this.gStatus = 0,
     this.gActDrop,
     this.pkgStatus,
+    this.gRating,
   });
 
   bool get isPositive => winLost >= 0;
@@ -100,6 +104,13 @@ class LastThreeMonthsDetailedData {
 
   /// True when the member has an active package (`PKG_Status == "Y"`).
   bool get hasPackage => (pkgStatus ?? '').trim().toUpperCase() == 'Y';
+
+  /// Rating tier text ready for display. Null when the column is missing or
+  /// blank so the UI can skip the badge.
+  String? get ratingDisplay {
+    final raw = (gRating ?? '').trim();
+    return raw.isEmpty ? null : raw.toUpperCase();
+  }
 
   factory LastThreeMonthsDetailedData.fromJson(Map<String, dynamic> json) {
     return LastThreeMonthsDetailedData(
@@ -119,6 +130,8 @@ class LastThreeMonthsDetailedData {
           json.containsKey('G_ActDrop') ? _toDouble(json['G_ActDrop']) : null,
       pkgStatus:
           json.containsKey('PKG_Status') ? json['PKG_Status']?.toString() : null,
+      gRating:
+          json.containsKey('G_Rating') ? json['G_Rating']?.toString() : null,
     );
   }
 

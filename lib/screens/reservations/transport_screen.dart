@@ -66,6 +66,8 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
         return Colors.blue;
       case TransportStatus.pendingTransport:
         return Colors.purple;
+      case TransportStatus.rejected:
+        return Colors.red;
       case TransportStatus.requested:
         return Colors.orange;
     }
@@ -77,6 +79,8 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
         return Icons.fact_check;
       case TransportStatus.pendingTransport:
         return Icons.event_available;
+      case TransportStatus.rejected:
+        return Icons.cancel;
       case TransportStatus.requested:
         return Icons.hourglass_bottom;
     }

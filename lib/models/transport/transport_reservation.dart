@@ -47,6 +47,8 @@ class TransportReservation {
         return TransportStatus.transportAssigned;
       case 'pending transport':
         return TransportStatus.pendingTransport;
+      case 'rejected':
+        return TransportStatus.rejected;
       default:
         return TransportStatus.requested;
     }
@@ -102,7 +104,10 @@ enum TransportStatus {
   transportAssigned('Transport Assigned'),
 
   /// Assigned for a future date.
-  pendingTransport('Pending Transport');
+  pendingTransport('Pending Transport'),
+
+  /// Turned down by transport staff.
+  rejected('Rejected');
 
   const TransportStatus(this.label);
 

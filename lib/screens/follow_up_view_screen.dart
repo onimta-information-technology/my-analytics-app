@@ -1,5 +1,6 @@
 // lib/screens/follow_up_view_screen.dart
 
+import 'package:ballys_reservation_app/components/guestDisplayCardById.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/models/follow_up_item.dart';
 import 'package:flutter/material.dart';
@@ -99,13 +100,9 @@ class FollowUpViewScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // ── Member ───────────────────────────────────────────────────
-              Text(
-                '${item.memberId} - ${item.memberName}',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
+              GuestDisplayCardById(
+                memberId: item.memberId,
+                showLastVisitDate: true,
               ),
               if (item.createdDate != null) ...[
                 const SizedBox(height: 4),

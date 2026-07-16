@@ -50,6 +50,14 @@ class TransportState {
     this.error,
   });
 
+  /// Requests still awaiting a taxi/driver assignment.
+  List<TransportReservation> get pendingReservations =>
+      reservations.where((r) => !r.isConfirmed).toList();
+
+  /// Requests transport staff have already confirmed and assigned.
+  List<TransportReservation> get confirmedReservations =>
+      reservations.where((r) => r.isConfirmed).toList();
+
   TransportState copyWith({
     List<TransportReservation>? reservations,
     bool? isLoading,

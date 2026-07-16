@@ -16,8 +16,9 @@ class TransportScreen extends ConsumerStatefulWidget {
 }
 
 class _TransportScreenState extends ConsumerState<TransportScreen>
-    with ConnectivityMixin {
+    with TickerProviderStateMixin, ConnectivityMixin {
   final TextEditingController _searchController = TextEditingController();
+  late TabController _tabController;
   String _searchQuery = '';
   bool _isSearching = false;
 
@@ -29,6 +30,7 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadTransportData();
     });
@@ -36,6 +38,7 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
 
   @override
   void dispose() {
+    _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -56,31 +59,23 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
     return '$day/$month/${dt.year}  $hourStr:$minute $period';
   }
 
-  // Color _getStatusColor(String status) {
-  //   switch (status) {
-  //     case 'Approved':
-  //       return Colors.green;
-  //     case 'Rejected':
-  //       return Colors.red;
-  //     case 'Checked':
-  //       return Colors.blue;
-  //     default:
-  //       return Colors.orange;
-  //   }
-  // }
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Confirmed':
+        return Colors.blue;
+      default:
+        return Colors.orange;
+    }
+  }
 
-  // IconData _getStatusIcon(String status) {
-  //   switch (status) {
-  //     case 'Approved':
-  //       return Icons.check_circle;
-  //     case 'Rejected':
-  //       return Icons.cancel;
-  //     case 'Checked':
-  //       return Icons.fact_check;
-  //     default:
-  //       return Icons.hourglass_bottom;
-  //   }
-  // }
+  IconData _getStatusIcon(String status) {
+    switch (status) {
+      case 'Confirmed':
+        return Icons.fact_check;
+      default:
+        return Icons.hourglass_bottom;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -93,6 +88,9 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
           r.userName.toLowerCase().contains(_searchQuery) ||
           r.contactNumber.toLowerCase().contains(_searchQuery);
     }).toList();
+
+    final pending = reservations.where((r) => !r.isConfirmed).toList();
+    final confirmed = reservations.where((r) => r.isConfirmed).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -140,24 +138,24 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
             onPressed: _loadTransportData,
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: Colors.pink,
+          tabs: [
+            _buildTab('Pending', pending.length, Colors.orange),
+            _buildTab('Confirmed', confirmed.length, Colors.blue),
+          ],
+        ),
       ),
       body: Stack(
         children: [
-          RefreshIndicator(
-            onRefresh: _loadTransportData,
-            child: reservations.isEmpty && !transportState.isLoading
-                ? ListView(
-                    children: const [
-                      SizedBox(height: 200),
-                      Center(child: Text('No transport requests available.')),
-                    ],
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: reservations.length,
-                    itemBuilder: (context, index) =>
-                        _buildTransportCard(reservations[index]),
-                  ),
+          TabBarView(
+            controller: _tabController,
+            children: [
+              _buildTransportList(pending, isLoading: transportState.isLoading),
+              _buildTransportList(confirmed,
+                  isLoading: transportState.isLoading),
+            ],
           ),
           if (transportState.isLoading)
             Positioned.fill(
@@ -174,6 +172,48 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTab(String title, int count, Color color) {
+    return Tab(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(title),
+          const SizedBox(width: 6),
+          CircleAvatar(
+            radius: 12,
+            backgroundColor: color,
+            child: Text(
+              count.toString(),
+              style: const TextStyle(color: Colors.white, fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTransportList(
+    List<TransportReservation> reservations, {
+    required bool isLoading,
+  }) {
+    return RefreshIndicator(
+      onRefresh: _loadTransportData,
+      child: reservations.isEmpty && !isLoading
+          ? ListView(
+              children: const [
+                SizedBox(height: 200),
+                Center(child: Text('No transport requests available.')),
+              ],
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: reservations.length,
+              itemBuilder: (context, index) =>
+                  _buildTransportCard(reservations[index]),
+            ),
     );
   }
 
@@ -232,36 +272,81 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
               fontSettings.fontWeight,
               Colors.blueGrey,
             ),
+
+            // ✅ Show taxi/driver assignment only in the Confirmed tab
+            if (reservation.isConfirmed) ...[
+              const SizedBox(height: 4),
+              _iconRow(
+                Icons.person_outline,
+                'Received by: ${reservation.receivedBy ?? 'N/A'}',
+                fontSettings.fontSize + 1,
+                fontSettings.fontWeight,
+                Colors.blue,
+              ),
+              const SizedBox(height: 4),
+              _iconRow(
+                Icons.fact_check,
+                'Received: ${_formatDateTime(reservation.receivedDate)}',
+                fontSettings.fontSize + 1,
+                fontSettings.fontWeight,
+                Colors.blue,
+              ),
+              const SizedBox(height: 4),
+              _iconRow(
+                Icons.local_taxi,
+                'Taxi plate: ${reservation.taxiPlateNumber ?? 'N/A'}',
+                fontSettings.fontSize + 1,
+                fontSettings.fontWeight,
+                Colors.indigo,
+              ),
+              const SizedBox(height: 4),
+              _iconRow(
+                Icons.badge_outlined,
+                'Driver: ${reservation.driverName ?? 'N/A'}',
+                fontSettings.fontSize + 1,
+                fontSettings.fontWeight,
+                Colors.indigo,
+              ),
+              const SizedBox(height: 4),
+              _iconRow(
+                Icons.phone_in_talk,
+                'Driver phone: ${reservation.driverPhoneNumber ?? 'N/A'}',
+                fontSettings.fontSize + 1,
+                fontSettings.fontWeight,
+                Colors.green,
+              ),
+            ],
+
             const SizedBox(height: 8),
             Row(
               children: [
-                // Container(
-                //   padding:
-                //       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                //   decoration: BoxDecoration(
-                //     color: _getStatusColor(reservation.reservationStatus),
-                //     borderRadius: BorderRadius.circular(12),
-                //   ),
-                //   // child: Row(
-                //   //   mainAxisSize: MainAxisSize.min,
-                //   //   children: [
-                //   //     Icon(
-                //   //       _getStatusIcon(reservation.reservationStatus),
-                //   //       size: 20,
-                //   //       color: Colors.white,
-                //   //     ),
-                //   //     const SizedBox(width: 4),
-                //   //     Text(
-                //   //       reservation.reservationStatus,
-                //   //       style: TextStyle(
-                //   //         fontSize: fontSettings.fontSize,
-                //   //         color: Colors.white,
-                //   //         fontWeight: FontWeight.bold,
-                //   //       ),
-                //   //     ),
-                //   //   ],
-                //   // ),
-                // ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(reservation.reservationStatus),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _getStatusIcon(reservation.reservationStatus),
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        reservation.isConfirmed ? 'Confirmed' : 'Pending',
+                        style: TextStyle(
+                          fontSize: fontSettings.fontSize,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(width: 8),
                 Flexible(
                   child: Container(

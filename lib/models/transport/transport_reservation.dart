@@ -13,6 +13,11 @@ class TransportReservation {
   final String userName;
   final String deviceId;
   final DateTime? createdDate;
+  final String? receivedBy;
+  final DateTime? receivedDate;
+  final String? taxiPlateNumber;
+  final String? driverName;
+  final String? driverPhoneNumber;
   final List<TransportDetail> details;
 
   TransportReservation({
@@ -26,8 +31,16 @@ class TransportReservation {
     required this.userName,
     required this.deviceId,
     required this.createdDate,
+    this.receivedBy,
+    this.receivedDate,
+    this.taxiPlateNumber,
+    this.driverName,
+    this.driverPhoneNumber,
     required this.details,
   });
+
+  /// True once the request has been confirmed/assigned by transport staff.
+  bool get isConfirmed => reservationStatus.toLowerCase() == 'confirmed';
 
   factory TransportReservation.fromJson(Map<String, dynamic> json) {
     final rawDetails = json['transport_details'];
@@ -43,6 +56,11 @@ class TransportReservation {
       userName: json['user_name']?.toString() ?? '',
       deviceId: json['device_id']?.toString() ?? '',
       createdDate: _parseDate(json['created_date']),
+      receivedBy: _parseText(json['received_by']),
+      receivedDate: _parseDate(json['received_date']),
+      taxiPlateNumber: _parseText(json['taxi_plate_number']),
+      driverName: _parseText(json['driver_name']),
+      driverPhoneNumber: _parseText(json['driver_phone_number']),
       details: rawDetails is List
           ? rawDetails
               .whereType<Map>()
@@ -77,6 +95,11 @@ class TransportDetail {
   final int noOfVehicles;
   final int noOfPassengers;
   final String contactNumber;
+  final String? receivedBy;
+  final DateTime? receivedDate;
+  final String? taxiPlateNumber;
+  final String? driverName;
+  final String? driverPhoneNumber;
 
   TransportDetail({
     required this.detailId,
@@ -93,7 +116,20 @@ class TransportDetail {
     required this.noOfVehicles,
     required this.noOfPassengers,
     required this.contactNumber,
+    this.receivedBy,
+    this.receivedDate,
+    this.taxiPlateNumber,
+    this.driverName,
+    this.driverPhoneNumber,
   });
+
+  /// True once transport staff have filled in the taxi/driver assignment.
+  bool get hasDriverInfo =>
+      taxiPlateNumber != null ||
+      driverName != null ||
+      driverPhoneNumber != null ||
+      receivedBy != null ||
+      receivedDate != null;
 
   factory TransportDetail.fromJson(Map<String, dynamic> json) {
     return TransportDetail(
@@ -111,8 +147,21 @@ class TransportDetail {
       noOfVehicles: _parseInt(json['no_of_vehicles']),
       noOfPassengers: _parseInt(json['no_of_passengers']),
       contactNumber: json['contact_number']?.toString() ?? '',
+      receivedBy: _parseText(json['received_by']),
+      receivedDate: _parseDate(json['received_date']),
+      taxiPlateNumber: _parseText(json['taxi_plate_number']),
+      driverName: _parseText(json['driver_name']),
+      driverPhoneNumber: _parseText(json['driver_phone_number']),
     );
   }
+}
+
+/// Returns null for absent/blank values so callers can distinguish
+/// "not assigned yet" from an empty string.
+String? _parseText(dynamic value) {
+  if (value == null) return null;
+  final text = value.toString().trim();
+  return text.isEmpty ? null : text;
 }
 
 DateTime? _parseDate(dynamic value) {

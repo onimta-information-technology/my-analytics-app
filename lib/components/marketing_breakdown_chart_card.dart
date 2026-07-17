@@ -27,6 +27,17 @@ Map<String, List<Guest>> groupByCountry(List<Guest> guests) {
   );
 }
 
+// Half-pie geometry, shared by the painter and the hit-test so they stay in sync.
+const double _kRadiusFactor = 0.88;
+const double _kMaxRadius = 150;
+const double _kInnerRadiusFactor = 0.55;
+const double _kBaselinePadding = 8;
+// A hovered slice paints 6px thicker, half of which spills past the outer edge.
+const double _kHoverExpand = 6;
+
+double _radiusFor(double width) =>
+    min((width / 2) * _kRadiusFactor, _kMaxRadius);
+
 const List<Color> _sliceColors = [
   Color(0xFFE91E63),
   Color(0xFF00BCD4),
@@ -393,44 +404,52 @@ class _HalfPieSectionState extends State<_HalfPieSection>
   Widget build(BuildContext context) {
     return Column(
       children: [
-        AnimatedBuilder(
-          animation: _animation,
-          builder: (context, _) {
-            return SizedBox(
-              height: 190,
-              child: GestureDetector(
-                onTapUp: (d) => _handleTap(d, context),
-                child: CustomPaint(
-                  painter: _HalfPiePainter(
-                    groups: widget.groups,
-                    total: widget.total,
-                    progress: _animation.value,
-                    hoveredIndex: _hoveredIndex,
-                    colorForIndex: _colorFor,
-                  ),
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 100),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            widget.total.toString(),
-                            style: const TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.black87),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final radius = _radiusFor(constraints.maxWidth);
+            return AnimatedBuilder(
+              animation: _animation,
+              builder: (context, _) {
+                return SizedBox(
+                  height: radius + _kHoverExpand / 2 + _kBaselinePadding,
+                  child: GestureDetector(
+                    onTapUp: (d) => _handleTap(d, constraints.maxWidth),
+                    child: CustomPaint(
+                      painter: _HalfPiePainter(
+                        groups: widget.groups,
+                        total: widget.total,
+                        progress: _animation.value,
+                        hoveredIndex: _hoveredIndex,
+                        colorForIndex: _colorFor,
+                        radius: radius,
+                      ),
+                      child: Align(
+                        alignment: Alignment.bottomCenter,
+                        child: Padding(
+                          padding: const EdgeInsets.only(
+                              bottom: _kBaselinePadding),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                widget.total.toString(),
+                                style: const TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.black87),
+                              ),
+                              const Text('Total Visits',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      color: Color.fromARGB(255, 0, 0, 0))),
+                            ],
                           ),
-                          const Text('Total Visits',
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  color: Color.fromARGB(255, 0, 0, 0))),
-                        ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
             );
           },
         ),
@@ -520,17 +539,15 @@ class _HalfPieSectionState extends State<_HalfPieSection>
     );
   }
 
-  void _handleTap(TapUpDetails details, BuildContext context) {
-    final box = context.findRenderObject() as RenderBox;
-    final localPos = box.globalToLocal(details.globalPosition);
-    final size = box.size;
+  void _handleTap(TapUpDetails details, double width) {
+    final localPos = details.localPosition;
+    final radius = _radiusFor(width);
+    final innerRadius = radius * _kInnerRadiusFactor;
 
-    final center = Offset(size.width / 2, 170);
-    final radius = (size.width / 2) * 0.88;
-    final innerRadius = radius * 0.55;
-
-    final dx = localPos.dx - center.dx;
-    final dy = localPos.dy - center.dy;
+    // The GestureDetector spans the chart box, so localPosition is already
+    // relative to it; mirror the painter's centre.
+    final dx = localPos.dx - width / 2;
+    final dy = localPos.dy - (radius + _kHoverExpand / 2);
     final distance = sqrt(dx * dx + dy * dy);
 
     if (distance < innerRadius || distance > radius) {
@@ -1263,6 +1280,7 @@ class _HalfPiePainter extends CustomPainter {
   final double progress;
   final int? hoveredIndex;
   final Color Function(int index) colorForIndex;
+  final double radius;
 
   _HalfPiePainter({
     required this.groups,
@@ -1270,15 +1288,15 @@ class _HalfPiePainter extends CustomPainter {
     required this.progress,
     required this.hoveredIndex,
     required this.colorForIndex,
+    required this.radius,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     if (total == 0) return;
 
-    final center = Offset(size.width / 2, size.height * 0.92);
-    final radius = (size.width / 2) * 0.88;
-    final innerRadius = radius * 0.55;
+    final center = Offset(size.width / 2, radius + _kHoverExpand / 2);
+    final innerRadius = radius * _kInnerRadiusFactor;
     final strokeWidth = radius - innerRadius;
 
     double startAngle = pi;

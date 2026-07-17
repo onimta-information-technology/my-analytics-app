@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dropdown_search/dropdown_search.dart';
+import 'package:country_picker/country_picker.dart';
 import 'package:ballys_reservation_app/components/air_ticket_class_selector.dart';
 import 'package:ballys_reservation_app/components/passport_upload_widget.dart';
 import 'package:ballys_reservation_app/components/package_amount_field.dart';
@@ -270,12 +271,44 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
   final _t_noOfPassengers = TextEditingController(text: '1');
   final _t_contactNumber = TextEditingController();
 
+  Country _t_country = _defaultCountry();
+
   DateTime? _t_pickupDate;
   TimeOfDay? _t_pickupTime;
   String? _t_carType;
   String? _t_hireType;
   String _t_pickupPlaceId = '';
   String _t_dropPlaceId = '';
+
+  static Country _defaultCountry() => Country(
+    phoneCode: '94',
+    countryCode: 'LK',
+    e164Sc: 0,
+    geographic: true,
+    level: 1,
+    name: 'Sri Lanka',
+    example: '712345678',
+    displayName: 'Sri Lanka (LK) [+94]',
+    displayNameNoCountryCode: 'Sri Lanka (LK)',
+    e164Key: '',
+  );
+
+  void _showTransportCountryPicker() {
+    showCountryPicker(
+      context: context,
+      showPhoneCode: true,
+      onSelect: (Country country) => setState(() => _t_country = country),
+      countryListTheme: CountryListThemeData(
+        borderRadius: BorderRadius.circular(8),
+        inputDecoration: InputDecoration(
+          labelText: 'Search',
+          hintText: 'Start typing to search',
+          prefixIcon: const Icon(Icons.search),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      ),
+    );
+  }
 
   static const _hotelColor = Color(0xFFE65C00);
   static const _airColor = Color(0xFF0277BD);
@@ -875,7 +908,9 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       'dropLocation': _t_dropLocationCtrl.text,
       'noOfVehicles': _t_noOfVehicles.text,
       'noOfPassengers': _t_noOfPassengers.text,
-      'contactNumber': _t_contactNumber.text,
+      'contactNumber': _t_contactNumber.text.trim().isEmpty
+          ? ''
+          : '+${_t_country.phoneCode}${_t_contactNumber.text.trim()}',
       // typed fields used when building the API body
       'pickupDateObj': _t_pickupDate,
       'pickupTimeObj': _t_pickupTime,
@@ -892,6 +927,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     _t_noOfVehicles.text = '1';
     _t_noOfPassengers.text = '1';
     _t_contactNumber.clear();
+    _t_country = _defaultCountry();
     _t_pickupDate = null;
     _t_pickupTime = null;
     _t_carType = null;
@@ -4054,15 +4090,52 @@ class _TransportForm extends StatelessWidget {
           const SizedBox(height: 12),
 
           // ── Contact number ───────────────────────────────────────────────────
-          TextFormField(
-            controller: state._t_contactNumber,
-            style: kInputTextStyle,
-            keyboardType: TextInputType.phone,
-            decoration: _fieldDeco(
-              'Contact Number *',
-              icon: Icons.phone_rounded,
-              accent: accent,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              InkWell(
+                onTap: state._showTransportCountryPicker,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  height: 58,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade400),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        state._t_country.flagEmoji,
+                        style: const TextStyle(fontSize: 18),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '+${state._t_country.phoneCode}',
+                        style: kInputTextStyle.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Icon(Icons.arrow_drop_down, color: accent, size: 20),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextFormField(
+                  controller: state._t_contactNumber,
+                  style: kInputTextStyle,
+                  keyboardType: TextInputType.phone,
+                  decoration: _fieldDeco(
+                    'Contact Number *',
+                    icon: Icons.phone_rounded,
+                    accent: accent,
+                  ),
+                ),
+              ),
+            ],
           ),
 
           const SizedBox(height: 16),

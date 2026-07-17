@@ -102,10 +102,10 @@ class TransportViewScreen extends ConsumerWidget {
                       )
                     else
                       ...transport.details.asMap().entries.map(
-                            (entry) => _buildDetailCard(
-                              entry.key + 1,
-                              entry.value,
-                              fontSettings,
+                            (entry) => _TripCard(
+                              index: entry.key + 1,
+                              detail: entry.value,
+                              fontSettings: fontSettings,
                             ),
                           ),
                   ],
@@ -325,165 +325,7 @@ class TransportViewScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDetailCard(
-    int index,
-    TransportDetail detail,
-    FontSettings fontSettings,
-  ) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 14,
-                  backgroundColor: Constants.kPrimaryColor,
-                  child: Text(
-                    '$index',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    '${detail.mid} - ${detail.guestName}',
-                    style: TextStyle(
-                      fontSize: fontSettings.fontSize + 1,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.indigo,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    detail.hireType,
-                    style: TextStyle(
-                      fontSize: fontSettings.fontSize,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const Divider(height: 20),
-            _infoRow(
-              Icons.event,
-              'Pickup date',
-              _formatDate(detail.pickupDate),
-              Colors.blueGrey,
-              fontSettings,
-            ),
-            _infoRow(
-              Icons.access_time,
-              'Pickup time',
-              detail.pickupTime,
-              Colors.blueGrey,
-              fontSettings,
-            ),
-            _infoRow(
-              Icons.trip_origin,
-              'From',
-              detail.pickupLocation,
-              Colors.green,
-              fontSettings,
-            ),
-            _infoRow(
-              Icons.location_on,
-              'To',
-              detail.dropLocation,
-              Colors.red,
-              fontSettings,
-            ),
-            _infoRow(
-              Icons.directions_car,
-              'Vehicle type',
-              detail.carType,
-              Colors.indigo,
-              fontSettings,
-            ),
-            _infoRow(
-              Icons.local_taxi,
-              'No. of vehicles',
-              '${detail.noOfVehicles}',
-              Colors.indigo,
-              fontSettings,
-            ),
-            _infoRow(
-              Icons.people,
-              'No. of passengers',
-              '${detail.noOfPassengers}',
-              Colors.indigo,
-              fontSettings,
-            ),
-            _infoRow(
-              Icons.phone,
-              'Contact',
-              detail.contactNumber,
-              Colors.green,
-              fontSettings,
-            ),
-            if (detail.hasDriverInfo) ...[
-              const Divider(height: 20),
-              _infoRow(
-                Icons.person_outline,
-                'Received by',
-                detail.receivedBy ?? '',
-                Colors.blue,
-                fontSettings,
-              ),
-              _infoRow(
-                Icons.fact_check,
-                'Received',
-                _formatDateTime(detail.receivedDate),
-                Colors.blue,
-                fontSettings,
-              ),
-              _infoRow(
-                Icons.local_taxi,
-                'Taxi plate',
-                detail.taxiPlateNumber ?? '',
-                Colors.indigo,
-                fontSettings,
-              ),
-              _infoRow(
-                Icons.badge_outlined,
-                'Driver',
-                detail.driverName ?? '',
-                Colors.indigo,
-                fontSettings,
-              ),
-              _infoRow(
-                Icons.phone_in_talk,
-                'Driver phone',
-                detail.driverPhoneNumber ?? '',
-                Colors.green,
-                fontSettings,
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _infoRow(
+  static Widget _infoRow(
     IconData icon,
     String label,
     String value,
@@ -557,6 +399,276 @@ class TransportViewScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _TripCard extends StatefulWidget {
+  const _TripCard({
+    required this.index,
+    required this.detail,
+    required this.fontSettings,
+  });
+
+  final int index;
+  final TransportDetail detail;
+  final FontSettings fontSettings;
+
+  @override
+  State<_TripCard> createState() => _TripCardState();
+}
+
+class _TripCardState extends State<_TripCard> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final detail = widget.detail;
+    final fontSettings = widget.fontSettings;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 14,
+                        backgroundColor: Constants.kPrimaryColor,
+                        child: Text(
+                          '${widget.index}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          '${detail.mid} - ${detail.guestName}',
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize + 1,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.indigo,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          detail.hireType,
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      AnimatedRotation(
+                        turns: _expanded ? 0.5 : 0,
+                        duration: const Duration(milliseconds: 200),
+                        child: const Icon(
+                          Icons.expand_more,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (!_expanded) ...[
+                    const SizedBox(height: 10),
+                    _collapsedSummary(detail, fontSettings),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            alignment: Alignment.topCenter,
+            child: _expanded
+                ? Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Divider(height: 20),
+                        TransportViewScreen._infoRow(
+                          Icons.event,
+                          'Pickup date',
+                          TransportViewScreen._formatDate(detail.pickupDate),
+                          Colors.blueGrey,
+                          fontSettings,
+                        ),
+                        TransportViewScreen._infoRow(
+                          Icons.access_time,
+                          'Pickup time',
+                          detail.pickupTime,
+                          Colors.blueGrey,
+                          fontSettings,
+                        ),
+                        TransportViewScreen._infoRow(
+                          Icons.trip_origin,
+                          'From',
+                          detail.pickupLocation,
+                          Colors.green,
+                          fontSettings,
+                        ),
+                        TransportViewScreen._infoRow(
+                          Icons.location_on,
+                          'To',
+                          detail.dropLocation,
+                          Colors.red,
+                          fontSettings,
+                        ),
+                        TransportViewScreen._infoRow(
+                          Icons.directions_car,
+                          'Vehicle type',
+                          detail.carType,
+                          Colors.indigo,
+                          fontSettings,
+                        ),
+                        TransportViewScreen._infoRow(
+                          Icons.local_taxi,
+                          'No. of vehicles',
+                          '${detail.noOfVehicles}',
+                          Colors.indigo,
+                          fontSettings,
+                        ),
+                        TransportViewScreen._infoRow(
+                          Icons.people,
+                          'No. of passengers',
+                          '${detail.noOfPassengers}',
+                          Colors.indigo,
+                          fontSettings,
+                        ),
+                        TransportViewScreen._infoRow(
+                          Icons.phone,
+                          'Contact',
+                          detail.contactNumber,
+                          Colors.green,
+                          fontSettings,
+                        ),
+                        if (detail.hasDriverInfo) ...[
+                          const Divider(height: 20),
+                          TransportViewScreen._infoRow(
+                            Icons.person_outline,
+                            'Received by',
+                            detail.receivedBy ?? '',
+                            Colors.blue,
+                            fontSettings,
+                          ),
+                          TransportViewScreen._infoRow(
+                            Icons.fact_check,
+                            'Received',
+                            TransportViewScreen._formatDateTime(
+                              detail.receivedDate,
+                            ),
+                            Colors.blue,
+                            fontSettings,
+                          ),
+                          TransportViewScreen._infoRow(
+                            Icons.local_taxi,
+                            'Taxi plate',
+                            detail.taxiPlateNumber ?? '',
+                            Colors.indigo,
+                            fontSettings,
+                          ),
+                          TransportViewScreen._infoRow(
+                            Icons.badge_outlined,
+                            'Driver',
+                            detail.driverName ?? '',
+                            Colors.indigo,
+                            fontSettings,
+                          ),
+                          TransportViewScreen._infoRow(
+                            Icons.phone_in_talk,
+                            'Driver phone',
+                            detail.driverPhoneNumber ?? '',
+                            Colors.green,
+                            fontSettings,
+                          ),
+                        ],
+                      ],
+                    ),
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _collapsedSummary(TransportDetail detail, FontSettings fontSettings) {
+    final route = [
+      detail.pickupLocation.isEmpty ? 'N/A' : detail.pickupLocation,
+      detail.dropLocation.isEmpty ? 'N/A' : detail.dropLocation,
+    ].join('  →  ');
+    final when = [
+      TransportViewScreen._formatDate(detail.pickupDate),
+      if (detail.pickupTime.isNotEmpty) detail.pickupTime,
+    ].join('  •  ');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.alt_route, size: 18, color: Colors.black45),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                route,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize,
+                  fontWeight: fontSettings.fontWeight,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            const Icon(Icons.schedule, size: 18, color: Colors.black45),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                when,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize - 1,
+                  color: Colors.black54,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

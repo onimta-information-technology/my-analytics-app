@@ -1262,6 +1262,8 @@ bool _showFollowButton = false;
 
                                                   final isBirthday =
                                                       name == 'birthday';
+                                                  final isPhoneMain =
+                                                      name == 'phone';
                                                   final isPhone =
                                                       name == 'phone1';
                                                   final isPhone2 =
@@ -1302,7 +1304,8 @@ bool _showFollowButton = false;
                                                       _getPrimaryWhatsApp();
 
                                                   final isContactNumber =
-                                                      (isPhone ||
+                                                      (isPhoneMain ||
+                                                          isPhone ||
                                                           isPhone2 ||
                                                           isPhone3 ||
                                                           iswhatsapp ||

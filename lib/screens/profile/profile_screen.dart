@@ -1955,7 +1955,7 @@ bool _showFollowButton = false;
                                                         child: Padding(
                                                           padding:
                                                               const EdgeInsets.all(
-                                                                8.0,
+                                                                2.0,
                                                               ),
                                                           child: Row(
                                                             mainAxisAlignment:
@@ -1974,7 +1974,7 @@ bool _showFollowButton = false;
                                                                   ),
                                                                 ),
                                                                 const SizedBox(
-                                                                  width: 6,
+                                                                  width: 4,
                                                                 ),
                                                               ],
                                                               Flexible(

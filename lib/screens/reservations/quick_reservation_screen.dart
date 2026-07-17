@@ -738,6 +738,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _showRequiredSnack();
       return;
     }
+    if (!(_hotelFormKey.currentState?.validate() ?? true)) return;
     // Collect current hotel if hotel name is filled
     final hotels = List<_HotelEntry>.from(_pendingHotels);
     if (_selectedHotelName != null && _selectedHotelName!.isNotEmpty) {
@@ -766,6 +767,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _showRequiredSnack();
       return;
     }
+    if (!(_airFormKey.currentState?.validate() ?? true)) return;
     setState(() {
       _airMembers.add(_captureCurrentAirMember());
       _resetSharedGuest();
@@ -828,6 +830,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _showRequiredSnack();
       return;
     }
+    if (!(_hotelFormKey.currentState?.validate() ?? true)) return;
     final hotels = List<_HotelEntry>.from(_pendingHotels);
     if (_selectedHotelName != null && _selectedHotelName!.isNotEmpty) {
       hotels.add(_captureCurrentHotelEntry());
@@ -855,6 +858,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _showRequiredSnack();
       return;
     }
+    if (!(_airFormKey.currentState?.validate() ?? true)) return;
     setState(() {
       _airMembers.add(_captureCurrentAirMember());
       _resetSharedGuest();
@@ -1810,6 +1814,13 @@ Contact Number     : ${m['contactNumber']}''';
     final hasCurrentGuest = _sharedGuestName.text.trim().isNotEmpty ||
         _sharedMemberId.text.trim().isNotEmpty;
 
+    // Only validate the on-screen form when it still holds a member that will
+    // be submitted — after "Apply & Add" it is cleared on purpose.
+    if ((hasCurrentGuest || currentHotels.isNotEmpty) &&
+        !(_hotelFormKey.currentState?.validate() ?? true)) {
+      return;
+    }
+
     final allMembers = <Map<String, dynamic>>[
       ..._hotelMembers,
       if (hasCurrentGuest || currentHotels.isNotEmpty)
@@ -1935,6 +1946,12 @@ print(" rrr : $body");
   Future<void> _saveAirSection() async {
     final hasCurrentGuest = _sharedGuestName.text.trim().isNotEmpty ||
         _sharedMemberId.text.trim().isNotEmpty;
+
+    // Only validate the on-screen form when it still holds a member that will
+    // be submitted — after "Apply & Add" it is cleared on purpose.
+    if (hasCurrentGuest && !(_airFormKey.currentState?.validate() ?? true)) {
+      return;
+    }
 
     final allMembers = <Map<String, dynamic>>[
       ..._airMembers,
@@ -2926,6 +2943,12 @@ class _HotelForm extends StatelessWidget {
               icon: Icons.currency_rupee,
               accent: accent,
             ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Package Amount is required';
+              }
+              return null;
+            },
           ),
           // const SizedBox(height: 12),
           // TextFormField(
@@ -3488,6 +3511,12 @@ class _AirForm extends StatelessWidget {
               icon: Icons.currency_rupee,
               accent: accent,
             ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Package Amount is required';
+              }
+              return null;
+            },
           ),
           // const SizedBox(height: 12),
           // TextFormField(

@@ -21,4 +21,25 @@ class TransportRepository {
             TransportReservation.fromJson(Map<String, dynamic>.from(item)))
         .toList();
   }
+
+  /// POST `{baseUrl}/Transport_Insert` — creates a transport reservation with
+  /// one or more vehicle/hire legs in `transport_details`.
+  Future<TransportInsertResult> insertTransport(
+    Map<String, Object?> body,
+  ) async {
+    final response = await apiService.post('Transport_Insert', body);
+
+    return TransportInsertResult(
+      success: response['Status'] as bool? ?? false,
+      message: response['Message'] as String?,
+    );
+  }
+}
+
+/// Outcome of a `Transport_Insert` call.
+class TransportInsertResult {
+  final bool success;
+  final String? message;
+
+  const TransportInsertResult({required this.success, this.message});
 }

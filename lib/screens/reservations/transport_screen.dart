@@ -145,6 +145,12 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
             },
           ),
           IconButton(
+            icon: const Icon(Icons.add, size: 30),
+            tooltip: 'Add Transport',
+            onPressed: () =>
+                context.push('/reservationMain/transport/transport-add'),
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh, size: 30),
             onPressed: _loadTransportData,
           ),

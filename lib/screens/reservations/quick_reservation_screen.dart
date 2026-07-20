@@ -3122,6 +3122,21 @@ class _HotelForm extends StatelessWidget {
               }
             },
           ),
+            const SizedBox(height: 12),
+          _rowPair(
+            _StepperField(
+              controller: state._h_noOfRooms,
+              label: 'No of Rooms',
+              icon: Icons.door_back_door_outlined,
+              accent: accent,
+            ),
+            _StepperField(
+              controller: state._h_noOfPax,
+              label: 'No of Pax',
+              icon: Icons.group_outlined,
+              accent: accent,
+            ),
+          ),
           const SizedBox(height: 12),
           DropdownSearch<Map<String, dynamic>>(
             key: state._hotelDropdownKey,
@@ -3330,21 +3345,21 @@ class _HotelForm extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          _rowPair(
-            _StepperField(
-              controller: state._h_noOfRooms,
-              label: 'No of Rooms',
-              icon: Icons.door_back_door_outlined,
-              accent: accent,
-            ),
-            _StepperField(
-              controller: state._h_noOfPax,
-              label: 'No of Pax',
-              icon: Icons.group_outlined,
-              accent: accent,
-            ),
-          ),
+          // const SizedBox(height: 12),
+          // _rowPair(
+          //   _StepperField(
+          //     controller: state._h_noOfRooms,
+          //     label: 'No of Rooms',
+          //     icon: Icons.door_back_door_outlined,
+          //     accent: accent,
+          //   ),
+          //   _StepperField(
+          //     controller: state._h_noOfPax,
+          //     label: 'No of Pax',
+          //     icon: Icons.group_outlined,
+          //     accent: accent,
+          //   ),
+          // ),
           const SizedBox(height: 12),
           _LabeledCard(
             label: 'ECI / LCO Facility',

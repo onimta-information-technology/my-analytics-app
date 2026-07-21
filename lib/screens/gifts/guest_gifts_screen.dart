@@ -146,12 +146,17 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> with Connec
     );
   }
 
-  Widget _buildProfileCard(Guest? selectedGuest, String? ratingFromGifts) {
+  Widget _buildProfileCard(
+    Guest? selectedGuest,
+    String? ratingFromGifts,
+    String? gNameFromGifts,
+  ) {
     final fontSettings = ref.watch(fontSettingsProvider);
 
     if (selectedGuest == null) return const SizedBox.shrink();
 
     String? displayRating = ratingFromGifts ?? selectedGuest.gRating;
+    final displayGName = gNameFromGifts ?? selectedGuest.gName;
 
     // If rating is null, empty, or equals "NULL", set it to CLASSIC
     if (displayRating == null ||
@@ -246,7 +251,23 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> with Connec
                           ),
                         ),
                       ),
-
+                      if (displayGName != null && displayGName.trim().isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const SizedBox(width: 2),
+                            Expanded(
+                              child: Text(
+                                'M P: $displayGName',
+                                style: TextStyle(
+                                  fontSize: fontSettings.fontSize,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 8),
                       Row(
                         children: [
@@ -261,6 +282,7 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> with Connec
                           ),
                         ],
                       ),
+
                     ],
                   ),
                 ),
@@ -321,6 +343,9 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> with Connec
     final ratingFromGifts = inactiveMembers.isNotEmpty
         ? inactiveMembers.first.gRating
         : null;
+    final gNameFromGifts = inactiveMembers.isNotEmpty
+        ? inactiveMembers.first.gName
+        : null;
 
     return Scaffold(
       appBar: AppBar(title: Text('Guest Gifts')),
@@ -329,7 +354,7 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> with Connec
           Column(
             children: [
               // Profile Card at the top
-              _buildProfileCard(selectedGuest, ratingFromGifts),
+              _buildProfileCard(selectedGuest, ratingFromGifts, gNameFromGifts),
 
               // Gifts List
               Expanded(

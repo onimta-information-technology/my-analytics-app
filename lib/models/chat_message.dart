@@ -190,7 +190,7 @@ class ChatMessage {
       id: json['id'] ?? json['messageUuid'],
       text: json['text'] ?? '',
       isMe: isMe,
-      timestamp: DateTime.parse(json['timestamp']),
+      timestamp: DateTime.parse(json['timestamp']).toLocal(),
       apiMessageId: json['messageUuid'],
       apiChatId: json['chatUuid'],
       isRead: json['read'] == 1,

@@ -65,10 +65,10 @@ class GiftsRepository {
       if (tableData.length > 0) {
         for (var table in tableData) {
           giftGuestsList.add(
-            Guest.withGift(mid: table['MID'], memberName: table['MNAME']),
+            Guest.fromJson(Map<String, dynamic>.from(table)),
           );
         }
- 
+
         return giftGuestsList;
       } else {
         return [];

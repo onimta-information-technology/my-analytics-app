@@ -7,6 +7,7 @@ class Guest {
   final String? gRating;
   final String? mGroup;
   final String? gName;
+  final int? rc;
   String? memImage2;
   String? gift;
   double? mDrop;
@@ -21,22 +22,12 @@ class Guest {
     required this.gRating,
     required this.mGroup,
     required this.gName,
+    this.rc,
     this.memImage2,
     this.gift,
     this.mDrop,
     this.mobile,
   });
-
-  Guest.withGift({required this.mid, required this.memberName})
-      : country = '',
-        lastVisitDate = '1990-01-01',
-        age = 0,
-        gRating = null,
-        mGroup = null,
-        gName = null,
-        memImage2 = null,
-        gift = null,
-        mDrop = null;
 
   Guest copyWith({String? memImage2}) {
     return Guest(
@@ -48,6 +39,7 @@ class Guest {
       gRating: gRating,
       mGroup: mGroup,
       gName: gName,
+      rc: rc,
       memImage2: memImage2 ?? this.memImage2,
       gift: gift ?? this.gift,
       mDrop: mDrop ?? this.mDrop,
@@ -81,6 +73,7 @@ class Guest {
       gRating: getValue(['G_Rating', 'G_RATING']),
       mGroup: getValue(['mGroup', 'MGROUP']),
       gName: getValue(['GName', 'GNAME']),
+      rc: int.tryParse(getValue(['RC']) ?? ''),
       memImage2: getValue(['MemImage2', 'MEMIMAGE2']),
       gift: getValue(['GIFT']),
       mDrop: double.tryParse(getValue(['MDROP']) ?? '0'),

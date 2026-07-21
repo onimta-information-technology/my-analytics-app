@@ -61,6 +61,13 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> with Connec
   //   "PLATINUM": "assets/images/ratings/PLATINUM.png",
   //   "SILVER": "assets/images/ratings/SILVER.png",
   // };
+ String _formatLastVisitDate(String? raw) {
+    if (raw == null || raw.isEmpty) return '-';
+    final parsed = DateTime.tryParse(raw);
+    if (parsed == null) return '-';
+    return DateFormat('dd MMM yyyy').format(parsed);
+  }
+
  Color _getRatingColor(String? rating) {
     switch ((rating ?? '').toUpperCase()) {
       case 'GOLD':
@@ -150,6 +157,7 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> with Connec
     Guest? selectedGuest,
     String? ratingFromGifts,
     String? gNameFromGifts,
+    String? lvdFromGifts,
   ) {
     final fontSettings = ref.watch(fontSettingsProvider);
 
@@ -157,6 +165,7 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> with Connec
 
     String? displayRating = ratingFromGifts ?? selectedGuest.gRating;
     final displayGName = gNameFromGifts ?? selectedGuest.gName;
+    final displayLvd = lvdFromGifts ?? selectedGuest.lastVisitDate;
 
     // If rating is null, empty, or equals "NULL", set it to CLASSIC
     if (displayRating == null ||
@@ -282,6 +291,19 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> with Connec
                           ),
                         ],
                       ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const SizedBox(width: 2),
+                          Text(
+                            'LVD: ${_formatLastVisitDate(displayLvd)}',
+                            style: TextStyle(
+                              fontSize: fontSettings.fontSize,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ],
+                      ),
 
                     ],
                   ),
@@ -346,6 +368,9 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> with Connec
     final gNameFromGifts = inactiveMembers.isNotEmpty
         ? inactiveMembers.first.gName
         : null;
+    final lvdFromGifts = inactiveMembers.isNotEmpty
+        ? inactiveMembers.first.lvd
+        : null;
 
     return Scaffold(
       appBar: AppBar(title: Text('Guest Gifts')),
@@ -354,7 +379,12 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> with Connec
           Column(
             children: [
               // Profile Card at the top
-              _buildProfileCard(selectedGuest, ratingFromGifts, gNameFromGifts),
+              _buildProfileCard(
+                selectedGuest,
+                ratingFromGifts,
+                gNameFromGifts,
+                lvdFromGifts,
+              ),
 
               // Gifts List
               Expanded(

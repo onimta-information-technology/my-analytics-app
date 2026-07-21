@@ -185,7 +185,9 @@ class FirebaseApiService {
       final request = http.MultipartRequest('POST', url)
         ..headers['Authorization'] = 'Bearer $token'
         ..fields['senderId'] = deviceId ?? ''
-        ..fields['senderName'] = senderName;
+        ..fields['senderName'] = senderName
+        ..fields['senderAppType'] = '2'; // Assuming appType is always 2 for this app
+
 
       for (final path in filePaths) {
         final file = File(path);
@@ -261,6 +263,7 @@ class FirebaseApiService {
       return await putRequest(url, {
         'messageIds': messageIds,
         'userId': deviceId,
+        'appType': 2, 
       });
     } catch (e) {
       return {'success': false, 'error': e.toString()};
@@ -323,7 +326,7 @@ class FirebaseApiService {
     try {
       final deviceId = await DeviceId.get();
       final url = '$domain${endpoints['deleteMessage']}/$chatId/hide';
-      final response = await postRequest(url, {'userId': deviceId});
+      final response = await postRequest(url, {'userId': deviceId, 'appType': 2});
       return response['success'] == true;
     } catch (e) {
       return false;
@@ -332,12 +335,13 @@ class FirebaseApiService {
 
   static Future<Map<String, dynamic>> fetchUserChats() async {
     try {
+      print('fetchUserChats called');
       final deviceId = await DeviceId.get();
       final location = await StorageUtil.getCurrentLocation();
       if (deviceId == null || deviceId.isEmpty) {
         throw Exception('deviceId not found in storage');
       }
-      final url = '$domain${endpoints['fetchUserChats']}/$deviceId?location=${location?.code}';
+      final url = '$domain${endpoints['fetchUserChats']}/$deviceId?location=${location?.code}&appType=2';
       print('Fetching chats for deviceId: $url');
       final response = await getRequest(url);
       if (response['success'] == true) {
@@ -355,7 +359,7 @@ class FirebaseApiService {
     try {
       final deviceId = await DeviceId.get();
       final location = await StorageUtil.getCurrentLocation();
-      final url = '$domain${endpoints['fetchAllUsers']}/$deviceId?location=${location?.code}';
+      final url = '$domain${endpoints['fetchAllUsers']}/$deviceId?location=${location?.code}&appType=2';
     print('Fetching users from URL: $url');
       final response = await getRequest(url);
       print('Fetch users response: $response');
@@ -372,6 +376,7 @@ class FirebaseApiService {
   static Future<Map<String, dynamic>> fetchMessages(String chatId) async {
     try {
       final url = '$domain${endpoints['fetchMessages']}/$chatId/messages';
+      print("rrrr, $url");
       final response =
           await getRequest(url).timeout(const Duration(seconds: 10));
       return response;
@@ -386,10 +391,11 @@ class FirebaseApiService {
     required String title,
     required String body,
     required String chatId,
+    int recipientAppType = 1,
   }) async {
     try {
       print(
-          'sendMessage called with recipientUuid: $recipientUuid, chatId: $chatId, message: $message');
+          'sendMessage called with recipientUuid: $recipientUuid, chatId: $chatId, message: $message ,recipientAppType: $recipientAppType');
       final deviceId = await DeviceId.get();
       final url = '$domain${endpoints['sendMessage']}';
       final response = await postRequest(url, {
@@ -399,6 +405,9 @@ class FirebaseApiService {
         "title": title,
         "body": body,
         "chatId": chatId,
+        "senderAppType": 2,
+        "recipientAppType": recipientAppType,
+
       });
       print('sendMessage response: $response');
       return response;
@@ -430,7 +439,7 @@ static Future<Map<String, dynamic>> softDeleteMessage(
     print('softDeleteMessage called with chatId: $chatId, messageId: $messageId');
     final deviceId = await DeviceId.get();
     final url = '$domain/api/chats/$chatId/messages/$messageId/soft-delete';
-    return await patchRequest(url, {'userId': deviceId});
+    return await patchRequest(url, {'userId': deviceId,'appType': 2});
   } catch (e) {
     return {'success': false, 'error': e.toString()};
   }
@@ -445,7 +454,7 @@ static Future<Map<String, dynamic>> deleteMessageForEveryone(
     print('deleteMessageForEveryone called with chatId: $chatId, messageId: $messageId');
     final deviceId = await DeviceId.get();
     final url = '$domain/api/chats/$chatId/messages/$messageId';
-    return await deleteRequestWithBody(url, {'userId': deviceId});
+    return await deleteRequestWithBody(url, {'userId': deviceId,'appType': 2});
   } catch (e) {
     return {'success': false, 'error': e.toString()};
   }

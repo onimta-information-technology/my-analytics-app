@@ -18,6 +18,7 @@ class ChatContact {
   final List<String> participants;
   final DateTime createdAt;
   final String? lastMessageSenderName;
+  final int appType;
 
   ChatContact({
     required this.id,
@@ -36,7 +37,16 @@ class ChatContact {
     required this.participants,
     required this.createdAt,
     required this.lastMessageSenderName,
+    this.appType = 1,
   }) : userUuid = userUuid ?? id;
+
+  // Backend sends appType as a string (e.g. "2") in some responses and an
+  // int in others, so parse defensively rather than casting directly.
+  static int parseAppType(dynamic value, {int fallback = 1}) {
+    if (value == null) return fallback;
+    if (value is int) return value;
+    return int.tryParse(value.toString()) ?? fallback;
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -55,6 +65,7 @@ class ChatContact {
     'participants': participants,
     'createdAt': createdAt.millisecondsSinceEpoch,
     'lastMessageSenderName': lastMessageSenderName,
+    'appType': appType,
   };
 
   static ChatContact fromJson(Map<String, dynamic> json) => ChatContact(
@@ -76,6 +87,7 @@ class ChatContact {
     participants: List<String>.from(json['participants'] ?? []),
     createdAt: DateTime.fromMillisecondsSinceEpoch(json['createdAt']),
     lastMessageSenderName: json['lastMessageSenderName'],
+    appType: parseAppType(json['appType']),
   );
 
   // Fixed: Now accepts currentUserDeviceId instead of currentUserName
@@ -90,22 +102,24 @@ class ChatContact {
    
     String otherParticipantUuid = '';
     String otherParticipantName = '';
+    dynamic otherParticipantAppType;
 
     // Find the participant that is NOT the current user (by device ID)
     for (var participant in participantsData) {
       final String participantUuid = participant['user_uuid'] ?? '';
       final String participantName = participant['name'] ?? '';
 
-    
+
 
       // Compare with device ID, not name
       if (participantUuid != currentUserDeviceId) {
         otherParticipantUuid = participantUuid;
         otherParticipantName = participantName;
-       
+        otherParticipantAppType =
+            participant['appType'] ?? participant['app_type'];
         break;
       } else {
-        
+
       }
     }
 
@@ -119,6 +133,8 @@ class ChatContact {
         if (participantUuid != currentUserDeviceId) {
           otherParticipantUuid = participantUuid;
           otherParticipantName = participantName;
+          otherParticipantAppType =
+              participant['appType'] ?? participant['app_type'];
           break;
         }
       }
@@ -127,6 +143,8 @@ class ChatContact {
       if (otherParticipantName.isEmpty) {
         otherParticipantUuid = participantsData[0]['user_uuid'] ?? '';
         otherParticipantName = participantsData[0]['name'] ?? 'Unknown';
+        otherParticipantAppType =
+            participantsData[0]['appType'] ?? participantsData[0]['app_type'];
       }
     }
 
@@ -161,6 +179,12 @@ class ChatContact {
         .where((uuid) => uuid.isNotEmpty)
         .toList();
 
+    final int appType = parseAppType(
+      otherParticipantAppType ??
+          participantDetails?[otherParticipantName]?['appType'] ??
+          json['appType'],
+    );
+
     return ChatContact(
       id: json['id'] ?? '',
       chatUuid: json['chatUuid'] ?? json['id'] ?? '',
@@ -178,6 +202,7 @@ class ChatContact {
       participants: participantsList,
       createdAt: DateTime.parse(json['createdAt']),
       lastMessageSenderName: json['lastMessageSenderName'],
+      appType: appType,
     );
   }
 

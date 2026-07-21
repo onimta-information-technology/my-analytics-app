@@ -521,6 +521,7 @@ if (message.data['msg_type'] == '35') {
             participants: [name],
             createdAt: DateTime.now(),
             lastMessageSenderName: null,
+            appType: ChatContact.parseAppType(user['appType']),
           );
         }).toList();
 
@@ -619,6 +620,7 @@ if (message.data['msg_type'] == '35') {
           participants: _contacts[index].participants,
           createdAt: _contacts[index].createdAt,
           lastMessageSenderName: _contacts[index].lastMessageSenderName,
+          appType: _contacts[index].appType,
         );
       
         final filteredIndex = _filteredContacts.indexWhere(
@@ -672,6 +674,7 @@ if (message.data['msg_type'] == '35') {
             participants: contact.participants,
             createdAt: contact.createdAt,
             lastMessageSenderName: contact.lastMessageSenderName,
+            appType: contact.appType,
           );
 
           Navigator.of(context)
@@ -1235,6 +1238,7 @@ if (message.data['msg_type'] == '35') {
                                                           contact.createdAt,
                                                       lastMessageSenderName: contact
                                                           .lastMessageSenderName,
+                                                      appType: contact.appType,
                                                     );
 
                                                     await navigator.push(
@@ -1306,6 +1310,7 @@ if (message.data['msg_type'] == '35') {
                                                           contact.createdAt,
                                                       lastMessageSenderName: contact
                                                           .lastMessageSenderName,
+                                                      appType: contact.appType,
                                                     );
 
                                                     await navigator.push(

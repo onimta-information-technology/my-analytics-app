@@ -291,6 +291,7 @@ Future<void> _markMessagesAsRead() async {
         title: _currentUserName ?? '',
         body: text,
         chatId: widget.contact.chatUuid,
+        recipientAppType: widget.contact.appType,
       );
       if (response['success'] == true) {
         final rd = response['data'];

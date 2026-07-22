@@ -2325,8 +2325,9 @@ Widget _dateField(
   String label,
   TextEditingController ctrl,
   Color accent,
-  VoidCallback onTap,
-) {
+  VoidCallback onTap, {
+  FormFieldValidator<String>? validator,
+}) {
   return TextFormField(
     controller: ctrl,
     readOnly: true,
@@ -2337,6 +2338,7 @@ Widget _dateField(
       accent: accent,
     ).copyWith(suffixIcon: Icon(Icons.arrow_drop_down, color: accent)),
     onTap: onTap,
+    validator: validator,
   );
 }
 
@@ -4078,6 +4080,7 @@ class _TransportForm extends StatelessWidget {
                 context,
                 label: 'Select Pickup Date',
                 initial: state._t_pickupDate,
+                minDate: DateTime.now(),
               );
               if (d != null) {
                 state.setState(() {
@@ -4085,6 +4088,21 @@ class _TransportForm extends StatelessWidget {
                   state._t_pickupDateCtrl.text = state._fmt(d);
                 });
               }
+            },
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Pickup Date is required';
+              }
+              final d = state._t_pickupDate;
+              if (d != null) {
+                final today = DateTime.now();
+                final dateOnly = DateTime(d.year, d.month, d.day);
+                final todayOnly = DateTime(today.year, today.month, today.day);
+                if (dateOnly.isBefore(todayOnly)) {
+                  return 'Pickup Date cannot be in the past';
+                }
+              }
+              return null;
             },
           ),
           const SizedBox(height: 12),
@@ -4111,6 +4129,27 @@ class _TransportForm extends StatelessWidget {
                   state._t_pickupTimeCtrl.text = state._fmtTime(t);
                 });
               }
+            },
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Pickup Time is required';
+              }
+              final d = state._t_pickupDate;
+              final t = state._t_pickupTime;
+              if (d != null && t != null) {
+                final now = DateTime.now();
+                final isToday = d.year == now.year &&
+                    d.month == now.month &&
+                    d.day == now.day;
+                if (isToday) {
+                  final pickupDateTime =
+                      DateTime(d.year, d.month, d.day, t.hour, t.minute);
+                  if (pickupDateTime.isBefore(now)) {
+                    return 'Pickup Time cannot be earlier than the current time';
+                  }
+                }
+              }
+              return null;
             },
           ),
           const SizedBox(height: 12),

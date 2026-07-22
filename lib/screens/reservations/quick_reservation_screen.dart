@@ -933,34 +933,33 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
   }
 
   // ── TRANSPORT ───────────────────────────────────────────────────────────────
-  /// Expands the current form into one entry per vehicle — each entry shares
-  /// the guest/pickup/location details but carries its own Car Type and a
-  /// `noOfVehicles` of '1', so every vehicle is saved as its own transport
-  /// detail record.
-  List<Map<String, dynamic>> _captureCurrentTransportMembers() {
-    final vehicleCount = _t_carTypes.isEmpty ? 1 : _t_carTypes.length;
-    return List.generate(vehicleCount, (i) {
-      return {
-        'guestName': _sharedGuestName.text,
-        'memberId': _sharedMemberId.text,
-        'pickupDate': _t_pickupDateCtrl.text,
-        'pickupTime': _t_pickupTimeCtrl.text,
-        'carType': _t_carTypes[i] ?? '',
-        'hireType': _t_hireType ?? '',
-        'pickupLocation': _t_pickupLocationCtrl.text,
-        'dropLocation': _t_dropLocationCtrl.text,
-        'noOfVehicles': '1',
-        'noOfPassengers': _t_passengerCtrls[i].text,
-        'contactNumber': _t_contactNumber.text.trim().isEmpty
-            ? ''
-            : '+${_t_country.phoneCode}${_t_contactNumber.text.trim()}',
-        // typed fields used when building the API body
-        'pickupDateObj': _t_pickupDate,
-        'pickupTimeObj': _t_pickupTime,
-        'pickupPlaceId': _t_pickupPlaceId,
-        'dropPlaceId': _t_dropPlaceId,
-      };
-    });
+  /// Captures the current form as a single transport entry. Per-vehicle Car
+  /// Type + Passengers are carried as a `vehicleDetails` list (one map per
+  /// vehicle) rather than flattened into separate entries.
+  Map<String, dynamic> _captureCurrentTransportMember() {
+    return {
+      'guestName': _sharedGuestName.text,
+      'memberId': _sharedMemberId.text,
+      'pickupDate': _t_pickupDateCtrl.text,
+      'pickupTime': _t_pickupTimeCtrl.text,
+      'hireType': _t_hireType ?? '',
+      'pickupLocation': _t_pickupLocationCtrl.text,
+      'dropLocation': _t_dropLocationCtrl.text,
+      'vehicleDetails': List.generate(_t_carTypes.length, (i) {
+        return {
+          'carType': _t_carTypes[i] ?? '',
+          'noOfPassengers': _t_passengerCtrls[i].text,
+        };
+      }),
+      'contactNumber': _t_contactNumber.text.trim().isEmpty
+          ? ''
+          : '+${_t_country.phoneCode}${_t_contactNumber.text.trim()}',
+      // typed fields used when building the API body
+      'pickupDateObj': _t_pickupDate,
+      'pickupTimeObj': _t_pickupTime,
+      'pickupPlaceId': _t_pickupPlaceId,
+      'dropPlaceId': _t_dropPlaceId,
+    };
   }
 
   void _resetTransportFields() {
@@ -991,7 +990,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     }
     if (!(_transportFormKey.currentState?.validate() ?? true)) return;
     setState(() {
-      _transportMembers.addAll(_captureCurrentTransportMembers());
+      _transportMembers.add(_captureCurrentTransportMember());
       _resetSharedGuest();
       _resetTransportFields();
     });
@@ -1007,7 +1006,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     }
     if (!(_transportFormKey.currentState?.validate() ?? true)) return;
     setState(() {
-      _transportMembers.addAll(_captureCurrentTransportMembers());
+      _transportMembers.add(_captureCurrentTransportMember());
       _resetSharedGuest();
     });
     _showAddedSnack(_transportMembers.length, _transportColor);
@@ -1517,39 +1516,39 @@ Remarks              : ${m['remarks']}''';
 
   // ── Message builders — TRANSPORT ─────────────────────────────────────────────
   String _singleTransportText(Map<String, dynamic> m) {
-    return '''
-*TRANSPORT REQUEST*
-Membership No      : ${m['memberId']}
-Guest Name         : ${m['guestName']}
-Pickup Date        : ${m['pickupDate']}
-Pickup Time        : ${m['pickupTime']}
-Car Type           : ${m['carType']}
-Hire Type          : ${m['hireType']}
-Pickup Location    : ${m['pickupLocation']}
-Drop Location      : ${m['dropLocation']}
-No of Vehicles     : ${m['noOfVehicles']}
-No of Passengers   : ${m['noOfPassengers']}
-Contact Number     : ${m['contactNumber']}''';
+    final vehicles = (m['vehicleDetails'] as List?)?.cast<Map>() ?? const [];
+    final buf = StringBuffer()
+      ..writeln('*TRANSPORT REQUEST*')
+      ..writeln('Membership No      : ${m['memberId']}')
+      ..writeln('Guest Name         : ${m['guestName']}')
+      ..writeln('Pickup Date        : ${m['pickupDate']}')
+      ..writeln('Pickup Time        : ${m['pickupTime']}');
+    for (int i = 0; i < vehicles.length; i++) {
+      final prefix = vehicles.length > 1 ? 'Vehicle ${i + 1} ' : '';
+      final carTypeLabel = '${prefix}Car Type'.padRight(19);
+      final passengersLabel = '${prefix}Passengers'.padRight(19);
+      buf
+        ..writeln('$carTypeLabel: ${vehicles[i]['carType']}')
+        ..writeln('$passengersLabel: ${vehicles[i]['noOfPassengers']}');
+    }
+    buf
+      ..writeln('Hire Type          : ${m['hireType']}')
+      ..writeln('Pickup Location    : ${m['pickupLocation']}')
+      ..writeln('Drop Location      : ${m['dropLocation']}')
+      ..writeln('No of Vehicles     : ${vehicles.length}')
+      ..write('Contact Number     : ${m['contactNumber']}');
+    return buf.toString();
   }
 
   String _buildTransportText() {
-    final currentEntries = _captureCurrentTransportMembers();
+    final current = _captureCurrentTransportMember();
+    if (_transportMembers.isEmpty) return _singleTransportText(current);
     final hasCurrentGuest = _sharedGuestName.text.trim().isNotEmpty ||
         _sharedMemberId.text.trim().isNotEmpty;
-    if (_transportMembers.isEmpty) {
-      return currentEntries.length <= 1
-          ? _singleTransportText(
-              currentEntries.isNotEmpty ? currentEntries.first : {})
-          : _joinTransportEntries(currentEntries);
-    }
     final all = [
       ..._transportMembers,
-      if (hasCurrentGuest) ...currentEntries,
+      if (hasCurrentGuest) current,
     ];
-    return _joinTransportEntries(all);
-  }
-
-  String _joinTransportEntries(List<Map<String, dynamic>> all) {
     if (all.length == 1) return _singleTransportText(all.first);
     final buf = StringBuffer();
     for (int i = 0; i < all.length; i++) {
@@ -1758,7 +1757,7 @@ Contact Number     : ${m['contactNumber']}''';
 
     final allMembers = <Map<String, dynamic>>[
       ..._transportMembers,
-      if (hasCurrentGuest) ..._captureCurrentTransportMembers(),
+      if (hasCurrentGuest) _captureCurrentTransportMember(),
     ];
 
     if (allMembers.isEmpty) {
@@ -1848,20 +1847,25 @@ final phoneNumber = await StorageUtil.getMobileNumber();
   }
 
   Map<String, dynamic> _transportMemberToDetail(Map<String, dynamic> m) {
+    final vehicles = (m['vehicleDetails'] as List?)?.cast<Map>() ?? const [];
     return {
       'MID': m['memberId'],
       'guest_name': m['guestName'],
       'pickup_date': _pickupIso(m),
       'pickup_time': m['pickupTime'],
-      'car_type': m['carType'],
       'hire_type': m['hireType'],
       'pickup_location': m['pickupLocation'],
       'pickup_place_id': m['pickupPlaceId'],
       'drop_location': m['dropLocation'],
       'drop_place_id': m['dropPlaceId'],
-      'no_of_vehicles': int.tryParse(m['noOfVehicles'] as String? ?? '1') ?? 1,
-      'no_of_passengers':
-          int.tryParse(m['noOfPassengers'] as String? ?? '1') ?? 1,
+      'no_of_vehicles': vehicles.length,
+      'vehicle_details': vehicles
+          .map((v) => {
+                'car_type': v['carType'],
+                'no_of_passengers':
+                    int.tryParse(v['noOfPassengers'] as String? ?? '1') ?? 1,
+              })
+          .toList(),
       'contact_number': m['contactNumber'],
     };
   }

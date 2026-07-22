@@ -268,17 +268,48 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
   final _t_pickupLocationCtrl = TextEditingController();
   final _t_dropLocationCtrl = TextEditingController();
   final _t_noOfVehicles = TextEditingController(text: '1');
-  final _t_noOfPassengers = TextEditingController(text: '1');
   final _t_contactNumber = TextEditingController();
 
   Country _t_country = _defaultCountry();
 
   DateTime? _t_pickupDate;
   TimeOfDay? _t_pickupTime;
-  String? _t_carType;
+  // One Car Type selection per vehicle — resized whenever "No of Vehicles"
+  // changes (see _syncVehicleDetailsWithCount). Defaults to 'Normal Car'.
+  List<String?> _t_carTypes = ['Normal Car'];
+  // One passenger-count controller per vehicle, kept the same length as
+  // _t_carTypes so each car's passengers are assigned individually.
+  List<TextEditingController> _t_passengerCtrls = [
+    TextEditingController(text: '1'),
+  ];
   String? _t_hireType;
   String _t_pickupPlaceId = '';
   String _t_dropPlaceId = '';
+
+  /// Keeps `_t_carTypes` and `_t_passengerCtrls` in sync with the "No of
+  /// Vehicles" stepper so there is exactly one Car Type + Passengers pair
+  /// per vehicle. Growing the count appends unset slots; shrinking trims
+  /// from the end (disposing the removed controllers) and keeps the rest.
+  void _syncVehicleDetailsWithCount() {
+    final n = int.tryParse(_t_noOfVehicles.text) ?? 1;
+    if (n == _t_carTypes.length) return;
+    setState(() {
+      if (n > _t_carTypes.length) {
+        _t_carTypes.addAll(
+            List<String?>.filled(n - _t_carTypes.length, 'Normal Car'));
+        _t_passengerCtrls.addAll(List.generate(
+          n - _t_passengerCtrls.length,
+          (_) => TextEditingController(text: '1'),
+        ));
+      } else {
+        _t_carTypes.removeRange(n, _t_carTypes.length);
+        for (final c in _t_passengerCtrls.sublist(n)) {
+          c.dispose();
+        }
+        _t_passengerCtrls.removeRange(n, _t_passengerCtrls.length);
+      }
+    });
+  }
 
   static Country _defaultCountry() => Country(
     phoneCode: '94',
@@ -364,9 +395,11 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _t_pickupLocationCtrl,
       _t_dropLocationCtrl,
       _t_noOfVehicles,
-      _t_noOfPassengers,
       _t_contactNumber,
     ]) {
+      c.dispose();
+    }
+    for (final c in _t_passengerCtrls) {
       c.dispose();
     }
     _hotelScrollCtrl.dispose();
@@ -900,27 +933,34 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
   }
 
   // ── TRANSPORT ───────────────────────────────────────────────────────────────
-  Map<String, dynamic> _captureCurrentTransportMember() {
-    return {
-      'guestName': _sharedGuestName.text,
-      'memberId': _sharedMemberId.text,
-      'pickupDate': _t_pickupDateCtrl.text,
-      'pickupTime': _t_pickupTimeCtrl.text,
-      'carType': _t_carType ?? '',
-      'hireType': _t_hireType ?? '',
-      'pickupLocation': _t_pickupLocationCtrl.text,
-      'dropLocation': _t_dropLocationCtrl.text,
-      'noOfVehicles': _t_noOfVehicles.text,
-      'noOfPassengers': _t_noOfPassengers.text,
-      'contactNumber': _t_contactNumber.text.trim().isEmpty
-          ? ''
-          : '+${_t_country.phoneCode}${_t_contactNumber.text.trim()}',
-      // typed fields used when building the API body
-      'pickupDateObj': _t_pickupDate,
-      'pickupTimeObj': _t_pickupTime,
-      'pickupPlaceId': _t_pickupPlaceId,
-      'dropPlaceId': _t_dropPlaceId,
-    };
+  /// Expands the current form into one entry per vehicle — each entry shares
+  /// the guest/pickup/location details but carries its own Car Type and a
+  /// `noOfVehicles` of '1', so every vehicle is saved as its own transport
+  /// detail record.
+  List<Map<String, dynamic>> _captureCurrentTransportMembers() {
+    final vehicleCount = _t_carTypes.isEmpty ? 1 : _t_carTypes.length;
+    return List.generate(vehicleCount, (i) {
+      return {
+        'guestName': _sharedGuestName.text,
+        'memberId': _sharedMemberId.text,
+        'pickupDate': _t_pickupDateCtrl.text,
+        'pickupTime': _t_pickupTimeCtrl.text,
+        'carType': _t_carTypes[i] ?? '',
+        'hireType': _t_hireType ?? '',
+        'pickupLocation': _t_pickupLocationCtrl.text,
+        'dropLocation': _t_dropLocationCtrl.text,
+        'noOfVehicles': '1',
+        'noOfPassengers': _t_passengerCtrls[i].text,
+        'contactNumber': _t_contactNumber.text.trim().isEmpty
+            ? ''
+            : '+${_t_country.phoneCode}${_t_contactNumber.text.trim()}',
+        // typed fields used when building the API body
+        'pickupDateObj': _t_pickupDate,
+        'pickupTimeObj': _t_pickupTime,
+        'pickupPlaceId': _t_pickupPlaceId,
+        'dropPlaceId': _t_dropPlaceId,
+      };
+    });
   }
 
   void _resetTransportFields() {
@@ -929,12 +969,15 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     _t_pickupLocationCtrl.clear();
     _t_dropLocationCtrl.clear();
     _t_noOfVehicles.text = '1';
-    _t_noOfPassengers.text = '1';
     _t_contactNumber.clear();
     _t_country = _defaultCountry();
     _t_pickupDate = null;
     _t_pickupTime = null;
-    _t_carType = null;
+    _t_carTypes = ['Normal Car'];
+    for (final c in _t_passengerCtrls) {
+      c.dispose();
+    }
+    _t_passengerCtrls = [TextEditingController(text: '1')];
     _t_hireType = null;
     _t_pickupPlaceId = '';
     _t_dropPlaceId = '';
@@ -946,8 +989,9 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _showRequiredSnack();
       return;
     }
+    if (!(_transportFormKey.currentState?.validate() ?? true)) return;
     setState(() {
-      _transportMembers.add(_captureCurrentTransportMember());
+      _transportMembers.addAll(_captureCurrentTransportMembers());
       _resetSharedGuest();
       _resetTransportFields();
     });
@@ -961,8 +1005,9 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _showRequiredSnack();
       return;
     }
+    if (!(_transportFormKey.currentState?.validate() ?? true)) return;
     setState(() {
-      _transportMembers.add(_captureCurrentTransportMember());
+      _transportMembers.addAll(_captureCurrentTransportMembers());
       _resetSharedGuest();
     });
     _showAddedSnack(_transportMembers.length, _transportColor);
@@ -1488,14 +1533,24 @@ Contact Number     : ${m['contactNumber']}''';
   }
 
   String _buildTransportText() {
-    final current = _captureCurrentTransportMember();
-    if (_transportMembers.isEmpty) return _singleTransportText(current);
+    final currentEntries = _captureCurrentTransportMembers();
+    final hasCurrentGuest = _sharedGuestName.text.trim().isNotEmpty ||
+        _sharedMemberId.text.trim().isNotEmpty;
+    if (_transportMembers.isEmpty) {
+      return currentEntries.length <= 1
+          ? _singleTransportText(
+              currentEntries.isNotEmpty ? currentEntries.first : {})
+          : _joinTransportEntries(currentEntries);
+    }
     final all = [
       ..._transportMembers,
-      if ((current['guestName'] as String).isNotEmpty ||
-          (current['memberId'] as String).isNotEmpty)
-        current,
+      if (hasCurrentGuest) ...currentEntries,
     ];
+    return _joinTransportEntries(all);
+  }
+
+  String _joinTransportEntries(List<Map<String, dynamic>> all) {
+    if (all.length == 1) return _singleTransportText(all.first);
     final buf = StringBuffer();
     for (int i = 0; i < all.length; i++) {
       if (i > 0) buf.writeln('\n');
@@ -1695,9 +1750,15 @@ Contact Number     : ${m['contactNumber']}''';
     final hasCurrentGuest = _sharedGuestName.text.trim().isNotEmpty ||
         _sharedMemberId.text.trim().isNotEmpty;
 
+    // Only validate the on-screen form when it still holds a member that
+    // will be submitted — after "Apply & Add" it is cleared on purpose.
+    if (hasCurrentGuest && !(_transportFormKey.currentState?.validate() ?? true)) {
+      return;
+    }
+
     final allMembers = <Map<String, dynamic>>[
       ..._transportMembers,
-      if (hasCurrentGuest) _captureCurrentTransportMember(),
+      if (hasCurrentGuest) ..._captureCurrentTransportMembers(),
     ];
 
     if (allMembers.isEmpty) {
@@ -2301,6 +2362,7 @@ Widget _guestIdentityRow({
   required List<String> prefixes,
   required String selectedPrefix,
   required ValueChanged<String> onPrefixChanged,
+  FormFieldValidator<String>? memberIdValidator,
 }) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2312,6 +2374,7 @@ Widget _guestIdentityRow({
               controller: memberIdNumberCtrl,
               style: kInputTextStyle,
               keyboardType: TextInputType.number,
+              validator: memberIdValidator,
               decoration: _fieldDeco(midLabel, accent: accent).copyWith(
                 prefixIcon: isNumericOnly
                     ? null
@@ -3980,6 +4043,12 @@ class _TransportForm extends StatelessWidget {
               state._selectedPrefix = v;
               state._sharedMemberId.text = '$v${state._sharedMidNumber.text}';
             }),
+            memberIdValidator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Membership No is required';
+              }
+              return null;
+            },
           ),
           const SizedBox(height: 12),
           if (state._sharedGuestCardVisible &&
@@ -4042,22 +4111,57 @@ class _TransportForm extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // ── Car type / hire type ─────────────────────────────────────────────
-          DropdownButtonFormField<String>(
-            value: state._t_carType,
-            style: kInputTextStyle,
-            isExpanded: true,
-            decoration: _fieldDeco(
-              'Car Type *',
-              icon: Icons.directions_car_filled_outlined,
-              accent: accent,
-            ),
-            items: kCarTypes
-                .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                .toList(),
-            onChanged: (v) => state.setState(() => state._t_carType = v),
+          // ── No of vehicles ───────────────────────────────────────────────────
+          // Chosen before Car Type on purpose: bumping this grows the
+          // Car Type + Passengers pairs below to one per vehicle.
+          _StepperField(
+            controller: state._t_noOfVehicles,
+            label: 'No of Vehicles',
+            icon: Icons.local_taxi_outlined,
+            accent: accent,
+            onChanged: state._syncVehicleDetailsWithCount,
           ),
           const SizedBox(height: 12),
+
+          // ── Car type + passengers, one row per vehicle ────────────────────────
+          for (int i = 0; i < state._t_carTypes.length; i++) ...[
+            if (state._t_carTypes.length > 1)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  'Vehicle ${i + 1}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: accent,
+                  ),
+                ),
+              ),
+            _rowPair(
+              DropdownButtonFormField<String>(
+                value: state._t_carTypes[i],
+                style: kInputTextStyle,
+                isExpanded: true,
+                decoration: _fieldDeco(
+                  'Car Type *',
+                 // icon: Icons.directions_car_filled_outlined,
+                  accent: accent,
+                ),
+                items: kCarTypes
+                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .toList(),
+                onChanged: (v) =>
+                    state.setState(() => state._t_carTypes[i] = v),
+              ),
+              _StepperField(
+                controller: state._t_passengerCtrls[i],
+                label: 'Passengers',
+                icon: Icons.group_outlined,
+                accent: accent,
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           DropdownButtonFormField<String>(
             value: state._t_hireType,
             style: kInputTextStyle,
@@ -4071,6 +4175,12 @@ class _TransportForm extends StatelessWidget {
                 .map((h) => DropdownMenuItem(value: h, child: Text(h)))
                 .toList(),
             onChanged: (v) => state.setState(() => state._t_hireType = v),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Hire Type is required';
+              }
+              return null;
+            },
           ),
           const SizedBox(height: 12),
 
@@ -4094,6 +4204,12 @@ class _TransportForm extends StatelessWidget {
                     state._t_pickupLocationCtrl.text = description;
                     state._t_pickupPlaceId = placeId;
                   }),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Pickup Location is required';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 10),
                 LocationSearchField(
@@ -4110,25 +4226,14 @@ class _TransportForm extends StatelessWidget {
                     state._t_dropLocationCtrl.text = description;
                     state._t_dropPlaceId = placeId;
                   }),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Drop Location is required';
+                    }
+                    return null;
+                  },
                 ),
               ],
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // ── Vehicles / passengers ────────────────────────────────────────────
-          _rowPair(
-            _StepperField(
-              controller: state._t_noOfVehicles,
-              label: 'No of Vehicles',
-              icon: Icons.local_taxi_outlined,
-              accent: accent,
-            ),
-            _StepperField(
-              controller: state._t_noOfPassengers,
-              label: 'Passengers',
-              icon: Icons.group_outlined,
-              accent: accent,
             ),
           ),
           const SizedBox(height: 12),
@@ -4177,6 +4282,12 @@ class _TransportForm extends StatelessWidget {
                     icon: Icons.phone_rounded,
                     accent: accent,
                   ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Contact Number is required';
+                    }
+                    return null;
+                  },
                 ),
               ),
             ],
@@ -4342,6 +4453,10 @@ class _StepperField extends StatelessWidget {
   final Color accent;
   final int min;
   final int max;
+  /// Called after the controller's value changes, in addition to this
+  /// widget's own rebuild — lets a parent react (e.g. resize a list that
+  /// should track the count).
+  final VoidCallback? onChanged;
   const _StepperField({
     required this.controller,
     required this.label,
@@ -4349,6 +4464,7 @@ class _StepperField extends StatelessWidget {
     required this.accent,
     this.min = 1,
     this.max = 99,
+    this.onChanged,
   });
 
   int get _value => int.tryParse(controller.text) ?? min;
@@ -4356,6 +4472,7 @@ class _StepperField extends StatelessWidget {
     final next = (_value + delta).clamp(min, max);
     controller.text = next.toString();
     rebuild();
+    onChanged?.call();
   }
 
   @override
@@ -4377,12 +4494,15 @@ class _StepperField extends StatelessWidget {
                 children: [
                   Icon(icon, size: 18, color: accent),
                   const SizedBox(width: 6),
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                  Flexible(
+                    child: Text(
+                      label,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
                     ),
                   ),
                 ],

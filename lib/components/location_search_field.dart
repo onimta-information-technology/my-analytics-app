@@ -18,6 +18,8 @@ class LocationSearchField extends StatelessWidget {
   /// Called with the picked description and its place id (empty for free text).
   final void Function(String description, String placeId) onSelected;
 
+  final FormFieldValidator<String>? validator;
+
   const LocationSearchField({
     super.key,
     required this.controller,
@@ -26,6 +28,7 @@ class LocationSearchField extends StatelessWidget {
     required this.accent,
     required this.sheetTitle,
     required this.onSelected,
+    this.validator,
   });
 
   @override
@@ -36,6 +39,7 @@ class LocationSearchField extends StatelessWidget {
       style: textStyle,
       maxLines: 2,
       minLines: 1,
+      validator: validator,
       decoration: decoration.copyWith(
         suffixIcon: controller.text.isEmpty
             ? Icon(Icons.search, color: accent)

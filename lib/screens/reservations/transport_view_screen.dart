@@ -28,6 +28,25 @@ class TransportViewScreen extends ConsumerWidget {
     return '$day/$month/${dt.year}';
   }
 
+  /// Groups trip legs by `mid` so a member with several vehicle/car-type
+  /// entries under the same `mid` renders as a single card instead of one
+  /// card per array entry.
+  static List<List<TransportDetail>> _groupDetailsByMid(
+    List<TransportDetail> details,
+  ) {
+    final order = <String>[];
+    final groups = <String, List<TransportDetail>>{};
+    for (final d in details) {
+      final key = d.mid;
+      if (!groups.containsKey(key)) {
+        order.add(key);
+        groups[key] = [];
+      }
+      groups[key]!.add(d);
+    }
+    return order.map((key) => groups[key]!).toList();
+  }
+
   // static Color _statusColor(String status) {
   //   switch (status) {
   //     case 'Approved':
@@ -58,6 +77,9 @@ class TransportViewScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final transport = ref.watch(selectedTransportProvider);
     final fontSettings = ref.watch(fontSettingsProvider);
+    final groupedDetails = transport == null
+        ? const <List<TransportDetail>>[]
+        : _groupDetailsByMid(transport.details);
 
     return Scaffold(
       appBar: AppBar(
@@ -85,7 +107,7 @@ class TransportViewScreen extends ConsumerWidget {
                     _buildSummaryCard(transport, fontSettings),
                     const SizedBox(height: 20),
                     Text(
-                      'Trips (${transport.details.length})',
+                      'Trips (${groupedDetails.length})',
                       style: TextStyle(
                         fontSize: fontSettings.fontSize + 2,
                         fontWeight: FontWeight.bold,
@@ -93,7 +115,7 @@ class TransportViewScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    if (transport.details.isEmpty)
+                    if (groupedDetails.isEmpty)
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 24),
                         child: Center(
@@ -101,10 +123,10 @@ class TransportViewScreen extends ConsumerWidget {
                         ),
                       )
                     else
-                      ...transport.details.asMap().entries.map(
+                      ...groupedDetails.asMap().entries.map(
                             (entry) => _TripCard(
                               index: entry.key + 1,
-                              detail: entry.value,
+                              details: entry.value,
                               fontSettings: fontSettings,
                             ),
                           ),
@@ -403,15 +425,19 @@ class TransportViewScreen extends ConsumerWidget {
   }
 }
 
+/// One card per unique `mid`. `details` holds every leg the API returned for
+/// that `mid` — usually one, but sometimes several that only differ by
+/// vehicle/car type, which are listed together instead of duplicating the
+/// card.
 class _TripCard extends StatefulWidget {
   const _TripCard({
     required this.index,
-    required this.detail,
+    required this.details,
     required this.fontSettings,
   });
 
   final int index;
-  final TransportDetail detail;
+  final List<TransportDetail> details;
   final FontSettings fontSettings;
 
   @override
@@ -423,8 +449,12 @@ class _TripCardState extends State<_TripCard> {
 
   @override
   Widget build(BuildContext context) {
-    final detail = widget.detail;
+    final details = widget.details;
+    final base = details.first;
     final fontSettings = widget.fontSettings;
+    final totalVehicles =
+        details.fold<int>(0, (sum, d) => sum + d.noOfVehicles);
+    final multipleVehicleTypes = details.length > 1;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -458,7 +488,7 @@ class _TripCardState extends State<_TripCard> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          '${detail.mid} - ${detail.guestName}',
+                          '${base.mid} - ${base.guestName}',
                           style: TextStyle(
                             fontSize: fontSettings.fontSize + 1,
                             fontWeight: FontWeight.bold,
@@ -476,7 +506,8 @@ class _TripCardState extends State<_TripCard> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
-                          detail.hireType,
+                         
+                             base.hireType,
                           style: TextStyle(
                             fontSize: fontSettings.fontSize,
                             color: Colors.white,
@@ -496,7 +527,7 @@ class _TripCardState extends State<_TripCard> {
                   ),
                   if (!_expanded) ...[
                     const SizedBox(height: 10),
-                    _collapsedSummary(detail, fontSettings),
+                    _collapsedSummary(base, fontSettings),
                   ],
                 ],
               ),
@@ -516,104 +547,151 @@ class _TripCardState extends State<_TripCard> {
                         TransportViewScreen._infoRow(
                           Icons.event,
                           'Pickup date',
-                          TransportViewScreen._formatDate(detail.pickupDate),
+                          TransportViewScreen._formatDate(base.pickupDate),
                           Colors.blueGrey,
                           fontSettings,
                         ),
                         TransportViewScreen._infoRow(
                           Icons.access_time,
                           'Pickup time',
-                          detail.pickupTime,
+                          base.pickupTime,
                           Colors.blueGrey,
                           fontSettings,
                         ),
                         TransportViewScreen._infoRow(
                           Icons.trip_origin,
                           'From',
-                          detail.pickupLocation,
+                          base.pickupLocation,
                           Colors.green,
                           fontSettings,
                         ),
                         TransportViewScreen._infoRow(
                           Icons.location_on,
                           'To',
-                          detail.dropLocation,
+                          base.dropLocation,
                           Colors.red,
-                          fontSettings,
-                        ),
-                        TransportViewScreen._infoRow(
-                          Icons.directions_car,
-                          'Vehicle type',
-                          detail.carType,
-                          Colors.indigo,
-                          fontSettings,
-                        ),
-                        TransportViewScreen._infoRow(
-                          Icons.local_taxi,
-                          'No. of vehicles',
-                          '${detail.noOfVehicles}',
-                          Colors.indigo,
                           fontSettings,
                         ),
                         TransportViewScreen._infoRow(
                           Icons.people,
                           'No. of passengers',
-                          '${detail.noOfPassengers}',
+                          '${details.fold<int>(0, (sum, d) => sum + d.noOfPassengers)}',
                           Colors.indigo,
                           fontSettings,
                         ),
                         TransportViewScreen._infoRow(
                           Icons.phone,
                           'Contact',
-                          detail.contactNumber,
+                          base.contactNumber,
                           Colors.green,
                           fontSettings,
                         ),
-                        if (detail.hasDriverInfo) ...[
-                          const Divider(height: 20),
-                          TransportViewScreen._infoRow(
-                            Icons.person_outline,
-                            'Received by',
-                            detail.receivedBy ?? '',
-                            Colors.blue,
-                            fontSettings,
+                        const Divider(height: 20),
+                        Text(
+                          multipleVehicleTypes ? 'Vehicles' : 'Vehicle',
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black54,
                           ),
-                          TransportViewScreen._infoRow(
-                            Icons.fact_check,
-                            'Received',
-                            TransportViewScreen._formatDateTime(
-                              detail.receivedDate,
-                            ),
-                            Colors.blue,
-                            fontSettings,
-                          ),
-                          TransportViewScreen._infoRow(
-                            Icons.local_taxi,
-                            'Taxi plate',
-                            detail.taxiPlateNumber ?? '',
-                            Colors.indigo,
-                            fontSettings,
-                          ),
-                          TransportViewScreen._infoRow(
-                            Icons.badge_outlined,
-                            'Driver',
-                            detail.driverName ?? '',
-                            Colors.indigo,
-                            fontSettings,
-                          ),
-                          TransportViewScreen._infoRow(
-                            Icons.phone_in_talk,
-                            'Driver phone',
-                            detail.driverPhoneNumber ?? '',
-                            Colors.green,
-                            fontSettings,
-                          ),
-                        ],
+                        ),
+                        const SizedBox(height: 6),
+                        ...details.map(
+                          (d) => _vehicleEntry(d, fontSettings),
+                        ),
                       ],
                     ),
                   )
                 : const SizedBox(width: double.infinity),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _vehicleEntry(TransportDetail detail, FontSettings fontSettings) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(255, 250, 244, 232),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.directions_car, size: 18, color: Colors.indigo),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  detail.carType.isEmpty ? 'N/A' : detail.carType,
+                  style: TextStyle(
+                    fontSize: fontSettings.fontSize,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+              // Text(
+              //   'x${detail.noOfVehicles}',
+              //   style: TextStyle(
+              //     fontSize: fontSettings.fontSize,
+              //     fontWeight: FontWeight.bold,
+              //     color: Colors.indigo,
+              //   ),
+              // ),
+              const SizedBox(width: 10),
+              Icon(Icons.people, size: 16, color: Colors.black45),
+              const SizedBox(width: 4),
+              Text(
+                '${detail.noOfPassengers}',
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize,
+                  color: Colors.black54,
+                ),
+              ),
+            ],
+          ),
+          if (detail.hasDriverInfo) ...[
+            const SizedBox(height: 6),
+            TransportViewScreen._infoRow(
+              Icons.person_outline,
+              'Received by',
+              detail.receivedBy ?? '',
+              Colors.blue,
+              fontSettings,
+            ),
+            TransportViewScreen._infoRow(
+              Icons.fact_check,
+              'Received',
+              TransportViewScreen._formatDateTime(detail.receivedDate),
+              Colors.blue,
+              fontSettings,
+            ),
+            TransportViewScreen._infoRow(
+              Icons.local_taxi,
+              'Taxi plate',
+              detail.taxiPlateNumber ?? '',
+              Colors.indigo,
+              fontSettings,
+            ),
+            TransportViewScreen._infoRow(
+              Icons.badge_outlined,
+              'Driver',
+              detail.driverName ?? '',
+              Colors.indigo,
+              fontSettings,
+            ),
+            TransportViewScreen._infoRow(
+              Icons.phone_in_talk,
+              'Driver phone',
+              detail.driverPhoneNumber ?? '',
+              Colors.green,
+              fontSettings,
+            ),
+          ],
         ],
       ),
     );

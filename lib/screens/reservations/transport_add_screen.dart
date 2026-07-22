@@ -575,13 +575,14 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
     final salesCode = await StorageUtil.getSalesCode();
     final userName = await StorageUtil.getUserName();
     final deviceId = await DeviceId.get();
+    final phoneNumber = await StorageUtil.getMobileNumber();
 
     final body = <String, dynamic>{
       'master_id': DateTime.now().millisecondsSinceEpoch.toString(),
       'MID': primary['memberId'],
       'guest_name': primary['guestName'],
       'pickup_date': _pickupIso(primary),
-      'contact_number': primary['contactNumber'],
+      'contact_number': phoneNumber,
       'reservation_status': 'Requested',
       'sales_code': salesCode,
       'user_name': userName,

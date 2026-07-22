@@ -347,17 +347,21 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
   }
 
   Future<void> _pickPickupDate() async {
-    DateTime picked = _pickupDate ?? DateTime.now();
+    final now = DateTime.now();
+    DateTime picked = _pickupDate ?? now;
     DateTime? result;
     await _showPickerSheet(
       label: 'Select Pickup Date',
       picker: CupertinoDatePicker(
         mode: CupertinoDatePickerMode.date,
         initialDateTime: picked,
-        minimumDate: DateTime.now().subtract(const Duration(days: 1)),
+        minimumDate: DateTime(now.year, now.month, now.day),
         onDateTimeChanged: (d) => picked = d,
       ),
-      onConfirm: () => result = picked,
+      onConfirm: () {
+        result = picked;
+        return true;
+      },
     );
     if (result != null && mounted) {
       setState(() {
@@ -369,6 +373,15 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
 
   Future<void> _pickPickupTime() async {
     final now = DateTime.now();
+    // Only restrict past times when pickup is for today; future dates allow
+    // any time of day.
+    final date = _pickupDate;
+    final isToday = date == null ||
+        (date.year == now.year &&
+            date.month == now.month &&
+            date.day == now.day);
+    final minInMinutes = isToday ? now.hour * 60 + now.minute : null;
+
     DateTime picked = DateTime(
       now.year,
       now.month,
@@ -376,6 +389,12 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
       _pickupTime?.hour ?? now.hour,
       _pickupTime?.minute ?? now.minute,
     );
+    // Cupertino's time-mode picker ignores minimumDate, so clamp the initial
+    // value forward and enforce the minimum again on Confirm.
+    if (minInMinutes != null &&
+        picked.hour * 60 + picked.minute < minInMinutes) {
+      picked = DateTime(now.year, now.month, now.day, now.hour, now.minute);
+    }
     TimeOfDay? result;
     await _showPickerSheet(
       label: 'Select Pickup Time',
@@ -385,8 +404,17 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
         use24hFormat: false,
         onDateTimeChanged: (d) => picked = d,
       ),
-      onConfirm: () =>
-          result = TimeOfDay(hour: picked.hour, minute: picked.minute),
+      onConfirm: () {
+        if (minInMinutes != null &&
+            picked.hour * 60 + picked.minute < minInMinutes) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Pickup time cannot be in the past')),
+          );
+          return false;
+        }
+        result = TimeOfDay(hour: picked.hour, minute: picked.minute);
+        return true;
+      },
     );
     if (result != null && mounted) {
       setState(() {
@@ -399,7 +427,9 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
   Future<void> _showPickerSheet({
     required String label,
     required Widget picker,
-    required VoidCallback onConfirm,
+    // Return true to accept and close the sheet, false to keep it open
+    // (e.g. when the selected value fails validation).
+    required bool Function() onConfirm,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -444,8 +474,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
               Expanded(
                 child: TextButton(
                   onPressed: () {
-                    onConfirm();
-                    Navigator.pop(ctx);
+                    if (onConfirm()) Navigator.pop(ctx);
                   },
                   child: const Text(
                     'Confirm',

@@ -223,7 +223,7 @@ class TransportViewScreen extends ConsumerWidget {
                   Expanded(
                     child: _statTile(
                       Icons.local_taxi,
-                      '${transport.totalVehicles}',
+                      '${transport.totalVehicles ~/ 2}',
                       'Vehicles',
                       fontSettings,
                     ),

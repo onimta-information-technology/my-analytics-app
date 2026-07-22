@@ -57,6 +57,7 @@ class TransportAddScreen extends ConsumerStatefulWidget {
 class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
     with ConnectivityMixin {
   final _scrollCtrl = ScrollController();
+  final _formKey = GlobalKey<FormState>();
 
   // Guest identity
   final _memberIdCtrl = TextEditingController();
@@ -73,19 +74,53 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
   final _pickupLocationCtrl = TextEditingController();
   final _dropLocationCtrl = TextEditingController();
   final _noOfVehiclesCtrl = TextEditingController(text: '1');
-  final _noOfPassengersCtrl = TextEditingController(text: '1');
   final _contactNumberCtrl = TextEditingController();
 
   Country _country = _defaultCountry();
   DateTime? _pickupDate;
   TimeOfDay? _pickupTime;
-  String? _carType;
+  // One Car Type selection per vehicle — resized whenever "No of Vehicles"
+  // changes (see _syncVehicleDetailsWithCount). Defaults to 'Normal Car'.
+  List<String?> _carTypes = ['Normal Car'];
+  // One passenger-count controller per vehicle, kept the same length as
+  // _carTypes so each car's passengers are assigned individually.
+  List<TextEditingController> _passengerCtrls = [
+    TextEditingController(text: '1'),
+  ];
   String? _hireType;
   String _pickupPlaceId = '';
   String _dropPlaceId = '';
 
   final List<Map<String, dynamic>> _members = [];
   bool _isLoading = false;
+
+  /// Keeps `_carTypes` and `_passengerCtrls` in sync with the "No of
+  /// Vehicles" stepper so there is exactly one Car Type + Passengers pair
+  /// per vehicle. Growing the count appends 'Normal Car' slots; shrinking
+  /// trims from the end (disposing the removed controllers).
+  void _syncVehicleDetailsWithCount() {
+    final n = int.tryParse(_noOfVehiclesCtrl.text) ?? 1;
+    if (n == _carTypes.length) return;
+    setState(() {
+      if (n > _carTypes.length) {
+        _carTypes.addAll(
+          List<String?>.filled(n - _carTypes.length, 'Normal Car'),
+        );
+        _passengerCtrls.addAll(
+          List.generate(
+            n - _passengerCtrls.length,
+            (_) => TextEditingController(text: '1'),
+          ),
+        );
+      } else {
+        _carTypes.removeRange(n, _carTypes.length);
+        for (final c in _passengerCtrls.sublist(n)) {
+          c.dispose();
+        }
+        _passengerCtrls.removeRange(n, _passengerCtrls.length);
+      }
+    });
+  }
 
   static Country _defaultCountry() => Country(
     phoneCode: '94',
@@ -106,7 +141,9 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _applyLocationPrefixes());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _applyLocationPrefixes(),
+    );
   }
 
   @override
@@ -121,9 +158,11 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
       _pickupLocationCtrl,
       _dropLocationCtrl,
       _noOfVehiclesCtrl,
-      _noOfPassengersCtrl,
       _contactNumberCtrl,
     ]) {
+      c.dispose();
+    }
+    for (final c in _passengerCtrls) {
       c.dispose();
     }
     super.dispose();
@@ -204,8 +243,9 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
         onSearch: (newTerm, newIid) async {
           if (newTerm.length < 3) return;
           try {
-            final repo =
-                GuestRepository(ApiService(const FlutterSecureStorage()));
+            final repo = GuestRepository(
+              ApiService(const FlutterSecureStorage()),
+            );
             final r = await repo.searchGuest(newIid, newTerm);
             if (!ctx.mounted) return;
             Navigator.of(ctx).pop();
@@ -234,7 +274,9 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
       if (!mounted) return;
       if (guests.isNotEmpty) {
         final g = guests.first;
-        ref.read(selectedGuestProvider.notifier).setSelectedGuest(
+        ref
+            .read(selectedGuestProvider.notifier)
+            .setSelectedGuest(
               Guest(
                 mid: g.mid,
                 memberName: g.mName,
@@ -258,7 +300,9 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
   }
 
   void _setGuest({required String mid, required String name}) {
-    ref.read(selectedGuestProvider.notifier).setSelectedGuest(
+    ref
+        .read(selectedGuestProvider.notifier)
+        .setSelectedGuest(
           Guest(
             mid: mid,
             memberName: name,
@@ -431,18 +475,24 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
   }
 
   // ── Member list ────────────────────────────────────────────────────────────
+  /// Captures the current form as a single transport entry. Per-vehicle Car
+  /// Type + Passengers are carried as a `vehicleDetails` list (one map per
+  /// vehicle) rather than a single scalar car type/passenger count.
   Map<String, dynamic> _captureCurrentMember() {
     return {
       'guestName': _guestNameCtrl.text,
       'memberId': _memberIdCtrl.text,
       'pickupDate': _pickupDateCtrl.text,
       'pickupTime': _pickupTimeCtrl.text,
-      'carType': _carType ?? '',
       'hireType': _hireType ?? '',
       'pickupLocation': _pickupLocationCtrl.text,
       'dropLocation': _dropLocationCtrl.text,
-      'noOfVehicles': _noOfVehiclesCtrl.text,
-      'noOfPassengers': _noOfPassengersCtrl.text,
+      'vehicleDetails': List.generate(_carTypes.length, (i) {
+        return {
+          'carType': _carTypes[i] ?? '',
+          'noOfPassengers': _passengerCtrls[i].text,
+        };
+      }),
       'contactNumber': _contactNumberCtrl.text.trim().isEmpty
           ? ''
           : '+${_country.phoneCode}${_contactNumberCtrl.text.trim()}',
@@ -459,12 +509,15 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
     _pickupLocationCtrl.clear();
     _dropLocationCtrl.clear();
     _noOfVehiclesCtrl.text = '1';
-    _noOfPassengersCtrl.text = '1';
     _contactNumberCtrl.clear();
     _country = _defaultCountry();
     _pickupDate = null;
     _pickupTime = null;
-    _carType = null;
+    _carTypes = ['Normal Car'];
+    for (final c in _passengerCtrls) {
+      c.dispose();
+    }
+    _passengerCtrls = [TextEditingController(text: '1')];
     _hireType = null;
     _pickupPlaceId = '';
     _dropPlaceId = '';
@@ -488,6 +541,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
 
   void _applyAndAddMember() {
     if (!_requireGuest()) return;
+    if (!(_formKey.currentState?.validate() ?? true)) return;
     setState(() {
       _members.add(_captureCurrentMember());
       _clearGuestFields();
@@ -498,6 +552,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
 
   void _addMemberWithSameDetails() {
     if (!_requireGuest()) return;
+    if (!(_formKey.currentState?.validate() ?? true)) return;
     setState(() {
       _members.add(_captureCurrentMember());
       _clearGuestFields();
@@ -539,27 +594,41 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
   }
 
   Map<String, dynamic> _memberToDetail(Map<String, dynamic> m) {
+    final vehicles = (m['vehicleDetails'] as List?)?.cast<Map>() ?? const [];
     return {
       'MID': m['memberId'],
       'guest_name': m['guestName'],
       'pickup_date': _pickupIso(m),
       'pickup_time': m['pickupTime'],
-      'car_type': m['carType'],
       'hire_type': m['hireType'],
       'pickup_location': m['pickupLocation'],
       'pickup_place_id': m['pickupPlaceId'],
       'drop_location': m['dropLocation'],
       'drop_place_id': m['dropPlaceId'],
-      'no_of_vehicles': int.tryParse(m['noOfVehicles'] as String? ?? '1') ?? 1,
-      'no_of_passengers':
-          int.tryParse(m['noOfPassengers'] as String? ?? '1') ?? 1,
+      'no_of_vehicles': vehicles.length,
+      'vehicle_details': vehicles
+          .map(
+            (v) => {
+              'car_type': v['carType'],
+              'no_of_passengers':
+                  int.tryParse(v['noOfPassengers'] as String? ?? '1') ?? 1,
+            },
+          )
+          .toList(),
       'contact_number': m['contactNumber'],
     };
   }
 
   Future<void> _save() async {
-    final hasCurrentGuest = _guestNameCtrl.text.trim().isNotEmpty ||
+    final hasCurrentGuest =
+        _guestNameCtrl.text.trim().isNotEmpty ||
         _memberIdCtrl.text.trim().isNotEmpty;
+
+    // Only validate the on-screen form when it still holds a member that
+    // will be submitted — after "Apply & Add" it is cleared on purpose.
+    if (hasCurrentGuest && !(_formKey.currentState?.validate() ?? true)) {
+      return;
+    }
 
     final allMembers = <Map<String, dynamic>>[
       ..._members,
@@ -593,7 +662,9 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
     setState(() => _isLoading = true);
     try {
       _logLong('Saving transport reservation', body);
-      final repo = TransportRepository(ApiService(const FlutterSecureStorage()));
+      final repo = TransportRepository(
+        ApiService(const FlutterSecureStorage()),
+      );
       final result = await repo.insertTransport(body);
       if (!mounted) return;
       setState(() => _isLoading = false);
@@ -609,7 +680,8 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    result.message ?? 'Transport reservation saved successfully',
+                    result.message ??
+                        'Transport reservation saved successfully',
                   ),
                 ),
               ],
@@ -617,8 +689,9 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
             backgroundColor: Colors.green.shade700,
             duration: const Duration(seconds: 3),
             behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
         if (context.canPop()) {
@@ -673,15 +746,25 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
       return s.isEmpty ? 'NA' : s;
     }
 
-    return '''Pickup Date        : ${v('pickupDate')}
-Pickup Time        : ${v('pickupTime')}
-Car Type           : ${v('carType')}
-Hire Type          : ${v('hireType')}
-Pickup Location    : ${v('pickupLocation')}
-Drop Location      : ${v('dropLocation')}
-No of Vehicles     : ${v('noOfVehicles')}
-No of Passengers   : ${v('noOfPassengers')}
-Contact Number     : ${v('contactNumber')}''';
+    final vehicles = (m['vehicleDetails'] as List?)?.cast<Map>() ?? const [];
+    final buf = StringBuffer()
+      ..writeln('Pickup Date        : ${v('pickupDate')}')
+      ..writeln('Pickup Time        : ${v('pickupTime')}');
+    for (int i = 0; i < vehicles.length; i++) {
+      final prefix = vehicles.length > 1 ? 'Vehicle ${i + 1} ' : '';
+      final carTypeLabel = '${prefix}Car Type'.padRight(19);
+      final passengersLabel = '${prefix}Passengers'.padRight(19);
+      buf
+        ..writeln('$carTypeLabel: ${vehicles[i]['carType']}')
+        ..writeln('$passengersLabel: ${vehicles[i]['noOfPassengers']}');
+    }
+    buf
+      ..writeln('Hire Type          : ${v('hireType')}')
+      ..writeln('Pickup Location    : ${v('pickupLocation')}')
+      ..writeln('Drop Location      : ${v('dropLocation')}')
+      ..writeln('No of Vehicles     : ${vehicles.length}')
+      ..write('Contact Number     : ${v('contactNumber')}');
+    return buf.toString();
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
@@ -721,199 +804,253 @@ Contact Number     : ${v('contactNumber')}''';
       ),
       body: Stack(
         children: [
-          ListView(
-            controller: _scrollCtrl,
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
-            children: [
-              // _sectionHeader('Transport Request'),
-              _guestIdentityRow(),
-              const SizedBox(height: 12),
-              if (_guestCardVisible &&
-                  _memberIdCtrl.text.isNotEmpty &&
-                  _guestNameCtrl.text.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: GuestDisplayCardSpecialGiftview(
-                    memberIdText: _memberIdCtrl.text,
-                    memberNameText: _guestNameCtrl.text,
-                    showCard: true,
-                    showLastVisitDate: true,
-                  ),
-                ),
-
-              // Pickup date & time
-              TextFormField(
-                controller: _pickupDateCtrl,
-                readOnly: true,
-                style: _kInputTextStyle,
-                decoration: _fieldDeco(
-                  'Pickup Date *',
-                  icon: Icons.calendar_today_rounded,
-                ).copyWith(
-                  suffixIcon:
-                      const Icon(Icons.arrow_drop_down, color: _kAccent),
-                ),
-                onTap: _pickPickupDate,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _pickupTimeCtrl,
-                readOnly: true,
-                style: _kInputTextStyle,
-                decoration: _fieldDeco(
-                  'Pickup Time *',
-                  icon: Icons.access_time_rounded,
-                ).copyWith(
-                  suffixIcon:
-                      const Icon(Icons.arrow_drop_down, color: _kAccent),
-                ),
-                onTap: _pickPickupTime,
-              ),
-              const SizedBox(height: 12),
-
-              // Car / hire type
-              DropdownButtonFormField<String>(
-                initialValue: _carType,
-                style: _kInputTextStyle,
-                isExpanded: true,
-                decoration: _fieldDeco(
-                  'Car Type *',
-                  icon: Icons.directions_car_filled_outlined,
-                ),
-                items: _kCarTypes
-                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                    .toList(),
-                onChanged: (v) => setState(() => _carType = v),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: _hireType,
-                style: _kInputTextStyle,
-                isExpanded: true,
-                decoration: _fieldDeco(
-                  'Hire Type *',
-                  icon: Icons.assignment_outlined,
-                ),
-                items: _kHireTypes
-                    .map((h) => DropdownMenuItem(value: h, child: Text(h)))
-                    .toList(),
-                onChanged: (v) => setState(() => _hireType = v),
-              ),
-              const SizedBox(height: 12),
-
-              // Locations
-              LocationSearchField(
-                controller: _pickupLocationCtrl,
-                textStyle: _kInputTextStyle,
-                accent: _kAccent,
-                sheetTitle: 'Search Pickup Location',
-                decoration: _fieldDeco(
-                  'Pickup Location *',
-                  icon: Icons.my_location_rounded,
-                ),
-                onSelected: (description, placeId) => setState(() {
-                  _pickupLocationCtrl.text = description;
-                  _pickupPlaceId = placeId;
-                }),
-              ),
-              const SizedBox(height: 12),
-              LocationSearchField(
-                controller: _dropLocationCtrl,
-                textStyle: _kInputTextStyle,
-                accent: _kAccent,
-                sheetTitle: 'Search Drop Location',
-                decoration: _fieldDeco(
-                  'Drop Location *',
-                  icon: Icons.place_rounded,
-                ),
-                onSelected: (description, placeId) => setState(() {
-                  _dropLocationCtrl.text = description;
-                  _dropPlaceId = placeId;
-                }),
-              ),
-              const SizedBox(height: 12),
-
-              // Vehicles / passengers
-              Row(
-                children: [
-                  Expanded(
-                    child: _StepperField(
-                      controller: _noOfVehiclesCtrl,
-                      label: 'No of Vehicles',
-                      icon: Icons.local_taxi_outlined,
+          Form(
+            key: _formKey,
+            child: ListView(
+              controller: _scrollCtrl,
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
+              children: [
+                // _sectionHeader('Transport Request'),
+                _guestIdentityRow(),
+                const SizedBox(height: 12),
+                if (_guestCardVisible &&
+                    _memberIdCtrl.text.isNotEmpty &&
+                    _guestNameCtrl.text.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: GuestDisplayCardSpecialGiftview(
+                      memberIdText: _memberIdCtrl.text,
+                      memberNameText: _guestNameCtrl.text,
+                      showCard: true,
+                      showLastVisitDate: true,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _StepperField(
-                      controller: _noOfPassengersCtrl,
-                      label: 'Passengers',
-                      icon: Icons.group_outlined,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
 
-              // Contact number with country code
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  InkWell(
-                    onTap: _showCountryPicker,
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      height: 58,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(10),
+                // Pickup date & time
+                TextFormField(
+                  controller: _pickupDateCtrl,
+                  readOnly: true,
+                  style: _kInputTextStyle,
+                  decoration:
+                      _fieldDeco(
+                        'Pickup Date *',
+                        icon: Icons.calendar_today_rounded,
+                      ).copyWith(
+                        suffixIcon: const Icon(
+                          Icons.arrow_drop_down,
+                          color: _kAccent,
+                        ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _country.flagEmoji,
-                            style: const TextStyle(fontSize: 18),
+                  onTap: _pickPickupDate,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _pickupTimeCtrl,
+                  readOnly: true,
+                  style: _kInputTextStyle,
+                  decoration:
+                      _fieldDeco(
+                        'Pickup Time *',
+                        icon: Icons.access_time_rounded,
+                      ).copyWith(
+                        suffixIcon: const Icon(
+                          Icons.arrow_drop_down,
+                          color: _kAccent,
+                        ),
+                      ),
+                  onTap: _pickPickupTime,
+                ),
+                const SizedBox(height: 12),
+
+                // No of vehicles — chosen before Car Type on purpose: bumping
+                // this grows the Car Type + Passengers pairs below to one per
+                // vehicle.
+                _StepperField(
+                  controller: _noOfVehiclesCtrl,
+                  label: 'No of Vehicles',
+                  icon: Icons.local_taxi_outlined,
+                  onChanged: _syncVehicleDetailsWithCount,
+                ),
+                const SizedBox(height: 12),
+
+                // Car type + passengers, one row per vehicle
+                for (int i = 0; i < _carTypes.length; i++) ...[
+                  if (_carTypes.length > 1)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        'Vehicle ${i + 1}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: _kAccent,
+                        ),
+                      ),
+                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          initialValue: _carTypes[i],
+                          style: _kInputTextStyle,
+                          isExpanded: true,
+                          decoration: _fieldDeco(
+                            'Car Type *',
+                            //icon: Icons.directions_car_filled_outlined,
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            '+${_country.phoneCode}',
-                            style: _kInputTextStyle,
-                          ),
-                          const Icon(
-                            Icons.arrow_drop_down,
-                            color: _kAccent,
-                            size: 20,
-                          ),
+                          items: _kCarTypes
+                              .map(
+                                (c) =>
+                                    DropdownMenuItem(value: c, child: Text(c)),
+                              )
+                              .toList(),
+                          onChanged: (v) => setState(() => _carTypes[i] = v),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _StepperField(
+                          controller: _passengerCtrls[i],
+                          label: 'Passengers',
+                          icon: Icons.group_outlined,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
+                DropdownButtonFormField<String>(
+                  initialValue: _hireType,
+                  style: _kInputTextStyle,
+                  isExpanded: true,
+                  decoration: _fieldDeco(
+                    'Hire Type *',
+                    icon: Icons.assignment_outlined,
+                  ),
+                  items: _kHireTypes
+                      .map((h) => DropdownMenuItem(value: h, child: Text(h)))
+                      .toList(),
+                  onChanged: (v) => setState(() => _hireType = v),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Hire Type is required';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+
+                // Locations
+                LocationSearchField(
+                  controller: _pickupLocationCtrl,
+                  textStyle: _kInputTextStyle,
+                  accent: _kAccent,
+                  sheetTitle: 'Search Pickup Location',
+                  decoration: _fieldDeco(
+                    'Pickup Location *',
+                    icon: Icons.my_location_rounded,
+                  ),
+                  onSelected: (description, placeId) => setState(() {
+                    _pickupLocationCtrl.text = description;
+                    _pickupPlaceId = placeId;
+                  }),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Pickup Location is required';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                LocationSearchField(
+                  controller: _dropLocationCtrl,
+                  textStyle: _kInputTextStyle,
+                  accent: _kAccent,
+                  sheetTitle: 'Search Drop Location',
+                  decoration: _fieldDeco(
+                    'Drop Location *',
+                    icon: Icons.place_rounded,
+                  ),
+                  onSelected: (description, placeId) => setState(() {
+                    _dropLocationCtrl.text = description;
+                    _dropPlaceId = placeId;
+                  }),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Drop Location is required';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+
+                // Contact number with country code
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    InkWell(
+                      onTap: _showCountryPicker,
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        height: 58,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _country.flagEmoji,
+                              style: const TextStyle(fontSize: 18),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '+${_country.phoneCode}',
+                              style: _kInputTextStyle,
+                            ),
+                            const Icon(
+                              Icons.arrow_drop_down,
+                              color: _kAccent,
+                              size: 20,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _contactNumberCtrl,
+                        style: _kInputTextStyle,
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
                         ],
+                        decoration: _fieldDeco(
+                          'Contact Number *',
+                          icon: Icons.phone_rounded,
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Contact Number is required';
+                          }
+                          return null;
+                        },
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _contactNumberCtrl,
-                      style: _kInputTextStyle,
-                      keyboardType: TextInputType.phone,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
-                      decoration: _fieldDeco(
-                        'Contact Number *',
-                        icon: Icons.phone_rounded,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
+                  ],
+                ),
+                const SizedBox(height: 16),
 
-              _actionButtons(),
-              const SizedBox(height: 20),
-              _addedMembersSection(),
-            ],
+                _actionButtons(),
+                const SizedBox(height: 20),
+                _addedMembersSection(),
+              ],
+            ),
           ),
           if (_isLoading)
             Positioned.fill(
@@ -1000,6 +1137,12 @@ Contact Number     : ${v('contactNumber')}''';
                 controller: _midNumberCtrl,
                 style: _kInputTextStyle,
                 keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Membership No is required';
+                  }
+                  return null;
+                },
                 decoration: _fieldDeco('Membership No *').copyWith(
                   prefixIcon: _isNumericOnlyLocation
                       ? null
@@ -1021,7 +1164,8 @@ Contact Number     : ${v('contactNumber')}''';
                                 if (v == null) return;
                                 setState(() {
                                   _selectedPrefix = v;
-                                  _memberIdCtrl.text = '$v${_midNumberCtrl.text}';
+                                  _memberIdCtrl.text =
+                                      '$v${_midNumberCtrl.text}';
                                 });
                               },
                             ),
@@ -1039,8 +1183,9 @@ Contact Number     : ${v('contactNumber')}''';
                 ),
                 onChanged: (value) {
                   _guestNameCtrl.clear();
-                  _memberIdCtrl.text =
-                      _isNumericOnlyLocation ? value : '$_selectedPrefix$value';
+                  _memberIdCtrl.text = _isNumericOnlyLocation
+                      ? value
+                      : '$_selectedPrefix$value';
                 },
               ),
             ),
@@ -1048,14 +1193,17 @@ Contact Number     : ${v('contactNumber')}''';
             ElevatedButton(
               onPressed: _guestCardVisible ? _navigateToProfile : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    _guestCardVisible ? Colors.black : Colors.grey.shade400,
+                backgroundColor: _guestCardVisible
+                    ? Colors.black
+                    : Colors.grey.shade400,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                padding:
-                    const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 14,
+                ),
               ),
               child: const Icon(Icons.person_search, size: 25),
             ),
@@ -1066,15 +1214,13 @@ Contact Number     : ${v('contactNumber')}''';
           controller: _guestNameCtrl,
           style: _kInputTextStyle,
           textCapitalization: TextCapitalization.words,
-          decoration: _fieldDeco(
-            'Guest Name',
-            icon: Icons.person_outline,
-          ).copyWith(
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.search, color: _kAccent),
-              onPressed: () => _openGuestSearch(iid: 8003),
-            ),
-          ),
+          decoration: _fieldDeco('Guest Name', icon: Icons.person_outline)
+              .copyWith(
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.search, color: _kAccent),
+                  onPressed: () => _openGuestSearch(iid: 8003),
+                ),
+              ),
           onChanged: (_) => _midNumberCtrl.clear(),
         ),
       ],
@@ -1173,12 +1319,15 @@ Contact Number     : ${v('contactNumber')}''';
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: _kAccent.withValues(alpha: 0.07),
-                    borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(10)),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(10),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -1267,10 +1416,16 @@ class _StepperField extends StatefulWidget {
   final TextEditingController controller;
   final String label;
   final IconData icon;
+
+  /// Called after the controller's value changes, in addition to this
+  /// widget's own rebuild — lets a parent react (e.g. resize a list that
+  /// should track the count).
+  final VoidCallback? onChanged;
   const _StepperField({
     required this.controller,
     required this.label,
     required this.icon,
+    this.onChanged,
   });
 
   @override
@@ -1287,6 +1442,7 @@ class _StepperFieldState extends State<_StepperField> {
     setState(() {
       widget.controller.text = (_value + delta).clamp(_min, _max).toString();
     });
+    widget.onChanged?.call();
   }
 
   @override
@@ -1374,11 +1530,7 @@ class _StepButton extends StatelessWidget {
               : Colors.grey.shade200,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(
-          icon,
-          size: 20,
-          color: enabled ? _kAccent : Colors.grey,
-        ),
+        child: Icon(icon, size: 20, color: enabled ? _kAccent : Colors.grey),
       ),
     );
   }

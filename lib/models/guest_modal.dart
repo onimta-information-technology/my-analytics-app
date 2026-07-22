@@ -12,6 +12,7 @@ class Guest {
   String? gift;
   double? mDrop;
   String? mobile;
+  String? categoryCode;
 
   Guest({
     required this.mid,
@@ -27,6 +28,7 @@ class Guest {
     this.gift,
     this.mDrop,
     this.mobile,
+    this.categoryCode,
   });
 
   Guest copyWith({String? memImage2}) {
@@ -44,6 +46,7 @@ class Guest {
       gift: gift ?? this.gift,
       mDrop: mDrop ?? this.mDrop,
       mobile: mobile ?? this.mobile,
+      categoryCode: categoryCode,
     );
   }
 

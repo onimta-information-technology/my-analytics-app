@@ -296,7 +296,7 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> with Connec
                         children: [
                           const SizedBox(width: 2),
                           Text(
-                            'LVD: ${_formatLastVisitDate(displayLvd)}',
+                            'LVD:${_formatLastVisitDate(displayLvd)}',
                             style: TextStyle(
                               fontSize: fontSettings.fontSize,
                               color: Colors.grey[700],
@@ -421,6 +421,7 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> with Connec
                                   mGroup: guest.mGroup,
                                   gName: guest.gName,
                                   mobile: guest.mobile,
+                                  categoryCode: guest.categoryCode,
                                   // IMPORTANT: Preserve the image from current guest if it exists
                                   memImage2: currentGuest?.memImage2,
                                 );
@@ -439,7 +440,10 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> with Connec
 
                                 // Navigate to profile screen
                                 if (mounted) {
-                                  context.push('/home/profile');
+                                  context.push(
+                                    '/home/profile',
+                                    extra: {'isNormalGift': true},
+                                  );
                                 }
                               },
                               child: Card(

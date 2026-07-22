@@ -386,7 +386,7 @@ class BirthdayRepository {
       final salesCode = await StorageUtil.getSalesCode();
       final deviceId = await DeviceId.get();
       final mCode = await StorageUtil.getMarketingCode();
-
+print("amuuuuu");
       // Bellagio (bty.world) vs Bally's, resolved from the logged-in API url.
       final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
       final casino = apiUrl.contains('bty.world') ? 'bellagio' : 'ballys';

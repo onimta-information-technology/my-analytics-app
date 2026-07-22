@@ -229,6 +229,31 @@ Future<String> sendSpecialGiftWhatsapp({
       return "Error sending message";
     }
   }
+  Future<String> sendNormalGiftWhatsapp({
+    required String whatsappNumber,
+    required String bmNumber,
+    required String memberName,
+    required String giftValue,
+    required String chipType,
+    required String giftFor,
+    required String createdBy,
+  }) async {
+    try {
+      final result = await giftRepository.sendNormalGiftWhatsapp(
+        whatsappNumber: whatsappNumber,
+        bmNumber: bmNumber,
+        memberName: memberName,
+        giftValue: giftValue,
+        chipType: chipType,
+        giftFor: giftFor,
+        createdBy: createdBy,
+      );
+      return result;
+    } catch (e) {
+      print('Error in sendNormalGiftWhatsapp provider: $e');
+      return "Error sending message";
+    }
+  }
   Future<bool> increaceBirtdayGiftFromUI({
     required String mid,
     required String memberName,

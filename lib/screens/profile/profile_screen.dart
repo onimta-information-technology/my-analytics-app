@@ -22,6 +22,7 @@ import 'package:ballys_reservation_app/providers/main_profile_details_provider.d
 import 'package:ballys_reservation_app/providers/member_summary_provider.dart';
 import 'package:ballys_reservation_app/providers/profile_date_filter_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+import 'package:ballys_reservation_app/providers/special_gift_provider.dart';
 import 'package:ballys_reservation_app/providers/trip_information_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -51,6 +52,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   String? _userSalesCode;
   bool _useBadgeForRating = false;
 bool _showFollowButton = false;
+  bool _isNormalGift = false;
+  String? _userName;
   @override
   void initState() {
     super.initState();
@@ -59,6 +62,7 @@ bool _showFollowButton = false;
       _memProfSH = await StorageUtil.getMemProfSH();
       _userMarketingCode = await StorageUtil.getMarketingCode();
       _userSalesCode = await StorageUtil.getSalesCode();
+      _userName = await StorageUtil.getUserName();
 
       // Check if we should use badge instead of rating image
       final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
@@ -71,6 +75,7 @@ bool _showFollowButton = false;
         setState(() {
           _nogiftamount = extra['nogiftamount'] == true;
           _showFollowButton = extra['showFollowButton'] == true;
+          _isNormalGift = extra['isNormalGift'] == true;
         });
       }
 
@@ -2196,16 +2201,40 @@ bool _showFollowButton = false;
                                             status: 'Sending gift...',
                                           );
 
-                                          final result = await ref
-                                              .read(birthdayProvider.notifier)
-                                              .sendWhatsappMessage(
-                                                mname: guest.memberName,
-                                                whatsappNumber: phoneNumber,
-                                                gift: guest.gift!,
-                                                mid: guest.mid,
-                                                memberMobile:
-                                                    guest.mobile ?? '',
-                                              );
+                                          final String result;
+                                          if (_isNormalGift) {
+                                            final giftFor =
+                                                (guest.categoryCode ?? '')
+                                                        .trim()
+                                                        .isNotEmpty
+                                                    ? guest.categoryCode!
+                                                    : 'GIFT';
+                                            result = await ref
+                                                .read(giftProvider.notifier)
+                                                .sendNormalGiftWhatsapp(
+                                                  whatsappNumber: phoneNumber,
+                                                  bmNumber: guest.mid,
+                                                  memberName:
+                                                      guest.memberName,
+                                                  giftValue: guest.gift!,
+                                                  chipType: giftFor,
+                                                  giftFor: giftFor,
+                                                  createdBy: _userName ?? '',
+                                                );
+                                          } else {
+                                            result = await ref
+                                                .read(
+                                                  birthdayProvider.notifier,
+                                                )
+                                                .sendWhatsappMessage(
+                                                  mname: guest.memberName,
+                                                  whatsappNumber: phoneNumber,
+                                                  gift: guest.gift!,
+                                                  mid: guest.mid,
+                                                  memberMobile:
+                                                      guest.mobile ?? '',
+                                                );
+                                          }
 
                                           EasyLoading.dismiss();
 

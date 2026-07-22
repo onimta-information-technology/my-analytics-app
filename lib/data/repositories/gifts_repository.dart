@@ -1517,6 +1517,139 @@ final shortUrl = responseBody['short_url'];
       return "Error: $e";
     }
   }
+  Future<String> sendNormalGiftWhatsapp({
+    required String whatsappNumber,
+    required String bmNumber,
+    required String memberName,
+    required String giftValue,
+    required String chipType,
+    required String giftFor,
+    required String createdBy,
+  }) async {
+    try {
+        final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+      final casino = apiUrl.contains('bty.world') ? 'bellagio' : 'ballys';
+      print('Sending  gift WhatsApp message...');
+      print('WhatsApp: $whatsappNumber, BM: $bmNumber, Name: $memberName');
+      print('Gift Value: $giftValue, Chip: $chipType, For: $giftFor');
+ final cleanGift = giftValue.replaceAll(',', '').trim();
+      final formattedGift = NumberFormat('#,##0', 'en_US').format(int.parse(cleanGift));
+      final response = await http.post(
+        Uri.parse('${Constants.laravelAPIbaseUrl}/gift/otp/send'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'whatsapp_number': whatsappNumber,
+          'bm_number': bmNumber,
+          'member_name': memberName,
+          'gift_value': formattedGift,
+          'chip_type': chipType,
+          'gift_for': giftFor,
+          'created_by': createdBy,
+          'casino': casino
+        }),
+      );
+
+      print('Special Gift WhatsApp API Response: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseBody = jsonDecode(response.body);
+        // final giftCode = responseBody['gift_code'];
+        // print('Gift code received: $giftCode');
+final shortUrl = responseBody['short_url'];
+        // Create WhatsApp message with the gift code link
+        String message = 'Congratulations! 🎁\n\n'
+            'You have received a gift!\n\n'
+            '━━━━━━━━━━━━━━━━━━\n'
+            '📌 Gift Details:\n'
+            '💰 Amount: $formattedGift\n'
+            '🎰 Type: $chipType\n'
+            '🎯 For: $giftFor\n'
+            '━━━━━━━━━━━━━━━━━━\n\n'
+            '✨ Enjoy this special token of appreciation!\n\n'
+            '👉 Click here to claim your gift:\n'
+            '$shortUrl';
+
+        String encodedMessage = Uri.encodeComponent(message);
+        String phoneNumber = whatsappNumber.trim();
+
+        String androidUrl = "whatsapp://send?phone=$phoneNumber&text=$encodedMessage";
+        String iosUrl = "https://wa.me/$phoneNumber?text=$encodedMessage";
+        String webUrl = "https://wa.me/$phoneNumber?text=$encodedMessage";
+
+        bool launched = false;
+
+        // Try platform-specific URLs first
+        try {
+          if (Platform.isAndroid) {
+            await launchUrl(
+              Uri.parse(androidUrl),
+              mode: LaunchMode.externalApplication,
+            );
+            launched = true;
+            print('Launched via Android WhatsApp');
+          } else if (Platform.isIOS) {
+            await launchUrl(
+              Uri.parse(iosUrl),
+              mode: LaunchMode.externalApplication,
+            );
+            launched = true;
+            print('Launched via iOS WhatsApp');
+          }
+        } catch (e) {
+          print('Error launching platform-specific URL: $e');
+          launched = false;
+        }
+
+        // Fallback to web URL
+        if (!launched) {
+          try {
+            await launchUrl(
+              Uri.parse(webUrl),
+              mode: LaunchMode.externalApplication,
+            );
+            launched = true;
+            print('Launched via web WhatsApp');
+          } catch (e) {
+            print('Error launching web URL: $e');
+          }
+        }
+
+        // Final fallback
+        if (!launched) {
+          try {
+            String fallbackUrl = "https://wa.me/$phoneNumber";
+            await launchUrl(
+              Uri.parse(fallbackUrl),
+              mode: LaunchMode.externalApplication,
+            );
+            launched = true;
+            print('Launched via fallback URL');
+          } catch (e) {
+            print('Error launching fallback URL: $e');
+          }
+        }
+
+        if (launched) {
+          print('WhatsApp launched successfully');
+          return "Success";
+        } else {
+          print('Failed to launch WhatsApp');
+          return "WhatsApp not available";
+        }
+      } else {
+        final responseBody = jsonDecode(response.body);
+        String errorMessage = responseBody['message'] ?? 'Failed to send gift';
+        print('API Error: $errorMessage');
+        throw Exception('Failed to send gift: $errorMessage');
+      }
+    } catch (e) {
+      print('Error in sendSpecialGiftWhatsapp: $e');
+      return "Error: $e";
+    }
+  }
 Future<bool> checkSpecialGiftRequest({
   required double reqid,
   required String remarks,

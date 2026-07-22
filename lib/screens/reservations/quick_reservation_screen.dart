@@ -1256,6 +1256,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     BuildContext context, {
     String label = 'Select Time',
     TimeOfDay? initial,
+    TimeOfDay? minTime,
   }) async {
     final now = DateTime.now();
     DateTime picked = DateTime(
@@ -1265,6 +1266,21 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       initial?.hour ?? now.hour,
       initial?.minute ?? now.minute,
     );
+    // Cupertino's time-mode picker ignores minimumDate, so clamp the initial
+    // value forward when a minimum is supplied and enforce it again on Confirm.
+    if (minTime != null) {
+      final minInMinutes = minTime.hour * 60 + minTime.minute;
+      final pickedInMinutes = picked.hour * 60 + picked.minute;
+      if (pickedInMinutes < minInMinutes) {
+        picked = DateTime(
+          now.year,
+          now.month,
+          now.day,
+          minTime.hour,
+          minTime.minute,
+        );
+      }
+    }
     TimeOfDay? result;
     await showModalBottomSheet(
       context: context,
@@ -1317,6 +1333,20 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
               Expanded(
                 child: TextButton(
                   onPressed: () {
+                    if (minTime != null) {
+                      final minInMinutes = minTime.hour * 60 + minTime.minute;
+                      final pickedInMinutes =
+                          picked.hour * 60 + picked.minute;
+                      if (pickedInMinutes < minInMinutes) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content:
+                                Text('Pickup time cannot be in the past'),
+                          ),
+                        );
+                        return;
+                      }
+                    }
                     result =
                         TimeOfDay(hour: picked.hour, minute: picked.minute);
                     Navigator.pop(context);
@@ -2325,9 +2355,8 @@ Widget _dateField(
   String label,
   TextEditingController ctrl,
   Color accent,
-  VoidCallback onTap, {
-  FormFieldValidator<String>? validator,
-}) {
+  VoidCallback onTap,
+) {
   return TextFormField(
     controller: ctrl,
     readOnly: true,
@@ -2338,7 +2367,6 @@ Widget _dateField(
       accent: accent,
     ).copyWith(suffixIcon: Icon(Icons.arrow_drop_down, color: accent)),
     onTap: onTap,
-    validator: validator,
   );
 }
 
@@ -4076,11 +4104,12 @@ class _TransportForm extends StatelessWidget {
             state._t_pickupDateCtrl,
             accent,
             () async {
+              final now = DateTime.now();
               final d = await state._pickDate(
                 context,
                 label: 'Select Pickup Date',
                 initial: state._t_pickupDate,
-                minDate: DateTime.now(),
+                minDate: DateTime(now.year, now.month, now.day),
               );
               if (d != null) {
                 state.setState(() {
@@ -4088,21 +4117,6 @@ class _TransportForm extends StatelessWidget {
                   state._t_pickupDateCtrl.text = state._fmt(d);
                 });
               }
-            },
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Pickup Date is required';
-              }
-              final d = state._t_pickupDate;
-              if (d != null) {
-                final today = DateTime.now();
-                final dateOnly = DateTime(d.year, d.month, d.day);
-                final todayOnly = DateTime(today.year, today.month, today.day);
-                if (dateOnly.isBefore(todayOnly)) {
-                  return 'Pickup Date cannot be in the past';
-                }
-              }
-              return null;
             },
           ),
           const SizedBox(height: 12),
@@ -4118,10 +4132,21 @@ class _TransportForm extends StatelessWidget {
               suffixIcon: Icon(Icons.arrow_drop_down, color: accent),
             ),
             onTap: () async {
+              // Only restrict past times when pickup is for today; future
+              // dates allow any time of day.
+              final now = DateTime.now();
+              final pickupDate = state._t_pickupDate;
+              final isToday = pickupDate == null ||
+                  (pickupDate.year == now.year &&
+                      pickupDate.month == now.month &&
+                      pickupDate.day == now.day);
               final t = await state._pickTime(
                 context,
                 label: 'Select Pickup Time',
                 initial: state._t_pickupTime,
+                minTime: isToday
+                    ? TimeOfDay(hour: now.hour, minute: now.minute)
+                    : null,
               );
               if (t != null) {
                 state.setState(() {
@@ -4129,27 +4154,6 @@ class _TransportForm extends StatelessWidget {
                   state._t_pickupTimeCtrl.text = state._fmtTime(t);
                 });
               }
-            },
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Pickup Time is required';
-              }
-              final d = state._t_pickupDate;
-              final t = state._t_pickupTime;
-              if (d != null && t != null) {
-                final now = DateTime.now();
-                final isToday = d.year == now.year &&
-                    d.month == now.month &&
-                    d.day == now.day;
-                if (isToday) {
-                  final pickupDateTime =
-                      DateTime(d.year, d.month, d.day, t.hour, t.minute);
-                  if (pickupDateTime.isBefore(now)) {
-                    return 'Pickup Time cannot be earlier than the current time';
-                  }
-                }
-              }
-              return null;
             },
           ),
           const SizedBox(height: 12),

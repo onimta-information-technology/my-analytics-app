@@ -16,7 +16,12 @@ class MemberNewSearchBottomSheet extends ConsumerStatefulWidget {
   final String initialSearchTerm; // Add this parameter
   final Function(String searchTerm, int iid)? onSearch; // Add search callback
   final int searchIid; // Add search type identifier
-  
+
+  /// When supplied, the picked member is handed to this callback instead of
+  /// being written to the reservation providers — used by callers that fill a
+  /// field other than the main Member ID / Member Name pair.
+  final void Function(GuestSearchResponse guest)? onGuestSelected;
+
   const MemberNewSearchBottomSheet({
     super.key,
     required this.guests,
@@ -25,6 +30,7 @@ class MemberNewSearchBottomSheet extends ConsumerStatefulWidget {
     this.initialSearchTerm = '', // Default empty string
     this.onSearch,
     required this.searchIid, // Make this required
+    this.onGuestSelected,
   });
 
   @override
@@ -128,6 +134,11 @@ class _MembernewSearchBottomSheetState extends ConsumerState<MemberNewSearchBott
                       return InkWell(
                         onTap: () {
                           final guest = filteredGuests[index];
+                          if (widget.onGuestSelected != null) {
+                            widget.onGuestSelected!(guest);
+                            Navigator.of(context).pop();
+                            return;
+                          }
                           ref.read(selectedGuestProvider.notifier).setSelectedGuest(
                                 Guest(
                                   mid: guest.mid,

@@ -786,28 +786,6 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
                     "${guest.hotels.length} rooms · ${guest.flights.length} tickets",
                     style: TextStyle(fontSize: fontSettings.fontSize,fontWeight: fontSettings.fontWeight),
                   ),
-                  if (guest.hasFamilyMembers) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      "Family members included",
-                      style: TextStyle(fontSize: fontSettings.fontSize,fontWeight: fontSettings.fontWeight),
-                    ),
-                  ],
-                  // Members on this guest's package: they hold no rooms or
-                  // tickets of their own, so they only show up here.
-                  ...guest.accompanyingMembers.map(
-                    (m) => Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text(
-                        "Same package: ${m.guestName} (${m.mid})"
-                        "${m.hasFamilyMembers ? ' · Family members included' : ''}",
-                        style: TextStyle(
-                          fontSize: fontSettings.fontSize,
-                          fontWeight: fontSettings.fontWeight,
-                        ),
-                      ),
-                    ),
-                  ),
                   if (guest.remarks.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(

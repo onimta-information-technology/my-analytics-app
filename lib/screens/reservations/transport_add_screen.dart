@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart';
@@ -12,6 +13,7 @@ import 'package:country_picker/country_picker.dart';
 import 'package:ballys_reservation_app/components/bottom_sheets/member_search-new_sheet.dart';
 import 'package:ballys_reservation_app/components/guest_deatils_view_spGift.dart';
 import 'package:ballys_reservation_app/components/location_search_field.dart';
+import 'package:ballys_reservation_app/components/passport_upload_widget.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/transport_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
@@ -92,6 +94,10 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
   String _dropPlaceId = '';
   String _silkRoute = 'No';
   String _airportPickup = 'No';
+
+  // Passport bio data pages (images / PDFs) for the member on screen.
+  List<PassportFile> _passportFiles = [];
+  Key _passportUploadKey = UniqueKey();
 
   final List<Map<String, dynamic>> _members = [];
   bool _isLoading = false;
@@ -529,6 +535,8 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
           : '+${_country.phoneCode}${_contactNumberCtrl.text.trim()}',
       'silkRoute': _silkRoute,
       'airportPickup': _airportPickup,
+      'passportFiles': _passportFiles.map((f) => f.fileName).join(', '),
+      'passportFileObjects': List<PassportFile>.from(_passportFiles),
       'pickupDateObj': _pickupDate,
       'pickupTimeObj': _pickupTime,
       'pickupPlaceId': _pickupPlaceId,
@@ -556,6 +564,8 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
     _dropPlaceId = '';
     _silkRoute = 'No';
     _airportPickup = 'No';
+    _passportFiles = [];
+    _passportUploadKey = UniqueKey();
   }
 
   void _clearGuestFields() {
@@ -656,6 +666,31 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
     };
   }
 
+  /// Flattens every member's uploaded passport files into the base64 payload
+  /// the API expects, tagged with the member they belong to. Files that can no
+  /// longer be read (moved/deleted since picking) are skipped rather than
+  /// failing the whole save.
+  List<Map<String, dynamic>> _buildPassportImages(
+    List<Map<String, dynamic>> members,
+  ) {
+    final images = <Map<String, dynamic>>[];
+    for (final m in members) {
+      final memberId = m['memberId'] as String? ?? '';
+      final files = m['passportFileObjects'] as List<PassportFile>? ?? [];
+      for (final f in files) {
+        try {
+          images.add({
+            'GuestBMNumber': memberId,
+            'FileName': f.fileName,
+            'IsPdf': f.isPdf,
+            'Base64Data': base64Encode(File(f.path).readAsBytesSync()),
+          });
+        } catch (_) {}
+      }
+    }
+    return images;
+  }
+
   Future<void> _save() async {
     final hasCurrentGuest =
         _guestNameCtrl.text.trim().isNotEmpty ||
@@ -694,6 +729,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
       'user_name': userName,
       'device_id': deviceId,
       'transport_details': allMembers.map(_memberToDetail).toList(),
+      'passport_images': _buildPassportImages(allMembers),
     };
 
     setState(() => _isLoading = true);
@@ -748,8 +784,27 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
     }
   }
 
+  /// Replaces base64 blobs with a short `<base64: n chars>` marker so a logged
+  /// payload stays readable — an uploaded passport page is otherwise hundreds
+  /// of thousands of characters and buries the rest of the body.
+  Object? _shortenForLog(Object? value) {
+    if (value is Map) {
+      return value.map(
+        (k, v) => MapEntry(
+          k,
+          k == 'Base64Data' && v is String
+              ? '<base64: ${v.length} chars>'
+              : _shortenForLog(v),
+        ),
+      );
+    }
+    if (value is List) return value.map(_shortenForLog).toList();
+    return value;
+  }
+
   void _logLong(String label, Map<String, dynamic> payload) {
-    final text = const JsonEncoder.withIndent('  ').convert(payload);
+    final text =
+        const JsonEncoder.withIndent('  ').convert(_shortenForLog(payload));
     debugPrint('===== $label =====');
     for (final line in text.split('\n')) {
       for (var i = 0; i < line.length; i += 800) {
@@ -803,6 +858,10 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
       ..writeln('Contact Number     : ${v('contactNumber')}')
       ..writeln('Slik Route         : ${v('silkRoute')}')
       ..write('Airport Pickup     : ${v('airportPickup')}');
+    final passports = m['passportFiles'] as String? ?? '';
+    if (passports.isNotEmpty) {
+      buf.write('\nPassport Files     : $passports');
+    }
     return buf.toString();
   }
 
@@ -932,6 +991,23 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
                   icon: Icons.flight_land_rounded,
                   value: _airportPickup,
                   onChanged: (v) => setState(() => _airportPickup = v),
+                ),
+                const SizedBox(height: 12),
+
+                // Passport bio data pages — images or PDFs.
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: PassportUploadWidget(
+                    key: _passportUploadKey,
+                    initialFiles: _passportFiles,
+                    onFilesChanged: (files) =>
+                        setState(() => _passportFiles = files),
+                  ),
                 ),
                 const SizedBox(height: 12),
 

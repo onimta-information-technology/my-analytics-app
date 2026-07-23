@@ -90,6 +90,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
   String? _hireType;
   String _pickupPlaceId = '';
   String _dropPlaceId = '';
+  String _silkRoute = 'No';
 
   final List<Map<String, dynamic>> _members = [];
   bool _isLoading = false;
@@ -525,6 +526,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
       'contactNumber': _contactNumberCtrl.text.trim().isEmpty
           ? ''
           : '+${_country.phoneCode}${_contactNumberCtrl.text.trim()}',
+      'silkRoute': _silkRoute,
       'pickupDateObj': _pickupDate,
       'pickupTimeObj': _pickupTime,
       'pickupPlaceId': _pickupPlaceId,
@@ -550,6 +552,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
     _hireType = null;
     _pickupPlaceId = '';
     _dropPlaceId = '';
+    _silkRoute = 'No';
   }
 
   void _clearGuestFields() {
@@ -645,6 +648,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
           )
           .toList(),
       'contact_number': m['contactNumber'],
+      'silk_route': (m['silkRoute'] as String?) == 'Yes' ? 1 : 0,
     };
   }
 
@@ -792,7 +796,8 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
       ..writeln('Pickup Location    : ${v('pickupLocation')}')
       ..writeln('Drop Location      : ${v('dropLocation')}')
       ..writeln('No of Vehicles     : ${vehicles.length}')
-      ..write('Contact Number     : ${v('contactNumber')}');
+      ..writeln('Contact Number     : ${v('contactNumber')}')
+      ..write('Slik Route         : ${v('silkRoute')}');
     return buf.toString();
   }
 
@@ -891,14 +896,29 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
                 ),
                 const SizedBox(height: 12),
 
-                // No of vehicles — chosen before Car Type on purpose: bumping
-                // this grows the Car Type + Passengers pairs below to one per
-                // vehicle.
-                _StepperField(
-                  controller: _noOfVehiclesCtrl,
-                  label: 'No of Vehicles',
-                  icon: Icons.local_taxi_outlined,
-                  onChanged: _syncVehicleDetailsWithCount,
+                // No of vehicles + Slik Route. Vehicle count is chosen before
+                // Car Type on purpose: bumping it grows the Car Type +
+                // Passengers pairs below to one per vehicle.
+                Row(
+                  children: [
+                    Expanded(
+                      child: _StepperField(
+                        controller: _noOfVehiclesCtrl,
+                        label: 'No of Vehicles',
+                        icon: Icons.local_taxi_outlined,
+                        onChanged: _syncVehicleDetailsWithCount,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _YesNoRadioRow(
+                        label: 'Slik Route',
+                        icon: Icons.alt_route_rounded,
+                        value: _silkRoute,
+                        onChanged: (v) => setState(() => _silkRoute = v),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
 
@@ -1436,6 +1456,94 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
           );
         }),
       ],
+    );
+  }
+}
+
+// ── Yes / No radio card ──────────────────────────────────────────────────────
+/// Label on top, Yes/No underneath — mirrors [_StepperField]'s two-line card so
+/// the two sit level when paired half-width in a row.
+class _YesNoRadioRow extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final String value; // 'Yes' or 'No'
+  final ValueChanged<String> onChanged;
+
+  const _YesNoRadioRow({
+    required this.label,
+    required this.icon,
+    required this.value,
+    required this.onChanged,
+  });
+
+  Widget _option(String text) {
+    final selected = value == text;
+    return InkWell(
+      onTap: () => onChanged(text),
+      borderRadius: BorderRadius.circular(8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Radio<String>(
+            value: text,
+            groupValue: value,
+            activeColor: _kAccent,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            visualDensity: VisualDensity.compact,
+            onChanged: (v) => onChanged(v!),
+          ),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 14.5,
+              fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+              color: selected ? _kAccent : Colors.black87,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: _kAccent),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 32,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [_option('Yes'), _option('No')],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -91,6 +91,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
   String _pickupPlaceId = '';
   String _dropPlaceId = '';
   String _silkRoute = 'No';
+  String _airportPickup = 'No';
 
   final List<Map<String, dynamic>> _members = [];
   bool _isLoading = false;
@@ -527,6 +528,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
           ? ''
           : '+${_country.phoneCode}${_contactNumberCtrl.text.trim()}',
       'silkRoute': _silkRoute,
+      'airportPickup': _airportPickup,
       'pickupDateObj': _pickupDate,
       'pickupTimeObj': _pickupTime,
       'pickupPlaceId': _pickupPlaceId,
@@ -553,6 +555,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
     _pickupPlaceId = '';
     _dropPlaceId = '';
     _silkRoute = 'No';
+    _airportPickup = 'No';
   }
 
   void _clearGuestFields() {
@@ -649,6 +652,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
           .toList(),
       'contact_number': m['contactNumber'],
       'silk_route': (m['silkRoute'] as String?) == 'Yes' ? 1 : 0,
+      'airport_pickup': (m['airportPickup'] as String?) == 'Yes' ? 1 : 0,
     };
   }
 
@@ -797,7 +801,8 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
       ..writeln('Drop Location      : ${v('dropLocation')}')
       ..writeln('No of Vehicles     : ${vehicles.length}')
       ..writeln('Contact Number     : ${v('contactNumber')}')
-      ..write('Slik Route         : ${v('silkRoute')}');
+      ..writeln('Slik Route         : ${v('silkRoute')}')
+      ..write('Airport Pickup     : ${v('airportPickup')}');
     return buf.toString();
   }
 
@@ -915,10 +920,18 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
                         label: 'Slik Route',
                         icon: Icons.alt_route_rounded,
                         value: _silkRoute,
+                        stacked: true,
                         onChanged: (v) => setState(() => _silkRoute = v),
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 12),
+                _YesNoRadioRow(
+                  label: 'Airport Pickup',
+                  icon: Icons.flight_land_rounded,
+                  value: _airportPickup,
+                  onChanged: (v) => setState(() => _airportPickup = v),
                 ),
                 const SizedBox(height: 12),
 
@@ -1461,19 +1474,23 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
 }
 
 // ── Yes / No radio card ──────────────────────────────────────────────────────
-/// Label on top, Yes/No underneath — mirrors [_StepperField]'s two-line card so
-/// the two sit level when paired half-width in a row.
 class _YesNoRadioRow extends StatelessWidget {
   final String label;
   final IconData icon;
   final String value; // 'Yes' or 'No'
   final ValueChanged<String> onChanged;
 
+  /// Label on top, Yes/No underneath — mirrors [_StepperField]'s two-line card
+  /// so the two sit level when paired half-width in a row. Full-width cards
+  /// keep the default single-line layout.
+  final bool stacked;
+
   const _YesNoRadioRow({
     required this.label,
     required this.icon,
     required this.value,
     required this.onChanged,
+    this.stacked = false,
   });
 
   Widget _option(String text) {
@@ -1513,37 +1530,59 @@ class _YesNoRadioRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.grey.shade300),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 18, color: _kAccent),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  label,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+      padding: stacked
+          ? const EdgeInsets.symmetric(horizontal: 14, vertical: 10)
+          : const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      child: stacked
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(icon, size: 18, color: _kAccent),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        label,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 32,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [_option('Yes'), _option('No')],
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 32,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [_option('Yes'), _option('No')],
+              ],
+            )
+          : Row(
+              children: [
+                Icon(icon, size: 18, color: _kAccent),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    label,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+                _option('Yes'),
+                _option('No'),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 }

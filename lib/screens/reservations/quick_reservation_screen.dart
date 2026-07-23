@@ -286,6 +286,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
   String _t_pickupPlaceId = '';
   String _t_dropPlaceId = '';
   String _t_silkRoute = 'No';
+  String _t_airportPickup = 'No';
 
   /// Keeps `_t_carTypes` and `_t_passengerCtrls` in sync with the "No of
   /// Vehicles" stepper so there is exactly one Car Type + Passengers pair
@@ -956,6 +957,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
           ? ''
           : '+${_t_country.phoneCode}${_t_contactNumber.text.trim()}',
       'silkRoute': _t_silkRoute,
+      'airportPickup': _t_airportPickup,
       // typed fields used when building the API body
       'pickupDateObj': _t_pickupDate,
       'pickupTimeObj': _t_pickupTime,
@@ -983,6 +985,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     _t_pickupPlaceId = '';
     _t_dropPlaceId = '';
     _t_silkRoute = 'No';
+    _t_airportPickup = 'No';
   }
 
   void _applyAndAddTransportMember() {
@@ -1570,7 +1573,8 @@ Remarks              : ${m['remarks']}''';
       ..writeln('Drop Location      : ${m['dropLocation']}')
       ..writeln('No of Vehicles     : ${vehicles.length}')
       ..writeln('Contact Number     : ${m['contactNumber']}')
-      ..write('Slik Route         : ${m['silkRoute'] ?? 'No'}');
+      ..writeln('Slik Route         : ${m['silkRoute'] ?? 'No'}')
+      ..write('Airport Pickup     : ${m['airportPickup'] ?? 'No'}');
     return buf.toString();
   }
 
@@ -1902,6 +1906,7 @@ final phoneNumber = await StorageUtil.getMobileNumber();
           .toList(),
       'contact_number': m['contactNumber'],
       'silk_route': (m['silkRoute'] as String?) == 'Yes' ? 1 : 0,
+      'airport_pickup': (m['airportPickup'] as String?) == 'Yes' ? 1 : 0,
     };
   }
 
@@ -4182,6 +4187,14 @@ class _TransportForm extends StatelessWidget {
               stacked: true,
               onChanged: (v) => state.setState(() => state._t_silkRoute = v),
             ),
+          ),
+          const SizedBox(height: 12),
+          _YesNoRadioRow(
+            label: 'Airport Pickup',
+            icon: Icons.flight_land_rounded,
+            value: state._t_airportPickup,
+            accent: accent,
+            onChanged: (v) => state.setState(() => state._t_airportPickup = v),
           ),
           const SizedBox(height: 12),
 

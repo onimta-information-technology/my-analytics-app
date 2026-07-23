@@ -1,7 +1,9 @@
 import 'dart:convert';
 
 import 'package:ballys_reservation_app/data/services/api_service.dart';
+import 'package:ballys_reservation_app/models/reervationBallys.dart';
 import 'package:ballys_reservation_app/models/reservation.dart';
+import 'package:ballys_reservation_app/models/reservation/new_reservation_ballys.dart';
 import 'package:ballys_reservation_app/utils/amount_util.dart';
 import 'package:ballys_reservation_app/models/reservation/new_reservation.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
@@ -84,7 +86,38 @@ class ReservationRepository {
       throw Exception('Unexpected response structure');
     }
   }
+ Future<Map<String, List<ReservationBallys>>> getBallysReservations() async {
+    final response = await apiService.get('Reservation_GetAllReservations');
+    print('Response from getReservations API: $response');
 
+    final Map<String, List<ReservationBallys>> classifiedReservations = {
+      'Pending': [],
+      'Approved': [],
+      'Rejected': [],
+      'Checked': [],
+    };
+
+    final status = response['Status'] as bool? ?? false;
+    final data = response['Data'];
+
+    if (status && data is List) {
+      for (final item in data) {
+        if (item is Map<String, dynamic>) {
+          final reservation = ReservationBallys.fromReservationData(item);
+          // Bucket on the `reservation_status` the API returns; anything
+          // unrecognised (or blank) shows up under Pending.
+          final bucket =
+              classifiedReservations.containsKey(reservation.requestStatus)
+                  ? reservation.requestStatus
+                  : 'Pending';
+          classifiedReservations[bucket]!.add(reservation);
+        }
+      }
+      return classifiedReservations;
+    } else {
+      throw Exception('Unexpected response structure');
+    }
+  }
   /// Fetches the predefined package amounts (e.g. `"IND 10,000"`,
   /// `"USD 25,000"`). Returns an empty list when the request fails or the
   /// payload is unexpected, so the caller can fall back to free-text entry.
@@ -147,7 +180,39 @@ class ReservationRepository {
       'passport_images': newReservation.passportImages,
     };
   }
+Future<Map<String, dynamic>> _buildReservationBodyBallys(
+    NewReservationBallys newReservation, {
+    required String masterId,
+  }) async {
+    final salesCode = await StorageUtil.getSalesCode();
+    final userName = await StorageUtil.getUserName();
+    final deviceId = await DeviceId.get();
 
+    return {
+      'master_id': masterId,
+      'bm_number': newReservation.bmNumber,
+      'guest_name': newReservation.guestName,
+      'arrival_date': newReservation.arrivalDate?.toIso8601String(),
+      'departure_date': newReservation.departureDate?.toIso8601String(),
+      'no_of_nights': newReservation.noOfNights,
+      'has_air_ticket_reservation':
+          newReservation.hasAirTicketReservation == '1',
+      'remarks': newReservation.remarks,
+      'manual_reserv_no': newReservation.reservationnewnumber ?? '',
+      'package_amount': packageAmountToInt(newReservation.packageAmount),
+      'currency_type': packageAmountCurrency(newReservation.packageAmount),
+      'sales_code': salesCode,
+      'user_name': userName,
+      'device_id': deviceId,
+      'selected_marketing_person':
+          newReservation.selectedMarketingPerson ?? '',
+      'reservation_status': 'Pending',
+      'guests': newReservation.guests,
+      'room_details': newReservation.roomDetails,
+      'air_ticket_details': newReservation.airTicketDetails,
+      'passport_images': newReservation.passportImages,
+    };
+  }
   Future<Reservation?> saveReservation(NewReservation newReservation) async {
     final requestBody = await _buildReservationBody(
       newReservation,
@@ -162,6 +227,27 @@ class ReservationRepository {
     print('Reservation save status: $status');
     if (status) {
       return Reservation.fromJson({
+        'Reserv_No': response['ReservationId']?.toString() ?? '',
+      });
+    } else {
+      throw Exception(response['Message'] ?? 'Failed to save reservation');
+    }
+  }
+
+  Future<ReservationBallys?> saveReservationBallys(NewReservationBallys newReservations) async {
+    final requestBody = await _buildReservationBodyBallys(
+      newReservations,
+      masterId: DateTime.now().millisecondsSinceEpoch.toString(),
+    );
+
+    debugPrintRequestBody(requestBody);
+
+    final response =
+        await apiService.post('Reservation_InsertReservation', requestBody);
+    final status = response['Status'] as bool? ?? false;
+    print('Reservation save status: $status');
+    if (status) {
+      return ReservationBallys.fromJson({
         'Reserv_No': response['ReservationId']?.toString() ?? '',
       });
     } else {
@@ -277,6 +363,29 @@ class ReservationRepository {
     print('Reservation update status: $status');
     if (status) {
       return Reservation.fromJson({
+        'Reserv_No': (response['ReservationId'] ?? masterId).toString(),
+      });
+    } else {
+      throw Exception(response['Message'] ?? 'Failed to update reservation');
+    }
+  }
+  Future<ReservationBallys?> updateReservationBallys(NewReservationBallys newReservation) async {
+    final masterId = newReservation.reservationNo ?? '';
+    if (masterId.isEmpty) {
+      throw Exception('Cannot update a reservation without a reservation no');
+    }
+
+    final requestBody =
+        await _buildReservationBodyBallys(newReservation, masterId: masterId);
+
+    debugPrintRequestBody(requestBody);
+
+    final response =
+        await apiService.post('Reservation_InsertReservation', requestBody);
+    final status = response['Status'] as bool? ?? false;
+    print('Reservation update status: $status');
+    if (status) {
+      return ReservationBallys.fromJson({
         'Reserv_No': (response['ReservationId'] ?? masterId).toString(),
       });
     } else {

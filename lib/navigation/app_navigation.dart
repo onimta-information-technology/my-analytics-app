@@ -51,6 +51,7 @@ import 'package:ballys_reservation_app/screens/profile/trip_history_screen.dart'
 import 'package:ballys_reservation_app/screens/report_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/air_tickets_selection_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/main_reservation.dart';
+import 'package:ballys_reservation_app/screens/reservations/new_reservationBallys_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/new_reservation_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/quick_reservation_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/reservation_screen.dart';
@@ -444,6 +445,20 @@ class AppNavigation {
               },
             ),
           ],
+        ),
+        GoRoute(
+          path: 'new-reservation-ballys',
+          pageBuilder: (context, state) => CustomTransitionPage(
+            fullscreenDialog: false,
+            key: state.pageKey,
+            child: const NewReservationBallysScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(
+                opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+                child: child,
+              );
+            },
+          ),
         ),
         GoRoute(
           path: 'reservation-view',

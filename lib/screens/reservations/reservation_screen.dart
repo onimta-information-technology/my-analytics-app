@@ -3,8 +3,11 @@ import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/models/reservation.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/reservation_provider.dart';
+import 'package:ballys_reservation_app/providers/selectedReservationforBallys_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_flight_provider.dart';
+import 'package:ballys_reservation_app/providers/selected_flight_provider_ballys.dart';
 import 'package:ballys_reservation_app/providers/selected_hotel_provider.dart';
+import 'package:ballys_reservation_app/providers/selected_hotel_provider_ballys.dart';
 import 'package:ballys_reservation_app/providers/selected_reservation_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -51,6 +54,14 @@ bool _isSearching = false;
     setState(() => _isLoading = true);
     await ref.read(reservationProvider.notifier).getReservationData();
     setState(() => _isLoading = false);
+  }
+
+  /// True when the logged-in device/user is on the Ballys location, which
+  /// uses its own New Reservation flow.
+  Future<bool> _isBallysLocation() async {
+    final location = await StorageUtil.getCurrentLocation();
+    if (location == null) return false;
+    return location.code.split('_').first.toUpperCase() == 'BALLYS';
   }
 
   Future<List<Reservation>> _filterReservations(
@@ -231,17 +242,33 @@ title: _isSearching
             IconButton(
               icon: const Icon(Icons.add_rounded, size: 35),
               onPressed: () async {
+                // Ballys logins get their own New Reservation screen; every
+                // other location keeps the shared one.
+                final isBallys = await _isBallysLocation();
+
                 // Always start a fresh "New Reservation" — clear any
                 // reservation/hotels/flights left selected by the view screen
-                // so NewReservationScreen doesn't open in Update mode or show
-                // the previously-viewed hotel & air-ticket data.
-                ref
-                    .read(selectedReservationProvider.notifier)
-                    .clearSelectedReservation();
-                ref.read(selectedHotelProvider.notifier).setHotels([]);
-                ref.read(selectedFlightProvider.notifier).setFlights([]);
+                // so the screen doesn't open in Update mode or show the
+                // previously-viewed hotel & air-ticket data.
+                if (isBallys) {
+                  ref
+                      .read(selectedReservationBallysProvider.notifier)
+                      .clearSelectedBallysReservation();
+                  ref.read(selectedHotelBallysProvider.notifier).setHotels([]);
+                  ref.read(selectedFlightBallysProvider.notifier).setFlights([]);
+                } else {
+                  ref
+                      .read(selectedReservationProvider.notifier)
+                      .clearSelectedReservation();
+                  ref.read(selectedHotelProvider.notifier).setHotels([]);
+                  ref.read(selectedFlightProvider.notifier).setFlights([]);
+                }
+
+                if (!mounted) return;
                 final result = await context.push(
-                  '/reservationMain/reservations/new-reservation',
+                  isBallys
+                      ? '/reservationMain/reservations/new-reservation-ballys'
+                      : '/reservationMain/reservations/new-reservation',
                 );
                 if (result == true) await _loadReservationData();
               },

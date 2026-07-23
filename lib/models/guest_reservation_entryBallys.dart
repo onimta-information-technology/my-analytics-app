@@ -5,6 +5,7 @@ import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.d
 import 'package:ballys_reservation_app/models/reservation/hotel_desc.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_booking.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_desc_ballys.dart';
+import 'package:ballys_reservation_app/utils/amount_util.dart';
 
 class PassportImage {
   final String path;
@@ -39,17 +40,31 @@ class AccompanyingMember {
   /// Whether family members travel with this member — a plain yes/no tick.
   final bool hasFamilyMembers;
 
+  /// This member's own package amount as displayed in the form, e.g.
+  /// `"IND 10,000"`. Members share the owner's rooms, tickets and dates but
+  /// each is billed their own package, so the amount is per member.
+  final String packageAmount;
+
   const AccompanyingMember({
     required this.mid,
     required this.guestName,
     this.hasFamilyMembers = false,
+    this.packageAmount = '',
   });
 
   factory AccompanyingMember.fromJson(Map<String, dynamic> json) {
+    // Sent as a bare number plus a separate currency, mirroring the
+    // reservation-level package_amount / currency_type pair.
+    final amount = json['PackageAmount']?.toString().trim() ?? '';
+    final currency = json['CurrencyType']?.toString().trim() ?? '';
+
     return AccompanyingMember(
       mid: json['BMNumber'] as String? ?? '',
       guestName: json['GuestName'] as String? ?? '',
       hasFamilyMembers: json['HasFamilyMembers'] as bool? ?? false,
+      packageAmount: amount.isEmpty || currency.isEmpty
+          ? amount
+          : '$currency $amount',
     );
   }
 
@@ -57,11 +72,13 @@ class AccompanyingMember {
     String? mid,
     String? guestName,
     bool? hasFamilyMembers,
+    String? packageAmount,
   }) {
     return AccompanyingMember(
       mid: mid ?? this.mid,
       guestName: guestName ?? this.guestName,
       hasFamilyMembers: hasFamilyMembers ?? this.hasFamilyMembers,
+      packageAmount: packageAmount ?? this.packageAmount,
     );
   }
 }
@@ -130,6 +147,8 @@ class GuestReservationEntryBallys {
           'HasFamilyMembers': m.hasFamilyMembers,
           'IsSharedPackage': true,
           'PrimaryBMNumber': mid,
+          'PackageAmount': packageAmountToInt(m.packageAmount),
+          'CurrencyType': packageAmountCurrency(m.packageAmount),
         },
       ),
     ];

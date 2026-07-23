@@ -32,7 +32,6 @@ import 'package:ballys_reservation_app/providers/selected_flight_provider_ballys
  import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_hotel_provider_ballys.dart';
 import 'package:ballys_reservation_app/providers/selected_passport_provider.dart';
-import 'package:ballys_reservation_app/providers/selected_hotel_provider.dart';
 // import 'package:ballys_reservation_app/providers/selected_reservation_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -233,6 +232,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
           midNumber: number,
           name: member.guestName,
           hasFamilyMembers: member.hasFamilyMembers,
+          packageAmount: member.packageAmount,
         ),
       );
     }
@@ -245,6 +245,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
               mid: row.fullMid(numericOnly: _isNumericOnlyLocation),
               guestName: row.nameController.text.trim(),
               hasFamilyMembers: row.hasFamilyMembers,
+              packageAmount: row.packageAmountController.text.trim(),
             ))
         .where((m) => m.mid.isNotEmpty || m.guestName.isNotEmpty)
         .toList();
@@ -260,11 +261,18 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
       final row = _extraMembers[i];
       final mid = row.fullMid(numericOnly: _isNumericOnlyLocation);
       final name = row.nameController.text.trim();
+      final packageAmount = row.packageAmountController.text.trim();
 
-      if (mid.isEmpty && name.isEmpty) continue; // blank row: ignored on save
+      if (mid.isEmpty && name.isEmpty && packageAmount.isEmpty) {
+        continue; // blank row: ignored on save
+      }
 
       if (mid.isEmpty || name.isEmpty) {
         _showError('Guest ${i + 2}: both Member ID and Name are required');
+        return false;
+      }
+      if (packageAmount.isEmpty) {
+        _showError('Guest ${i + 2}: Package Amount is required');
         return false;
       }
       if (!seen.add(mid)) {
@@ -420,7 +428,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
     // The view screen fills these with every hotel/flight on the reservation to
     // render its summary. They now live on the guest cards, so start the form
     // empty for the next guest.
-    ref.read(selectedHotelProvider.notifier).setHotels([]);
+    ref.read(selectedHotelBallysProvider.notifier).setHotels([]);
     ref.read(selectedFlightBallysProvider.notifier).setFlights([]);
     ref.read(selectedPassportProvider.notifier).setFiles([]);
     ref.read(selectedGuestProvider.notifier).clearGuest();
@@ -507,6 +515,39 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
 
   // ── Key fix: isDismissible: false + enableDrag: false so that
   //    dropdown dialog dismissal does NOT close the bottom sheet.
+  /// Everyone currently on the reservation — guests already added to a card
+  /// plus the member in the form and anyone sharing their package — flattened
+  /// to BM number, name and family-members status for the selector sheets.
+  List<AccompanyingMember> _reservationGuestSummary() {
+    final summary = <AccompanyingMember>[];
+
+    for (var i = 0; i < _guestEntries.length; i++) {
+      // The guest pulled back into the form is listed from the form fields
+      // below, so skip its (stale) card here rather than showing it twice.
+      if (i == _editingGuestIndex) continue;
+      final entry = _guestEntries[i];
+      summary.add(AccompanyingMember(
+        mid: entry.mid,
+        guestName: entry.guestName,
+        hasFamilyMembers: entry.hasFamilyMembers,
+      ));
+      summary.addAll(entry.accompanyingMembers);
+    }
+
+    final mid = _memberIdController.text.trim();
+    final name = _memberNameController.text.trim();
+    if (mid.isNotEmpty || name.isNotEmpty) {
+      summary.add(AccompanyingMember(
+        mid: mid,
+        guestName: name,
+        hasFamilyMembers: _hasFamilyMembers,
+      ));
+    }
+    summary.addAll(_collectExtraMembers());
+
+    return summary;
+  }
+
   void _openHotelAndRoomSelectorBottomSheet(BuildContext context) {
     FocusScope.of(context).requestFocus(FocusNode());
     showModalBottomSheet(
@@ -523,6 +564,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
           onClose: () => Navigator.pop(context), // ← X button callback
           reservationArrivalDate: _arrivalDate,
           reservationDepartureDate: _departureDate,
+          guests: _reservationGuestSummary(),
         );
       },
     );
@@ -531,7 +573,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
   void _openAirTicketsSelectorScreen(BuildContext context) {
     FocusScope.of(context).requestFocus(FocusNode());
     context.push(
-      "/reservationMain/reservations/new-reservation/air-tickets-selection",
+      "/reservationMain/reservations/new-reservation-ballys/air-tickets-selection",
       extra: {
         'arrivalDate': _arrivalDateController.text,
         'departureDate': _departureDateController.text,
@@ -545,6 +587,42 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
       return selectedFlights.isEmpty;
     }
     return true;
+  }
+
+  /// Applies a member picked from the search sheet to the main Member ID /
+  /// Member Name pair.
+  ///
+  /// Without this the sheet falls back to writing into `newReservationProvider`
+  /// — the non-Ballys provider, which this screen never reads — so the pick
+  /// would load fine and then never reach the form.
+  void _onPrimaryMemberSelected(GuestSearchResponse guest) {
+    _updateMemberIdFields(guest.mid);
+    setState(() {
+      _memberNameController.text = guest.mName;
+      _isGuestLoading = false;
+    });
+
+    ref
+        .read(memberSearchProvider.notifier)
+        .updateMemberInfo(guest.mid, guest.mName);
+    ref
+        .read(newReservationBallysProvider.notifier)
+        .updateMemberInfo(guest.mid, guest.mName);
+
+    // Feeds the guest card above the form (rating / last visit / photo).
+    ref.read(selectedGuestProvider.notifier).setSelectedGuest(
+          Guest(
+            mid: guest.mid,
+            memberName: guest.mName,
+            country: "",
+            lastVisitDate: guest.lvd?.toString() ?? "",
+            age: 0,
+            gRating: guest.gRating ?? "",
+            mGroup: guest.mGroup ?? "",
+            gName: guest.gName ?? "",
+            memImage2: guest.memImage2,
+          ),
+        );
   }
 
   Future<void> _openMemberSearchBottomSheet(int iid) async {
@@ -570,6 +648,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
             onSearch: (String term, int searchIid) async {
               await _performGuestSearch(term, searchIid);
             },
+            onGuestSelected: _onPrimaryMemberSelected,
           );
         },
       );
@@ -598,6 +677,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
             onSearch: (String term, int searchIid) async {
               await _performGuestSearch(term, searchIid);
             },
+            onGuestSelected: _onPrimaryMemberSelected,
           );
         },
       );
@@ -633,6 +713,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
             onSearch: (String term, int searchIid) async {
               await _performGuestSearch(term, searchIid);
             },
+            onGuestSelected: _onPrimaryMemberSelected,
           );
         },
       );
@@ -666,7 +747,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
       }
     }
 
-    final selectedHotels = ref.watch(selectedHotelProvider);
+    final selectedHotels = ref.watch(selectedHotelBallysProvider);
     final selectedFlights = ref.watch(selectedFlightBallysProvider);
 
     if (selectedHotels.isEmpty && selectedFlights.isEmpty) {
@@ -862,66 +943,9 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
 
   // ── Multi-guest helpers ─────────────────────────────────────────────
 
-  /// Validates that the CURRENT on-screen guest has at minimum a Member ID,
-  /// Member Name, and at least one hotel or flight selected — the minimum
-  /// needed to be worth saving as a guest-entry row.
-  bool _validateCurrentGuestForAdd() {
-    if (_memberIdController.text.trim().isEmpty ||
-        _memberNameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a Member ID and Name first'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return false;
-    }
-
-    // Rooms and air tickets are matched back to their owner by BM number, so
-    // the same member twice would merge into one guest on the API side.
-    final mid = _memberIdController.text.trim();
-    final duplicateIndex =
-        _guestEntries.indexWhere((g) => g.mid.trim() == mid);
-    if (duplicateIndex != -1 && duplicateIndex != _editingGuestIndex) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$mid is already added to this reservation'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return false;
-    }
-
-    final selectedHotels = ref.read(selectedHotelProvider);
-    final selectedFlights = ref.read(selectedFlightBallysProvider);
-    if (selectedHotels.isEmpty && selectedFlights.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select at least one hotel or flight'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return false;
-    }
-
-    if (_arrivalDate == null || _departureDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select Arrival and Departure dates'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return false;
-    }
-
-    if (!_validateExtraMembers(primaryMid: mid)) return false;
-
-    return true;
-  }
-
   /// Snapshots the guest currently on screen into a GuestReservationEntry.
   GuestReservationEntryBallys _snapshotCurrentGuest() {
-    final selectedHotels = ref.read(selectedHotelProvider);
+    final selectedHotels = ref.read(selectedHotelBallysProvider);
     final selectedFlights = ref.read(selectedFlightBallysProvider);
     final selectedPassports = ref.read(selectedPassportProvider);
 
@@ -943,89 +967,6 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
           .toList(),
       hasFamilyMembers: _hasFamilyMembers,
       accompanyingMembers: _collectExtraMembers(),
-    );
-  }
-
-  /// "Add Guest" — same hotel/flight/dates carried forward.
-  /// Saves current guest into the list, clears ONLY Member ID + Name
-  /// (and the linked selected-guest provider) so the next guest can be
-  /// searched for, while hotel/flight/dates/remarks stay as-is.
-  void _onAddGuest() {
-    if (!_validateCurrentGuestForAdd()) return;
-
-    final entry = _snapshotCurrentGuest();
-
-    setState(() {
-      if (_editingGuestIndex != null) {
-        _guestEntries[_editingGuestIndex!] = entry;
-        _editingGuestIndex = null;
-      } else {
-        _guestEntries.add(entry);
-      }
-
-      // Clear only guest identity fields.
-      _memberIdController.clear();
-      _memberIdNumberController.clear();
-      _memberNameController.clear();
-      _hasFamilyMembers = false;
-      _clearExtraMembers();
-    });
-
-    ref.read(selectedGuestProvider.notifier).clearGuest();
-    ref.read(selectedPassportProvider.notifier).setFiles([]);
-    ref.read(newReservationBallysProvider.notifier).resetState();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${entry.guestName} added. Search next guest.'),
-        backgroundColor: Colors.green,
-      ),
-    );
-  }
-
-  /// "Add New Guest" — different hotel/flight/dates for the next guest.
-  /// Saves current guest into the list, clears Member ID + Name AND
-  /// hotel/flight selections AND dates, so the next guest starts fresh.
-  void _onAddNewGuest() {
-    if (!_validateCurrentGuestForAdd()) return;
-
-    final entry = _snapshotCurrentGuest();
-
-    setState(() {
-      if (_editingGuestIndex != null) {
-        _guestEntries[_editingGuestIndex!] = entry;
-        _editingGuestIndex = null;
-      } else {
-        _guestEntries.add(entry);
-      }
-
-      // Clear guest identity fields.
-      _memberIdController.clear();
-      _memberIdNumberController.clear();
-      _memberNameController.clear();
-      _hasFamilyMembers = false;
-      _clearExtraMembers();
-
-      // Clear hotel/flight/date selections for a completely fresh guest.
-      _arrivalDate = null;
-      _departureDate = null;
-      _arrivalDateController.clear();
-      _departureDateController.clear();
-      _remarksController.clear();
-      _airTicketRequisition = "No";
-    });
-
-    ref.read(selectedHotelProvider.notifier).setHotels([]);
-    ref.read(selectedFlightBallysProvider.notifier).setFlights([]);
-    ref.read(selectedPassportProvider.notifier).setFiles([]);
-    ref.read(selectedGuestProvider.notifier).clearGuest();
-    ref.read(newReservationBallysProvider.notifier).resetState();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${entry.guestName} added. Start next guest.'),
-        backgroundColor: Colors.green,
-      ),
     );
   }
 
@@ -1209,7 +1150,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
       if (!_validateUpdateFields()) return;
     }
 
-    final selectedHotels = ref.read(selectedHotelProvider);
+    final selectedHotels = ref.read(selectedHotelBallysProvider);
     final selectedFlights = ref.read(selectedFlightBallysProvider);
 
     setState(() {
@@ -1345,7 +1286,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
       });
 
       // Clear all provider state
-      ref.read(selectedHotelProvider.notifier).setHotels([]);
+      ref.read(selectedHotelBallysProvider.notifier).setHotels([]);
       ref.read(selectedFlightBallysProvider.notifier).setFlights([]);
       ref.read(selectedPassportProvider.notifier).setFiles([]);
       ref.read(selectedGuestProvider.notifier).clearGuest();
@@ -1627,6 +1568,34 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
             ),
             const SizedBox(height: 10),
 
+            // ── This guest's own package amount ──
+            // Keyed on the row itself so removing a card takes its picker
+            // state with it instead of leaving it behind on the next row.
+            PackageAmountFieldBallys(
+              key: ValueKey(row),
+              controller: row.packageAmountController,
+              textStyle: TextStyle(
+                fontSize: fontSettings.fontSize,
+                fontWeight: fontSettings.fontWeight,
+                color: Colors.black,
+              ),
+              decoration: InputDecoration(
+                labelText: "Package Amount *",
+                labelStyle: TextStyle(
+                  fontSize: fontSettings.fontSize,
+                  fontWeight: fontSettings.fontWeight,
+                ),
+                border: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12.0,
+                  vertical: -5.0,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+
             // ── Family members of THIS guest ──
             _familyMembersField(
               fontSettings: fontSettings,
@@ -1727,7 +1696,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
               ref
                   .read(selectedReservationBallysProvider.notifier)
                   .clearSelectedBallysReservation();
-              ref.read(selectedHotelProvider.notifier).setHotels([]);
+              ref.read(selectedHotelBallysProvider.notifier).setHotels([]);
               ref.read(selectedFlightBallysProvider.notifier).setFlights([]);
               ref.read(selectedPassportProvider.notifier).setFiles([]);
             },
@@ -2005,6 +1974,10 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
                                                 color: Constants.kPrimaryColor,
                                                 label: [
                                                   "${m.guestName} (${m.mid})",
+                                                  if (m.packageAmount
+                                                      .trim()
+                                                      .isNotEmpty)
+                                                    m.packageAmount.trim(),
                                                   if (m.hasFamilyMembers)
                                                     "family members included",
                                                 ].join(" — "),
@@ -2234,6 +2207,39 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
                         ),
                         const SizedBox(height: 10.0),
 
+                        // ── This member's package amount ───────
+                        PackageAmountFieldBallys(
+                          controller: _packageAmountController,
+                          enabled: true,
+                          textStyle: TextStyle(
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: fontSettings.fontWeight,
+                            color: Colors.black,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: "Package Amount *",
+                            labelStyle: TextStyle(
+                              fontSize: fontSettings.fontSize,
+                              fontWeight: fontSettings.fontWeight,
+                            ),
+                            border: const OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(12)),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12.0,
+                              vertical: -5.0,
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return "Package Amount Number is required";
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 10.0),
+
                         // ── Extra members on the SAME package ──
                         ..._extraMembers.asMap().entries.map(
                               (e) => _extraMemberCard(e.key, fontSettings),
@@ -2273,49 +2279,19 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
                             ),
                           ),
                         ),
-                        if (_extraMembers.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 6.0),
-                            child: Text(
-                              "These members share the same package, hotel, "
-                              "air tickets and dates as the member above.",
-                              style: TextStyle(
-                                fontSize: fontSettings.fontSize * 0.75,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ),
-                        const SizedBox(height: 10.0),
-                          PackageAmountFieldBallys(
-                          controller: _packageAmountController,
-                          enabled: true,
-                          textStyle: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: fontSettings.fontWeight,
-                            color: Colors.black,
-                          ),
-                          decoration: InputDecoration(
-                            labelText: "Package Amount *",
-                            labelStyle: TextStyle(
-                              fontSize: fontSettings.fontSize,
-                              fontWeight: fontSettings.fontWeight,
-                            ),
-                            border: const OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12.0,
-                              vertical: -5.0,
-                            ),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return "Package Amount Number is required";
-                            }
-                            return null;
-                          },
-                        ),
+                        // if (_extraMembers.isNotEmpty)
+                        //   Padding(
+                        //     padding: const EdgeInsets.only(top: 6.0),
+                        //     child: Text(
+                        //       "These members share the same hotel, air tickets "
+                        //       "and dates as the member above, each with their "
+                        //       "own package amount.",
+                        //       style: TextStyle(
+                        //         fontSize: fontSettings.fontSize * 0.75,
+                        //         color: Colors.grey.shade600,
+                        //       ),
+                        //     ),
+                        //   ),
                         const SizedBox(height: 10.0),
 
                           // ── Arrival Date ───────────────────────
@@ -2926,86 +2902,6 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
                         // ),
                         const SizedBox(height: 16.0),
 
-                        // ── Add Guest / Add New Guest Buttons ──
-                        Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              OutlinedButton(
-                                onPressed: _onAddGuest,
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor:
-                                      Constants.kSecondaryColor,
-                                  side: BorderSide(
-                                    color: Constants.kSecondaryColor,
-                                    width: 2,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(12),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 14,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.center,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.person_add, size: 18),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      "Add Member With Same Details",
-                                      style: TextStyle(
-                                        fontSize: fontSettings.fontSize *
-                                            0.9,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              OutlinedButton(
-                                onPressed: _onAddNewGuest,
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.deepOrange,
-                                  side: const BorderSide(
-                                    color: Colors.deepOrange,
-                                    width: 2,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(12),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 14,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.center,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                        Icons.person_add_alt_1,
-                                        size: 18),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      "Apply & Add Member",
-                                      style: TextStyle(
-                                        fontSize: fontSettings.fontSize *
-                                            0.9,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        const SizedBox(height: 10.0),
-
                         // ── Confirm / Update Button ────────────
                         SizedBox(
                           width: double.infinity,
@@ -3077,6 +2973,10 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
 class _ExtraMemberRow {
   final TextEditingController midNumberController;
   final TextEditingController nameController;
+
+  /// This member's own package amount — they share the primary guest's hotels,
+  /// tickets and dates but are billed their own package.
+  final TextEditingController packageAmountController;
   String prefix;
   bool hasFamilyMembers;
 
@@ -3085,8 +2985,10 @@ class _ExtraMemberRow {
     String midNumber = "",
     String name = "",
     this.hasFamilyMembers = false,
+    String packageAmount = "",
   })  : midNumberController = TextEditingController(text: midNumber),
-        nameController = TextEditingController(text: name);
+        nameController = TextEditingController(text: name),
+        packageAmountController = TextEditingController(text: packageAmount);
 
   /// The member ID as the API expects it: prefixed everywhere except the
   /// numeric-only locations, which have no prefix dropdown at all.
@@ -3099,5 +3001,6 @@ class _ExtraMemberRow {
   void dispose() {
     midNumberController.dispose();
     nameController.dispose();
+    packageAmountController.dispose();
   }
 }

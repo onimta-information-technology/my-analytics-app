@@ -1,9 +1,10 @@
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/hotel_repository.dart';
+import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_cost_response.dart';
-import 'package:ballys_reservation_app/models/reservation/hotel_desc.dart';
+import 'package:ballys_reservation_app/models/reservation/hotel_desc_ballys.dart';
 import 'package:ballys_reservation_app/providers/hotels_provider.dart';
-import 'package:ballys_reservation_app/providers/selected_hotel_provider.dart';
+import 'package:ballys_reservation_app/providers/selected_hotel_provider_ballys.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,11 +21,17 @@ class HotelAndRoomSelectionBallysBottomSheet extends ConsumerStatefulWidget {
   final DateTime? reservationArrivalDate;
   final DateTime? reservationDepartureDate;
 
+  /// Everyone already on the reservation, listed at the top of the sheet so
+  /// rooms can be picked against the right head count — each guest's BM number
+  /// and whether family members travel with them.
+  final List<AccompanyingMember> guests;
+
   const HotelAndRoomSelectionBallysBottomSheet(
     this.hotelRepository, {
     this.onClose,
     this.reservationArrivalDate,
     this.reservationDepartureDate,
+    this.guests = const [],
     super.key,
   });
 
@@ -53,7 +60,7 @@ class _HotelAndRoomSelectionBallysBottomSheetState
   @override
   void initState() {
     super.initState();
-    hotelList = List.from(ref.read(selectedHotelProvider));
+    hotelList = List.from(ref.read(selectedHotelBallysProvider));
     _loadBrand();
   }
 
@@ -110,7 +117,7 @@ class _HotelAndRoomSelectionBallysBottomSheetState
   int numberOfChildren = 0;
   int numberOfRooms = 1;
 
-  List<HotelDescip> hotelList = [];
+  List<HotelDescipBallys> hotelList = [];
 String selectedEcLcoFacility = 'NA';
 String selectedByPaymnet = 'NA';
 
@@ -332,7 +339,7 @@ String selectedByPaymnet = 'NA';
     });
   }
 
-  void _editHotel(HotelDescip hotel, int index) {
+  void _editHotel(HotelDescipBallys hotel, int index) {
     setState(() {
       editMode = true;
       editIndex = index;
@@ -427,7 +434,7 @@ String selectedByPaymnet = 'NA';
 
     // Cost is optional — no blocking if not calculated
 
-    final hotel = HotelDescip(
+    final hotel = HotelDescipBallys(
       hotel: selectedHotelId,
       hotelName: selectedHotelName,
       roomCategoryId: selectedRoomCategoryId,
@@ -459,7 +466,7 @@ String selectedByPaymnet = 'NA';
   }
 
   void _acceptChanges() {
-    ref.read(selectedHotelProvider.notifier).addHotels(hotelList);
+    ref.read(selectedHotelBallysProvider.notifier).addHotels(hotelList);
     Navigator.pop(context);
   }
 
@@ -615,6 +622,81 @@ String selectedByPaymnet = 'NA';
     );
   }
 
+  /// Who the rooms are being picked for: every guest already on the
+  /// reservation with their BM number and family-members status.
+  Widget _guestSummary() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F8FA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFDADDE3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.group, size: 18, color: Constants.kPrimaryColor),
+              const SizedBox(width: 6),
+              Text(
+                "Guests on this reservation (${widget.guests.length})",
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...widget.guests.map(_guestSummaryRow),
+        ],
+      ),
+    );
+  }
+
+  Widget _guestSummaryRow(AccompanyingMember guest) {
+    final label = [
+      if (guest.mid.trim().isNotEmpty) guest.mid.trim(),
+      if (guest.guestName.trim().isNotEmpty) guest.guestName.trim(),
+    ].join(" — ");
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Icon(
+            guest.hasFamilyMembers
+                ? Icons.family_restroom
+                : Icons.person_outline,
+            size: 16,
+            color: guest.hasFamilyMembers
+                ? Colors.green.shade700
+                : Colors.grey.shade600,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            guest.hasFamilyMembers ? "Family included" : "No family",
+            style: TextStyle(
+              fontSize: 13,
+              color: guest.hasFamilyMembers
+                  ? Colors.green.shade700
+                  : Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return FractionallySizedBox(
@@ -651,6 +733,12 @@ String selectedByPaymnet = 'NA';
                   child: IntrinsicHeight(
                     child: Column(
                       children: [
+                        // ── Guests on this reservation ─────────
+                        if (widget.guests.isNotEmpty) ...[
+                          const SizedBox(height: 5),
+                          _guestSummary(),
+                        ],
+
                         // ── Date Range ─────────────────────────
                         const SizedBox(height: 5),
                         TextFormField(
@@ -1301,7 +1389,9 @@ const SizedBox(height: 16),
                                                     ),
                                                   ),
                                                   const SizedBox(height: 8),
-                                                  Row(
+                                                  Wrap(
+                                                    spacing: 20,
+                                                    runSpacing: 4,
                                                     children: [
                                                       Text(
                                                         "Guest Count: ${hotel.guestCount}",
@@ -1310,7 +1400,13 @@ const SizedBox(height: 16),
                                                           fontWeight: FontWeight.bold,
                                                         ),
                                                       ),
-                                                      const SizedBox(width: 20),
+                                                      Text(
+                                                        "Rooms: ${hotel.roomCount}",
+                                                        style: const TextStyle(
+                                                          fontSize: 18,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
                                                       Text(
                                                         "Nights: ${hotel.noOfNights}",
                                                         style: const TextStyle(

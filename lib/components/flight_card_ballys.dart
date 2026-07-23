@@ -17,6 +17,13 @@ class FlightCardBallys extends StatelessWidget {
     this.onDelete,
   });
 
+  /// " (Arrival)" / " (Departure)" — blank when the flight carries no leg,
+  /// which is the case for anything saved before the facility asked for one.
+  static String _leg(String? type) {
+    final leg = type?.trim() ?? '';
+    return leg.isEmpty ? '' : ' ($leg)';
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -159,12 +166,35 @@ class FlightCardBallys extends StatelessWidget {
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      "Silk Route: ${flight.silkRoute == 1 ? 'Yes' : 'No'}",
+                      // The leg only means something once the facility is on.
+                      "Silk Route: ${flight.silkRoute == 1 ? 'Yes${_leg(flight.silkRouteType)}' : 'No'}",
                       style: const TextStyle(
                         fontSize: 19,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    if (flight.goldRoute) ...[
+                      const SizedBox(height: 5),
+                      Text(
+                        "Gold Route: Yes${_leg(flight.goldRouteType)}",
+                        style: const TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                    if (flight.meal) ...[
+                      const SizedBox(height: 5),
+                      Text(
+                        flight.mealRemark?.trim().isNotEmpty == true
+                            ? "Meal: Yes — ${flight.mealRemark!.trim()}"
+                            : "Meal: Yes",
+                        style: const TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

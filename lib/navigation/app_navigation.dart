@@ -49,6 +49,7 @@ import 'package:ballys_reservation_app/screens/profile/profile_screen.dart';
 import 'package:ballys_reservation_app/screens/menu_screen.dart';
 import 'package:ballys_reservation_app/screens/profile/trip_history_screen.dart';
 import 'package:ballys_reservation_app/screens/report_screen.dart';
+import 'package:ballys_reservation_app/screens/reservations/air_tickets_selection_ballys_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/air_tickets_selection_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/main_reservation.dart';
 import 'package:ballys_reservation_app/screens/reservations/new_reservationBallys_screen.dart';
@@ -459,6 +460,32 @@ class AppNavigation {
               );
             },
           ),
+          routes: [
+            GoRoute(
+              path: 'air-tickets-selection',
+              pageBuilder: (context, state) {
+                final Map<String, dynamic> data =
+                    state.extra as Map<String, dynamic>;
+                final arrivalDate = data['arrivalDate'] ?? '';
+                final departureDate = data['departureDate'] ?? '';
+                return CustomTransitionPage(
+                  fullscreenDialog: false,
+                  key: state.pageKey,
+                  child: AirTicketsSelectionBallysScreen(
+                    AirportRepository(ApiService(const FlutterSecureStorage())),
+                    arrivalDate: arrivalDate,
+                    departureDate: departureDate,
+                  ),
+                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                    return FadeTransition(
+                      opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+                      child: child,
+                    );
+                  },
+                );
+              },
+            ),
+          ],
         ),
         GoRoute(
           path: 'reservation-view',

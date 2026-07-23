@@ -9,12 +9,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 ///   * Shows the predefined amounts (e.g. `"IND 10,000"`) in a dropdown.
 ///   * A currency filter row (All / IND / USD / …) narrows the dropdown to a
 ///     single currency. Currencies are derived from the fetched values.
-///   * An **Other amount** dropdown entry reveals a free-text numeric field so
-///     the user can enter a custom amount.
 ///
-/// The selected value (a display string like `"IND 10,000"` or a manually
-/// typed number) is written straight into [controller] and sent to the backend
-/// as-is (the `package_amount` column is a varchar), preserving the currency.
+/// The selected value (a display string like `"IND 10,000"`) is written
+/// straight into [controller] and sent to the backend as-is (the
+/// `package_amount` column is a varchar), preserving the currency.
 ///
 /// While the amounts are loading — or if the request fails — the widget falls
 /// back to a plain numeric text field bound to [controller] so the form is
@@ -49,74 +47,24 @@ class PackageAmountFieldBallys extends ConsumerStatefulWidget {
 }
 
 class _PackageAmountFieldState extends ConsumerState<PackageAmountFieldBallys> {
-  static const String _kOther = '__other_amount__';
-
-  final TextEditingController _manualController = TextEditingController();
-
   /// Currency filter, `null` == "All".
   String? _currencyFilter;
 
-  /// The amount currently selected from the list (`null` when none / other).
+  /// The amount currently selected from the list (`null` when none).
   String? _selected;
-
-  /// Whether the user chose "Other amount".
-  bool _isOther = false;
-
-  /// Currency prepended to a custom ("Other amount") value, e.g. `IND` / `USD`.
-  String? _otherCurrency;
 
   /// One-time reconciliation with any pre-existing controller value once the
   /// amounts have loaded.
   bool _initialisedFromController = false;
 
-  @override
-  void dispose() {
-    _manualController.dispose();
-    super.dispose();
-  }
-
-  void _syncFromController(List<String> amounts, List<String> currencies) {
+  void _syncFromController() {
     if (_initialisedFromController) return;
     _initialisedFromController = true;
 
     final text = widget.controller.text.trim();
-    if (text.isEmpty) {
-      _selected = null;
-      _isOther = false;
-    } else if (amounts.contains(text)) {
-      _selected = text;
-      _isOther = false;
-    } else {
-      // Custom value — split off a leading currency (e.g. "IND 12345") so the
-      // currency selector and amount field pre-fill correctly.
-      _isOther = true;
-      final parts = text.split(' ');
-      if (parts.length > 1 && currencies.contains(parts.first)) {
-        _otherCurrency = parts.first;
-        _manualController.text = parts.sublist(1).join(' ');
-      } else {
-        _otherCurrency = currencies.isNotEmpty ? currencies.first : null;
-        _manualController.text = text;
-      }
-    }
-  }
-
-  /// The currency to default a fresh "Other amount" entry to: the active
-  /// filter when it names a currency, otherwise the first available currency.
-  String? _defaultOtherCurrency(List<String> currencies) =>
-      _currencyFilter ?? (currencies.isNotEmpty ? currencies.first : null);
-
-  /// Rebuilds the controller value from the currency + typed amount, e.g.
-  /// `"IND 12345"`. Empty amount clears the field.
-  void _updateOtherValue() {
-    final amount = _manualController.text.trim();
-    if (amount.isEmpty) {
-      widget.controller.text = '';
-    } else if (_otherCurrency != null && _otherCurrency!.isNotEmpty) {
-      widget.controller.text = '$_otherCurrency $amount';
-    } else {
-      widget.controller.text = amount;
-    }
+    // A value the list doesn't offer — e.g. one saved before an amount was
+    // retired — is still shown so editing never silently drops it.
+    _selected = text.isEmpty ? null : text;
   }
 
   List<String> _currenciesOf(List<String> amounts) {
@@ -139,7 +87,7 @@ class _PackageAmountFieldState extends ConsumerState<PackageAmountFieldBallys> {
       data: (amounts) {
         if (amounts.isEmpty) return _fallbackField();
         final currencies = _currenciesOf(amounts);
-        _syncFromController(amounts, currencies);
+        _syncFromController();
         return _dropdownUi(amounts, currencies);
       },
     );
@@ -157,20 +105,14 @@ class _PackageAmountFieldState extends ConsumerState<PackageAmountFieldBallys> {
     final valueSet = <String>{...filtered};
     if (_selected != null) valueSet.add(_selected!);
 
-    final items = <DropdownMenuItem<String>>[
-      ...valueSet.map(
-        (a) => DropdownMenuItem<String>(
-          value: a,
-          child: Text(a, style: widget.textStyle,),
-        ),
-      ),
-      DropdownMenuItem<String>(
-        value: _kOther,
-        child: Text('Other amount', style: widget.textStyle),
-      ),
-    ];
-
-    final currentValue = _isOther ? _kOther : _selected;
+    final items = valueSet
+        .map(
+          (a) => DropdownMenuItem<String>(
+            value: a,
+            child: Text(a, style: widget.textStyle),
+          ),
+        )
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -187,7 +129,7 @@ class _PackageAmountFieldState extends ConsumerState<PackageAmountFieldBallys> {
             ),
           ),
         DropdownButtonFormField<String>(
-          value: currentValue,
+          value: _selected,
           isExpanded: true,
           style: widget.textStyle,
           decoration: widget.decoration,
@@ -195,78 +137,14 @@ class _PackageAmountFieldState extends ConsumerState<PackageAmountFieldBallys> {
           onChanged: widget.enabled
               ? (value) {
                   setState(() {
-                    if (value == _kOther) {
-                      _isOther = true;
-                      _selected = null;
-                      _otherCurrency ??= _defaultOtherCurrency(currencies);
-                      _updateOtherValue();
-                    } else {
-                      _isOther = false;
-                      _selected = value;
-                      widget.controller.text = value ?? '';
-                    }
+                    _selected = value;
+                    widget.controller.text = value ?? '';
                   });
                 }
               : null,
-          validator: (value) {
-            if (widget.validator == null) return null;
-            return _isOther
-                ? widget.validator!(_manualController.text)
-                : widget.validator!(value);
-          },
+          validator: widget.validator,
         ),
-        if (_isOther) ...[
-          const SizedBox(height: 10),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (currencies.isNotEmpty) ...[
-                _otherCurrencySelector(currencies),
-                const SizedBox(width: 10),
-              ],
-              Expanded(
-                child: TextFormField(
-                  controller: _manualController,
-                  enabled: widget.enabled,
-                  style: widget.textStyle,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-                  ],
-                  decoration: widget.decoration.copyWith(
-                    labelText: 'Enter amount',
-                  ),
-                  onChanged: (_) => _updateOtherValue(),
-                ),
-              ),
-            ],
-          ),
-        ],
       ],
-    );
-  }
-
-  /// Currency dropdown shown beside the custom-amount field so an "Other
-  /// amount" value is still tagged with IND / USD.
-  Widget _otherCurrencySelector(List<String> currencies) {
-    final value = _otherCurrency ?? currencies.first;
-    return DropdownButtonHideUnderline(
-      child: DropdownButton<String>(
-        value: currencies.contains(value) ? value : currencies.first,
-        style: widget.textStyle,
-        items: currencies
-            .map((c) => DropdownMenuItem<String>(
-                  value: c,
-                  child: Text(c, style: widget.textStyle),
-                ))
-            .toList(),
-        onChanged: widget.enabled
-            ? (v) => setState(() {
-                  _otherCurrency = v;
-                  _updateOtherValue();
-                })
-            : null,
-      ),
     );
   }
 
@@ -287,12 +165,6 @@ class _PackageAmountFieldState extends ConsumerState<PackageAmountFieldBallys> {
                     !_selected!.startsWith('$value ')) {
                   _selected = null;
                   widget.controller.text = '';
-                }
-                // Keep an in-progress "Other amount" tagged with the newly
-                // chosen currency so the value stays consistent.
-                if (value != null && _isOther) {
-                  _otherCurrency = value;
-                  _updateOtherValue();
                 }
               })
           : null,

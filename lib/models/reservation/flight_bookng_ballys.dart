@@ -19,6 +19,17 @@ class FlightBookingBallys {
   final bool extraLegroomSeat;
   final bool goldRoute;
 
+  /// Which leg the Silk Route facility applies to — "Arrival" or "Departure".
+  /// Only meaningful while [silkRoute] is 1.
+  final String? silkRouteType;
+
+  /// Which leg the Gold Route facility applies to — "Arrival" or "Departure".
+  /// Only meaningful while [goldRoute] is true.
+  final String? goldRouteType;
+
+  /// Free-text meal requirement, captured only when [meal] is true.
+  final String? mealRemark;
+
   FlightBookingBallys({
     required this.guestCount,
     required this.airports,
@@ -36,6 +47,9 @@ class FlightBookingBallys {
     this.meal = false,
     this.extraLegroomSeat = false,
     this.goldRoute = false,
+    this.silkRouteType,
+    this.goldRouteType,
+    this.mealRemark,
   });
 
   factory FlightBookingBallys.fromJson(Map<String, dynamic> json) {
@@ -58,6 +72,9 @@ class FlightBookingBallys {
       meal: json['meal'] as bool? ?? false,
       extraLegroomSeat: json['extra_leg_room_seat'] as bool? ?? false,
       goldRoute: json['gold_route'] as bool? ?? false,
+      silkRouteType: json['silk_route_type'] as String?,
+      goldRouteType: json['gold_route_type'] as String?,
+      mealRemark: json['meal_remark'] as String?,
     );
   }
 
@@ -141,6 +158,9 @@ class FlightBookingBallys {
       'gold_route': goldRoute,
       'is_round_trip': isRoundTrip,
       'silk_route': silkRoute,
+      'silk_route_type': silkRoute == 1 ? (silkRouteType ?? '') : '',
+      'gold_route_type': goldRoute ? (goldRouteType ?? '') : '',
+      'meal_remark': meal ? (mealRemark ?? '') : '',
       'airport_transportation': airportTransportation,
       'arrival_date': arrivalDate?.toIso8601String(),
       'departure_date': departureDate?.toIso8601String(),

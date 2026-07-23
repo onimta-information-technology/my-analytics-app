@@ -2,6 +2,7 @@ import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/inactive_members_repository.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
+import 'package:ballys_reservation_app/models/inactive_member_group.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
@@ -33,6 +34,41 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
   List<Guest> originalMembers = [];
   List<Guest> inactiveMembers = [];
 
+  /// Ballys returns a marketing-group summary (Table1) and is browsed group
+  /// first, then member. Bellagio keeps the single flat member list.
+  bool _isBallys = false;
+  List<InactiveMemberGroup> originalGroups = [];
+  List<InactiveMemberGroup> groups = [];
+  InactiveMemberGroup? _selectedGroup;
+
+  final TextEditingController _searchController = TextEditingController();
+
+  int _requestId = 0;
+
+  /// The filter values the currently displayed data was fetched with. Null
+  /// until the first fetch, so nothing is claimed before a filter is applied.
+  String? _appliedDateOption;
+  String? _appliedBuyInOption;
+
+  static const Map<String, String> _dateOptionLabels = {
+    '1': '1 Month',
+    '2': '03 Months',
+    '3': '06 Months',
+    '4': '12 Months',
+  };
+
+  static const Map<String, String> _buyInOptionLabels = {
+    '1': '1M',
+    '2': '2.5M',
+    '3': '5M',
+    '4': '10M',
+    '5': '20M',
+    '6': '100M',
+  };
+
+  /// True while the Ballys group list is on screen (no group picked yet).
+  bool get _showingGroups => _isBallys && _selectedGroup == null;
+
   @override
   void initState() {
     super.initState();
@@ -42,8 +78,18 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
     });
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _initializeAppMode() async {
     try {
+      final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+      if (mounted) {
+        setState(() => _isBallys = !apiUrl.contains('bty.world'));
+      }
       final salesCode = await StorageUtil.getSalesCode();
       if (salesCode != null) {
         ref.read(appmodeSettingsProvider.notifier).setSalesCode(salesCode);
@@ -54,6 +100,9 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
   }
 
   void _applyFilter() async {
+    // Only the newest request is allowed to write results, so an app-mode
+    // change mid-fetch can't be overwritten by the older call.
+    final requestId = ++_requestId;
     setState(() {
       _isLoading = true;
     });
@@ -61,24 +110,102 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
     final salesCode = await StorageUtil.getSalesCode();
     final marketingCode = await StorageUtil.getMarketingCode();
     final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+    final isBellagio = apiUrl.contains('bty.world');
 
-    final inactiveMembers_ = await widget.inactiveMembersRepository
-        .getInactiveMembers(
-          selectedDateOption,
-          selectedBuyInOption,
-          appMode,
-          salesCode!,
-        );
-    final filtered = _applyGroupFilter(
-      inactiveMembers_,
-      salesCode,
-      marketingCode,
-      apiUrl.contains('bty.world'),
-    );
+    try {
+      final result = await widget.inactiveMembersRepository.getInactiveMembers(
+        selectedDateOption,
+        selectedBuyInOption,
+        appMode,
+        salesCode!,
+      );
+      final filtered = _applyGroupFilter(
+        result.members,
+        salesCode,
+        marketingCode,
+        isBellagio,
+      );
+      if (!mounted || requestId != _requestId) return;
+      _searchController.clear();
+      setState(() {
+        _appliedDateOption = selectedDateOption;
+        _appliedBuyInOption = selectedBuyInOption;
+        _isBallys = !isBellagio;
+        originalMembers = filtered;
+        inactiveMembers = List<Guest>.from(originalMembers);
+        originalGroups = result.groups;
+        groups = List<InactiveMemberGroup>.from(originalGroups);
+        _selectedGroup = null;
+      });
+    } catch (e) {
+      if (!mounted || requestId != _requestId) return;
+      setState(() {
+        _appliedDateOption = selectedDateOption;
+        _appliedBuyInOption = selectedBuyInOption;
+        originalMembers = [];
+        inactiveMembers = [];
+        originalGroups = [];
+        groups = [];
+        _selectedGroup = null;
+      });
+    } finally {
+      if (mounted && requestId == _requestId) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  /// Drills into one marketing group: shows only the members of that mGroup.
+  void _openGroup(InactiveMemberGroup group) {
+    _searchController.clear();
     setState(() {
-      originalMembers = filtered;
+      _selectedGroup = group;
+      inactiveMembers = originalMembers
+          .where((g) => (g.mGroup ?? '') == group.mGroup)
+          .toList();
+    });
+  }
+
+  /// Returns from a group's member list to the group list.
+  void _closeGroup() {
+    _searchController.clear();
+    setState(() {
+      _selectedGroup = null;
       inactiveMembers = List<Guest>.from(originalMembers);
-      _isLoading = false;
+      groups = List<InactiveMemberGroup>.from(originalGroups);
+    });
+  }
+
+  void _onSearchChanged(String value) {
+    final query = value.toLowerCase();
+    setState(() {
+      if (_showingGroups) {
+        groups = query.isEmpty
+            ? List<InactiveMemberGroup>.from(originalGroups)
+            : originalGroups
+                  .where(
+                    (g) =>
+                        g.gName.toLowerCase().contains(query) ||
+                        g.mGroup.toLowerCase().contains(query),
+                  )
+                  .toList();
+        return;
+      }
+
+      final source = _selectedGroup == null
+          ? originalMembers
+          : originalMembers
+                .where((g) => (g.mGroup ?? '') == _selectedGroup!.mGroup)
+                .toList();
+      inactiveMembers = query.isEmpty
+          ? List<Guest>.from(source)
+          : source
+                .where(
+                  (guest) =>
+                      guest.memberName.toLowerCase().contains(query) ||
+                      guest.mid.toLowerCase().contains(query),
+                )
+                .toList();
     });
   }
 
@@ -141,24 +268,33 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
         _applyFilter();
       }
     });
-    return GestureDetector(
+    return PopScope(
+      canPop: _selectedGroup == null,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) _closeGroup();
+      },
+      child: GestureDetector(
       onTap: () {
         FocusScope.of(context).unfocus();
       },
       child: Scaffold(
-        
-        appBar: AppBar(title: const Text('Inactive Members'),
+
+        appBar: AppBar(title: Text(
+          _selectedGroup?.gName ?? 'Inactive Members',
+        ),
         leading: IconButton(
     icon: const Icon(Icons.arrow_back),
     onPressed: () {
-      if (context.canPop()) {
+      if (_selectedGroup != null) {
+        _closeGroup();
+      } else if (context.canPop()) {
         context.pop();
       } else {
         context.go('/menu');
       }
     },
   ),),
-        
+
         body: Stack(
           children: [
             Column(
@@ -166,24 +302,12 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: TextField(
-                    onChanged: (value) {
-                      setState(() {
-                        if (value.isEmpty) {
-                          inactiveMembers = List<Guest>.from(originalMembers);
-                        } else {
-                          inactiveMembers = originalMembers.where((guest) {
-                            return guest.memberName.toLowerCase().contains(
-                                  value.toLowerCase(),
-                                ) ||
-                                guest.mid.toLowerCase().contains(
-                                  value.toLowerCase(),
-                                );
-                          }).toList();
-                        }
-                      });
-                    },
+                    controller: _searchController,
+                    onChanged: _onSearchChanged,
                     decoration: InputDecoration(
-                      hintText: 'Search',
+                      hintText: _showingGroups
+                          ? 'Search marketing group'
+                          : 'Search',
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: IconButton(
                         icon: const Icon(Icons.filter_list),
@@ -195,6 +319,21 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
                     ),
                   ),
                 ),
+                _buildAppliedFilterBar(),
+                if (_showingGroups)
+                  Expanded(
+                    child: groups.isEmpty
+                        ? const Center(child: Text("No marketing groups available"))
+                        : Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: ListView.builder(
+                              itemCount: groups.length,
+                              itemBuilder: (context, index) =>
+                                  _buildGroupCard(groups[index], fontSettings),
+                            ),
+                          ),
+                  )
+                else
                 Expanded(
                   child: inactiveMembers.isEmpty
                       ? const Center(
@@ -270,7 +409,7 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
                                                         fontSettings.fontSize,
                                                     fontWeight:
                                                         fontSettings.fontWeight,
-                                                    color: Colors.grey[600],
+                                                    color: const Color.fromARGB(255, 8, 8, 8),
                                                   ),
                                                 ),
                                               ],
@@ -365,6 +504,123 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
               ),
             const Watermark(),
           ],
+        ),
+      ),
+    ),
+    );
+  }
+
+  /// Shows which filter the listed data was fetched with. Rendered on both the
+  /// group list and a group's member list; empty until a filter is applied.
+  Widget _buildAppliedFilterBar() {
+    if (_appliedDateOption == null || _appliedBuyInOption == null) {
+      return const SizedBox.shrink();
+    }
+    final dateLabel = _dateOptionLabels[_appliedDateOption] ?? '-';
+    final buyInLabel = _buyInOptionLabels[_appliedBuyInOption] ?? '-';
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
+      child: Row(
+        children: [
+          const Icon(Icons.filter_list, size: 16, color: Colors.grey),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                _buildFilterChip('Date: $dateLabel'),
+                _buildFilterChip('Buy In: $buyInLabel'),
+                // if (_selectedGroup != null)
+                //   _buildFilterChip('Group: ${_selectedGroup!.gName}'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Constants.kSecondaryColor.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Constants.kSecondaryColor.withOpacity(0.4)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  /// One Table1 row: marketing group name with its inactive-member count.
+  Widget _buildGroupCard(InactiveMemberGroup group, FontSettings fontSettings) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 5.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      elevation: 2,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12.0),
+        onTap: () => _openGroup(group),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 18.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      group.gName,
+                      style: TextStyle(
+                        fontSize: fontSettings.fontSize,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    // if (group.mGroup.isNotEmpty) ...[
+                    //   const SizedBox(height: 4),
+                    //   Text(
+                    //     group.mGroup,
+                    //     style: TextStyle(
+                    //       fontSize: fontSettings.fontSize - 2,
+                    //       fontWeight: fontSettings.fontWeight,
+                    //       color: Colors.grey[600],
+                    //     ),
+                    //   ),
+                    // ],
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color.fromARGB(255, 0, 0, 0),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${group.count}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right, color: Colors.grey),
+            ],
+          ),
         ),
       ),
     );

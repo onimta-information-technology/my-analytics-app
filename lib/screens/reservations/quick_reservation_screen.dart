@@ -288,6 +288,10 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
   String _t_silkRoute = 'No';
   String _t_airportPickup = 'No';
 
+  // ── Transport — passport bio data page uploads ─────────────────────────────
+  List<PassportFile> _t_passportFiles = [];
+  Key _t_passportUploadKey = UniqueKey();
+
   /// Keeps `_t_carTypes` and `_t_passengerCtrls` in sync with the "No of
   /// Vehicles" stepper so there is exactly one Car Type + Passengers pair
   /// per vehicle. Growing the count appends unset slots; shrinking trims
@@ -958,6 +962,8 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
           : '+${_t_country.phoneCode}${_t_contactNumber.text.trim()}',
       'silkRoute': _t_silkRoute,
       'airportPickup': _t_airportPickup,
+      'passportFiles': _t_passportFiles.map((f) => f.fileName).join(', '),
+      'passportFileObjects': List<PassportFile>.from(_t_passportFiles),
       // typed fields used when building the API body
       'pickupDateObj': _t_pickupDate,
       'pickupTimeObj': _t_pickupTime,
@@ -986,6 +992,8 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     _t_dropPlaceId = '';
     _t_silkRoute = 'No';
     _t_airportPickup = 'No';
+    _t_passportFiles = [];
+    _t_passportUploadKey = UniqueKey();
   }
 
   void _applyAndAddTransportMember() {
@@ -1575,6 +1583,10 @@ Remarks              : ${m['remarks']}''';
       ..writeln('Contact Number     : ${m['contactNumber']}')
       ..writeln('Slik Route         : ${m['silkRoute'] ?? 'No'}')
       ..write('Airport Pickup     : ${m['airportPickup'] ?? 'No'}');
+    final passports = m['passportFiles'] as String? ?? '';
+    if (passports.isNotEmpty) {
+      buf.write('\nPassport Files     : $passports');
+    }
     return buf.toString();
   }
 
@@ -1772,8 +1784,27 @@ Remarks              : ${m['remarks']}''';
   }
 
   // debugPrint truncates long lines, so emit the payload in chunks.
+  /// Replaces base64 blobs with a short `<base64: n chars>` marker so a logged
+  /// payload stays readable — an uploaded passport page is otherwise hundreds
+  /// of thousands of characters and buries the rest of the body.
+  Object? _shortenForLog(Object? value) {
+    if (value is Map) {
+      return value.map(
+        (k, v) => MapEntry(
+          k,
+          k == 'Base64Data' && v is String
+              ? '<base64: ${v.length} chars>'
+              : _shortenForLog(v),
+        ),
+      );
+    }
+    if (value is List) return value.map(_shortenForLog).toList();
+    return value;
+  }
+
   void _logLong(String label, Object? payload) {
-    final text = const JsonEncoder.withIndent('  ').convert(payload);
+    final text =
+        const JsonEncoder.withIndent('  ').convert(_shortenForLog(payload));
     debugPrint('===== $label =====');
     for (final line in text.split('\n')) {
       for (var i = 0; i < line.length; i += 800) {
@@ -1832,6 +1863,7 @@ final phoneNumber = await StorageUtil.getMobileNumber();
       'user_name': userName,
       'device_id': deviceId,
       'transport_details': transportDetails,
+      'passport_images': _buildPassportImages(allMembers),
       // 'guests': guests,
     };
 
@@ -4195,6 +4227,23 @@ class _TransportForm extends StatelessWidget {
             value: state._t_airportPickup,
             accent: accent,
             onChanged: (v) => state.setState(() => state._t_airportPickup = v),
+          ),
+          const SizedBox(height: 12),
+
+          // ── Passport bio data page upload ────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: PassportUploadWidget(
+              key: state._t_passportUploadKey,
+              initialFiles: state._t_passportFiles,
+              onFilesChanged: (files) =>
+                  state.setState(() => state._t_passportFiles = files),
+            ),
           ),
           const SizedBox(height: 12),
 

@@ -285,6 +285,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
   String? _t_hireType;
   String _t_pickupPlaceId = '';
   String _t_dropPlaceId = '';
+  String _t_silkRoute = 'No';
 
   /// Keeps `_t_carTypes` and `_t_passengerCtrls` in sync with the "No of
   /// Vehicles" stepper so there is exactly one Car Type + Passengers pair
@@ -954,6 +955,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       'contactNumber': _t_contactNumber.text.trim().isEmpty
           ? ''
           : '+${_t_country.phoneCode}${_t_contactNumber.text.trim()}',
+      'silkRoute': _t_silkRoute,
       // typed fields used when building the API body
       'pickupDateObj': _t_pickupDate,
       'pickupTimeObj': _t_pickupTime,
@@ -980,6 +982,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     _t_hireType = null;
     _t_pickupPlaceId = '';
     _t_dropPlaceId = '';
+    _t_silkRoute = 'No';
   }
 
   void _applyAndAddTransportMember() {
@@ -1566,7 +1569,8 @@ Remarks              : ${m['remarks']}''';
       ..writeln('Pickup Location    : ${m['pickupLocation']}')
       ..writeln('Drop Location      : ${m['dropLocation']}')
       ..writeln('No of Vehicles     : ${vehicles.length}')
-      ..write('Contact Number     : ${m['contactNumber']}');
+      ..writeln('Contact Number     : ${m['contactNumber']}')
+      ..write('Slik Route         : ${m['silkRoute'] ?? 'No'}');
     return buf.toString();
   }
 
@@ -1897,6 +1901,7 @@ final phoneNumber = await StorageUtil.getMobileNumber();
               })
           .toList(),
       'contact_number': m['contactNumber'],
+      'silk_route': (m['silkRoute'] as String?) == 'Yes' ? 1 : 0,
     };
   }
 
@@ -4158,15 +4163,25 @@ class _TransportForm extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // ── No of vehicles ───────────────────────────────────────────────────
-          // Chosen before Car Type on purpose: bumping this grows the
-          // Car Type + Passengers pairs below to one per vehicle.
-          _StepperField(
-            controller: state._t_noOfVehicles,
-            label: 'No of Vehicles',
-            icon: Icons.local_taxi_outlined,
-            accent: accent,
-            onChanged: state._syncVehicleDetailsWithCount,
+          // ── No of vehicles + Slik Route ───────────────────────────────────────
+          // Vehicle count is chosen before Car Type on purpose: bumping it
+          // grows the Car Type + Passengers pairs below to one per vehicle.
+          _rowPair(
+            _StepperField(
+              controller: state._t_noOfVehicles,
+              label: 'No of Vehicles',
+              icon: Icons.local_taxi_outlined,
+              accent: accent,
+              onChanged: state._syncVehicleDetailsWithCount,
+            ),
+            _YesNoRadioRow(
+              label: 'Slik Route',
+              icon: Icons.alt_route_rounded,
+              value: state._t_silkRoute,
+              accent: accent,
+              stacked: true,
+              onChanged: (v) => state.setState(() => state._t_silkRoute = v),
+            ),
           ),
           const SizedBox(height: 12),
 
@@ -4370,12 +4385,17 @@ class _YesNoRadioRow extends StatelessWidget {
   final Color accent;
   final ValueChanged<String> onChanged;
 
+  /// Label on top, Yes/No underneath — matches [_StepperField]'s two-line card
+  /// so the two sit level when paired half-width in a [_rowPair].
+  final bool stacked;
+
   const _YesNoRadioRow({
     required this.label,
     required this.icon,
     required this.value,
     required this.accent,
     required this.onChanged,
+    this.stacked = false,
   });
 
   Widget _option(String text) {
@@ -4415,25 +4435,61 @@ class _YesNoRadioRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.grey.shade300),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: accent),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 15.5,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
+      padding: stacked
+          ? const EdgeInsets.symmetric(horizontal: 14, vertical: 10)
+          : const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      child: stacked
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(icon, size: 18, color: accent),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        label,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 42,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _option('Yes'),
+                      _option('No'),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                Icon(icon, size: 18, color: accent),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+                _option('Yes'),
+                _option('No'),
+              ],
             ),
-          ),
-          _option('Yes'),
-          _option('No'),
-        ],
-      ),
     );
   }
 }

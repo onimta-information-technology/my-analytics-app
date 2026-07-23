@@ -1565,7 +1565,7 @@ final shortUrl = responseBody['short_url'];
             '━━━━━━━━━━━━━━━━━━\n'
             '📌 Gift Details:\n'
             '💰 Amount: $formattedGift\n'
-            '🎰 Type: $chipType\n'
+            // '🎰 Type: $chipType\n'
             '🎯 For: $giftFor\n'
             '━━━━━━━━━━━━━━━━━━\n\n'
             '✨ Enjoy this special token of appreciation!\n\n'

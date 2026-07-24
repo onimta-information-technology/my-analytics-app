@@ -194,13 +194,11 @@ Future<Map<String, dynamic>> _buildReservationBodyBallys(
       'guest_name': newReservation.guestName,
       'arrival_date': newReservation.arrivalDate?.toIso8601String(),
       'departure_date': newReservation.departureDate?.toIso8601String(),
-      'no_of_nights': newReservation.noOfNights,
       'has_air_ticket_reservation':
           newReservation.hasAirTicketReservation == '1',
       'remarks': newReservation.remarks,
-      'manual_reserv_no': newReservation.reservationnewnumber ?? '',
-      'package_amount': packageAmountToInt(newReservation.packageAmount),
-      'currency_type': packageAmountCurrency(newReservation.packageAmount),
+      // Package amount is per guest and travels inside `guests` — every member
+      // is billed their own package, so there is no reservation-level amount.
       'sales_code': salesCode,
       'user_name': userName,
       'device_id': deviceId,

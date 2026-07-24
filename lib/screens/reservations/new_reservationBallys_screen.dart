@@ -392,6 +392,11 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
               reservation.passportImages
                   .where((p) => p.guestBmNumber == guest.mid),
             ),
+            // Carried through so an update re-sends what was booked instead
+            // of blanking these out.
+            hasFamilyMembers: guest.hasFamilyMembers,
+            accompanyingMembers: guest.accompanyingMembers,
+            packageAmount: guest.packageAmount,
           ),
         );
       }
@@ -412,6 +417,8 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
               reservation.airticketDescrip.isNotEmpty ? "Yes" : "No",
           passportImages:
               await _materializePassports(reservation.passportImages),
+          // Pre-multi-guest records kept the amount on the reservation.
+          packageAmount: reservation.packageAmountDisplay,
         ),
       );
     }
@@ -967,6 +974,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
           .toList(),
       hasFamilyMembers: _hasFamilyMembers,
       accompanyingMembers: _collectExtraMembers(),
+      packageAmount: _packageAmountController.text.trim(),
     );
   }
 
@@ -994,6 +1002,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
             DateFormat('yyyy-MM-dd').format(entry.departureDate!);
       }
       _remarksController.text = entry.remarks;
+      _packageAmountController.text = entry.packageAmount;
       _airTicketRequisition = entry.airTicketRequisition;
       _hasFamilyMembers = entry.hasFamilyMembers;
       _loadExtraMembers(entry.accompanyingMembers);

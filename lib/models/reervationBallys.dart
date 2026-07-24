@@ -293,37 +293,64 @@ class ReservationBallys {
 
       final rawGuests = guestList.whereType<Map<String, dynamic>>().toList();
 
-      // Members flagged as sharing a package hang off the guest named in
-      // PrimaryBMNumber rather than becoming a guest of their own — they own no
-      // rooms or air tickets.
-      bool isShared(Map<String, dynamic> g) =>
-          g['IsSharedPackage'] == true ||
-          ((g['PrimaryBMNumber'] as String?)?.trim().isNotEmpty ?? false);
-
-      List<AccompanyingMember> sharedFor(String bm) {
-        return rawGuests
-            .where((g) =>
-                isShared(g) && (g['PrimaryBMNumber'] as String?)?.trim() == bm)
-            .map(AccompanyingMember.fromJson)
-            .toList();
+      // Older payloads flagged package-sharing members explicitly; newer ones
+      // don't send those keys at all, so a member is recognised by owning no
+      // rooms and no air tickets of their own. Either way they hang off the
+      // preceding guest, which is the order toGuestsJson writes them in.
+      bool isShared(Map<String, dynamic> g) {
+        if (g['IsSharedPackage'] == true) return true;
+        if ((g['PrimaryBMNumber'] as String?)?.trim().isNotEmpty ?? false) {
+          return true;
+        }
+        final bm = g['BMNumber'] as String? ?? '';
+        return roomsFor(bm).isEmpty && flightsFor(bm).isEmpty;
       }
 
-      return rawGuests.where((g) => !isShared(g)).map((g) {
+      final entries = <GuestReservationEntryBallys>[];
+
+      for (final g in rawGuests) {
         final bm = g['BMNumber'] as String? ?? '';
-        return GuestReservationEntryBallys(
+
+        // A shared member with nothing to hang off — e.g. a reservation whose
+        // very first guest owns no rooms — still becomes a guest of its own
+        // rather than being dropped.
+        if (isShared(g) && entries.isNotEmpty) {
+          final owner = entries.last;
+          entries[entries.length - 1] = owner.copyWith(
+            accompanyingMembers: [
+              ...owner.accompanyingMembers,
+              AccompanyingMember.fromJson(g),
+            ],
+          );
+          continue;
+        }
+
+        final amount = g['PackageAmount']?.toString().trim() ?? '';
+        final currency = g['CurrencyType']?.toString().trim() ?? '';
+        final guestFlights = flightsFor(bm);
+
+        entries.add(GuestReservationEntryBallys(
           mid: bm,
           guestName: g['GuestName'] as String? ?? '',
           hotels: roomsFor(bm),
-          flights: flightsFor(bm),
+          flights: guestFlights,
           arrivalDate: parseDate(g['ArrivalDate']),
           departureDate: parseDate(g['DepartureDate']),
           remarks: g['Remarks'] as String? ?? '',
-          airTicketRequisition:
-              g['HasAirTicketReservation'] == true ? 'Yes' : 'No',
+          // No longer sent per guest — a guest wanted air tickets exactly when
+          // tickets are booked against their BM number.
+          airTicketRequisition: g['HasAirTicketReservation'] == true ||
+                  guestFlights.isNotEmpty
+              ? 'Yes'
+              : 'No',
           hasFamilyMembers: g['HasFamilyMembers'] as bool? ?? false,
-          accompanyingMembers: sharedFor(bm),
-        );
-      }).toList();
+          packageAmount: amount.isEmpty || currency.isEmpty
+              ? amount
+              : '$currency $amount',
+        ));
+      }
+
+      return entries;
     }
 
     List<ReservationPassportImage> parsePassportImages(dynamic list) {

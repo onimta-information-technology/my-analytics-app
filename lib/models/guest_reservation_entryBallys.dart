@@ -100,6 +100,11 @@ class GuestReservationEntryBallys {
   /// Other members sharing this guest's package.
   final List<AccompanyingMember> accompanyingMembers;
 
+  /// This guest's own package amount as displayed in the form, e.g.
+  /// `"IND 10,000"`. Every guest is billed their own package, so the amount
+  /// travels per guest inside `guests` rather than on the reservation.
+  final String packageAmount;
+
   GuestReservationEntryBallys({
     required this.mid,
     required this.guestName,
@@ -112,6 +117,7 @@ class GuestReservationEntryBallys {
     this.passportImages = const [],
     this.hasFamilyMembers = false,
     this.accompanyingMembers = const [],
+    this.packageAmount = '',
   });
 
   /// Simplified guest entry sent inside the `guests` array.
@@ -121,18 +127,16 @@ class GuestReservationEntryBallys {
       'GuestName': guestName,
       'ArrivalDate': arrivalDate?.toIso8601String(),
       'DepartureDate': departureDate?.toIso8601String(),
-      'HasAirTicketReservation': airTicketRequisition == 'Yes',
-      'Remarks': remarks,
       'HasFamilyMembers': hasFamilyMembers,
-      'IsSharedPackage': false,
-      'PrimaryBMNumber': '',
+      'PackageAmount': packageAmountToInt(packageAmount),
+      'CurrencyType': packageAmountCurrency(packageAmount),
     };
   }
 
   /// This guest plus every member sharing their package, flattened for the
   /// top-level `guests` array. Shared members repeat the owner's dates and
-  /// point back at them through `PrimaryBMNumber`; they contribute no rooms or
-  /// air tickets of their own, so the package is never counted twice.
+  /// contribute no rooms or air tickets of their own, but each carries its own
+  /// package amount.
   List<Map<String, dynamic>> toGuestsJson() {
     return [
       toJson(),
@@ -142,11 +146,7 @@ class GuestReservationEntryBallys {
           'GuestName': m.guestName,
           'ArrivalDate': arrivalDate?.toIso8601String(),
           'DepartureDate': departureDate?.toIso8601String(),
-          'HasAirTicketReservation': false,
-          'Remarks': '',
           'HasFamilyMembers': m.hasFamilyMembers,
-          'IsSharedPackage': true,
-          'PrimaryBMNumber': mid,
           'PackageAmount': packageAmountToInt(m.packageAmount),
           'CurrencyType': packageAmountCurrency(m.packageAmount),
         },
@@ -194,6 +194,7 @@ class GuestReservationEntryBallys {
     List<PassportImage>? passportImages,
     bool? hasFamilyMembers,
     List<AccompanyingMember>? accompanyingMembers,
+    String? packageAmount,
   }) {
     return GuestReservationEntryBallys(
       mid: mid ?? this.mid,
@@ -207,6 +208,7 @@ class GuestReservationEntryBallys {
       passportImages: passportImages ?? this.passportImages,
       hasFamilyMembers: hasFamilyMembers ?? this.hasFamilyMembers,
       accompanyingMembers: accompanyingMembers ?? this.accompanyingMembers,
+      packageAmount: packageAmount ?? this.packageAmount,
     );
   }
 }

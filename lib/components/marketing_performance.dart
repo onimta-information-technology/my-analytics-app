@@ -727,61 +727,70 @@ Widget _buildViewTypeButton(
               performance.sm, performance.smName, performance.winLost),
           child: Container(
             margin: const EdgeInsets.only(bottom: 8),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(
-                  width: 200,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
+                // Full-width name line (uses the whole row width).
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
                         performance.smName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: fontSettings.fontSize,
                           fontWeight: fontSettings.fontWeight,
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
-                      // New / old / package guest badges for this SM
-                      // (N_Reg / O_Reg / PKG_G).
-                      _buildGuestBadges(
+                    ),
+                    Icon(Icons.arrow_forward_ios,
+                        size: 12, color: Colors.grey[600]),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                // Badges + bar on the line below.
+                Row(
+                  children: [
+                    // New / old / package guest badges for this SM
+                    // (N_Reg / O_Reg / PKG_G) — fixed width so every bar
+                    // starts at the same point and is the same size.
+                    SizedBox(
+                      width: 150,
+                      child: _buildGuestBadges(
                         newReg: performance.newReg,
                         oldReg: performance.oldReg,
                         pkgG: performance.pkgG,
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Stack(
-                    children: [
-                      Container(
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      FractionallySizedBox(
-                        widthFactor: barWidthFactor,
-                        child: Container(
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: performance.isPositive
-                                ? Colors.green
-                                : Colors.red,
-                            borderRadius: BorderRadius.circular(12),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Stack(
+                        children: [
+                          Container(
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
-                        ),
+                          FractionallySizedBox(
+                            widthFactor: barWidthFactor,
+                            child: Container(
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color: performance.isPositive
+                                    ? Colors.green
+                                    : Colors.red,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Icon(Icons.arrow_forward_ios,
-                    size: 12, color: Colors.grey[600]),
               ],
             ),
           ),
@@ -824,14 +833,18 @@ Widget _buildViewTypeButton(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              result.smName,
-                              style: TextStyle(
-                                fontSize: fontSettings.fontSize,
-                                fontWeight: fontSettings.fontWeight,
-                                color: Colors.black87,
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                result.smName,
+                                maxLines: 1,
+                                style: TextStyle(
+                                  fontSize: fontSettings.fontSize,
+                                  fontWeight: fontSettings.fontWeight,
+                                  color: Colors.black87,
+                                ),
                               ),
-                              overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 4),
                             // New / old / package guest badges for this SM
@@ -1004,14 +1017,18 @@ Widget _buildViewTypeButton(
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    '$rowNumber. ${target.gName}',
-                    style: TextStyle(
-                      fontSize: fontSettings.fontSize,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '$rowNumber. ${target.gName}',
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontSize: fontSettings.fontSize,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 Icon(Icons.arrow_forward_ios,

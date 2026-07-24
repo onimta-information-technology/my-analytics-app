@@ -414,26 +414,37 @@ class _LastThreeMonthsGuestCardState
           onTap: () => _navigateToDetail(performance),
           child: Container(
             margin: const EdgeInsets.only(bottom: 8),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(
-                  width: 200,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
+                // Full-width name line (uses the whole row width).
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
                         performance.smName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: fontSettings.fontSize,
                           fontWeight: fontSettings.fontWeight,
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
-                      // New / old / package guest count badges for this SM
-                      // (N_Reg / O_Reg / PKG_Status) — shown on a second row
-                      // below the SM name.
-                      Row(
+                    ),
+                    Icon(Icons.arrow_forward_ios,
+                        size: 12, color: Colors.grey[600]),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                // Badges + bar on the line below.
+                Row(
+                  children: [
+                    // New / old / package guest count badges for this SM
+                    // (N_Reg / O_Reg / PKG_Status) — fixed width so every bar
+                    // starts at the same point and is the same size.
+                    SizedBox(
+                      width: 150,
+                      child: Row(
                         children: [
                           _buildRegBadge(
                             count: newReg,
@@ -457,38 +468,35 @@ class _LastThreeMonthsGuestCardState
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 5),
-                Expanded(
-                  child: Stack(
-                    children: [
-                      Container(
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      FractionallySizedBox(
-                        widthFactor: barWidthFactor,
-                        child: Container(
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: performance.isPositive
-                                ? Colors.green
-                                : Colors.red,
-                            borderRadius: BorderRadius.circular(12),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Stack(
+                        children: [
+                          Container(
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
-                        ),
+                          FractionallySizedBox(
+                            widthFactor: barWidthFactor,
+                            child: Container(
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color: performance.isPositive
+                                    ? Colors.green
+                                    : Colors.red,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Icon(Icons.arrow_forward_ios,
-                    size: 12, color: Colors.grey[600]),
               ],
             ),
           ),

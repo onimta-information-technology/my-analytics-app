@@ -20,6 +20,10 @@ class TransportReservation {
   final String? driverPhoneNumber;
   final List<TransportDetail> details;
 
+  /// Passport scans uploaded with the request, served as files from the API
+  /// host (see [TransportPassportFile.urlFrom]).
+  final List<TransportPassportFile> passportFiles;
+
   TransportReservation({
     required this.masterId,
     required this.mid,
@@ -37,6 +41,7 @@ class TransportReservation {
     this.driverName,
     this.driverPhoneNumber,
     required this.details,
+    this.passportFiles = const [],
   });
 
   /// Anything the API doesn't recognise falls back to [TransportStatus.requested]
@@ -59,6 +64,7 @@ class TransportReservation {
 
   factory TransportReservation.fromJson(Map<String, dynamic> json) {
     final rawDetails = json['transport_details'];
+    final rawFiles = json['passport_files'];
 
     return TransportReservation(
       masterId: json['master_id']?.toString() ?? '',
@@ -81,6 +87,13 @@ class TransportReservation {
               .whereType<Map>()
               .map((d) =>
                   TransportDetail.fromJson(Map<String, dynamic>.from(d)))
+              .toList()
+          : const [],
+      passportFiles: rawFiles is List
+          ? rawFiles
+              .whereType<Map>()
+              .map((f) =>
+                  TransportPassportFile.fromJson(Map<String, dynamic>.from(f)))
               .toList()
           : const [],
     );
@@ -188,6 +201,64 @@ class TransportDetail {
       driverName: _parseText(json['driver_name']),
       driverPhoneNumber: _parseText(json['driver_phone_number']),
     );
+  }
+}
+
+/// A passport scan uploaded with a transport request.
+///
+/// The API only returns a server-relative `file_path` (e.g.
+/// `/Uploads/TransportPassports/…jpg`); the file itself is served from the
+/// API host, so [urlFrom] joins the two.
+class TransportPassportFile {
+  final int id;
+  final String masterId;
+  final String fileName;
+  final String filePath;
+  final String fileType;
+  final bool isPdf;
+  final DateTime? createdDate;
+
+  TransportPassportFile({
+    required this.id,
+    required this.masterId,
+    required this.fileName,
+    required this.filePath,
+    required this.fileType,
+    required this.isPdf,
+    this.createdDate,
+  });
+
+  factory TransportPassportFile.fromJson(Map<String, dynamic> json) {
+    final path = json['file_path']?.toString() ?? '';
+    final name = json['file_name']?.toString() ?? '';
+    final flagged = json['is_pdf'];
+
+    return TransportPassportFile(
+      id: _parseInt(json['id']),
+      masterId: json['master_id']?.toString() ?? '',
+      fileName: name,
+      filePath: path,
+      fileType: json['file_type']?.toString() ?? '',
+      // `is_pdf` is authoritative, but fall back to the extension in case the
+      // flag is missing on older rows.
+      isPdf: flagged is bool
+          ? flagged
+          : (name.toLowerCase().endsWith('.pdf') ||
+              path.toLowerCase().endsWith('.pdf')),
+      createdDate: _parseDate(json['created_date']),
+    );
+  }
+
+  /// Absolute URL of the file on [host] (e.g. `https://bty.world`), or null
+  /// when the API returned no path.
+  String? urlFrom(String host) {
+    if (filePath.isEmpty) return null;
+    if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+      return filePath;
+    }
+    final base = host.endsWith('/') ? host.substring(0, host.length - 1) : host;
+    final path = filePath.startsWith('/') ? filePath : '/$filePath';
+    return '$base${Uri.encodeFull(path)}';
   }
 }
 

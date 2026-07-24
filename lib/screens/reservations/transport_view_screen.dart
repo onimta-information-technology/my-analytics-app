@@ -2,9 +2,11 @@ import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/models/transport/transport_reservation.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_transport_provider.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class TransportViewScreen extends ConsumerWidget {
   const TransportViewScreen({super.key});
@@ -105,6 +107,13 @@ class TransportViewScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildSummaryCard(transport, fontSettings),
+                    if (transport.passportFiles.isNotEmpty) ...[
+                      const SizedBox(height: 20),
+                      _PassportFilesSection(
+                        files: transport.passportFiles,
+                        fontSettings: fontSettings,
+                      ),
+                    ],
                     const SizedBox(height: 20),
                     Text(
                       'Trips (${groupedDetails.length})',
@@ -747,6 +756,332 @@ class _TripCardState extends State<_TripCard> {
           ],
         ),
       ],
+    );
+  }
+}
+
+/// Passport scans attached to the request. The API only returns server-relative
+/// paths, so the host is taken from the configured API URL (Bellagio —
+/// `https://bty.world` — being the fallback).
+class _PassportFilesSection extends StatefulWidget {
+  const _PassportFilesSection({
+    required this.files,
+    required this.fontSettings,
+  });
+
+  final List<TransportPassportFile> files;
+  final FontSettings fontSettings;
+
+  @override
+  State<_PassportFilesSection> createState() => _PassportFilesSectionState();
+}
+
+class _PassportFilesSectionState extends State<_PassportFilesSection> {
+  static const String _fallbackHost = 'https://bty.world';
+
+  String? _host;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHost();
+  }
+
+  Future<void> _loadHost() async {
+    String host = _fallbackHost;
+    try {
+      final apiUrl = await StorageUtil.getCurrentApiUrl();
+      final uri = apiUrl == null ? null : Uri.tryParse(apiUrl);
+      if (uri != null && uri.hasScheme && uri.hasAuthority) {
+        host = '${uri.scheme}://${uri.authority}';
+      }
+    } catch (_) {
+      // Fall back to the Bellagio host — transport is Bellagio-only anyway.
+    }
+    if (mounted) setState(() => _host = host);
+  }
+
+  Future<void> _openPdf(String url, String fileName) async {
+    final uri = Uri.parse(url);
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not open $fileName'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _openImage(String url, String fileName) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (_) => _PassportImageDialog(url: url, fileName: fileName),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fontSettings = widget.fontSettings;
+    final host = _host;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Passport (${widget.files.length})',
+          style: TextStyle(
+            fontSize: fontSettings.fontSize + 2,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (host == null)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(
+              child: SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          )
+        else
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: widget.files.map((file) {
+              final url = file.urlFrom(host);
+              final name =
+                  file.fileName.isNotEmpty ? file.fileName : 'Passport';
+
+              if (url == null) return _missingTile();
+              if (file.isPdf) {
+                return _pdfTile(
+                  name,
+                  fontSettings,
+                  () => _openPdf(url, name),
+                );
+              }
+              return _imageTile(url, name, () => _openImage(url, name));
+            }).toList(),
+          ),
+      ],
+    );
+  }
+
+  Widget _imageTile(String url, String fileName, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.network(
+          url,
+          width: 90,
+          height: 90,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, progress) {
+            if (progress == null) return child;
+            return Container(
+              width: 90,
+              height: 90,
+              color: Colors.grey.shade200,
+              alignment: Alignment.center,
+              child: const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) => Container(
+            width: 90,
+            height: 90,
+            color: Colors.grey.shade300,
+            child: const Icon(Icons.broken_image, color: Colors.black45),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _pdfTile(
+    String fileName,
+    FontSettings fontSettings,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.picture_as_pdf, color: Colors.red, size: 22),
+            const SizedBox(width: 6),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 150),
+              child: Text(
+                fileName,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: fontSettings.fontSize - 3),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _missingTile() {
+    return Container(
+      width: 90,
+      height: 90,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade300,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      alignment: Alignment.center,
+      child: const Icon(Icons.image_not_supported, color: Colors.black45),
+    );
+  }
+}
+
+/// Full-screen, zoomable preview of a passport image loaded over the network.
+///
+/// The phone stays locked to portrait, so a landscape scan is turned inside the
+/// viewer instead: it opens already rotated a quarter turn, and the rotate
+/// button turns it further.
+class _PassportImageDialog extends StatefulWidget {
+  const _PassportImageDialog({required this.url, required this.fileName});
+
+  final String url;
+  final String fileName;
+
+  @override
+  State<_PassportImageDialog> createState() => _PassportImageDialogState();
+}
+
+class _PassportImageDialogState extends State<_PassportImageDialog> {
+  final TransformationController _transformation = TransformationController();
+  int _quarterTurns = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _turnIfLandscape();
+  }
+
+  @override
+  void dispose() {
+    _transformation.dispose();
+    super.dispose();
+  }
+
+  /// Reads the image's aspect ratio once it resolves. The listener can fire
+  /// synchronously when the thumbnail already warmed the image cache, so the
+  /// turn is applied after the frame rather than during initState.
+  void _turnIfLandscape() {
+    final stream =
+        NetworkImage(widget.url).resolve(const ImageConfiguration());
+    late final ImageStreamListener listener;
+    listener = ImageStreamListener((info, _) {
+      final isLandscape = info.image.width > info.image.height;
+      info.dispose();
+      stream.removeListener(listener);
+      if (!isLandscape) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _quarterTurns = 1);
+      });
+    }, onError: (_, __) => stream.removeListener(listener));
+    stream.addListener(listener);
+  }
+
+  void _rotate() {
+    setState(() {
+      _quarterTurns = (_quarterTurns + 1) % 4;
+      _transformation.value = Matrix4.identity();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: EdgeInsets.zero,
+      backgroundColor: Colors.black,
+      child: SafeArea(
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      widget.fileName.isNotEmpty
+                          ? widget.fileName
+                          : 'Passport',
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Rotate',
+                  icon: const Icon(
+                    Icons.rotate_90_degrees_cw,
+                    color: Colors.white,
+                  ),
+                  onPressed: _rotate,
+                ),
+                IconButton(
+                  tooltip: 'Close',
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            Expanded(
+              child: InteractiveViewer(
+                transformationController: _transformation,
+                maxScale: 5,
+                child: RotatedBox(
+                  quarterTurns: _quarterTurns,
+                  child: Image.network(
+                    widget.url,
+                    fit: BoxFit.contain,
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return const Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) => const Center(
+                      child: Icon(
+                        Icons.broken_image,
+                        color: Colors.white54,
+                        size: 48,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

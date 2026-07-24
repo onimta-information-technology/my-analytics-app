@@ -31,6 +31,14 @@ class _ReservationMainScreenState extends ConsumerState<ReservationMainScreen>
     setState(() => _isBellagio = apiUrl.contains('bty.world'));
   }
 
+  /// True when the logged-in device/user is on the Ballys location, which
+  /// uses its own Quick Reservation flow.
+  Future<bool> _isBallysLocation() async {
+    final location = await StorageUtil.getCurrentLocation();
+    if (location == null) return false;
+    return location.code.split('_').first.toUpperCase() == 'BALLYS';
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.watch(fontSettingsProvider);
@@ -96,8 +104,16 @@ class _ReservationMainScreenState extends ConsumerState<ReservationMainScreen>
                     // ── Quick Reservation ────────────────────────────────────
                     Expanded(
                       child: GestureDetector(
-                        onTap: () {
-                          context.go('/reservationMain/quick-reservation');
+                        onTap: () async {
+                          // Ballys logins get their own Quick Reservation
+                          // screen; every other location keeps the shared one.
+                          final isBallys = await _isBallysLocation();
+                          if (!context.mounted) return;
+                          context.go(
+                            isBallys
+                                ? '/reservationMain/quick-reservation-ballys'
+                                : '/reservationMain/quick-reservation',
+                          );
                         },
                         child: Card(
                           color: const Color.fromARGB(255, 4, 158, 143),

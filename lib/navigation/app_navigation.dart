@@ -54,6 +54,7 @@ import 'package:ballys_reservation_app/screens/reservations/air_tickets_selectio
 import 'package:ballys_reservation_app/screens/reservations/main_reservation.dart';
 import 'package:ballys_reservation_app/screens/reservations/new_reservationBallys_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/new_reservation_screen.dart';
+import 'package:ballys_reservation_app/screens/reservations/quick_reservation_ballys.dart';
 import 'package:ballys_reservation_app/screens/reservations/quick_reservation_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/reservation_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/reservation_view_screen.dart';
@@ -504,13 +505,29 @@ class AppNavigation {
       ],
     ),
 
-    // Quick Reservation — connect your new screen here when ready
+    // Quick Reservation — shared screen for every non-Ballys location
     GoRoute(
       path: 'quick-reservation',
       pageBuilder: (context, state) => CustomTransitionPage(
         fullscreenDialog: false,
         key: state.pageKey,
-        child: const QuickReservationScreen(), // ← replace with your new screen
+        child: const QuickReservationScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+            child: child,
+          );
+        },
+      ),
+    ),
+
+    // Quick Reservation — Ballys logins get their own screen
+    GoRoute(
+      path: 'quick-reservation-ballys',
+      pageBuilder: (context, state) => CustomTransitionPage(
+        fullscreenDialog: false,
+        key: state.pageKey,
+        child: const QuickReservationBallysScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(
             opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),

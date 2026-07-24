@@ -395,9 +395,9 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      '${reservation.details.length} '
-                      '${reservation.details.length == 1 ? 'trip' : 'trips'} · '
-                      '${reservation.totalVehicles} veh · '
+                      // '${reservation.details.length/2} '
+                      // '${reservation.details.length == 1 ? 'trip' : 'trips'} · '
+                      // '${reservation.totalVehicles} veh · '
                       '${reservation.totalPassengers} pax',
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

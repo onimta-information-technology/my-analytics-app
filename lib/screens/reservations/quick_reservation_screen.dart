@@ -1022,6 +1022,10 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     setState(() {
       _transportMembers.add(_captureCurrentTransportMember());
       _resetSharedGuest();
+      // Passport pages belong to the individual guest, not the shared trip
+      // details, so they are cleared for the next member.
+      _t_passportFiles = [];
+      _t_passportUploadKey = UniqueKey();
     });
     _showAddedSnack(_transportMembers.length, _transportColor);
     _scrollToTop(_transportScrollCtrl);

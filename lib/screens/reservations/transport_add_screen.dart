@@ -601,6 +601,10 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
     setState(() {
       _members.add(_captureCurrentMember());
       _clearGuestFields();
+      // Passport pages belong to the individual guest, not the shared trip
+      // details, so they are cleared for the next member.
+      _passportFiles = [];
+      _passportUploadKey = UniqueKey();
     });
     _afterAdd();
   }

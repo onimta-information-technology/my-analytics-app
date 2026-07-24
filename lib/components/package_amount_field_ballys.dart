@@ -32,6 +32,17 @@ class PackageAmountFieldBallys extends ConsumerStatefulWidget {
   /// Accent colour for the selected currency filter chip.
   final Color accent;
 
+  /// When ticked the guest takes no package: the picker is locked, its value
+  /// cleared, and [validator] is skipped so the empty amount still passes.
+  final bool noPackage;
+
+  /// Set to render the tick box beside the dropdown. Left null the box is
+  /// hidden and the field behaves exactly as before.
+  final ValueChanged<bool>? onNoPackageChanged;
+
+  /// Label shown next to the tick box.
+  final String noPackageLabel;
+
   const PackageAmountFieldBallys({
     super.key,
     required this.controller,
@@ -40,6 +51,9 @@ class PackageAmountFieldBallys extends ConsumerStatefulWidget {
     this.validator,
     this.enabled = true,
     this.accent = const Color(0xFFCC963A),
+    this.noPackage = false,
+    this.onNoPackageChanged,
+    this.noPackageLabel = 'Shared',
   });
 
   @override
@@ -77,19 +91,95 @@ class _PackageAmountFieldState extends ConsumerState<PackageAmountFieldBallys> {
     return list;
   }
 
+  /// Ticking the box drops any amount already picked — the two are mutually
+  /// exclusive, and leaving a stale value behind would still be submitted.
+  void _setNoPackage(bool value) {
+    if (value) {
+      setState(() {
+        _selected = null;
+        _currencyFilter = null;
+        widget.controller.text = '';
+      });
+    }
+    widget.onNoPackageChanged?.call(value);
+  }
+
+  /// True while the picker accepts input.
+  bool get _inputEnabled => widget.enabled && !widget.noPackage;
+
   @override
   Widget build(BuildContext context) {
     final asyncAmounts = ref.watch(packageAmountsProvider);
 
     return asyncAmounts.when(
-      loading: () => _fallbackField(hint: 'Loading amounts…'),
-      error: (_, __) => _fallbackField(),
+      loading: () => _withNoPackageBox(_fallbackField(hint: 'Loading amounts…')),
+      error: (_, __) => _withNoPackageBox(_fallbackField()),
       data: (amounts) {
-        if (amounts.isEmpty) return _fallbackField();
+        if (amounts.isEmpty) return _withNoPackageBox(_fallbackField());
         final currencies = _currenciesOf(amounts);
         _syncFromController();
         return _dropdownUi(amounts, currencies);
       },
+    );
+  }
+
+  /// Lays the picker and the tick box out on one row. Returns [field] untouched
+  /// when no `onNoPackageChanged` was supplied.
+  Widget _withNoPackageBox(Widget field) {
+    if (widget.onNoPackageChanged == null) return field;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(child: field),
+        const SizedBox(width: 8),
+        _noPackageBox(),
+      ],
+    );
+  }
+
+  Widget _noPackageBox() {
+    final checked = widget.noPackage;
+    return InkWell(
+      onTap: widget.enabled ? () => _setNoPackage(!checked) : null,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: checked ? widget.accent : const Color(0xFFDADDE3),
+            width: checked ? 1.6 : 1,
+          ),
+        ),
+        padding: const EdgeInsets.fromLTRB(2, 6, 10, 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 32,
+              height: 32,
+              child: Checkbox(
+                value: checked,
+                activeColor: widget.accent,
+                onChanged: widget.enabled
+                    ? (value) => _setNoPackage(value ?? false)
+                    : null,
+              ),
+            ),
+            // Bounded so a large font setting can't push the box wider than
+            // the row and overflow the dropdown beside it.
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 90),
+              child: Text(
+                widget.noPackageLabel,
+                style: widget.textStyle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -117,7 +207,9 @@ class _PackageAmountFieldState extends ConsumerState<PackageAmountFieldBallys> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (currencies.length > 1)
+        // Filtering is pointless while the guest is on no package, so the
+        // chips go away with the picker's input.
+        if (currencies.length > 1 && !widget.noPackage)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Wrap(
@@ -128,24 +220,34 @@ class _PackageAmountFieldState extends ConsumerState<PackageAmountFieldBallys> {
               ],
             ),
           ),
-        DropdownButtonFormField<String>(
-          value: _selected,
-          isExpanded: true,
-          style: widget.textStyle,
-          decoration: widget.decoration,
-          items: items,
-          onChanged: widget.enabled
-              ? (value) {
-                  setState(() {
-                    _selected = value;
-                    widget.controller.text = value ?? '';
-                  });
-                }
-              : null,
-          validator: widget.validator,
+        _withNoPackageBox(
+          DropdownButtonFormField<String>(
+            value: _selected,
+            isExpanded: true,
+            style: widget.textStyle,
+            decoration: widget.decoration,
+            items: items,
+            onChanged: _inputEnabled
+                ? (value) {
+                    setState(() {
+                      _selected = value;
+                      widget.controller.text = value ?? '';
+                    });
+                  }
+                : null,
+            validator: _effectiveValidator,
+          ),
         ),
       ],
     );
+  }
+
+  /// A "required" validator from the caller must not fire once the guest is
+  /// marked as taking no package — the empty amount is the intended value.
+  String? Function(String?)? get _effectiveValidator {
+    if (widget.validator == null) return null;
+    if (widget.noPackage) return (_) => null;
+    return widget.validator;
   }
 
   Widget _filterChip(String label, String? value) {
@@ -176,7 +278,7 @@ class _PackageAmountFieldState extends ConsumerState<PackageAmountFieldBallys> {
   Widget _fallbackField({String? hint}) {
     return TextFormField(
       controller: widget.controller,
-      enabled: widget.enabled,
+      enabled: _inputEnabled,
       style: widget.textStyle,
       keyboardType: TextInputType.number,
       inputFormatters: [
@@ -185,7 +287,7 @@ class _PackageAmountFieldState extends ConsumerState<PackageAmountFieldBallys> {
       decoration: hint != null
           ? widget.decoration.copyWith(hintText: hint)
           : widget.decoration,
-      validator: widget.validator,
+      validator: _effectiveValidator,
     );
   }
 }

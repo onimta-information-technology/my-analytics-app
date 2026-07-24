@@ -78,6 +78,10 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
   // Whether family members travel with the member currently in the form.
   bool _hasFamilyMembers = false;
 
+  // Ticked when the member takes no package: the amount picker is locked and
+  // an empty package amount is accepted on save.
+  bool _noPackageAmount = false;
+
   DateTime? _arrivalDate;
   DateTime? _departureDate;
   String _airTicketRequisition = "No";
@@ -233,6 +237,8 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
           name: member.guestName,
           hasFamilyMembers: member.hasFamilyMembers,
           packageAmount: member.packageAmount,
+          // Saved with no amount means the row was on no package.
+          noPackage: member.packageAmount.trim().isEmpty,
         ),
       );
     }
@@ -271,7 +277,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
         _showError('Guest ${i + 2}: both Member ID and Name are required');
         return false;
       }
-      if (packageAmount.isEmpty) {
+      if (packageAmount.isEmpty && !row.noPackage) {
         _showError('Guest ${i + 2}: Package Amount is required');
         return false;
       }
@@ -485,6 +491,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
     _reservationNoController.text = selectedReservation.reservNo;
     _noOfNightsController.text = selectedReservation.noOfNights.toString();
     _packageAmountController.text = selectedReservation.packageAmountDisplay;
+    _noPackageAmount = selectedReservation.packageAmountDisplay.trim().isEmpty;
     _reservationnewnumberController.text =
         selectedReservation.reservationnewnumber ?? '';
   }
@@ -1003,6 +1010,9 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
       }
       _remarksController.text = entry.remarks;
       _packageAmountController.text = entry.packageAmount;
+      // A guest saved without an amount was on no package, so the tick has to
+      // come back with them or re-saving would demand one.
+      _noPackageAmount = entry.packageAmount.trim().isEmpty;
       _airTicketRequisition = entry.airTicketRequisition;
       _hasFamilyMembers = entry.hasFamilyMembers;
       _loadExtraMembers(entry.accompanyingMembers);
@@ -1283,6 +1293,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
         _packageAmountController.clear();
         _reservationNoController.clear();
         _hasFamilyMembers = false;
+        _noPackageAmount = false;
         _clearExtraMembers();
         _arrivalDate = null;
         _departureDate = null;
@@ -1583,6 +1594,9 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
             PackageAmountFieldBallys(
               key: ValueKey(row),
               controller: row.packageAmountController,
+              noPackage: row.noPackage,
+              onNoPackageChanged: (value) =>
+                  setState(() => row.noPackage = value),
               textStyle: TextStyle(
                 fontSize: fontSettings.fontSize,
                 fontWeight: fontSettings.fontWeight,
@@ -2220,6 +2234,9 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
                         PackageAmountFieldBallys(
                           controller: _packageAmountController,
                           enabled: true,
+                          noPackage: _noPackageAmount,
+                          onNoPackageChanged: (value) =>
+                              setState(() => _noPackageAmount = value),
                           textStyle: TextStyle(
                             fontSize: fontSettings.fontSize,
                             fontWeight: fontSettings.fontWeight,
@@ -2989,12 +3006,17 @@ class _ExtraMemberRow {
   String prefix;
   bool hasFamilyMembers;
 
+  /// Ticked when this member takes no package, which makes an empty
+  /// [packageAmountController] a valid state rather than a missing field.
+  bool noPackage;
+
   _ExtraMemberRow({
     this.prefix = "BM",
     String midNumber = "",
     String name = "",
     this.hasFamilyMembers = false,
     String packageAmount = "",
+    this.noPackage = false,
   })  : midNumberController = TextEditingController(text: midNumber),
         nameController = TextEditingController(text: name),
         packageAmountController = TextEditingController(text: packageAmount);

@@ -344,9 +344,11 @@ Future<Map<String, dynamic>> _buildReservationBodyBallys(
   /// Ballys reservation to `Reservation_InsertReservation` with a new
   /// `reservation_status` ("Checked" / "Approved" / "Rejected" / "Pending").
   ///
-  /// The reservation is sent back exactly as it came out of
-  /// `Reservation_GetAllReservations`, with `master_id` carrying the existing
-  /// id so the backend overwrites that record instead of creating a new one.
+  /// The body is field-for-field the one [_buildReservationBodyBallys] sends
+  /// for a new Ballys reservation — same keys, same order, same per-guest
+  /// shapes — with only `reservation_status` (and the action `remarks`)
+  /// differing. `master_id` carries the existing id so the backend overwrites
+  /// that record instead of creating a new one.
   Future<bool> updateBallysReservationStatus({
     required ReservationBallys reservation,
     required String status,
@@ -376,19 +378,25 @@ Future<Map<String, dynamic>> _buildReservationBodyBallys(
         ? reservation.currencyType!.trim()
         : packageAmountCurrency(reservation.packageAmount);
 
+    // The new-reservation payload mirrors the FIRST guest at the top level, so
+    // do the same here; reservation-level fields only stand in for legacy rows
+    // that carry no per-guest breakdown.
+    final firstGuest = guests.isNotEmpty ? guests.first : null;
+
     final requestBody = {
       'master_id': reservation.reservNo,
-      'bm_number': reservation.mid,
-      'guest_name': reservation.mName,
-      'arrival_date': reservation.arrDate.toIso8601String(),
-      'departure_date': reservation.depDate.toIso8601String(),
-      'no_of_nights': reservation.noOfNights,
-      'has_air_ticket_reservation':
-          reservation.airticketReservationStatus == '1',
+      'bm_number': firstGuest?.mid ?? reservation.mid,
+      'guest_name': firstGuest?.guestName ?? reservation.mName,
+      'arrival_date':
+          (firstGuest?.arrivalDate ?? reservation.arrDate).toIso8601String(),
+      'departure_date':
+          (firstGuest?.departureDate ?? reservation.depDate).toIso8601String(),
+      'has_air_ticket_reservation': firstGuest != null
+          ? firstGuest.airTicketRequisition == 'Yes'
+          : reservation.airticketReservationStatus == '1',
       'remarks': remarks,
-      'manual_reserv_no': reservation.reservationnewnumber ?? '',
-      'package_amount': packageAmountToInt(reservation.packageAmount),
-      'currency_type': currency,
+      // Package amount is per guest and travels inside `guests` — every member
+      // is billed their own package, so there is no reservation-level amount.
       'sales_code': salesCode,
       'user_name': userName,
       'device_id': deviceId,
@@ -404,9 +412,9 @@ Future<Map<String, dynamic>> _buildReservationBodyBallys(
                 'GuestName': reservation.mName,
                 'ArrivalDate': reservation.arrDate.toIso8601String(),
                 'DepartureDate': reservation.depDate.toIso8601String(),
-                'HasAirTicketReservation':
-                    reservation.airticketReservationStatus == '1',
-                'Remarks': reservation.remarks,
+                'HasFamilyMembers': false,
+                'PackageAmount': packageAmountToInt(reservation.packageAmount),
+                'CurrencyType': currency,
               }
             ],
       'room_details': roomDetails,

@@ -71,8 +71,16 @@ class _ReservationMainScreenState extends ConsumerState<ReservationMainScreen>
                     // ── Reservations ────────────────────────────────────────
                     Expanded(
                       child: GestureDetector(
-                        onTap: () {
-                          context.go('/reservationMain/reservations');
+                        onTap: () async {
+                          // Ballys logins get their own Reservations screen;
+                          // every other location keeps the shared one.
+                          final isBallys = await _isBallysLocation();
+                          if (!context.mounted) return;
+                          context.go(
+                            isBallys
+                                ? '/reservationMain/reservations-ballys'
+                                : '/reservationMain/reservations',
+                          );
                         },
                         child: Card(
                           color: Colors.orange[700],

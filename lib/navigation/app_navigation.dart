@@ -57,7 +57,9 @@ import 'package:ballys_reservation_app/screens/reservations/new_reservation_scre
 import 'package:ballys_reservation_app/screens/reservations/quick_reservation_ballys.dart';
 import 'package:ballys_reservation_app/screens/reservations/quick_reservation_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/reservation_screen.dart';
+import 'package:ballys_reservation_app/screens/reservations/reservation_screen_ballys.dart';
 import 'package:ballys_reservation_app/screens/reservations/reservation_view_screen.dart';
+import 'package:ballys_reservation_app/screens/reservations/reservation_view_screen_ballys.dart';
 import 'package:ballys_reservation_app/screens/reservations/transport_add_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/transport_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/transport_view_screen.dart';
@@ -502,7 +504,40 @@ class AppNavigation {
             },
           ),
         ),
+        // Ballys detail view — reads the Ballys reservation selected by
+        // ReservationScreenBallys.
+        GoRoute(
+          path: 'reservation-view-ballys',
+          pageBuilder: (context, state) => CustomTransitionPage(
+            fullscreenDialog: false,
+            key: state.pageKey,
+            child: const ReservationViewScreenBallys(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(
+                opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+                child: child,
+              );
+            },
+          ),
+        ),
       ],
+    ),
+
+    // Reservations list — Ballys logins get their own screen, which pushes the
+    // Ballys new-reservation / view screens under 'reservations' above.
+    GoRoute(
+      path: 'reservations-ballys',
+      pageBuilder: (context, state) => CustomTransitionPage(
+        fullscreenDialog: false,
+        key: state.pageKey,
+        child: const ReservationScreenBallys(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+            child: child,
+          );
+        },
+      ),
     ),
 
     // Quick Reservation — shared screen for every non-Ballys location

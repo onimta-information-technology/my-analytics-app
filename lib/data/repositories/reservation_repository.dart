@@ -340,6 +340,96 @@ Future<Map<String, dynamic>> _buildReservationBodyBallys(
     return response['Status'] as bool? ?? false;
   }
 
+  /// Ballys counterpart of [updateReservationStatus]: re-posts an existing
+  /// Ballys reservation to `Reservation_InsertReservation` with a new
+  /// `reservation_status` ("Checked" / "Approved" / "Rejected" / "Pending").
+  ///
+  /// The reservation is sent back exactly as it came out of
+  /// `Reservation_GetAllReservations`, with `master_id` carrying the existing
+  /// id so the backend overwrites that record instead of creating a new one.
+  Future<bool> updateBallysReservationStatus({
+    required ReservationBallys reservation,
+    required String status,
+    required String remarks,
+  }) async {
+    final salesCode = await StorageUtil.getSalesCode();
+    final userName = await StorageUtil.getUserName();
+    final deviceId = await DeviceId.get();
+
+    final guests = reservation.guests;
+
+    // Older payloads carry no per-guest breakdown; fall back to the
+    // reservation-level rooms / flights tagged with the primary BM number.
+    final roomDetails = guests.isNotEmpty
+        ? [for (final g in guests) ...g.toRoomDetailsJson()]
+        : reservation.hotelDescip
+            .map((h) => {...h.toJson(), 'BMNumber': reservation.mid})
+            .toList();
+
+    final airTicketDetails = guests.isNotEmpty
+        ? [for (final g in guests) ...g.toAirTicketDetailsJson()]
+        : reservation.airticketDescrip
+            .map((f) => {...f.toJson(), 'BMNumber': reservation.mid})
+            .toList();
+
+    final currency = (reservation.currencyType?.trim().isNotEmpty ?? false)
+        ? reservation.currencyType!.trim()
+        : packageAmountCurrency(reservation.packageAmount);
+
+    final requestBody = {
+      'master_id': reservation.reservNo,
+      'bm_number': reservation.mid,
+      'guest_name': reservation.mName,
+      'arrival_date': reservation.arrDate.toIso8601String(),
+      'departure_date': reservation.depDate.toIso8601String(),
+      'no_of_nights': reservation.noOfNights,
+      'has_air_ticket_reservation':
+          reservation.airticketReservationStatus == '1',
+      'remarks': remarks,
+      'manual_reserv_no': reservation.reservationnewnumber ?? '',
+      'package_amount': packageAmountToInt(reservation.packageAmount),
+      'currency_type': currency,
+      'sales_code': salesCode,
+      'user_name': userName,
+      'device_id': deviceId,
+      'selected_marketing_person': '',
+      'reservation_status': status,
+      // toGuestsJson flattens each guest plus the members sharing their
+      // package, which is the same shape the insert endpoint was given.
+      'guests': guests.isNotEmpty
+          ? [for (final g in guests) ...g.toGuestsJson()]
+          : [
+              {
+                'BMNumber': reservation.mid,
+                'GuestName': reservation.mName,
+                'ArrivalDate': reservation.arrDate.toIso8601String(),
+                'DepartureDate': reservation.depDate.toIso8601String(),
+                'HasAirTicketReservation':
+                    reservation.airticketReservationStatus == '1',
+                'Remarks': reservation.remarks,
+              }
+            ],
+      'room_details': roomDetails,
+      'air_ticket_details': airTicketDetails,
+      'passport_images': reservation.passportImages
+          .map((p) => {
+                'GuestBMNumber': p.guestBmNumber,
+                'FileName': p.fileName,
+                'IsPdf': p.isPdf,
+                'Base64Data': p.base64Data,
+              })
+          .toList(),
+    };
+
+    debugPrintRequestBody(requestBody);
+
+    final response =
+        await apiService.post('Reservation_InsertReservation', requestBody);
+    print('Ballys reservation status update ($status) response: $response');
+
+    return response['Status'] as bool? ?? false;
+  }
+
   /// Saves an edited reservation through the same endpoint as a new one. The
   /// existing reservation id travels as `master_id`, so the backend overwrites
   /// that record (guests, rooms, air tickets and passports included) instead of

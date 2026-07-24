@@ -1,8 +1,6 @@
 import 'package:ballys_reservation_app/data/repositories/reservation_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/reervationBallys.dart';
-
-import 'package:ballys_reservation_app/models/reservation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -32,12 +30,12 @@ void clearReservations() {
   /// Re-posts the reservation to the insert endpoint with a new
   /// `reservation_status` and refreshes the list on success.
   Future<bool> updateReservationStatus({
-    required Reservation reservation,
+    required ReservationBallys reservation,
     required String status,
     required String remarks,
   }) async {
     try {
-      final success = await reservationRepository.updateReservationStatus(
+      final success = await reservationRepository.updateBallysReservationStatus(
         reservation: reservation,
         status: status,
         remarks: remarks,

@@ -293,17 +293,15 @@ class ReservationBallys {
 
       final rawGuests = guestList.whereType<Map<String, dynamic>>().toList();
 
-      // Older payloads flagged package-sharing members explicitly; newer ones
-      // don't send those keys at all, so a member is recognised by owning no
-      // rooms and no air tickets of their own. Either way they hang off the
-      // preceding guest, which is the order toGuestsJson writes them in.
+      // Only an explicit flag makes a row a package-sharing member, in which
+      // case it hangs off the preceding guest — the order toGuestsJson writes
+      // them in. Owning no rooms and no air tickets is NOT enough: a guest
+      // entered in their own right can legitimately carry neither (the whole
+      // booking sits on the first guest), and folding those into the guest
+      // above would hide them from the reservation's guest list.
       bool isShared(Map<String, dynamic> g) {
         if (g['IsSharedPackage'] == true) return true;
-        if ((g['PrimaryBMNumber'] as String?)?.trim().isNotEmpty ?? false) {
-          return true;
-        }
-        final bm = g['BMNumber'] as String? ?? '';
-        return roomsFor(bm).isEmpty && flightsFor(bm).isEmpty;
+        return (g['PrimaryBMNumber'] as String?)?.trim().isNotEmpty ?? false;
       }
 
       final entries = <GuestReservationEntryBallys>[];

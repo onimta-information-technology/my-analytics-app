@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:ballys_reservation_app/components/package_amount_field_ballys.dart';
-import 'package:ballys_reservation_app/providers/new_reservation_provider_ballys.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1257,20 +1256,21 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
             _showSearchSheet(r, newTerm, newIid, onCardVisible);
           } catch (_) {}
         },
+        // Taken straight from the sheet rather than through a provider: the
+        // sheet publishes its pick on newReservationProvider, which this
+        // screen — a Ballys screen on newReservationBallysProvider — never
+        // sees, so the guest name never arrived.
+        onGuestSelected: (guest) {
+          _updateMemberIdFields(guest.mid);
+          setState(() => _sharedGuestName.text = guest.mName);
+          _fetchAndSetGuest(
+            mid: guest.mid,
+            name: guest.mName,
+            onReady: onCardVisible,
+          );
+        },
       ),
     );
-    ref.listenManual(newReservationBallysProvider, (_, next) {
-      if (next.bmNumber != null) {
-        _updateMemberIdFields(next.bmNumber!);
-        _sharedGuestName.text = next.guestName ?? '';
-        _fetchAndSetGuest(
-          mid: next.bmNumber!,
-          name: next.guestName ?? '',
-          onReady: onCardVisible,
-        );
-        ref.read(newReservationBallysProvider.notifier).resetState();
-      }
-    });
   }
 
   void _setGuest({required String mid, required String name}) {
@@ -4374,11 +4374,11 @@ class _TransportForm extends StatelessWidget {
         controller: state._transportScrollCtrl,
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
         children: [
-          _sectionHeader(
-            'Transport Request',
-            accent,
-            Icons.directions_car_rounded,
-          ),
+          // _sectionHeader(
+          //   'Transport Request',
+          //   accent,
+          //   Icons.directions_car_rounded,
+          // ),
           _guestIdentityRow(
             context: context,
             memberIdCtrl: state._sharedMemberId,

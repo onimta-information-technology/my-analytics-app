@@ -1278,68 +1278,68 @@ class _ReservationViewScreenBallysState
             ),
           ],
         ),
-        actions: [
-          PopScope(
-            onPopInvokedWithResult: (bool didPop, dynamic result) {
-              _clearSelection();
-            },
-            child: Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: (selectedReservation?.requestStatus == 'Pending' &&
-                      _isRequester(selectedReservation?.reqBy))
-                  ? IconButton(
-                      onPressed: () async {
-                        Future<void> navigateToEdit() async {
-                          final reservationBeforeEdit = ref.read(
-                            selectedReservationBallysProvider,
-                          );
-                          final result = await context.push(
-                            "/reservationMain/reservations/new-reservation-ballys",
-                          );
-                          if (!mounted) return;
-                          if (result == true) {
-                            Navigator.of(context).pop(true);
-                            return;
-                          }
-                          // Cancelled: NewReservationBallysScreen clears the
-                          // shared selection providers on pop, so put them back
-                          // or this screen renders with no reservation and no
-                          // guest.
-                          if (reservationBeforeEdit != null) {
-                            ref
-                                .read(
-                                  selectedReservationBallysProvider.notifier,
-                                )
-                                .setSelectedBallysReservation(
-                                  reservationBeforeEdit,
-                                );
-                            ref
-                                .read(selectedHotelBallysProvider.notifier)
-                                .setHotels(reservationBeforeEdit.hotelDescip);
-                            ref
-                                .read(selectedFlightBallysProvider.notifier)
-                                .setFlights(
-                                  reservationBeforeEdit.airticketDescrip,
-                                );
-                            _guestDataLoaded = false;
-                            await _loadGuestDataForView();
-                          }
-                        }
+        // actions: [
+        //   PopScope(
+        //     onPopInvokedWithResult: (bool didPop, dynamic result) {
+        //       _clearSelection();
+        //     },
+        //     child: Padding(
+        //       padding: const EdgeInsets.only(right: 8.0),
+        //       child: (selectedReservation?.requestStatus == 'Pending' &&
+        //               _isRequester(selectedReservation?.reqBy))
+        //           ? IconButton(
+        //               onPressed: () async {
+        //                 Future<void> navigateToEdit() async {
+        //                   final reservationBeforeEdit = ref.read(
+        //                     selectedReservationBallysProvider,
+        //                   );
+        //                   final result = await context.push(
+        //                     "/reservationMain/reservations/new-reservation-ballys",
+        //                   );
+        //                   if (!mounted) return;
+        //                   if (result == true) {
+        //                     Navigator.of(context).pop(true);
+        //                     return;
+        //                   }
+        //                   // Cancelled: NewReservationBallysScreen clears the
+        //                   // shared selection providers on pop, so put them back
+        //                   // or this screen renders with no reservation and no
+        //                   // guest.
+        //                   if (reservationBeforeEdit != null) {
+        //                     ref
+        //                         .read(
+        //                           selectedReservationBallysProvider.notifier,
+        //                         )
+        //                         .setSelectedBallysReservation(
+        //                           reservationBeforeEdit,
+        //                         );
+        //                     ref
+        //                         .read(selectedHotelBallysProvider.notifier)
+        //                         .setHotels(reservationBeforeEdit.hotelDescip);
+        //                     ref
+        //                         .read(selectedFlightBallysProvider.notifier)
+        //                         .setFlights(
+        //                           reservationBeforeEdit.airticketDescrip,
+        //                         );
+        //                     _guestDataLoaded = false;
+        //                     await _loadGuestDataForView();
+        //                   }
+        //                 }
 
-                        if (_memberIdController.text.isNotEmpty &&
-                            !_guestDataLoaded) {
-                          await _loadGuestDataForView();
-                          await navigateToEdit();
-                        } else {
-                          await navigateToEdit();
-                        }
-                      },
-                      icon: const Icon(Icons.mode_edit_outline_sharp),
-                    )
-                  : const SizedBox.shrink(),
-            ),
-          ),
-        ],
+        //                 if (_memberIdController.text.isNotEmpty &&
+        //                     !_guestDataLoaded) {
+        //                   await _loadGuestDataForView();
+        //                   await navigateToEdit();
+        //                 } else {
+        //                   await navigateToEdit();
+        //                 }
+        //               },
+        //               icon: const Icon(Icons.mode_edit_outline_sharp),
+        //             )
+        //           : const SizedBox.shrink(),
+        //     ),
+        //   ),
+        // ],
       ),
       body: Stack(
         children: [

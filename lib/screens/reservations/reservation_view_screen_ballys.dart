@@ -682,9 +682,11 @@ class _ReservationViewScreenBallysState
   /// with a blank currency, which is worth no line at all.
   String _packageLabel(String raw) {
     final amount = raw.trim();
-    if (amount.isEmpty) return '';
-    final numeric = double.tryParse(amount.replaceAll(RegExp(r'[^0-9.]'), ''));
-    if (numeric == null || numeric == 0) return '';
+    final numeric = amount.isEmpty
+        ? null
+        : double.tryParse(amount.replaceAll(RegExp(r'[^0-9.]'), ''));
+    // No package of their own — they travel on another guest's package.
+    if (numeric == null || numeric == 0) return 'Shared';
     return amount;
   }
 
@@ -693,14 +695,15 @@ class _ReservationViewScreenBallysState
   // A reservation number can carry more than one guest (the `guests` array of
   // the payload). The list shows a single card per reservation; here every
   // guest is expanded, together with the members sharing their package.
+  //
+  // Each card carries only the guest's own details — name, BM number, package
+  // amount and whether family members travel with them. The rooms, air tickets
+  // and dates they were booked against are shown once, further down the screen.
   Widget _buildGuestsSection(
     List<GuestReservationEntryBallys> guests,
-    List<ReservationPassportImage> passportImages,
     FontSettings fontSettings,
   ) {
     if (guests.isEmpty) return const SizedBox.shrink();
-
-    final dateFormat = DateFormat('yyyy-MM-dd');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -716,12 +719,7 @@ class _ReservationViewScreenBallysState
         ...guests.asMap().entries.map((entry) {
           final index = entry.key;
           final guest = entry.value;
-          final hasAir = guest.airTicketRequisition == 'Yes';
           final packageLabel = _packageLabel(guest.packageAmount);
-          final dateRange =
-              (guest.arrivalDate != null && guest.departureDate != null)
-                  ? "${dateFormat.format(guest.arrivalDate!)} → ${dateFormat.format(guest.departureDate!)}"
-                  : "";
 
           return Card(
             color: const Color.fromARGB(255, 228, 224, 224),
@@ -757,25 +755,6 @@ class _ReservationViewScreenBallysState
                           ),
                         ),
                       ),
-                      if (hasAir)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.blue,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Text(
-                            "Air Ticket",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                   if (guest.mid.isNotEmpty) ...[
@@ -788,54 +767,24 @@ class _ReservationViewScreenBallysState
                       ),
                     ),
                   ],
-                  if (dateRange.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      dateRange,
-                      style: TextStyle(
-                        fontSize: fontSettings.fontSize,
-                        fontWeight: fontSettings.fontWeight,
-                      ),
-                    ),
-                  ],
                   const SizedBox(height: 2),
                   Text(
-                    "${guest.hotels.length} rooms · ${guest.flights.length} tickets",
+                    "Package: $packageLabel",
                     style: TextStyle(
                       fontSize: fontSettings.fontSize,
                       fontWeight: fontSettings.fontWeight,
                     ),
                   ),
-                  if (packageLabel.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      "Package: $packageLabel",
-                      style: TextStyle(
-                        fontSize: fontSettings.fontSize,
-                        fontWeight: fontSettings.fontWeight,
-                      ),
+                  const SizedBox(height: 2),
+                  Text(
+                    guest.hasFamilyMembers
+                        ? "Family members: Included"
+                        : "Family members: Not included",
+                    style: TextStyle(
+                      fontSize: fontSettings.fontSize,
+                      fontWeight: fontSettings.fontWeight,
                     ),
-                  ],
-                  if (guest.remarks.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      "Remarks: ${guest.remarks}",
-                      style: TextStyle(
-                        fontSize: fontSettings.fontSize,
-                        fontWeight: fontSettings.fontWeight,
-                      ),
-                    ),
-                  ],
-                  if (guest.hasFamilyMembers) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      "Family members included",
-                      style: TextStyle(
-                        fontSize: fontSettings.fontSize,
-                        fontWeight: fontSettings.fontWeight,
-                      ),
-                    ),
-                  ],
+                  ),
                   // Members on this guest's package: they hold no rooms or
                   // tickets of their own, so they only show up here.
                   ...guest.accompanyingMembers.map(
@@ -843,7 +792,7 @@ class _ReservationViewScreenBallysState
                       padding: const EdgeInsets.only(top: 2),
                       child: Text(
                         "Same package: ${m.guestName} (${m.mid})"
-                        "${_packageLabel(m.packageAmount).isNotEmpty ? ' · ${_packageLabel(m.packageAmount)}' : ''}"
+                        " · ${_packageLabel(m.packageAmount)}"
                         "${m.hasFamilyMembers ? ' · Family members included' : ''}",
                         style: TextStyle(
                           fontSize: fontSettings.fontSize,
@@ -851,12 +800,6 @@ class _ReservationViewScreenBallysState
                         ),
                       ),
                     ),
-                  ),
-                  _buildPassportThumbnails(
-                    passportImages
-                        .where((p) => p.guestBmNumber == guest.mid)
-                        .toList(),
-                    fontSettings,
                   ),
                 ],
               ),
@@ -868,30 +811,91 @@ class _ReservationViewScreenBallysState
     );
   }
 
-  /// Renders a guest's passport images as tappable thumbnails and PDFs as
-  /// labelled chips. Returns an empty widget when the guest has none.
+  // ── Passports section ──────────────────────────────────────────────────
+  //
+  // Sits below the guest cards rather than inside them. Images are grouped by
+  // the guest they belong to (`GuestBMNumber`), so a reservation with several
+  // guests still shows whose passport is whose.
+  Widget _buildPassportsSection(
+    List<GuestReservationEntryBallys> guests,
+    List<ReservationPassportImage> passportImages,
+    FontSettings fontSettings,
+  ) {
+    if (passportImages.isEmpty) return const SizedBox.shrink();
+
+    // Guests first, in reservation order. Anything tagged with a BM number
+    // that matches no guest still gets shown rather than silently dropped.
+    final groups = <({String label, List<ReservationPassportImage> images})>[];
+    final claimed = <ReservationPassportImage>{};
+
+    for (final guest in guests) {
+      final images =
+          passportImages.where((p) => p.guestBmNumber == guest.mid).toList();
+      if (images.isEmpty) continue;
+      claimed.addAll(images);
+      final name = guest.guestName.trim();
+      groups.add((
+        label: name.isEmpty ? guest.mid : '${guest.mid} - $name',
+        images: images,
+      ));
+    }
+
+    final orphans =
+        passportImages.where((p) => !claimed.contains(p)).toList();
+    if (orphans.isNotEmpty) {
+      groups.add((label: 'Other', images: orphans));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          passportImages.length == 1
+              ? "Passport"
+              : "Passports (${passportImages.length})",
+          style: TextStyle(
+            fontSize: fontSettings.fontSize,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 6.0),
+        ...groups.map(
+          (group) => Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Text(
+                //   group.label,
+                //   style: TextStyle(
+                //     fontSize: fontSettings.fontSize,
+                //     fontWeight: fontSettings.fontWeight,
+                //   ),
+                // ),
+                const SizedBox(height: 6),
+                _buildPassportThumbnails(group.images, fontSettings),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 4.0),
+      ],
+    );
+  }
+
+  /// Renders passport images as tappable thumbnails and PDFs as labelled
+  /// chips. Returns an empty widget when there are none. The heading and the
+  /// owning-guest label come from [_buildPassportsSection].
   Widget _buildPassportThumbnails(
     List<ReservationPassportImage> images,
     FontSettings fontSettings,
   ) {
     if (images.isEmpty) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 8),
-        Text(
-          "Passport",
-          style: TextStyle(
-            fontSize: fontSettings.fontSize - 3,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: images.map((img) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: images.map((img) {
             final bytes = img.bytes;
 
             if (img.isPdf || bytes == null) {
@@ -947,9 +951,7 @@ class _ReservationViewScreenBallysState
                 ),
               ),
             );
-          }).toList(),
-        ),
-      ],
+      }).toList(),
     );
   }
 
@@ -1453,28 +1455,7 @@ class _ReservationViewScreenBallysState
                   ),
                   const SizedBox(height: 10.0),
 
-                  // ── Package Amount ───────────────────────────────────
-                  TextFormField(
-                    controller: _packageAmountController,
-                    readOnly: true,
-                    style: TextStyle(
-                      fontSize: fontSettings.fontSize,
-                      fontWeight: fontSettings.fontWeight,
-                    ),
-                    decoration: InputDecoration(
-                      labelText: "Package Amount",
-                      labelStyle: TextStyle(
-                        fontSize: fontSettings.fontSize,
-                        fontWeight: fontSettings.fontWeight,
-                      ),
-                      border: const OutlineInputBorder(),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12.0,
-                        vertical: -5.0,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10.0),
+
 
                   // ── Guest card ───────────────────────────────────────
                   GuestDisplayCardSpecialGiftview(
@@ -1489,6 +1470,12 @@ class _ReservationViewScreenBallysState
 
                   // ── All guests on this reservation ───────────────────
                   _buildGuestsSection(
+                    selectedReservation?.guests ?? const [],
+                    fontSettings,
+                  ),
+
+                  // ── Passports, grouped by guest ──────────────────────
+                  _buildPassportsSection(
                     selectedReservation?.guests ?? const [],
                     selectedReservation?.passportImages ?? const [],
                     fontSettings,

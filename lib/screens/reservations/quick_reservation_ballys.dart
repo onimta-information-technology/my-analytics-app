@@ -71,6 +71,9 @@ class _HotelEntry {
   DateTime? departureDate;
   String noOfRooms;
   String noOfPax;
+  /// Children sharing the room. Counted separately from [noOfPax], which stays
+  /// the adult count.
+  String noOfChildren;
   String roomType;
   int? roomTypeId;
   String roomCategory;
@@ -91,6 +94,7 @@ class _HotelEntry {
     this.departureDate,
     this.noOfRooms = '1',
     this.noOfPax = '1',
+    this.noOfChildren = '0',
     this.roomType = '',
     this.roomTypeId,
     this.roomCategory = '',
@@ -109,6 +113,7 @@ class _HotelEntry {
         'departure': departure,
         'noOfRooms': noOfRooms,
         'noOfPax': noOfPax,
+        'noOfChildren': noOfChildren,
         'roomType': roomType,
         'roomCategory': roomCategory,
         'eciLco': eciLco,
@@ -132,7 +137,7 @@ class _HotelEntry {
       'room_type': roomTypeId,
       'room_type_name': roomType,
       'guest_count': int.tryParse(noOfPax) ?? 1,
-      'children_count': 0,
+      'children_count': int.tryParse(noOfChildren) ?? 0,
       'room_count': int.tryParse(noOfRooms) ?? 1,
       'no_of_nights': nights,
       'arrival_date': arrDt?.toIso8601String(),
@@ -173,6 +178,11 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   // final _sharedReservationNo = TextEditingController();
   bool _sharedGuestCardVisible = false;
 
+  /// Whether family members travel with the guest in the form — the first
+  /// guest's own tick, matching the new reservation screen. Extra members carry
+  /// their own on each card.
+  bool _sharedHasFamilyMembers = false;
+
   // ── HOTEL members list ──────────────────────────────────────────────────────
   // Each member now has a 'hotels' list (List<_HotelEntry>) plus identity fields.
   List<Map<String, dynamic>> _hotelMembers = [];
@@ -180,6 +190,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   // Current hotel form fields (one hotel being edited at a time per guest)
   final _h_noOfRooms = TextEditingController(text: '1');
   final _h_noOfPax = TextEditingController(text: '1');
+  final _h_noOfChildren = TextEditingController(text: '0');
   final _h_mealPlan = TextEditingController();
   final _h_paymentBy = TextEditingController(text: 'NA');
   final _h_remarks = TextEditingController();
@@ -190,6 +201,10 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
 
   DateTime? _h_arrivalDate;
   DateTime? _h_departureDate;
+
+  /// See [_a_arrDateKey] — same reason, for the hotel tab's dates.
+  Key _h_arrivalDateKey = UniqueKey();
+  Key _h_departureDateKey = UniqueKey();
   String _h_eciLco = 'NA';
 
   Map<String, dynamic>? _selectedHotel;
@@ -213,7 +228,16 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   // ── AIR members list ────────────────────────────────────────────────────────
   List<Map<String, dynamic>> _airMembers = [];
 
+  /// Tickets already added for the guest in the form, the air-tab counterpart
+  /// of [_pendingHotels]. The ticket being edited is not in here until "Add
+  /// Another Air Ticket" is tapped.
+  List<Map<String, dynamic>> _pendingAirTickets = [];
+
   final _a_noOfSeats = TextEditingController(text: '1');
+  // Children / infants travel on the same ticket as the seats above but are
+  // counted separately, matching the new reservation screen's air ticket tab.
+  final _a_noOfChildren = TextEditingController(text: '0');
+  final _a_noOfInfants = TextEditingController(text: '0');
   Map<String, dynamic>? _a_selectedClass;
   Key _a_classKey = UniqueKey();
 
@@ -229,6 +253,13 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
 
   DateTime? _a_arrDate;
   DateTime? _a_depDate;
+
+  /// Rebuilt on reset so the date fields drop their old FormFieldState along
+  /// with the controller text — clearing the controller alone leaves the
+  /// previous value on screen, the same reason the airport and class pickers
+  /// carry keys.
+  Key _a_arrDateKey = UniqueKey();
+  Key _a_depDateKey = UniqueKey();
   static const String _defaultToAirportCode = 'CMB';
 
   Airport? _a_fromAirport;
@@ -249,6 +280,14 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   String _a_meal = 'No';
   String _a_extraLegroomSeat = 'No';
   String _a_goldRoute = 'No';
+
+  /// Which leg the Silk / Gold Route facility applies to. Only asked for — and
+  /// only submitted — while the matching option is Yes.
+  String _a_silkRouteType = 'Arrival';
+  String _a_goldRouteType = 'Arrival';
+
+  /// Meal requirement, asked for only while Meal is Yes.
+  final _a_mealRemarkCtrl = TextEditingController();
 
   // ── Air ticket — Hamoue contact person dropdown ───────────────────────────
   List<String> _hamoueContactPersons = [];
@@ -296,7 +335,13 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   /// Extra members travelling on the SAME transport request as the guest in the
   /// form: they share its pickup, vehicles and dates, so they only carry who
   /// they are and their own package amount.
-  final List<_TransportExtraMember> _t_extraMembers = [];
+  final List<_ExtraMember> _t_extraMembers = [];
+
+  /// The same "Add More Guest" rows for the hotel and air ticket tabs: extra
+  /// members share the guest's rooms / tickets and dates, each billed their own
+  /// package.
+  final List<_ExtraMember> _h_extraMembers = [];
+  final List<_ExtraMember> _a_extraMembers = [];
 
   // ── Transport — passport bio data page uploads ─────────────────────────────
   List<PassportFile> _t_passportFiles = [];
@@ -395,6 +440,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       // _sharedReservationNo,
       _h_noOfRooms,
       _h_noOfPax,
+      _h_noOfChildren,
       _h_mealPlan,
       _h_paymentBy,
       _h_remarks,
@@ -403,6 +449,9 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       _h_arrivalCtrl,
       _h_departureCtrl,
       _a_noOfSeats,
+      _a_noOfChildren,
+      _a_noOfInfants,
+      _a_mealRemarkCtrl,
       _a_arrCtrl,
       _a_depCtrl,
       _a_remarksCtrl,
@@ -418,7 +467,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     for (final c in _t_passengerCtrls) {
       c.dispose();
     }
-    for (final row in _t_extraMembers) {
+    for (final row in [..._t_extraMembers, ..._h_extraMembers, ..._a_extraMembers]) {
       row.dispose();
     }
     _hotelScrollCtrl.dispose();
@@ -607,6 +656,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     _sharedMidNumber.clear();
     _sharedGuestName.clear();
     _sharedGuestCardVisible = false;
+    _sharedHasFamilyMembers = false;
   }
 
   void _resetHotelFields() {
@@ -614,6 +664,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     // _sharedReservationNo.clear();
     _h_noOfRooms.text = '1';
     _h_noOfPax.text = '1';
+    _h_noOfChildren.text = '0';
     _h_mealPlan.clear();
     _h_paymentBy.text = _isBellagio ? 'N/A' : 'NA';
     _h_remarks.clear();
@@ -623,6 +674,8 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     _h_departureCtrl.clear();
     _h_arrivalDate = null;
     _h_departureDate = null;
+    _h_arrivalDateKey = UniqueKey();
+    _h_departureDateKey = UniqueKey();
     _h_eciLco = 'NA';
     _selectedHotel = null;
     _selectedHotelName = null;
@@ -639,42 +692,6 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     _roomCategoryDropdownKey = UniqueKey();
     _roomTypeDropdownKey = UniqueKey();
     _pendingHotels = [];
-  }
-
-  void _showRequiredSnack() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.white, size: 18),
-            SizedBox(width: 8),
-            Text('Please enter at least guest name or membership no'),
-          ],
-        ),
-        backgroundColor: Colors.red.shade700,
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
-
-  void _showAddedSnack(int count, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle, color: Colors.white, size: 18),
-            const SizedBox(width: 8),
-            Text('Member $count added — form reset for next member'),
-          ],
-        ),
-        backgroundColor: color,
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
   }
 
   void _showHotelAddedSnack() {
@@ -695,16 +712,6 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     );
   }
 
-  void _scrollToTop(ScrollController ctrl) {
-    if (ctrl.hasClients) {
-      ctrl.animateTo(
-        0,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeOut,
-      );
-    }
-  }
-
   // ── Capture current hotel fields → _HotelEntry ──────────────────────────────
   _HotelEntry _captureCurrentHotelEntry() {
     return _HotelEntry(
@@ -716,6 +723,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       departureDate: _h_departureDate,
       noOfRooms: _h_noOfRooms.text,
       noOfPax: _h_noOfPax.text,
+      noOfChildren: _h_noOfChildren.text,
       roomType: _selectedRoomTypeName ?? '',
       roomTypeId: _selectedRoomTypeId,
       roomCategory: _selectedRoomCategoryName ?? '',
@@ -755,6 +763,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       // Reset only the hotel-details fields, keep guest identity
       _h_noOfRooms.text = '1';
       _h_noOfPax.text = '1';
+      _h_noOfChildren.text = '0';
       _h_mealPlan.clear();
       _h_paymentBy.text = _isBellagio ? 'N/A' : 'NA';
       _h_remarks.clear();
@@ -764,6 +773,8 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       _h_departureCtrl.clear();
       _h_arrivalDate = null;
       _h_departureDate = null;
+      _h_arrivalDateKey = UniqueKey();
+      _h_departureDateKey = UniqueKey();
       _h_eciLco = 'NA';
       _selectedHotel = null;
       _selectedHotelName = null;
@@ -783,57 +794,22 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     _showHotelAddedSnack();
   }
 
-  // ── Add Member with Same Details — HOTEL ────────────────────────────────────
-  void _addMemberWithSameDetailsHotel() {
-    if (_sharedGuestName.text.trim().isEmpty &&
-        _sharedMemberId.text.trim().isEmpty) {
-      _showRequiredSnack();
-      return;
-    }
-    if (!(_hotelFormKey.currentState?.validate() ?? true)) return;
-    // Collect current hotel if hotel name is filled
-    final hotels = List<_HotelEntry>.from(_pendingHotels);
-    if (_selectedHotelName != null && _selectedHotelName!.isNotEmpty) {
-      hotels.add(_captureCurrentHotelEntry());
-    }
-
-    setState(() {
-      _hotelMembers.add({
-        'guestName': _sharedGuestName.text,
-        'memberId': _sharedMemberId.text,
-        'packageAmount': _sharedPackageAmount.text,
-        // 'reservationNo': _sharedReservationNo.text,
-        'hotels': hotels,
-      });
-      _resetSharedGuest();
-      _pendingHotels = [];
-    });
-    _showAddedSnack(_hotelMembers.length, _hotelColor);
-    _scrollToTop(_hotelScrollCtrl);
-  }
-
-  // ── Add Member with Same Details — AIR TICKET ───────────────────────────────
-  void _addMemberWithSameDetailsAir() {
-    if (_sharedGuestName.text.trim().isEmpty &&
-        _sharedMemberId.text.trim().isEmpty) {
-      _showRequiredSnack();
-      return;
-    }
-    if (!(_airFormKey.currentState?.validate() ?? true)) return;
-    setState(() {
-      _airMembers.add(_captureCurrentAirMember());
-      _resetSharedGuest();
-    });
-    _showAddedSnack(_airMembers.length, _airColor);
-    _scrollToTop(_airScrollCtrl);
-  }
-
   Map<String, dynamic> _captureCurrentAirMember() {
     return {
       'guestName': _sharedGuestName.text,
       'memberId': _sharedMemberId.text,
       'packageAmount': _sharedPackageAmount.text,
+      'hasFamilyMembers': _sharedHasFamilyMembers,
       // 'reservationNo': _sharedReservationNo.text,
+      ..._captureCurrentAirTicket(),
+    };
+  }
+
+  /// Just the ticket half of the air form — everything that belongs to a single
+  /// flight rather than to the guest. Kept separate so "Add Another Air Ticket"
+  /// can bank one ticket and reset those fields while the guest stays put.
+  Map<String, dynamic> _captureCurrentAirTicket() {
+    return {
       // display strings (used for copy text)
       'fromAirport': _a_fromAirport != null
           ? '${_a_fromAirport!.cityName ?? ''} (${_a_fromAirport!.airportCode ?? ''})'
@@ -851,6 +827,8 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       'arrDate': _a_arrCtrl.text,
       'depDate': _a_depCtrl.text,
       'noOfSeats': _a_noOfSeats.text,
+      'noOfChildren': _a_noOfChildren.text,
+      'noOfInfants': _a_noOfInfants.text,
       'class': _a_selectedClass?['type'] ?? '',
       'airline': _a_selectedAirline?.airLine ?? '',
       'sector': _a_selectedAirline?.sector ?? '',
@@ -862,6 +840,11 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       'meal': _a_meal,
       'extraLegroomSeat': _a_extraLegroomSeat,
       'goldRoute': _a_goldRoute,
+      // Follow-ups to the Yes answers above — only meaningful while their
+      // option is Yes, which is where they are read back.
+      'silkRouteType': _a_silkRouteType,
+      'goldRouteType': _a_goldRouteType,
+      'mealRemark': _a_mealRemarkCtrl.text.trim(),
       'hamoueContactPerson': _a_hamoueContactPerson ?? '',
       'passportFiles': _a_passportFiles.map((f) => f.fileName).join(', '),
       // typed fields used when building API body
@@ -876,79 +859,114 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     };
   }
 
-  void _applyAndAddHotelMember() {
-    if (_sharedGuestName.text.trim().isEmpty &&
-        _sharedMemberId.text.trim().isEmpty) {
-      _showRequiredSnack();
-      return;
-    }
-    if (!(_hotelFormKey.currentState?.validate() ?? true)) return;
-    final hotels = List<_HotelEntry>.from(_pendingHotels);
-    if (_selectedHotelName != null && _selectedHotelName!.isNotEmpty) {
-      hotels.add(_captureCurrentHotelEntry());
-    }
+  /// A full sector, which is what "Add Another Air Ticket" requires before it
+  /// will bank the ticket on screen.
+  bool get _hasCompleteAirSector =>
+      _a_fromAirport != null && _a_toAirport != null;
 
-    setState(() {
-      _hotelMembers.add({
-        'guestName': _sharedGuestName.text,
-        'memberId': _sharedMemberId.text,
-        'packageAmount': _sharedPackageAmount.text,
-        // 'reservationNo': _sharedReservationNo.text,
-        'hotels': hotels,
-      });
-      _resetSharedGuest();
-      _resetHotelFields();
-    });
-    _showAddedSnack(_hotelMembers.length, _hotelColor);
-    _scrollToTop(_hotelScrollCtrl);
+  /// Whether the ticket on screen is worth submitting. After "Add Another Air
+  /// Ticket" the form is blank on purpose and must not become an empty ticket,
+  /// but anything the user has since touched brings it back — checking only for
+  /// a complete sector would silently drop a half-filled ticket on save.
+  ///
+  /// `_a_toAirport` is deliberately not counted: the reset re-applies the
+  /// default destination, so it is set even on an untouched form.
+  bool get _hasCurrentAirTicket =>
+      _a_fromAirport != null ||
+      _a_selectedAirline != null ||
+      _a_selectedClass != null ||
+      _a_arrDate != null ||
+      _a_depDate != null ||
+      _a_passportFiles.isNotEmpty ||
+      _a_remarksCtrl.text.trim().isNotEmpty;
+
+  /// Clears the ticket half of the air form, leaving the guest identity and
+  /// package amount in place for the next ticket.
+  void _resetAirTicketFields() {
+    _a_noOfSeats.text = '1';
+    _a_noOfChildren.text = '0';
+    _a_noOfInfants.text = '0';
+    _a_selectedClass = null;
+    _a_classKey = UniqueKey();
+    _a_selectedAirline = null;
+    _a_airlineCosts = [];
+    _a_airlineKey = UniqueKey();
+    _a_arrCtrl.clear();
+    _a_depCtrl.clear();
+    _a_remarksCtrl.clear();
+    _a_arrDate = null;
+    _a_depDate = null;
+    _a_arrDateKey = UniqueKey();
+    _a_depDateKey = UniqueKey();
+    _a_fromAirport = null;
+    _a_toAirport =
+        ref.read(airportsProvider.notifier).findByCode(_defaultToAirportCode);
+    _a_returnFromAirport = null;
+    _a_returnToAirport = null;
+    _a_isRoundTrip = false;
+    _a_fromAirportKey = UniqueKey();
+    _a_toAirportKey = UniqueKey();
+    _a_returnFromAirportKey = UniqueKey();
+    _a_returnToAirportKey = UniqueKey();
+    _a_skipRouteFacility = 'No';
+    _a_airportTransport = 'No';
+    _a_visa = 'No';
+    _a_meal = 'No';
+    _a_extraLegroomSeat = 'No';
+    _a_goldRoute = 'No';
+    _a_silkRouteType = 'Arrival';
+    _a_goldRouteType = 'Arrival';
+    _a_mealRemarkCtrl.clear();
+    _a_hamoueContactPerson = null;
+    _a_passportFiles = [];
+    _a_passportUploadKey = UniqueKey();
   }
 
-  // ── Apply & Add — AIR TICKET ────────────────────────────────────────────────
-  void _applyAndAddAirMember() {
-    if (_sharedGuestName.text.trim().isEmpty &&
-        _sharedMemberId.text.trim().isEmpty) {
-      _showRequiredSnack();
+  // ── Add another air ticket to the current pending-guest form ────────────────
+  void _addAnotherAirTicket() {
+    if (!_hasCompleteAirSector) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.white, size: 18),
+              SizedBox(width: 8),
+              Text('Please select the From and To airports first'),
+            ],
+          ),
+          backgroundColor: Colors.orange.shade700,
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
       return;
     }
-    if (!(_airFormKey.currentState?.validate() ?? true)) return;
     setState(() {
-      _airMembers.add(_captureCurrentAirMember());
-      _resetSharedGuest();
-      _sharedPackageAmount.clear();
-      // _sharedReservationNo.clear();
-      _a_noOfSeats.text = '1';
-      _a_selectedClass = null;
-      _a_classKey = UniqueKey();
-      _a_selectedAirline = null;
-      _a_airlineCosts = [];
-      _a_airlineKey = UniqueKey();
-      _a_arrCtrl.clear();
-      _a_depCtrl.clear();
-      _a_remarksCtrl.clear();
-      _a_arrDate = null;
-      _a_depDate = null;
-      _a_fromAirport = null;
-      _a_toAirport =
-          ref.read(airportsProvider.notifier).findByCode(_defaultToAirportCode);
-      _a_returnFromAirport = null;
-      _a_returnToAirport = null;
-      _a_isRoundTrip = false;
-      _a_fromAirportKey = UniqueKey();
-      _a_toAirportKey = UniqueKey();
-      _a_returnFromAirportKey = UniqueKey();
-      _a_returnToAirportKey = UniqueKey();
-      _a_skipRouteFacility = 'No';
-      _a_airportTransport = 'No';
-      _a_visa = 'No';
-      _a_meal = 'No';
-      _a_extraLegroomSeat = 'No';
-      _a_goldRoute = 'No';
-      _a_hamoueContactPerson = null;
-      _a_passportFiles = [];
-      _a_passportUploadKey = UniqueKey();
+      _pendingAirTickets.add(_captureCurrentAirTicket());
+      _resetAirTicketFields();
     });
-    _showAddedSnack(_airMembers.length, _airColor);
-    _scrollToTop(_airScrollCtrl);
+    _showAirTicketAddedSnack();
+  }
+
+  void _showAirTicketAddedSnack() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.flight_takeoff_rounded,
+                color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Text('Air ticket ${_pendingAirTickets.length} added for this guest'),
+          ],
+        ),
+        backgroundColor: _airColor,
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
   // ── TRANSPORT ───────────────────────────────────────────────────────────────
@@ -964,7 +982,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       'packageAmount': _t_sharedPackage ? '' : _sharedPackageAmount.text,
       'sharedPackage': _t_sharedPackage,
       // Guests riding along on this same request.
-      'extraMembers': _captureTransportExtraMembers(),
+      'extraMembers': _captureExtraMembers(_t_extraMembers),
       'pickupDate': _t_pickupDateCtrl.text,
       'pickupTime': _t_pickupTimeCtrl.text,
       'hireType': _t_hireType ?? '',
@@ -1012,7 +1030,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     _t_silkRoute = 'No';
     _t_airportPickup = 'No';
     _t_sharedPackage = false;
-    _clearTransportExtraMembers();
+    _clearExtraMembers(_t_extraMembers);
     _t_passportFiles = [];
     _t_passportUploadKey = UniqueKey();
   }
@@ -1039,37 +1057,40 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     return ('BM', fullMemberId);
   }
 
-  void _addTransportExtraMember() {
+  void _addExtraMember(List<_ExtraMember> rows) {
     FocusScope.of(context).unfocus();
     setState(() {
-      _t_extraMembers.add(
-        _TransportExtraMember(
+      rows.add(
+        _ExtraMember(
           prefix: _isNumericOnlyLocation ? '' : _selectedPrefix,
         ),
       );
     });
   }
 
-  void _removeTransportExtraMember(int index) {
+  void _removeExtraMember(List<_ExtraMember> rows, int index) {
     setState(() {
-      _t_extraMembers.removeAt(index).dispose();
+      rows.removeAt(index).dispose();
     });
   }
 
-  void _clearTransportExtraMembers() {
-    for (final row in _t_extraMembers) {
+  void _clearExtraMembers(List<_ExtraMember> rows) {
+    for (final row in rows) {
       row.dispose();
     }
-    _t_extraMembers.clear();
+    rows.clear();
   }
 
   /// Rejects half-filled and duplicate rows before a save. A blank row is
-  /// skipped, matching how [_captureTransportExtraMembers] drops it.
-  bool _validateTransportExtraMembers({required String primaryMid}) {
+  /// skipped, matching how [_captureExtraMembers] drops it.
+  bool _validateExtraMembers(
+    List<_ExtraMember> rows, {
+    required String primaryMid,
+  }) {
     final seen = <String>{if (primaryMid.isNotEmpty) primaryMid};
 
-    for (var i = 0; i < _t_extraMembers.length; i++) {
-      final row = _t_extraMembers[i];
+    for (var i = 0; i < rows.length; i++) {
+      final row = rows[i];
       final mid = row.fullMid(numericOnly: _isNumericOnlyLocation);
       final name = row.nameController.text.trim();
       final packageAmount = row.packageAmountController.text.trim();
@@ -1094,11 +1115,11 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     return true;
   }
 
-  /// The filled-in extra rows as plain maps, in the same shape the transport
-  /// member map uses for the primary guest.
-  List<Map<String, dynamic>> _captureTransportExtraMembers() {
+  /// The filled-in extra rows as plain maps, in the same shape the primary
+  /// guest's member map uses.
+  List<Map<String, dynamic>> _captureExtraMembers(List<_ExtraMember> rows) {
     final out = <Map<String, dynamic>>[];
-    for (final row in _t_extraMembers) {
+    for (final row in rows) {
       final mid = row.fullMid(numericOnly: _isNumericOnlyLocation);
       final name = row.nameController.text.trim();
       if (mid.isEmpty && name.isEmpty) continue;
@@ -1108,6 +1129,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
         'packageAmount':
             row.sharedPackage ? '' : row.packageAmountController.text.trim(),
         'sharedPackage': row.sharedPackage,
+        'hasFamilyMembers': row.hasFamilyMembers,
       });
     }
     return out;
@@ -1115,10 +1137,14 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
 
   /// Member search for an extra-member row. Unlike the main fields these do not
   /// go through the shared guest controllers, so the pick comes back by row.
-  Future<void> _openTransportExtraMemberSearch(int index, int iid) async {
+  Future<void> _openExtraMemberSearch(
+    List<_ExtraMember> rows,
+    int index,
+    int iid,
+  ) async {
     FocusScope.of(context).unfocus();
 
-    final row = _t_extraMembers[index];
+    final row = rows[index];
     final term = iid == 8002
         ? row.fullMid(numericOnly: _isNumericOnlyLocation)
         : row.nameController.text.trim();
@@ -1543,6 +1569,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   Departure            : ${h.departure}
   No of Room/s         : ${h.noOfRooms}
   No Of Pax            : ${h.noOfPax}
+  No Of Children       : ${h.noOfChildren}
   Room Type            : ${h.roomType}
   Room Category        : ${h.roomCategory}
   ECI/LCO Facility     : ${h.eciLco}
@@ -1558,6 +1585,8 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     buf.writeln('Membership No        : ${m['memberId']}');
     buf.writeln('Reservation No       : ${m['reservationNo'] ?? ''}');
     buf.writeln('Package Amount       : ${m['packageAmount']}');
+    buf.writeln(
+        'Family Members       : ${(m['hasFamilyMembers'] as bool? ?? false) ? 'Yes' : 'No'}');
     if (hotels.isEmpty) {
       buf.writeln('  (No hotels added)');
     } else if (hotels.length == 1) {
@@ -1568,8 +1597,28 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
         if (i < hotels.length - 1) buf.writeln('  ─────────────────────');
       }
     }
+    _appendExtraMembersText(buf, _h_extraMembers);
     buf.write('*');
     return buf.toString();
+  }
+
+  /// Appends the "Add More Guest" rows to a copied message. They share the
+  /// booking above, so only who they are and their package is worth repeating.
+  void _appendExtraMembersText(StringBuffer buf, List<_ExtraMember> rows) {
+    final extras = _captureExtraMembers(rows);
+    for (int i = 0; i < extras.length; i++) {
+      final e = extras[i];
+      final amount = (e['sharedPackage'] as bool? ?? false)
+          ? 'Shared'
+          : e['packageAmount'];
+      buf
+        ..write('\n*Guest ${i + 2}*')
+        ..write('\nMembership No      : ${e['memberId']}')
+        ..write('\nGuest Name         : ${e['guestName']}')
+        ..write('\nPackage Amount     : $amount')
+        ..write(
+            '\nFamily Members     : ${(e['hasFamilyMembers'] as bool? ?? false) ? 'Yes' : 'No'}');
+    }
   }
 
   // Legacy signature kept for _addedMembersSection textBuilder
@@ -1586,6 +1635,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       'guestName': _sharedGuestName.text,
       'memberId': _sharedMemberId.text,
       'packageAmount': _sharedPackageAmount.text,
+      'hasFamilyMembers': _sharedHasFamilyMembers,
       // 'reservationNo': _sharedReservationNo.text,
       'hotels': currentHotels,
     };
@@ -1618,77 +1668,68 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
         (m['returnTo'] as String).isNotEmpty)
       sector +=
           '\n                         ${m['returnFrom']} → ${m['returnTo']}';
-    return '''
+    final body = '''
 *AIR TICKET REQUEST*
 BM                       : ${m['memberId']}
 Guest Name        : ${m['guestName']}
 Reservation No    : ${m['reservationNo'] ?? ''}
 Package Amount : ${m['packageAmount']}
+Family Members : ${(m['hasFamilyMembers'] as bool? ?? false) ? 'Yes' : 'No'}
 Sector                  : $sector
 Arr Date              : ${m['arrDate']}
 Dep Date             : ${m['depDate']}
 No of Seats         : ${m['noOfSeats']}
+No of Children     : ${m['noOfChildren'] ?? '0'}
+No of Infants       : ${m['noOfInfants'] ?? '0'}
 Class                    : ${m['class']}
 Airline                  : ${m['airline']}${(m['sector'] as String? ?? '').isNotEmpty ? ' (${m['sector']})' : ''}
 Cost                      : ${m['cost']}
 Round Trip           : ${isRound ? 'Yes' : 'No'}
-Slik Route Facility : ${m['skipRouteFacility']}
+Slik Route Facility : ${m['skipRouteFacility']}${(m['skipRouteFacility'] as String?) == 'Yes' ? ' (${m['silkRouteType'] ?? ''})' : ''}
 Airport Transport   : ${m['airportTransport']}
 Visa                     : ${m['visa']}
-Meal                     : ${m['meal']}
+Meal                     : ${m['meal']}${(m['meal'] as String?) == 'Yes' && (m['mealRemark'] as String? ?? '').isNotEmpty ? ' (${m['mealRemark']})' : ''}
 Extra Legroom Seat  : ${m['extraLegroomSeat']}
-Gold Route            : ${m['goldRoute']}
+Gold Route            : ${m['goldRoute']}${(m['goldRoute'] as String?) == 'Yes' ? ' (${m['goldRouteType'] ?? ''})' : ''}
 Hamoue Contact   : ${(m['hamoueContactPerson'] as String? ?? '').isEmpty ? 'NA' : m['hamoueContactPerson']}
 Passport File/s      : ${(m['passportFiles'] as String? ?? '').isEmpty ? 'None' : m['passportFiles']}
 Remarks              : ${m['remarks']}''';
+    final buf = StringBuffer(body);
+    _appendExtraMembersText(buf, _a_extraMembers);
+    return buf.toString();
   }
 
   String _buildAirText() {
-    final fromCode = _a_fromAirport?.airportCode ?? '';
-    final fromCity = _a_fromAirport?.cityName ?? '';
-    final toCode = _a_toAirport?.airportCode ?? '';
-    final toCity = _a_toAirport?.cityName ?? '';
-    final current = {
-      'guestName': _sharedGuestName.text,
-      'memberId': _sharedMemberId.text,
-      'packageAmount': _sharedPackageAmount.text,
-      // 'reservationNo': _sharedReservationNo.text,
-      'fromAirport': (fromCode.isNotEmpty && fromCity.isNotEmpty)
-          ? '$fromCity ($fromCode)'
-          : '',
-      'toAirport': (toCode.isNotEmpty && toCity.isNotEmpty)
-          ? '$toCity ($toCode)'
-          : '',
-      'isRoundTrip': _a_isRoundTrip,
-      'returnFrom': _a_returnFromAirport != null
-          ? '${_a_returnFromAirport!.cityName ?? ''} (${_a_returnFromAirport!.airportCode ?? ''})'
-          : '',
-      'returnTo': _a_returnToAirport != null
-          ? '${_a_returnToAirport!.cityName ?? ''} (${_a_returnToAirport!.airportCode ?? ''})'
-          : '',
-      'arrDate': _a_arrCtrl.text,
-      'depDate': _a_depCtrl.text,
-      'noOfSeats': _a_noOfSeats.text,
-      'class': _a_selectedClass?['type'] ?? '',
-      'airline': _a_selectedAirline?.airLine ?? '',
-      'sector': _a_selectedAirline?.sector ?? '',
-      'cost': _a_selectedAirline?.cost?.toString() ?? '',
-      'remarks': _a_remarksCtrl.text,
-      'skipRouteFacility': _a_skipRouteFacility,
-      'airportTransport': _a_airportTransport,
-      'visa': _a_visa,
-      'meal': _a_meal,
-      'extraLegroomSeat': _a_extraLegroomSeat,
-      'goldRoute': _a_goldRoute,
-      'hamoueContactPerson': _a_hamoueContactPerson ?? '',
-      'passportFiles': _a_passportFiles.map((f) => f.fileName).join(', '),
-    };
-    if (_airMembers.isEmpty) return _singleAirText(current);
+    final current = _captureCurrentAirMember();
+
+    // Every ticket banked for this guest, plus the one still on screen.
+    final tickets = <Map<String, dynamic>>[
+      ..._pendingAirTickets.map((t) => {
+            'guestName': current['guestName'],
+            'memberId': current['memberId'],
+            'packageAmount': current['packageAmount'],
+            'hasFamilyMembers': current['hasFamilyMembers'],
+            ...t,
+          }),
+      if (_pendingAirTickets.isEmpty || _hasCurrentAirTicket) current,
+    ];
+
+    if (_airMembers.isEmpty) {
+      if (tickets.length == 1) return _singleAirText(tickets.first);
+      final buf = StringBuffer();
+      for (int i = 0; i < tickets.length; i++) {
+        if (i > 0) buf.writeln('\n');
+        buf.writeln('*── Ticket ${i + 1} ──*');
+        buf.write(_singleAirText(tickets[i]));
+      }
+      return buf.toString();
+    }
+
     final all = [
       ..._airMembers,
       if ((current['guestName'] as String).isNotEmpty ||
           (current['memberId'] as String).isNotEmpty)
-        current,
+        ...tickets,
     ];
     final buf = StringBuffer();
     for (int i = 0; i < all.length; i++) {
@@ -1821,6 +1862,8 @@ Remarks              : ${m['remarks']}''';
     final depDate = m['depDateObj'] as DateTime?;
     return {
       'guest_count': int.tryParse(m['noOfSeats'] as String? ?? '1') ?? 1,
+      'children_count': int.tryParse(m['noOfChildren'] as String? ?? '0') ?? 0,
+      'infant_count': int.tryParse(m['noOfInfants'] as String? ?? '0') ?? 0,
       'air_ticket_class': m['classId'],
       'air_ticket_class_name': m['class'],
       'air_line': m['airline'],
@@ -1831,6 +1874,17 @@ Remarks              : ${m['remarks']}''';
       'gold_route': (m['goldRoute'] as String?) == 'Yes',
       'is_round_trip': m['isRoundTrip'] as bool? ?? false,
       'silk_route': (m['skipRouteFacility'] as String?) == 'Yes' ? 1 : 0,
+      // Follow-ups ride along only when their option is Yes, matching
+      // FlightBookingBallys.toJson().
+      'silk_route_type': (m['skipRouteFacility'] as String?) == 'Yes'
+          ? (m['silkRouteType'] as String? ?? '')
+          : '',
+      'gold_route_type': (m['goldRoute'] as String?) == 'Yes'
+          ? (m['goldRouteType'] as String? ?? '')
+          : '',
+      'meal_remark': (m['meal'] as String?) == 'Yes'
+          ? (m['mealRemark'] as String? ?? '')
+          : '',
       'airport_transportation': (m['airportTransport'] as String?) == 'Yes' ? 1 : 0,
       'arrival_date': arrDate?.toIso8601String(),
       'departure_date': depDate?.toIso8601String(),
@@ -1879,6 +1933,7 @@ Remarks              : ${m['remarks']}''';
   void _clearAllHotelForm() {
     setState(() {
       _hotelMembers.clear();
+      _clearExtraMembers(_h_extraMembers);
       _resetSharedGuest();
       _resetHotelFields();
     });
@@ -1887,39 +1942,12 @@ Remarks              : ${m['remarks']}''';
   void _clearAllAirForm() {
     setState(() {
       _airMembers.clear();
+      _pendingAirTickets = [];
+      _clearExtraMembers(_a_extraMembers);
       _resetSharedGuest();
       _sharedPackageAmount.clear();
       // _sharedReservationNo.clear();
-      _a_noOfSeats.text = '1';
-      _a_selectedClass = null;
-      _a_classKey = UniqueKey();
-      _a_selectedAirline = null;
-      _a_airlineCosts = [];
-      _a_airlineKey = UniqueKey();
-      _a_arrCtrl.clear();
-      _a_depCtrl.clear();
-      _a_remarksCtrl.clear();
-      _a_arrDate = null;
-      _a_depDate = null;
-      _a_fromAirport = null;
-      _a_toAirport =
-          ref.read(airportsProvider.notifier).findByCode(_defaultToAirportCode);
-      _a_returnFromAirport = null;
-      _a_returnToAirport = null;
-      _a_isRoundTrip = false;
-      _a_fromAirportKey = UniqueKey();
-      _a_toAirportKey = UniqueKey();
-      _a_returnFromAirportKey = UniqueKey();
-      _a_returnToAirportKey = UniqueKey();
-      _a_skipRouteFacility = 'No';
-      _a_airportTransport = 'No';
-      _a_visa = 'No';
-      _a_meal = 'No';
-      _a_extraLegroomSeat = 'No';
-      _a_goldRoute = 'No';
-      _a_hamoueContactPerson = null;
-      _a_passportFiles = [];
-      _a_passportUploadKey = UniqueKey();
+      _resetAirTicketFields();
     });
   }
 
@@ -1978,7 +2006,8 @@ Remarks              : ${m['remarks']}''';
       return;
     }
 
-    if (!_validateTransportExtraMembers(
+    if (!_validateExtraMembers(
+        _t_extraMembers,
         primaryMid: _sharedMemberId.text.trim())) {
       return;
     }
@@ -2034,6 +2063,7 @@ final phoneNumber = await StorageUtil.getMobileNumber();
       _logLong('Saving transport reservation', body);
       final apiService = ApiService(const FlutterSecureStorage());
       final response = await apiService.post('Transport_Insert', body);
+      _logLong('Transport reservation response', response);
       if (!mounted) return;
       setState(() => _isLoading = false);
       final status = response['Status'] as bool? ?? false;
@@ -2138,6 +2168,12 @@ final phoneNumber = await StorageUtil.getMobileNumber();
       return;
     }
 
+    if (!_validateExtraMembers(
+        _h_extraMembers,
+        primaryMid: _sharedMemberId.text.trim())) {
+      return;
+    }
+
     final allMembers = <Map<String, dynamic>>[
       ..._hotelMembers,
       if (hasCurrentGuest || currentHotels.isNotEmpty)
@@ -2174,20 +2210,41 @@ final phoneNumber = await StorageUtil.getMobileNumber();
       return '';
     }
 
-    final guests = allMembers
-        .map((m) => {
-              'BMNumber': m['memberId'],
-              'GuestName': m['guestName'],
-              'ArrivalDate': null,
-              'DepartureDate': null,
-              'HasAirTicketReservation': false,
-              'Remarks': remarksForMember(m),
-            })
-        .toList();
+    // Every member is billed their own package, so the amount travels per
+    // guest inside `guests` rather than on the reservation.
+    final guests = allMembers.map((m) {
+      final hotels = (m['hotels'] as List<_HotelEntry>?) ?? [];
+      final first = hotels.isNotEmpty ? hotels.first : null;
+      final amount = m['packageAmount'] as String?;
+      return {
+        'BMNumber': m['memberId'],
+        'GuestName': m['guestName'],
+        'ArrivalDate': first?.arrivalDate?.toIso8601String(),
+        'DepartureDate': first?.departureDate?.toIso8601String(),
+        'HasFamilyMembers': _sharedHasFamilyMembers,
+        'PackageAmount': packageAmountToInt(amount),
+        'CurrencyType': packageAmountCurrency(amount),
+      };
+    }).toList();
 
     final primary = allMembers.first;
     final primaryHotels = (primary['hotels'] as List<_HotelEntry>?) ?? [];
     final firstHotel = primaryHotels.isNotEmpty ? primaryHotels.first : null;
+
+    // Extra guests share the form guest's rooms and dates, so they add a
+    // `guests` entry each — with their own package — and no room of their own.
+    for (final e in _captureExtraMembers(_h_extraMembers)) {
+      final amount = e['packageAmount'] as String?;
+      guests.add({
+        'BMNumber': e['memberId'],
+        'GuestName': e['guestName'],
+        'ArrivalDate': firstHotel?.arrivalDate?.toIso8601String(),
+        'DepartureDate': firstHotel?.departureDate?.toIso8601String(),
+        'HasFamilyMembers': e['hasFamilyMembers'] as bool? ?? false,
+        'PackageAmount': packageAmountToInt(amount),
+        'CurrencyType': packageAmountCurrency(amount),
+      });
+    }
 
     final salesCode = await StorageUtil.getSalesCode();
     final userName = await StorageUtil.getUserName();
@@ -2199,19 +2256,8 @@ final phoneNumber = await StorageUtil.getMobileNumber();
       'guest_name': primary['guestName'],
       'arrival_date': firstHotel?.arrivalDate?.toIso8601String(),
       'departure_date': firstHotel?.departureDate?.toIso8601String(),
-      'no_of_nights': firstHotel != null &&
-              firstHotel.arrivalDate != null &&
-              firstHotel.departureDate != null
-          ? firstHotel.departureDate!
-              .difference(firstHotel.arrivalDate!)
-              .inDays
-          : 0,
       'has_air_ticket_reservation': false,
       'remarks': remarksForMember(primary),
-      'manual_reserv_no': '',
-      'package_amount': packageAmountToInt(primary['packageAmount'] as String?),
-      'currency_type':
-          packageAmountCurrency(primary['packageAmount'] as String?),
       'selected_marketing_person': '',
       "reservation_status":"Pending",
       'sales_code': salesCode,
@@ -2222,14 +2268,13 @@ final phoneNumber = await StorageUtil.getMobileNumber();
       'guests': guests,
       'passport_images': [],
     };
-print(" rrr : $body");
     setState(() => _isLoading = true);
     try {
+      _logLong('Saving hotel reservation', body);
       final apiService = ApiService(const FlutterSecureStorage());
-      
       final response =
           await apiService.post('Reservation_InsertReservation', body);
-          print("test3 $response");
+      _logLong('Hotel reservation response', response);
       if (!mounted) return;
       setState(() => _isLoading = false);
       final status = response['Status'] as bool? ?? false;
@@ -2270,6 +2315,12 @@ print(" rrr : $body");
       return;
     }
 
+    if (!_validateExtraMembers(
+        _a_extraMembers,
+        primaryMid: _sharedMemberId.text.trim())) {
+      return;
+    }
+
     final allMembers = <Map<String, dynamic>>[
       ..._airMembers,
       if (hasCurrentGuest) _captureCurrentAirMember(),
@@ -2280,44 +2331,72 @@ print(" rrr : $body");
       return;
     }
 
+    // Every ticket for this guest: the ones banked with "Add Another Air
+    // Ticket" plus the one still on screen, each tagged with the guest's member
+    // ID. A blank form after banking contributes nothing.
+    final primaryMemberId = allMembers.first['memberId'];
+    final ticketSources = <Map<String, dynamic>>[
+      ..._pendingAirTickets,
+      if (_pendingAirTickets.isEmpty || _hasCurrentAirTicket)
+        _captureCurrentAirTicket(),
+    ].map((t) => {...t, 'memberId': primaryMemberId}).toList();
+
     final airTicketDetails =
-        allMembers.map((m) => _airMemberToTicketDetail(m)).toList();
+        ticketSources.map((t) => _airMemberToTicketDetail(t)).toList();
 
-    final guests = allMembers
-        .map((m) => {
-              'BMNumber': m['memberId'],
-              'GuestName': m['guestName'],
-              'ArrivalDate': (m['arrDateObj'] as DateTime?)?.toIso8601String(),
-              'DepartureDate':
-                  (m['depDateObj'] as DateTime?)?.toIso8601String(),
-              'HasAirTicketReservation': true,
-              'Remarks': m['remarks'] ?? '',
-            })
-        .toList();
+    // The reservation's dates come from the first ticket, which is not always
+    // the one on screen — after banking every ticket the form is blank.
+    final firstTicket = ticketSources.first;
+    final primaryArrival = firstTicket['arrDateObj'] as DateTime?;
+    final primaryDeparture = firstTicket['depDateObj'] as DateTime?;
 
-    final passportImages = _buildPassportImages(allMembers);
+    // Every member is billed their own package, so the amount travels per
+    // guest inside `guests` rather than on the reservation.
+    final guests = allMembers.map((m) {
+      final amount = m['packageAmount'] as String?;
+      return {
+        'BMNumber': m['memberId'],
+        'GuestName': m['guestName'],
+        'ArrivalDate': primaryArrival?.toIso8601String(),
+        'DepartureDate': primaryDeparture?.toIso8601String(),
+        'HasFamilyMembers': _sharedHasFamilyMembers,
+        'PackageAmount': packageAmountToInt(amount),
+        'CurrencyType': packageAmountCurrency(amount),
+      };
+    }).toList();
+
+    // Extra guests share the form guest's tickets and dates, so they add a
+    // `guests` entry each — with their own package — and no ticket of their own.
+    for (final e in _captureExtraMembers(_a_extraMembers)) {
+      final amount = e['packageAmount'] as String?;
+      guests.add({
+        'BMNumber': e['memberId'],
+        'GuestName': e['guestName'],
+        'ArrivalDate': primaryArrival?.toIso8601String(),
+        'DepartureDate': primaryDeparture?.toIso8601String(),
+        'HasFamilyMembers': e['hasFamilyMembers'] as bool? ?? false,
+        'PackageAmount': packageAmountToInt(amount),
+        'CurrencyType': packageAmountCurrency(amount),
+      });
+    }
+
+    // Passports are uploaded against whichever ticket was on screen at the
+    // time, so every ticket contributes — not just the one left in the form.
+    final passportImages = _buildPassportImages(ticketSources);
 
     final primary = allMembers.first;
     final salesCode = await StorageUtil.getSalesCode();
     final userName = await StorageUtil.getUserName();
     final deviceId = await DeviceId.get();
     final masterId = DateTime.now().millisecondsSinceEpoch.toString();
-print(" rrr : $airTicketDetails");
     final body = <String, dynamic>{
       'master_id': masterId,
       'bm_number': primary['memberId'],
       'guest_name': primary['guestName'],
-      'arrival_date':
-          (primary['arrDateObj'] as DateTime?)?.toIso8601String(),
-      'departure_date':
-          (primary['depDateObj'] as DateTime?)?.toIso8601String(),
-      'no_of_nights': 0,
+      'arrival_date': primaryArrival?.toIso8601String(),
+      'departure_date': primaryDeparture?.toIso8601String(),
       'has_air_ticket_reservation': true,
-      'remarks': primary['remarks'] ?? '',
-      'manual_reserv_no': '',
-      'package_amount': packageAmountToInt(primary['packageAmount'] as String?),
-      'currency_type':
-          packageAmountCurrency(primary['packageAmount'] as String?),
+      'remarks': firstTicket['remarks'] ?? '',
       'selected_marketing_person': '',
       "reservation_status":"Pending",
       'sales_code': salesCode,
@@ -2328,13 +2407,13 @@ print(" rrr : $airTicketDetails");
       'guests': guests,
       'passport_images': passportImages,
     };
-print(" rrr : $body");
     setState(() => _isLoading = true);
     try {
+      _logLong('Saving air ticket reservation', body);
       final apiService = ApiService(const FlutterSecureStorage());
       final response =
           await apiService.post('Reservation_InsertReservation', body);
-           print("test4 $response");
+      _logLong('Air ticket reservation response', response);
       if (!mounted) return;
       setState(() => _isLoading = false);
       final status = response['Status'] as bool? ?? false;
@@ -2559,14 +2638,21 @@ Widget _sectionHeader(String title, Color color, IconData icon) {
   );
 }
 
+/// Read-only date field driven by a picker. When [onClear] is given, a ✕
+/// appears while the field holds a date — the picker itself can only ever set
+/// one, so without this a date picked by mistake could not be taken back.
 Widget _dateField(
   BuildContext context,
   String label,
   TextEditingController ctrl,
   Color accent,
-  VoidCallback onTap,
-) {
+  VoidCallback onTap, {
+  VoidCallback? onClear,
+  Key? fieldKey,
+}) {
+  final hasValue = ctrl.text.trim().isNotEmpty;
   return TextFormField(
+    key: fieldKey,
     controller: ctrl,
     readOnly: true,
     style: kInputTextStyle,
@@ -2574,7 +2660,24 @@ Widget _dateField(
       label,
       icon: Icons.calendar_today_rounded,
       accent: accent,
-    ).copyWith(suffixIcon: Icon(Icons.arrow_drop_down, color: accent)),
+    ).copyWith(
+      suffixIcon: (onClear != null && hasValue)
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.close_rounded, color: accent, size: 20),
+                  tooltip: 'Clear date',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32),
+                  onPressed: onClear,
+                ),
+                Icon(Icons.arrow_drop_down, color: accent),
+                const SizedBox(width: 8),
+              ],
+            )
+          : Icon(Icons.arrow_drop_down, color: accent),
+    ),
     onTap: onTap,
   );
 }
@@ -2837,65 +2940,24 @@ Widget _addedMembersSection({
   );
 }
 
-// ── Action buttons: Apply & Add + Add with Same Details ──────────────────────
-Widget _actionButtons({
-  required Color accent,
-  required VoidCallback onApplyAndAdd,
-  required VoidCallback onSameDetails,
-}) {
-  return Column(
-    children: [
-      SizedBox(
-        width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: onApplyAndAdd,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: accent,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: 0,
-          ),
-          icon: const Icon(Icons.person_add_alt_1_rounded),
-          label: const Text(
-            'Apply & Add Member',
-            style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600),
-          ),
-        ),
-      ),
-      const SizedBox(height: 10),
-      SizedBox(
-        width: double.infinity,
-        child: OutlinedButton.icon(
-          onPressed: onSameDetails,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: accent,
-            side: BorderSide(color: accent, width: 1.8),
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          icon: const Icon(Icons.group_add_rounded),
-          label: const Text(
-            'Add Member with Same Details',
-            style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600),
-          ),
-        ),
-      ),
-    ],
-  );
-}
-
 // ── Extra guest sharing the transport request ────────────────────────────────
-Widget _transportExtraMemberCard(
+/// One "Add More Guest" card: who the extra guest is and their own package
+/// amount. They inherit the hotels / flights / vehicles and dates of the guest
+/// in the form, so no booking fields appear here.
+Widget _extraMemberCard(
   _QuickReservationBallysScreenState state,
+  List<_ExtraMember> rows,
   int index,
-  Color accent,
-) {
-  final row = state._t_extraMembers[index];
+  Color accent, {
+  /// Label under the guest number — "Same Request" on transport, "Same
+  /// Package" on the hotel and air ticket tabs.
+  String subtitle = 'Same Request',
+
+  /// The hotel and air ticket tabs carry the family-members tick, matching the
+  /// new reservation screen's member card. Transport has no such field.
+  bool showFamilyMembers = false,
+}) {
+  final row = rows[index];
 
   return Card(
     elevation: 0,
@@ -2921,7 +2983,7 @@ Widget _transportExtraMemberCard(
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Guest ${index + 2} — Same Request',
+                  'Guest ${index + 2} — $subtitle',
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -2931,7 +2993,7 @@ Widget _transportExtraMemberCard(
               ),
               IconButton(
                 icon: const Icon(Icons.close, color: Colors.red),
-                onPressed: () => state._removeTransportExtraMember(index),
+                onPressed: () => state._removeExtraMember(rows, index),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
@@ -2969,7 +3031,7 @@ Widget _transportExtraMemberCard(
               suffixIcon: IconButton(
                 icon: Icon(Icons.search, color: accent),
                 onPressed: () =>
-                    state._openTransportExtraMemberSearch(index, 8002),
+                    state._openExtraMemberSearch(rows, index, 8002),
               ),
             ),
             // The name belongs to the old ID — clear it so a stale pairing is
@@ -2985,7 +3047,7 @@ Widget _transportExtraMemberCard(
               suffixIcon: IconButton(
                 icon: Icon(Icons.search, color: accent),
                 onPressed: () =>
-                    state._openTransportExtraMemberSearch(index, 8003),
+                    state._openExtraMemberSearch(rows, index, 8003),
               ),
             ),
           ),
@@ -3004,6 +3066,139 @@ Widget _transportExtraMemberCard(
               'Package Amount',
               icon: Icons.currency_rupee,
               accent: accent,
+            ),
+          ),
+          if (showFamilyMembers) ...[
+            const SizedBox(height: 12),
+            _familyMembersTick(
+              accent: accent,
+              checked: row.hasFamilyMembers,
+              onChanged: (value) =>
+                  state.setState(() => row.hasFamilyMembers = value),
+            ),
+          ],
+        ],
+      ),
+    ),
+  );
+}
+
+/// Full-width outlined button that banks the booking currently in the form and
+/// clears it for the next one — "Add Another Hotel" / "Add Another Air Ticket".
+Widget _addAnotherButton({
+  required Color accent,
+  required IconData icon,
+  required String label,
+  required VoidCallback onPressed,
+}) {
+  return SizedBox(
+    width: double.infinity,
+    child: OutlinedButton.icon(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: accent,
+        side: BorderSide(color: accent.withOpacity(0.6), width: 1.5),
+        padding: const EdgeInsets.symmetric(vertical: 13),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        backgroundColor: accent.withOpacity(0.04),
+      ),
+      icon: Icon(icon),
+      label: Text(
+        label,
+        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+      ),
+    ),
+  );
+}
+
+/// Full-width primary action that posts the section to the API.
+Widget _confirmReservationButton({
+  required Color accent,
+  required VoidCallback onPressed,
+}) {
+  return SizedBox(
+    width: double.infinity,
+    child: ElevatedButton.icon(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: accent,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        elevation: 0,
+      ),
+      icon: const Icon(Icons.done),
+      label: const Text(
+        'Confirm Reservation',
+        style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600),
+      ),
+    ),
+  );
+}
+
+/// Full-width "Add More Guest" button that appends an extra-member row.
+Widget _addMoreGuestButton({
+  required Color accent,
+  required VoidCallback onPressed,
+}) {
+  return SizedBox(
+    width: double.infinity,
+    child: OutlinedButton.icon(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: accent,
+        side: BorderSide(color: accent, width: 1.6),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      icon: const Icon(Icons.group_add, size: 18),
+      label: const Text(
+        'Add More Guest',
+        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+      ),
+    ),
+  );
+}
+
+/// "Family Members Included" tick, styled to sit alongside the other cards on
+/// this screen. Mirrors the same field on the new reservation screen.
+Widget _familyMembersTick({
+  required Color accent,
+  required bool checked,
+  required ValueChanged<bool> onChanged,
+}) {
+  return InkWell(
+    onTap: () => onChanged(!checked),
+    borderRadius: BorderRadius.circular(10),
+    child: Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: checked ? accent : Colors.grey.shade300,
+          width: checked ? 1.6 : 1,
+        ),
+      ),
+      padding: const EdgeInsets.fromLTRB(4, 2, 12, 2),
+      child: Row(
+        children: [
+          Checkbox(
+            value: checked,
+            activeColor: accent,
+            onChanged: (value) => onChanged(value ?? false),
+          ),
+          Icon(Icons.family_restroom, size: 20, color: accent),
+          const SizedBox(width: 8),
+          const Expanded(
+            child: Text(
+              'Family Members Included',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -3313,11 +3508,11 @@ class _HotelForm extends StatelessWidget {
         controller: state._hotelScrollCtrl,
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
         children: [
-          _sectionHeader(
-            'Hotel Reservation Request',
-            accent,
-            Icons.hotel_rounded,
-          ),
+          // _sectionHeader(
+          //   'Hotel Reservation Request',
+          //   accent,
+          //   Icons.hotel_rounded,
+          // ),
           _guestIdentityRow(
             context: context,
             memberIdCtrl: state._sharedMemberId,
@@ -3390,6 +3585,33 @@ class _HotelForm extends StatelessWidget {
           //   ),
           // ),
           const SizedBox(height: 12),
+
+          // ── Family members of THIS guest ────────────────────────────────────
+          _familyMembersTick(
+            accent: accent,
+            checked: state._sharedHasFamilyMembers,
+            onChanged: (v) =>
+                state.setState(() => state._sharedHasFamilyMembers = v),
+          ),
+          const SizedBox(height: 12),
+
+          // ── Extra guests on the SAME package ────────────────────────────────
+          ...List.generate(
+            state._h_extraMembers.length,
+            (i) => _extraMemberCard(
+              state,
+              state._h_extraMembers,
+              i,
+              accent,
+              subtitle: 'Same Package',
+              showFamilyMembers: true,
+            ),
+          ),
+          _addMoreGuestButton(
+            accent: accent,
+            onPressed: () => state._addExtraMember(state._h_extraMembers),
+          ),
+          const SizedBox(height: 16),
 
           // ── Pending hotels list ─────────────────────────────────────────────
           if (state._pendingHotels.isNotEmpty) ...[
@@ -3522,11 +3744,23 @@ class _HotelForm extends StatelessWidget {
                     !state._h_departureDate!.isAfter(d)) {
                   state._h_departureDate = null;
                   state._h_departureCtrl.clear();
+                  state._h_departureDateKey = UniqueKey();
                 }
                 // ignore: invalid_use_of_protected_member
                 (context as Element).markNeedsBuild();
               }
             },
+            // Clearing the arrival also drops the departure — it is only ever
+            // constrained relative to an arrival date.
+            onClear: () => state.setState(() {
+              state._h_arrivalDate = null;
+              state._h_arrivalCtrl.clear();
+              state._h_arrivalDateKey = UniqueKey();
+              state._h_departureDate = null;
+              state._h_departureCtrl.clear();
+              state._h_departureDateKey = UniqueKey();
+            }),
+            fieldKey: state._h_arrivalDateKey,
           ),
           const SizedBox(height: 12),
           _dateField(
@@ -3550,6 +3784,12 @@ class _HotelForm extends StatelessWidget {
                 (context as Element).markNeedsBuild();
               }
             },
+            onClear: () => state.setState(() {
+              state._h_departureDate = null;
+              state._h_departureCtrl.clear();
+              state._h_departureDateKey = UniqueKey();
+            }),
+            fieldKey: state._h_departureDateKey,
           ),
             const SizedBox(height: 12),
           _rowPair(
@@ -3565,6 +3805,14 @@ class _HotelForm extends StatelessWidget {
               icon: Icons.group_outlined,
               accent: accent,
             ),
+          ),
+          const SizedBox(height: 12),
+          _StepperField(
+            controller: state._h_noOfChildren,
+            label: 'No of Children',
+            icon: Icons.child_care_outlined,
+            accent: accent,
+            min: 0,
           ),
           const SizedBox(height: 12),
           DropdownSearch<Map<String, dynamic>>(
@@ -3828,6 +4076,15 @@ class _HotelForm extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
+
+          // ── Add Another Hotel button ─────────────────────────────────────────
+          _addAnotherButton(
+            accent: accent,
+            icon: Icons.add_business_rounded,
+            label: 'Add Another Hotel for This Guest',
+            onPressed: state._addAnotherHotel,
+          ),
+          const SizedBox(height: 12),
           TextFormField(
             controller: state._h_remarks,
             style: kInputTextStyle,
@@ -3839,37 +4096,6 @@ class _HotelForm extends StatelessWidget {
             maxLines: 3,
             keyboardType: TextInputType.multiline,
           ),
-          const SizedBox(height: 12),
-
-          // ── Add Another Hotel button ─────────────────────────────────────────
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: state._addAnotherHotel,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: accent,
-                side: BorderSide(
-                    color: accent.withOpacity(0.6), width: 1.5),
-                padding: const EdgeInsets.symmetric(vertical: 13),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                backgroundColor: accent.withOpacity(0.04),
-              ),
-              icon: const Icon(Icons.add_business_rounded),
-              label: const Text(
-                'Add Another Hotel for This Guest',
-                style:
-                    TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          _actionButtons(
-            accent: accent,
-            onApplyAndAdd: state._applyAndAddHotelMember,
-            onSameDetails: state._addMemberWithSameDetailsHotel,
-          ),
           const SizedBox(height: 20),
           _addedMembersSection(
             members: state._hotelMembers,
@@ -3878,6 +4104,11 @@ class _HotelForm extends StatelessWidget {
             onRemove: (i) =>
                 () => state.setState(() => state._hotelMembers.removeAt(i)),
           ),
+          _confirmReservationButton(
+            accent: accent,
+            onPressed: state._onSave,
+          ),
+          const SizedBox(height: 20),
         ],
       ),
     );
@@ -3900,7 +4131,7 @@ class _AirForm extends StatelessWidget {
         controller: state._airScrollCtrl,
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
         children: [
-          _sectionHeader('Air Ticket Request', accent, Icons.flight_rounded),
+          // _sectionHeader('Air Ticket Request', accent, Icons.flight_rounded),
           _guestIdentityRow(
             context: context,
             memberIdCtrl: state._sharedMemberId,
@@ -3972,7 +4203,130 @@ class _AirForm extends StatelessWidget {
           //     accent: accent,
           //   ),
           // ),
+          const SizedBox(height: 12),
+
+          // ── Family members of THIS guest ────────────────────────────────────
+          _familyMembersTick(
+            accent: accent,
+            checked: state._sharedHasFamilyMembers,
+            onChanged: (v) =>
+                state.setState(() => state._sharedHasFamilyMembers = v),
+          ),
+          const SizedBox(height: 12),
+
+          // ── Extra guests on the SAME package ────────────────────────────────
+          ...List.generate(
+            state._a_extraMembers.length,
+            (i) => _extraMemberCard(
+              state,
+              state._a_extraMembers,
+              i,
+              accent,
+              subtitle: 'Same Package',
+              showFamilyMembers: true,
+            ),
+          ),
+          _addMoreGuestButton(
+            accent: accent,
+            onPressed: () => state._addExtraMember(state._a_extraMembers),
+          ),
           const SizedBox(height: 16),
+
+          // ── Tickets already added for this guest ────────────────────────────
+          if (state._pendingAirTickets.isNotEmpty) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: accent.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: accent.withOpacity(0.25)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.flight_rounded, color: accent, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Air Tickets Added for This Guest '
+                    '(${state._pendingAirTickets.length})',
+                    style: TextStyle(
+                      color: accent,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ...state._pendingAirTickets.asMap().entries.map((e) {
+              final idx = e.key;
+              final t = e.value;
+              final sector = [
+                if ((t['fromAirport'] as String? ?? '').isNotEmpty)
+                  t['fromAirport'],
+                if ((t['toAirport'] as String? ?? '').isNotEmpty) t['toAirport'],
+              ].join(' → ');
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border:
+                      Border.all(color: accent.withOpacity(0.35), width: 1.2),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 13,
+                      backgroundColor: accent.withOpacity(0.15),
+                      child: Text(
+                        '${idx + 1}',
+                        style: TextStyle(
+                          color: accent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            sector.isNotEmpty ? sector : '—',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            '${t['arrDate']} → ${t['depDate']}  |  '
+                            '${t['class']}  |  ${t['noOfSeats']} seat(s)',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline_rounded,
+                          color: Colors.red, size: 20),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () => state.setState(
+                          () => state._pendingAirTickets.removeAt(idx)),
+                    ),
+                  ],
+                ),
+              );
+            }),
+            const SizedBox(height: 6),
+          ],
           _dateField(
             context,
             'Arrival Date',
@@ -3987,10 +4341,27 @@ class _AirForm extends StatelessWidget {
               if (d != null) {
                 state._a_arrDate = d;
                 state._a_arrCtrl.text = state._fmt(d);
+                if (state._a_depDate != null &&
+                    !state._a_depDate!.isAfter(d)) {
+                  state._a_depDate = null;
+                  state._a_depCtrl.clear();
+                  state._a_depDateKey = UniqueKey();
+                }
                 // ignore: invalid_use_of_protected_member
                 (context as Element).markNeedsBuild();
               }
             },
+            // Clearing the arrival also drops the departure — it is only ever
+            // constrained relative to an arrival date.
+            onClear: () => state.setState(() {
+              state._a_arrDate = null;
+              state._a_arrCtrl.clear();
+              state._a_arrDateKey = UniqueKey();
+              state._a_depDate = null;
+              state._a_depCtrl.clear();
+              state._a_depDateKey = UniqueKey();
+            }),
+            fieldKey: state._a_arrDateKey,
           ),
           const SizedBox(height: 12),
           _dateField(
@@ -4014,6 +4385,12 @@ class _AirForm extends StatelessWidget {
                 (context as Element).markNeedsBuild();
               }
             },
+            onClear: () => state.setState(() {
+              state._a_depDate = null;
+              state._a_depCtrl.clear();
+              state._a_depDateKey = UniqueKey();
+            }),
+            fieldKey: state._a_depDateKey,
           ),
           const SizedBox(height: 12),
           _LabeledCard(
@@ -4152,6 +4529,23 @@ class _AirForm extends StatelessWidget {
             accent: accent,
           ),
           const SizedBox(height: 12),
+          _rowPair(
+            _StepperField(
+              controller: state._a_noOfChildren,
+              label: 'Children',
+              icon: Icons.child_care_outlined,
+              accent: accent,
+              min: 0,
+            ),
+            _StepperField(
+              controller: state._a_noOfInfants,
+              label: 'Infants',
+              icon: Icons.child_friendly_outlined,
+              accent: accent,
+              min: 0,
+            ),
+          ),
+          const SizedBox(height: 12),
           AirTicketClassSelector(
             key: state._a_classKey,
             selectedClass: state._a_selectedClass,
@@ -4287,6 +4681,42 @@ class _AirForm extends StatelessWidget {
               onChanged: (v) => state.setState(() => state._a_goldRoute = v),
             ),
           ],
+
+          // ── Follow-ups for the Yes answers above ────────────────────────────
+          // Full width, one per row: the leg pickers and the meal note need
+          // more space than the half-width option rows.
+          if (state._a_skipRouteFacility == 'Yes') ...[
+            const SizedBox(height: 12),
+            _LegSelector(
+              label: 'Slik Route Facility For',
+              value: state._a_silkRouteType,
+              accent: accent,
+              onChanged: (leg) =>
+                  state.setState(() => state._a_silkRouteType = leg),
+            ),
+          ],
+          if (!state._isBellagio && state._a_goldRoute == 'Yes') ...[
+            const SizedBox(height: 12),
+            _LegSelector(
+              label: 'Gold Route For',
+              value: state._a_goldRouteType,
+              accent: accent,
+              onChanged: (leg) =>
+                  state.setState(() => state._a_goldRouteType = leg),
+            ),
+          ],
+          if (!state._isBellagio && state._a_meal == 'Yes') ...[
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: state._a_mealRemarkCtrl,
+              style: kInputTextStyle,
+              decoration: _fieldDeco(
+                'Meal Details',
+                icon: Icons.restaurant_menu,
+                accent: accent,
+              ).copyWith(hintText: 'e.g. vegetarian, no nuts'),
+            ),
+          ],
           const SizedBox(height: 12),
 
           // ── Hamoue contact person (NEW, hardcoded test values) ──────────────
@@ -4325,6 +4755,15 @@ class _AirForm extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
+          // ── Add Another Air Ticket button ────────────────────────────────────
+          _addAnotherButton(
+            accent: accent,
+            icon: Icons.flight_takeoff_rounded,
+            label: 'Add Another Air Ticket for This Guest',
+            onPressed: state._addAnotherAirTicket,
+          ),
+          const SizedBox(height: 12),
+
           // ── Remarks (Air Tab) ─────────────────────────────────────────────────
           TextFormField(
             controller: state._a_remarksCtrl,
@@ -4338,12 +4777,6 @@ class _AirForm extends StatelessWidget {
             keyboardType: TextInputType.multiline,
           ),
 
-          const SizedBox(height: 16),
-          _actionButtons(
-            accent: accent,
-            onApplyAndAdd: state._applyAndAddAirMember,
-            onSameDetails: state._addMemberWithSameDetailsAir,
-          ),
           const SizedBox(height: 20),
           _addedMembersSection(
             members: state._airMembers,
@@ -4352,6 +4785,11 @@ class _AirForm extends StatelessWidget {
             onRemove: (i) =>
                 () => state.setState(() => state._airMembers.removeAt(i)),
           ),
+          _confirmReservationButton(
+            accent: accent,
+            onPressed: state._onSave,
+          ),
+          const SizedBox(height: 20),
         ],
       ),
     );
@@ -4453,26 +4891,11 @@ class _TransportForm extends StatelessWidget {
           // ── Extra guests on the SAME transport request ─────────────────────
           ...List.generate(
             state._t_extraMembers.length,
-            (i) => _transportExtraMemberCard(state, i, accent),
+            (i) => _extraMemberCard(state, state._t_extraMembers, i, accent),
           ),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: state._addTransportExtraMember,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: accent,
-                side: BorderSide(color: accent, width: 1.6),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              icon: const Icon(Icons.group_add, size: 18),
-              label: const Text(
-                'Add More Guest',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-              ),
-            ),
+          _addMoreGuestButton(
+            accent: accent,
+            onPressed: () => state._addExtraMember(state._t_extraMembers),
           ),
           const SizedBox(height: 16),
           // ── Pickup date & time ───────────────────────────────────────────────
@@ -4784,12 +5207,15 @@ class _TransportForm extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 // An extra guest sharing the transport request currently in the form
 // ─────────────────────────────────────────────────────────────────────────────
-class _TransportExtraMember {
+/// One extra guest travelling on the same request as the guest in the form:
+/// they share its hotels / flights / vehicles and dates, so they only carry who
+/// they are and their own package amount. Used by all three tabs.
+class _ExtraMember {
   final TextEditingController midNumberController;
   final TextEditingController nameController;
 
-  /// This member's own package amount — they share the primary guest's pickup,
-  /// vehicles and dates but are billed their own package.
+  /// This member's own package amount — they share the primary guest's booking
+  /// and dates but are billed their own package.
   final TextEditingController packageAmountController;
   String prefix;
 
@@ -4797,12 +5223,17 @@ class _TransportExtraMember {
   /// empty [packageAmountController] a valid state rather than a missing field.
   bool sharedPackage;
 
-  _TransportExtraMember({
+  /// Whether family members travel with THIS guest. Only shown on the hotel and
+  /// air ticket tabs, matching the new reservation screen's member card.
+  bool hasFamilyMembers;
+
+  _ExtraMember({
     this.prefix = 'BM',
     String midNumber = '',
     String name = '',
     String packageAmount = '',
     this.sharedPackage = false,
+    this.hasFamilyMembers = false,
   })  : midNumberController = TextEditingController(text: midNumber),
         nameController = TextEditingController(text: name),
         packageAmountController = TextEditingController(text: packageAmount);
@@ -4825,6 +5256,106 @@ class _TransportExtraMember {
 // ─────────────────────────────────────────────────────────────────────────────
 // Yes / No radio row — used for Skip Route Facility, Airport Transport, Visa
 // ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Arrival / Departure picker — which leg a Silk or Gold Route facility is for.
+// Only shown once its option is answered Yes.
+// ─────────────────────────────────────────────────────────────────────────────
+class _LegSelector extends StatelessWidget {
+  final String label;
+  final String value; // 'Arrival' or 'Departure'
+  final Color accent;
+  final ValueChanged<String> onChanged;
+
+  const _LegSelector({
+    required this.label,
+    required this.value,
+    required this.accent,
+    required this.onChanged,
+  });
+
+  Widget _leg(String leg, IconData icon) {
+    final selected = value == leg;
+    return Expanded(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => onChanged(leg),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+          decoration: BoxDecoration(
+            color: selected ? accent.withOpacity(0.12) : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: selected ? accent : Colors.grey.shade300,
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon,
+                  size: 18, color: selected ? accent : Colors.grey.shade600),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  leg,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                    color: selected ? accent : Colors.black87,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.flight_takeoff_rounded, size: 18, color: accent),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _leg('Arrival', Icons.flight_land_rounded),
+              const SizedBox(width: 10),
+              _leg('Departure', Icons.flight_takeoff_rounded),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _YesNoRadioRow extends StatelessWidget {
   final String label;
   final IconData icon;

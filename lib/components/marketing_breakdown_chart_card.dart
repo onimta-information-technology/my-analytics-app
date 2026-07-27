@@ -318,6 +318,7 @@ class _HalfPieSectionState extends State<_HalfPieSection>
             salesPersons: groupByCountry(widget.nonMarketingGuests),
             accentColor: color,
             useKeyAsName: true,
+            allowAllUsers: true,
           ),
         );
         return;
@@ -352,6 +353,7 @@ class _HalfPieSectionState extends State<_HalfPieSection>
           salesPersons: groupByCountry(widget.nonMarketingGuests),
           accentColor: color,
           useKeyAsName: true,
+          allowAllUsers: true,
         ),
       );
       return;
@@ -588,6 +590,10 @@ class _SalesPersonsSheet extends StatefulWidget {
   final bool disableNavigation;
   final List<MarketingGroup>? salesPersonOrder;
 
+  /// Bally's-only: let every user open these member profiles, ignoring the
+  /// marketing-group check. See [_MemberVisitsSheet.allowAllUsers].
+  final bool allowAllUsers;
+
   const _SalesPersonsSheet({
     required this.title,
     required this.salesPersons,
@@ -595,6 +601,7 @@ class _SalesPersonsSheet extends StatefulWidget {
     this.useKeyAsName = false,
     this.salesPersonOrder,
     this.disableNavigation = false,
+    this.allowAllUsers = false,
   });
 
   @override
@@ -695,6 +702,7 @@ class _SalesPersonsSheetState extends State<_SalesPersonsSheet> with Connectivit
                                 accentColor: widget.accentColor,
                                 showBackButton: true,
                                 disableNavigation: widget.disableNavigation,
+                                allowAllUsers: widget.allowAllUsers,
                               ),
                             );
                           },
@@ -745,12 +753,18 @@ class _MemberVisitsSheet extends ConsumerStatefulWidget {
   final bool showBackButton;
   final bool disableNavigation;
 
+  /// Bally's-only escape hatch for the Non Marketing breakdown: those guests
+  /// carry no mGroup, so the usual marketing-group check would lock everyone
+  /// but AD001 out. Ignored on Bellagio (bty.world).
+  final bool allowAllUsers;
+
   const _MemberVisitsSheet({
     required this.title,
     required this.guests,
     required this.accentColor,
     this.showBackButton = false,
     this.disableNavigation = false,
+    this.allowAllUsers = false,
   });
 
   @override
@@ -768,6 +782,9 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> with Con
 
   // ── Rating mode (mirrors ProfileScreen + MemberVisits) ──
   bool _useBadgeForRating = false;
+
+  // Bally's is every deployment that is not bty.world (Bellagio).
+  bool _isBallys = false;
 
   // static const Map<String, String> _ratingImages = {
   //   "CLASSIC": "assets/images/ratings/CLASSIC.png",
@@ -813,6 +830,7 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> with Con
     if (mounted) {
       setState(() {
         _useBadgeForRating = apiUrl.contains('bty.world');
+        _isBallys = !apiUrl.contains('bty.world');
       });
     }
   }
@@ -837,6 +855,11 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> with Con
 
   bool _hasPermissionToViewMember(Guest guest) {
     if (_userSalesCode == 'AD001') {
+      return true;
+    }
+
+    // Non Marketing on Bally's: open to every user.
+    if (widget.allowAllUsers && _isBallys) {
       return true;
     }
 

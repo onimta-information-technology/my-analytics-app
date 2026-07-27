@@ -7,6 +7,7 @@ import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -34,10 +35,23 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> with Connec
   List<GuestGift> originalMembers = [];
   List<GuestGift> inactiveMembers = [];
 
+  // Redeem is a Bellagio-only feature; Ballys logins never see the button.
+  bool _isBellagio = false;
+
   @override
   void initState() {
     _applyFilter();
+    _loadLocation();
     super.initState();
+  }
+
+  Future<void> _loadLocation() async {
+    final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+    if (mounted) {
+      setState(() {
+        _isBellagio = apiUrl.contains('bty.world');
+      });
+    }
   }
 
   void _applyFilter() async {
@@ -90,6 +104,16 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> with Connec
         return const Color(0xFF5D4037);
     }
   }
+  // UI only for now — the redeem API is not wired up yet.
+  void _onRedeemPressed(GuestGift gift) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Redeem ${gift.categoryCode} — coming soon'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   void _showImagePopup(BuildContext context, Guest selectedGuest) {
     showDialog(
       context: context,
@@ -526,6 +550,30 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> with Connec
                                           ),
                                         ],
                                       ),
+                                      if (_isBellagio) ...[
+                                        const SizedBox(height: 8),
+                                        Align(
+                                          alignment: Alignment.centerRight,
+                                          child: ElevatedButton.icon(
+                                            onPressed: () =>
+                                                _onRedeemPressed(guest),
+                                            icon: const Icon(
+                                              Icons.redeem,
+                                              size: 18,
+                                            ),
+                                            label: const Text('Redeem'),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  Constants.kSecondaryColor,
+                                              foregroundColor: Colors.white,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ],
                                   ),
                                 ),

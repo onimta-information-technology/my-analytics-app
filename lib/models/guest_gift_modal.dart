@@ -9,6 +9,7 @@ class GuestGift {
   final String? gRating;
   final String mobile;
   final String? mGroup;
+  final int? rcNo;
 
   GuestGift({
     required this.mid,
@@ -21,21 +22,49 @@ class GuestGift {
      this.gRating,
      this.mobile = "",
       this.mGroup,
+      this.rcNo,
   });
 
   factory GuestGift.fromJson(Map<String, dynamic> json) {
-    return GuestGift(
-      mid: json['MID'],
-      memberName: json['MNAME'],
-      expireDate: json['D_EXP_DATE'],
-      amount: json['AMT'],
-      categoryCode: json['CatCode'],
-      gName: json['GName'],
-      lvd: json['LVD'],
-      gRating: json['G_Rating'],
-      mobile: json['Mobile'] ?? "",
-      mGroup: json['MGroup'],
+    // The SP returns the same column with different casing/types between calls
+    // (e.g. AMT as 500 one time and 500.00 the next, RC_NO as int or decimal),
+    // so look keys up case-insensitively and never cast the raw value directly.
+    final lowerJson = {
+      for (final e in json.entries) e.key.toLowerCase(): e.value
+    };
 
+    String? getValue(List<String> keys) {
+      for (final key in keys) {
+        final v = lowerJson[key.toLowerCase()];
+        if (v != null) return v.toString();
+      }
+      return null;
+    }
+
+    /// Handles int, double and String ("500", "500.00", "1,500.00") payloads.
+    double toDouble(String? raw) {
+      if (raw == null || raw.isEmpty) return 0.0;
+      return double.tryParse(raw.replaceAll(',', '')) ?? 0.0;
+    }
+
+    /// Same as [toDouble] but truncates, so "5.0" no longer parses to null.
+    int? toInt(String? raw) {
+      if (raw == null || raw.isEmpty) return null;
+      return num.tryParse(raw.replaceAll(',', ''))?.toInt();
+    }
+
+    return GuestGift(
+      mid: getValue(['MID']) ?? '',
+      memberName: getValue(['MNAME', 'MName']) ?? '',
+      expireDate: getValue(['D_EXP_DATE']) ?? '',
+      amount: toDouble(getValue(['AMT'])),
+      categoryCode: getValue(['CatCode', 'CATCODE']) ?? '',
+      gName: getValue(['GName', 'GNAME']) ?? '',
+      lvd: getValue(['LVD']),
+      gRating: getValue(['G_Rating', 'G_RATING']),
+      mobile: getValue(['Mobile', 'MOBILE']) ?? '',
+      mGroup: getValue(['MGroup', 'MGROUP', 'mGroup']),
+      rcNo: toInt(getValue(['RC_NO', 'RCNO', 'RC'])),
     );
   }
 }

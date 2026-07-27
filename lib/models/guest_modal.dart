@@ -76,7 +76,8 @@ class Guest {
       gRating: getValue(['G_Rating', 'G_RATING']),
       mGroup: getValue(['mGroup', 'MGROUP']),
       gName: getValue(['GName', 'GNAME']),
-      rc: int.tryParse(getValue(['RC']) ?? ''),
+      // num.tryParse so a decimal payload ("5.0") doesn't parse to null.
+      rc: num.tryParse(getValue(['RC', 'RC_NO']) ?? '')?.toInt(),
       memImage2: getValue(['MemImage2', 'MEMIMAGE2']),
       gift: getValue(['GIFT']),
       mDrop: double.tryParse(getValue(['MDROP']) ?? '0'),

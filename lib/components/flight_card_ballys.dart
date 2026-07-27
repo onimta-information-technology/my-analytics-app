@@ -109,6 +109,28 @@ class FlightCardBallys extends StatelessWidget {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
+                            // Only worth the space once someone is travelling
+                            // with children / infants.
+                            if ((flight.childrenCount ?? 0) > 0) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                "Children: ${flight.childrenCount}",
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                            if ((flight.infantCount ?? 0) > 0) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                "Infants: ${flight.infantCount}",
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ],

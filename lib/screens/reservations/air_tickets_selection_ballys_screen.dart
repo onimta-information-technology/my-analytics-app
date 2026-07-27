@@ -172,6 +172,7 @@ class _AirTicketsSelectionBallysScreenState
 
   int numberOfGuests = 1;
   int numberOfChildren = 0;
+  int numberOfInfants = 0;
   int numberOfRooms = 1;
 
   List<FlightBookingBallys> flightList = [];
@@ -222,6 +223,15 @@ String? _selectedContactPerson;
     if (count >= 0) {
       setState(() {
         numberOfChildren = count;
+      });
+      _clearSelectedCost();
+    }
+  }
+
+  void _updateInfants(count) {
+    if (count >= 0) {
+      setState(() {
+        numberOfInfants = count;
       });
       _clearSelectedCost();
     }
@@ -337,6 +347,8 @@ String? _selectedContactPerson;
       editMode = true;
       editIndex = index;
       numberOfGuests = flight.guestCount;
+      numberOfChildren = flight.childrenCount;
+      numberOfInfants = flight.infantCount;
 
       _airTicketClass = flight.airTicketClass;
       _airTicketClassName = flight.airTicketClassName;
@@ -449,6 +461,8 @@ String? _selectedContactPerson;
 
     final flightBooking = FlightBookingBallys(
       guestCount: numberOfGuests,
+      childrenCount: numberOfChildren,
+      infantCount: numberOfInfants,
       airTicketClass: _airTicketClass!,
       arrivalDate: DateFormat("yyyy-MM-dd").parse(_arrivalDateController.text),
       departureDate: _departureDateController.text.isEmpty
@@ -645,6 +659,8 @@ String? _selectedContactPerson;
   void _clearSelection() {
     setState(() {
       numberOfGuests = 1;
+      numberOfChildren = 0;
+      numberOfInfants = 0;
       arrivalDate = null;
       _arrivalDateController.text = "";
       _departureDateController.text = "";
@@ -918,6 +934,12 @@ String? _selectedContactPerson;
                       const SizedBox(height: 16),
                       _buildCounter("Guests", numberOfGuests, 1,
                           (count) => _updateAdults(count)),
+                      const SizedBox(height: 12),
+                      _buildCounter("Children", numberOfChildren, 2,
+                          (count) => _updateChildren(count)),
+                      const SizedBox(height: 12),
+                      _buildCounter("Infants", numberOfInfants, 3,
+                          (count) => _updateInfants(count)),
                       const SizedBox(height: 20),
                       const Align(
                         alignment: Alignment.topLeft,

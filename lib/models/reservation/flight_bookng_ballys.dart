@@ -3,6 +3,13 @@ import 'package:intl/intl.dart';
 
 class FlightBookingBallys {
   final int guestCount;
+
+  /// Children travelling on the ticket. Counted separately from [guestCount],
+  /// which stays the adult count.
+  final int childrenCount;
+
+  /// Infants travelling on the ticket.
+  final int infantCount;
   final FlightAirport? airports;
   final int airTicketClass;
   final DateTime? arrivalDate;
@@ -32,6 +39,8 @@ class FlightBookingBallys {
 
   FlightBookingBallys({
     required this.guestCount,
+    this.childrenCount = 0,
+    this.infantCount = 0,
     required this.airports,
     required this.airTicketClass,
     required this.arrivalDate,
@@ -55,6 +64,8 @@ class FlightBookingBallys {
   factory FlightBookingBallys.fromJson(Map<String, dynamic> json) {
     return FlightBookingBallys(
       guestCount: json['guest_count'] ?? 0,
+      childrenCount: _toInt(json['children_count']),
+      infantCount: _toInt(json['infant_count']),
       airports: json['airports'] != null
           ? FlightAirport.fromJson(json['airports'])
           : _parseFlatAirports(json),
@@ -76,6 +87,14 @@ class FlightBookingBallys {
       goldRouteType: json['gold_route_type'] as String?,
       mealRemark: json['meal_remark'] as String?,
     );
+  }
+
+  /// Child / infant counts come back as either a number or a string depending
+  /// on the endpoint; missing means none.
+  static int _toInt(dynamic value) {
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
   }
 
   static String? _parseCost(dynamic cost) {
@@ -148,6 +167,8 @@ class FlightBookingBallys {
   Map<String, dynamic> toJson() {
     return {
       'guest_count': guestCount,
+      'children_count': childrenCount,
+      'infant_count': infantCount,
       'air_ticket_class': airTicketClass,
       'air_ticket_class_name': airTicketClassName,
       'air_line': airLine,

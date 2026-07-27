@@ -314,10 +314,10 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> with ConnectivityMixi
                                   highlightColor: Colors.transparent,
                                   onTap: () async {
                                     // Check sales code permission
-                                    if (_salesCode != 'AD001') {
-                                      _showAccessDeniedDialog();
-                                      return;
-                                    }
+                                    // if (_salesCode != 'AD001') {
+                                    //   _showAccessDeniedDialog();
+                                    //   return;
+                                    // }
 
                                     // Show loading indicator
                                     setState(() {

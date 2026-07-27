@@ -325,12 +325,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   String? _t_hireType;
   String _t_pickupPlaceId = '';
   String _t_dropPlaceId = '';
-  String _t_silkRoute = 'No';
   String _t_airportPickup = 'No';
-
-  /// Ticked when the guest shares another member's package: the amount picker
-  /// is locked and an empty package amount is accepted on save.
-  bool _t_sharedPackage = false;
 
   /// Extra members travelling on the SAME transport request as the guest in the
   /// form: they share its pickup, vehicles and dates, so they only carry who
@@ -342,10 +337,6 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   /// package.
   final List<_ExtraMember> _h_extraMembers = [];
   final List<_ExtraMember> _a_extraMembers = [];
-
-  // ── Transport — passport bio data page uploads ─────────────────────────────
-  List<PassportFile> _t_passportFiles = [];
-  Key _t_passportUploadKey = UniqueKey();
 
   /// Keeps `_t_carTypes` and `_t_passengerCtrls` in sync with the "No of
   /// Vehicles" stepper so there is exactly one Car Type + Passengers pair
@@ -977,10 +968,10 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     return {
       'guestName': _sharedGuestName.text,
       'memberId': _sharedMemberId.text,
-      // Empty while "Shared" is ticked — the guest rides on another member's
-      // package, so no amount of their own is submitted.
-      'packageAmount': _t_sharedPackage ? '' : _sharedPackageAmount.text,
-      'sharedPackage': _t_sharedPackage,
+      // Transport requests no longer capture a package amount; the API field is
+      // kept so the payload shape stays unchanged.
+      'packageAmount': '',
+      'sharedPackage': false,
       // Guests riding along on this same request.
       'extraMembers': _captureExtraMembers(_t_extraMembers),
       'pickupDate': _t_pickupDateCtrl.text,
@@ -997,10 +988,8 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       'contactNumber': _t_contactNumber.text.trim().isEmpty
           ? ''
           : '+${_t_country.phoneCode}${_t_contactNumber.text.trim()}',
-      'silkRoute': _t_silkRoute,
+      'silkRoute': 'No',
       'airportPickup': _t_airportPickup,
-      'passportFiles': _t_passportFiles.map((f) => f.fileName).join(', '),
-      'passportFileObjects': List<PassportFile>.from(_t_passportFiles),
       // typed fields used when building the API body
       'pickupDateObj': _t_pickupDate,
       'pickupTimeObj': _t_pickupTime,
@@ -1027,12 +1016,8 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     _t_hireType = null;
     _t_pickupPlaceId = '';
     _t_dropPlaceId = '';
-    _t_silkRoute = 'No';
     _t_airportPickup = 'No';
-    _t_sharedPackage = false;
     _clearExtraMembers(_t_extraMembers);
-    _t_passportFiles = [];
-    _t_passportUploadKey = UniqueKey();
   }
 
   void _clearAllTransportForm() {
@@ -1086,6 +1071,10 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   bool _validateExtraMembers(
     List<_ExtraMember> rows, {
     required String primaryMid,
+
+    /// Transport rows have no Package Amount field, so an empty amount there is
+    /// expected rather than a half-filled row.
+    bool requirePackageAmount = true,
   }) {
     final seen = <String>{if (primaryMid.isNotEmpty) primaryMid};
 
@@ -1103,7 +1092,9 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
             'Guest ${i + 2}: both Membership No and Guest Name are required');
         return false;
       }
-      if (packageAmount.isEmpty && !row.sharedPackage) {
+      if (requirePackageAmount &&
+          packageAmount.isEmpty &&
+          !row.sharedPackage) {
         _showSaveErrorSnack('Guest ${i + 2}: Package Amount is required');
         return false;
       }
@@ -1747,8 +1738,6 @@ Remarks              : ${m['remarks']}''';
       ..writeln('*TRANSPORT REQUEST*')
       ..writeln('Membership No      : ${m['memberId']}')
       ..writeln('Guest Name         : ${m['guestName']}')
-      ..writeln(
-          'Package Amount     : ${(m['sharedPackage'] as bool? ?? false) ? 'Shared' : m['packageAmount']}')
       ..writeln('Pickup Date        : ${m['pickupDate']}')
       ..writeln('Pickup Time        : ${m['pickupTime']}');
     for (int i = 0; i < vehicles.length; i++) {
@@ -1765,22 +1754,14 @@ Remarks              : ${m['remarks']}''';
       ..writeln('Drop Location      : ${m['dropLocation']}')
       ..writeln('No of Vehicles     : ${vehicles.length}')
       ..writeln('Contact Number     : ${m['contactNumber']}')
-      ..writeln('Slik Route         : ${m['silkRoute'] ?? 'No'}')
       ..write('Airport Pickup     : ${m['airportPickup'] ?? 'No'}');
-    final passports = m['passportFiles'] as String? ?? '';
-    if (passports.isNotEmpty) {
-      buf.write('\nPassport Files     : $passports');
-    }
     final extras = _extraMembersOf(m);
     for (int i = 0; i < extras.length; i++) {
       final e = extras[i];
-      final amount =
-          (e['sharedPackage'] as bool? ?? false) ? 'Shared' : e['packageAmount'];
       buf
         ..write('\n*Guest ${i + 2}*')
         ..write('\nMembership No      : ${e['memberId']}')
-        ..write('\nGuest Name         : ${e['guestName']}')
-        ..write('\nPackage Amount     : $amount');
+        ..write('\nGuest Name         : ${e['guestName']}');
     }
     return buf.toString();
   }
@@ -2008,7 +1989,8 @@ Remarks              : ${m['remarks']}''';
 
     if (!_validateExtraMembers(
         _t_extraMembers,
-        primaryMid: _sharedMemberId.text.trim())) {
+        primaryMid: _sharedMemberId.text.trim(),
+        requirePackageAmount: false)) {
       return;
     }
 
@@ -2046,15 +2028,15 @@ final phoneNumber = await StorageUtil.getMobileNumber();
       'guest_name': primary['guestName'],
       'pickup_date': _pickupIso(primary),
       'contact_number': phoneNumber,
-      'package_amount': packageAmountToInt(primary['packageAmount'] as String?),
-      'currency_type':
-          packageAmountCurrency(primary['packageAmount'] as String?),
+      // 'package_amount': packageAmountToInt(primary['packageAmount'] as String?),
+      // 'currency_type':
+      //     packageAmountCurrency(primary['packageAmount'] as String?),
       'reservation_status': 'Requested',
       'sales_code': salesCode,
       'user_name': userName,
       'device_id': deviceId,
       'transport_details': transportDetails,
-      'passport_images': _buildPassportImages(allMembers),
+      // 'passport_images': _buildPassportImages(allMembers),
       // 'guests': guests,
     };
 
@@ -2117,18 +2099,18 @@ final phoneNumber = await StorageUtil.getMobileNumber();
     return {
       'MID': m['memberId'],
       'guest_name': m['guestName'],
-      'package_amount': packageAmountToInt(m['packageAmount'] as String?),
-      'currency_type': packageAmountCurrency(m['packageAmount'] as String?),
+      // 'package_amount': packageAmountToInt(m['packageAmount'] as String?),
+      // 'currency_type': packageAmountCurrency(m['packageAmount'] as String?),
       // Guests sharing this request: same pickup, vehicles and dates, each
       // carrying their own package amount.
       'accompanying_members': _extraMembersOf(m)
           .map((e) => {
                 'MID': e['memberId'],
                 'guest_name': e['guestName'],
-                'package_amount':
-                    packageAmountToInt(e['packageAmount'] as String?),
-                'currency_type':
-                    packageAmountCurrency(e['packageAmount'] as String?),
+                // 'package_amount':
+                //     packageAmountToInt(e['packageAmount'] as String?),
+                // 'currency_type':
+                //     packageAmountCurrency(e['packageAmount'] as String?),
               })
           .toList(),
       'pickup_date': _pickupIso(m),
@@ -2147,7 +2129,7 @@ final phoneNumber = await StorageUtil.getMobileNumber();
               })
           .toList(),
       'contact_number': m['contactNumber'],
-      'silk_route': (m['silkRoute'] as String?) == 'Yes' ? 1 : 0,
+      // 'silk_route': (m['silkRoute'] as String?) == 'Yes' ? 1 : 0,
       'airport_pickup': (m['airportPickup'] as String?) == 'Yes' ? 1 : 0,
     };
   }
@@ -2956,6 +2938,10 @@ Widget _extraMemberCard(
   /// The hotel and air ticket tabs carry the family-members tick, matching the
   /// new reservation screen's member card. Transport has no such field.
   bool showFamilyMembers = false,
+
+  /// Transport requests are not billed against a package, so their extra guests
+  /// only carry who they are.
+  bool showPackageAmount = true,
 }) {
   final row = rows[index];
 
@@ -3051,23 +3037,25 @@ Widget _extraMemberCard(
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          // Keyed on the row itself so removing a card takes its picker state
-          // with it instead of leaving it behind on the next row.
-          PackageAmountFieldBallys(
-            key: ValueKey(row),
-            controller: row.packageAmountController,
-            noPackage: row.sharedPackage,
-            onNoPackageChanged: (value) =>
-                state.setState(() => row.sharedPackage = value),
-            textStyle: kInputTextStyle,
-            accent: accent,
-            decoration: _fieldDeco(
-              'Package Amount',
-              icon: Icons.currency_rupee,
+          if (showPackageAmount) ...[
+            const SizedBox(height: 12),
+            // Keyed on the row itself so removing a card takes its picker state
+            // with it instead of leaving it behind on the next row.
+            PackageAmountFieldBallys(
+              key: ValueKey(row),
+              controller: row.packageAmountController,
+              noPackage: row.sharedPackage,
+              onNoPackageChanged: (value) =>
+                  state.setState(() => row.sharedPackage = value),
+              textStyle: kInputTextStyle,
               accent: accent,
+              decoration: _fieldDeco(
+                'Package Amount',
+                icon: Icons.currency_rupee,
+                accent: accent,
+              ),
             ),
-          ),
+          ],
           if (showFamilyMembers) ...[
             const SizedBox(height: 12),
             _familyMembersTick(
@@ -4524,7 +4512,7 @@ class _AirForm extends StatelessWidget {
           const SizedBox(height: 12),
           _StepperField(
             controller: state._a_noOfSeats,
-            label: 'No of Seats',
+            label: 'No of Adults',
             icon: Icons.event_seat_outlined,
             accent: accent,
           ),
@@ -4867,31 +4855,16 @@ class _TransportForm extends StatelessWidget {
                 showLastVisitDate: true,
               ),
             ),
-          PackageAmountFieldBallys(
-            controller: state._sharedPackageAmount,
-            noPackage: state._t_sharedPackage,
-            onNoPackageChanged: (value) =>
-                state.setState(() => state._t_sharedPackage = value),
-            textStyle: kInputTextStyle,
-            accent: accent,
-            decoration: _fieldDeco(
-              'Package Amount',
-              icon: Icons.currency_rupee,
-              accent: accent,
-            ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Package Amount is required';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 12),
-
           // ── Extra guests on the SAME transport request ─────────────────────
           ...List.generate(
             state._t_extraMembers.length,
-            (i) => _extraMemberCard(state, state._t_extraMembers, i, accent),
+            (i) => _extraMemberCard(
+              state,
+              state._t_extraMembers,
+              i,
+              accent,
+              showPackageAmount: false,
+            ),
           ),
           _addMoreGuestButton(
             accent: accent,
@@ -4901,14 +4874,14 @@ class _TransportForm extends StatelessWidget {
           // ── Pickup date & time ───────────────────────────────────────────────
           _dateField(
             context,
-            'Pickup Date *',
+            'Pickup/ Drop Date *',
             state._t_pickupDateCtrl,
             accent,
             () async {
               final now = DateTime.now();
               final d = await state._pickDate(
                 context,
-                label: 'Select Pickup Date',
+                label: 'Select Pickup/ Drop Date',
                 initial: state._t_pickupDate,
                 minDate: DateTime(now.year, now.month, now.day),
               );
@@ -4926,7 +4899,7 @@ class _TransportForm extends StatelessWidget {
             readOnly: true,
             style: kInputTextStyle,
             decoration: _fieldDeco(
-              'Pickup Time *',
+              'Pickup/ Drop Time *',
               icon: Icons.access_time_rounded,
               accent: accent,
             ).copyWith(
@@ -4943,7 +4916,7 @@ class _TransportForm extends StatelessWidget {
                       pickupDate.day == now.day);
               final t = await state._pickTime(
                 context,
-                label: 'Select Pickup Time',
+                label: 'Select Pickup/ Drop Time',
                 initial: state._t_pickupTime,
                 minTime: isToday
                     ? TimeOfDay(hour: now.hour, minute: now.minute)
@@ -4959,50 +4932,23 @@ class _TransportForm extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // ── No of vehicles + Slik Route ───────────────────────────────────────
+          // ── No of vehicles ───────────────────────────────────────────────────
           // Vehicle count is chosen before Car Type on purpose: bumping it
           // grows the Car Type + Passengers pairs below to one per vehicle.
-          _rowPair(
-            _StepperField(
-              controller: state._t_noOfVehicles,
-              label: 'No of Vehicles',
-              icon: Icons.local_taxi_outlined,
-              accent: accent,
-              onChanged: state._syncVehicleDetailsWithCount,
-            ),
-            _YesNoRadioRow(
-              label: 'Slik Route',
-              icon: Icons.alt_route_rounded,
-              value: state._t_silkRoute,
-              accent: accent,
-              stacked: true,
-              onChanged: (v) => state.setState(() => state._t_silkRoute = v),
-            ),
+          _StepperField(
+            controller: state._t_noOfVehicles,
+            label: 'No of Vehicles',
+            icon: Icons.local_taxi_outlined,
+            accent: accent,
+            onChanged: state._syncVehicleDetailsWithCount,
           ),
           const SizedBox(height: 12),
           _YesNoRadioRow(
-            label: 'Airport Pickup',
+            label: 'Airport Pickup/ Drop',
             icon: Icons.flight_land_rounded,
             value: state._t_airportPickup,
             accent: accent,
             onChanged: (v) => state.setState(() => state._t_airportPickup = v),
-          ),
-          const SizedBox(height: 12),
-
-          // ── Passport bio data page upload ────────────────────────────────────
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
-            child: PassportUploadWidget(
-              key: state._t_passportUploadKey,
-              initialFiles: state._t_passportFiles,
-              onFilesChanged: (files) =>
-                  state.setState(() => state._t_passportFiles = files),
-            ),
           ),
           const SizedBox(height: 12),
 

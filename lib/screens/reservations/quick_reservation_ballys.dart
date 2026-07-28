@@ -4621,9 +4621,24 @@ class _AirForm extends StatelessWidget {
             icon: Icons.alt_route_rounded,
             value: state._a_skipRouteFacility,
             accent: accent,
-            onChanged: (v) =>
-                state.setState(() => state._a_skipRouteFacility = v),
+            // Silk and Gold Route are mutually exclusive — saying Yes to one
+            // clears the other.
+            onChanged: (v) => state.setState(() {
+              state._a_skipRouteFacility = v;
+              if (v == 'Yes') state._a_goldRoute = 'No';
+            }),
           ),
+            const SizedBox(height: 10),
+            _YesNoRadioRow(
+              label: 'Gold Route',
+              icon: Icons.route_rounded,
+              value: state._a_goldRoute,
+              accent: accent,
+              onChanged: (v) => state.setState(() {
+                state._a_goldRoute = v;
+                if (v == 'Yes') state._a_skipRouteFacility = 'No';
+              }),
+            ),
           const SizedBox(height: 10),
           _YesNoRadioRow(
             label: 'Airport Transport',
@@ -4660,14 +4675,7 @@ class _AirForm extends StatelessWidget {
               onChanged: (v) =>
                   state.setState(() => state._a_extraLegroomSeat = v),
             ),
-            const SizedBox(height: 10),
-            _YesNoRadioRow(
-              label: 'Gold Route',
-              icon: Icons.route_rounded,
-              value: state._a_goldRoute,
-              accent: accent,
-              onChanged: (v) => state.setState(() => state._a_goldRoute = v),
-            ),
+          
           ],
 
           // ── Follow-ups for the Yes answers above ────────────────────────────

@@ -1229,8 +1229,12 @@ DropdownSearch<String>(
                           _buildYesNoOption(
                           label: "Silk Route Facility",
                           value: _silkRouteFacility == "Yes",
-                          onChanged: (value) => setState(() =>
-                              _silkRouteFacility = value ? "Yes" : "No"),
+                          // Silk and Gold Route are mutually exclusive —
+                          // turning one on clears the other.
+                          onChanged: (value) => setState(() {
+                            _silkRouteFacility = value ? "Yes" : "No";
+                            if (value) _goldRoute = false;
+                          }),
                         ),
 
                         if (_isBallys) ...[
@@ -1249,8 +1253,10 @@ DropdownSearch<String>(
                           _buildYesNoOption(
                             label: "Gold Route",
                             value: _goldRoute,
-                            onChanged: (value) =>
-                                setState(() => _goldRoute = value),
+                            onChanged: (value) => setState(() {
+                              _goldRoute = value;
+                              if (value) _silkRouteFacility = "No";
+                            }),
                           ),
                         ],
                       ]),

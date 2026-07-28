@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/transport/transport_reservation.dart';
+import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 
 class TransportRepository {
@@ -38,22 +39,43 @@ class TransportRepository {
     );
   }
 
-  /// POST `{baseUrl}/amendment` — records an amendment note against an existing
-  /// transport request (Bellagio: `https://bty.world/api/Bellagio/CRM/amendment`).
+  /// Amendment endpoint, resolved against the current CRM base URL — i.e.
+  /// `https://bty.world/api/Bellagio/CRM/Transport_Amendment_Insert`.
+  static const String amendmentEndpoint = 'Transport_Amendment_Insert';
+
+  /// POST `{baseUrl}/Transport_Amendment_Insert` — records an amendment note
+  /// against an existing transport request.
   Future<TransportInsertResult> submitAmendment({
     required String masterId,
+    required String mid,
+    required String guestName,
     required String amendment,
   }) async {
+    final userName = await StorageUtil.getUserName();
+    final deviceId = await DeviceId.get();
+
     final body = <String, Object?>{
       'master_id': masterId,
+      'mid': mid,
+      'guest_name': guestName,
       'amendment': amendment,
+      'user_name': userName,
+      'device_id': deviceId,
+      'amendment_details': [
+        {
+          'mid': mid,
+          'guest_name': guestName,
+                    'amendment': amendment,
+        }
+      ],
     };
 
-    final url = '${await StorageUtil.getCurrentApiUrl() ?? ''}/amendment';
+    final url =
+        '${await StorageUtil.getCurrentApiUrl() ?? ''}/$amendmentEndpoint';
     print('Amendment POST → $url');
     print('Amendment payload → ${jsonEncode(body)}');
 
-    final response = await apiService.post('amendment', body);
+    final response = await apiService.post(amendmentEndpoint, body);
     print('Amendment result → $response');
 
     return TransportInsertResult(

@@ -136,7 +136,7 @@ class TransportViewScreen extends ConsumerWidget {
                           context: context,
                           barrierDismissible: false,
                           builder: (_) => _AmendmentDialog(
-                            masterId: transport.masterId,
+                            transport: transport,
                             fontSettings: fontSettings,
                           ),
                         ),
@@ -798,9 +798,9 @@ class _TripCardState extends State<_TripCard> {
 /// Free-text amendment note for an existing request, posted to `amendment`
 /// with the request's `master_id`.
 class _AmendmentDialog extends StatefulWidget {
-  const _AmendmentDialog({required this.masterId, required this.fontSettings});
+  const _AmendmentDialog({required this.transport, required this.fontSettings});
 
-  final String masterId;
+  final TransportReservation transport;
   final FontSettings fontSettings;
 
   @override
@@ -835,7 +835,9 @@ class _AmendmentDialogState extends State<_AmendmentDialog> {
         ApiService(const FlutterSecureStorage()),
       );
       final result = await repo.submitAmendment(
-        masterId: widget.masterId,
+        masterId: widget.transport.masterId,
+        mid: widget.transport.mid,
+        guestName: widget.transport.guestName,
         amendment: text,
       );
       if (!mounted) return;

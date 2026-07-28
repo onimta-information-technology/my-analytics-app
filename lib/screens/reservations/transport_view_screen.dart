@@ -1,10 +1,13 @@
 import 'package:ballys_reservation_app/core/constants.dart';
+import 'package:ballys_reservation_app/data/repositories/transport_repository.dart';
+import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/transport/transport_reservation.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_transport_provider.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -107,6 +110,38 @@ class TransportViewScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildSummaryCard(transport, fontSettings),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.edit_note),
+                        label: Text(
+                          'Amendment',
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Constants.kPrimaryColor,
+                          side: const BorderSide(
+                            color: Constants.kPrimaryColor,
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: () => showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (_) => _AmendmentDialog(
+                            masterId: transport.masterId,
+                            fontSettings: fontSettings,
+                          ),
+                        ),
+                      ),
+                    ),
                     if (transport.passportFiles.isNotEmpty) ...[
                       const SizedBox(height: 20),
                       _PassportFilesSection(
@@ -754,6 +789,152 @@ class _TripCardState extends State<_TripCard> {
               ),
             ),
           ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Free-text amendment note for an existing request, posted to `amendment`
+/// with the request's `master_id`.
+class _AmendmentDialog extends StatefulWidget {
+  const _AmendmentDialog({required this.masterId, required this.fontSettings});
+
+  final String masterId;
+  final FontSettings fontSettings;
+
+  @override
+  State<_AmendmentDialog> createState() => _AmendmentDialogState();
+}
+
+class _AmendmentDialogState extends State<_AmendmentDialog> {
+  final TextEditingController _controller = TextEditingController();
+  bool _submitting = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty) {
+      setState(() => _error = 'Please enter the amendment');
+      return;
+    }
+
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+
+    try {
+      final repo = TransportRepository(
+        ApiService(const FlutterSecureStorage()),
+      );
+      final result = await repo.submitAmendment(
+        masterId: widget.masterId,
+        amendment: text,
+      );
+      if (!mounted) return;
+
+      if (result.success) {
+        // Grab the messenger before popping — the dialog's own context is gone
+        // once the route is removed.
+        final messenger = ScaffoldMessenger.of(context);
+        Navigator.of(context).pop();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(result.message ?? 'Amendment submitted'),
+            backgroundColor: Colors.green.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        _submitting = false;
+        _error = result.message ?? 'Failed to submit amendment';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fontSettings = widget.fontSettings;
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      title: Row(
+        children: [
+          const Icon(Icons.edit_note, color: Constants.kPrimaryColor),
+          const SizedBox(width: 8),
+          Text(
+            'Amendment',
+            style: TextStyle(
+              fontSize: fontSettings.fontSize + 2,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _controller,
+            enabled: !_submitting,
+            autofocus: true,
+            maxLines: 4,
+            textCapitalization: TextCapitalization.sentences,
+            style: TextStyle(fontSize: fontSettings.fontSize),
+            decoration: InputDecoration(
+              hintText: 'Enter amendment details',
+              errorText: _error,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onChanged: (_) {
+              if (_error != null) setState(() => _error = null);
+            },
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _submitting ? null : _submit,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Constants.kPrimaryColor,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          child: _submitting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text('Submit'),
         ),
       ],
     );

@@ -2,6 +2,7 @@ class GuestGift {
   final String mid;
   final String memberName;
   final String expireDate;
+  final String? issueDate;
   final double amount;
   final String categoryCode;
   final String gName;
@@ -16,6 +17,7 @@ class GuestGift {
     required this.mid,
     required this.memberName,
     required this.expireDate,
+    this.issueDate,
     required this.amount,
     required this.categoryCode,
     required this.gName,
@@ -59,6 +61,7 @@ class GuestGift {
       mid: getValue(['MID']) ?? '',
       memberName: getValue(['MNAME', 'MName']) ?? '',
       expireDate: getValue(['D_EXP_DATE']) ?? '',
+      issueDate: getValue(['D_ISS_DATE', 'DISSDATE']),
       amount: toDouble(getValue(['AMT'])),
       categoryCode: getValue(['CatCode', 'CATCODE']) ?? '',
       gName: getValue(['GName', 'GNAME']) ?? '',

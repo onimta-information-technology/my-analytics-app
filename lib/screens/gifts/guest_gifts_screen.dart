@@ -680,6 +680,32 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> with Connec
                                           ),
                                         ],
                                       ),
+                                      if (_formatLastVisitDate(
+                                            guest.issueDate,
+                                          ) !=
+                                          '-') ...[
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.event_available,
+                                              color: Colors.grey,
+                                              size: 18,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              'Valid from ${_formatLastVisitDate(guest.issueDate)}',
+                                              style: TextStyle(
+                                                fontSize:
+                                                    fontSettings.fontSize,
+                                                fontWeight:
+                                                    fontSettings.fontWeight,
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                       const SizedBox(height: 8),
                                       Row(
                                         children: [

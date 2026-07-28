@@ -110,38 +110,42 @@ class TransportViewScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildSummaryCard(transport, fontSettings),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.edit_note),
-                        label: Text(
-                          'Amendment',
-                          style: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: FontWeight.bold,
+                    // A rejected request can't be amended, so the Rejected tab
+                    // opens this screen without the Amendment action.
+                    if (transport.status != TransportStatus.rejected) ...[
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.edit_note),
+                          label: Text(
+                            'Amendment',
+                            style: TextStyle(
+                              fontSize: fontSettings.fontSize,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Constants.kPrimaryColor,
-                          side: const BorderSide(
-                            color: Constants.kPrimaryColor,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Constants.kPrimaryColor,
+                            side: const BorderSide(
+                              color: Constants.kPrimaryColor,
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        onPressed: () => showDialog(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (_) => _AmendmentDialog(
-                            transport: transport,
-                            fontSettings: fontSettings,
+                          onPressed: () => showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (_) => _AmendmentDialog(
+                              transport: transport,
+                              fontSettings: fontSettings,
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
                     if (transport.passportFiles.isNotEmpty) ...[
                       const SizedBox(height: 20),
                       _PassportFilesSection(

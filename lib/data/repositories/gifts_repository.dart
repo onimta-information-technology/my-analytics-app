@@ -7,6 +7,7 @@ import 'package:ballys_reservation_app/models/gift/birthday_gift_request.dart';
 import 'package:ballys_reservation_app/models/gift/gest_gift_data.dart';
 import 'package:ballys_reservation_app/models/gift/gift_type.dart';
 import 'package:ballys_reservation_app/models/gift/prev_gift.dart';
+import 'package:ballys_reservation_app/models/gift/redeem_location.dart';
 import 'package:ballys_reservation_app/models/gift/special_gift_request.dart';
 import 'package:ballys_reservation_app/models/guest_gift_modal.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
@@ -129,6 +130,128 @@ class GiftsRepository {
       }
     } else {
       throw Exception('No gifts found: unexpected response structure');
+    }
+  }
+
+  /// Locations the logged-in user may redeem a gift at (iid 90332).
+  Future<List<RedeemLocation>> getRedeemLocations() async {
+   final salesCode = await StorageUtil.getSalesCode();
+    final deviceId = await DeviceId.get();
+    final spName = await StorageUtil.getStoredProcedureName();
+    final response = await apiService.post('CommonExecute', {
+      "HasReturnData": "T",
+      "Parameters": [
+        {
+          "Para_Data": 90332,
+          "Para_Direction": "Input",
+          "Para_Lenth": 1,
+          "Para_Name": "@Iid",
+          "Para_Type": "int",
+        },
+        {
+          "Para_Data": salesCode,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text1",
+          "Para_Type": "varchar",
+        },
+        {
+          "Para_Data": deviceId,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text30",
+          "Para_Type": "varchar",
+        },
+      ],
+      "SpName": spName,
+      "con": "1",
+    });
+
+    if (response['CommonResult'] != null &&
+        response['CommonResult']['Table'] is List) {
+      final tableData = response['CommonResult']['Table'] as List;
+      return tableData
+          .map((item) => RedeemLocation.fromJson(Map<String, dynamic>.from(item)))
+          .toList();
+    }
+    return [];
+  }
+
+  /// Redeems a gift at the picked location (iid 90333).
+  Future<Map<String, dynamic>?> redeemGift({
+    required String mid,
+    required String serialNo,
+    required String commLoca,
+    int? rcNum,
+  }) async {
+    try {
+      final userName = await StorageUtil.getUserName() ?? '';
+      final deviceId = await DeviceId.get();
+      final spName = await StorageUtil.getStoredProcedureName();
+      print(
+        'redeemGift: user=$userName, mid=$mid, serialNo=$serialNo, commLoca=$commLoca, rcNum=$rcNum',
+      );
+      final resp = await apiService.post('CommonExecute', {
+        "HasReturnData": "T",
+        "Parameters": [
+          {
+            "Para_Data": 90333,
+            "Para_Direction": "Input",
+            "Para_Lenth": 1,
+            "Para_Name": "@Iid",
+            "Para_Type": "int",
+          },
+          {
+            "Para_Data": userName,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text1",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": mid,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text2",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": serialNo,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text3",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": commLoca,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text4",
+            "Para_Type": "varchar",
+          },
+           {
+            "Para_Data": rcNum,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text5",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": deviceId,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text30",
+            "Para_Type": "varchar",
+          },
+        ],
+        "SpName": spName,
+        "con": "1",
+      });
+      print('Redeem Gift Response: $resp');
+      return resp;
+    } catch (e) {
+      print('Error in redeemGift: $e');
+      return null;
     }
   }
 

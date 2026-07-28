@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
+import 'package:ballys_reservation_app/models/gift/redeem_location.dart';
 import 'package:ballys_reservation_app/models/guest_gift_modal.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
@@ -104,13 +105,149 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> with Connec
         return const Color(0xFF5D4037);
     }
   }
-  // UI only for now — the redeem API is not wired up yet.
-  void _onRedeemPressed(GuestGift gift) {
+  /// Redeem flow: pick a location (iid 90332), then redeem there (iid 90333).
+  Future<void> _onRedeemPressed(GuestGift gift) async {
+    final serialNo = gift.srNo;
+    if (serialNo == null || serialNo.trim().isEmpty) {
+      _showMessage('Serial number missing for this gift');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    List<RedeemLocation> locations = [];
+    try {
+      locations = await widget.giftsRepository.getRedeemLocations();
+    } catch (e) {
+      print('Error loading redeem locations: $e');
+    }
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (locations.isEmpty) {
+      _showMessage('No redeem locations available');
+      return;
+    }
+
+    final selected = await _showLocationPicker(locations);
+    if (selected == null || !mounted) return;
+
+    final confirmed = await _showRedeemConfirmation(gift, selected);
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isLoading = true);
+    final resp = await widget.giftsRepository.redeemGift(
+      mid: gift.mid,
+      serialNo: serialNo,
+      commLoca: selected.commLoca,
+      rcNum :gift.rcNo,
+    );
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (resp != null && resp['strRturnRes'] == true) {
+      _showMessage('Gift redeemed at ${selected.location}');
+      _applyFilter();
+    } else {
+      _showMessage('Failed to redeem gift. Please try again.');
+    }
+  }
+
+  void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Redeem ${gift.categoryCode} — coming soon'),
-        duration: const Duration(seconds: 2),
-      ),
+      SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
+    );
+  }
+
+  Future<bool?> _showRedeemConfirmation(
+    GuestGift gift,
+    RedeemLocation location,
+  ) {
+    final amount = NumberFormat.currency(
+      symbol: '',
+      decimalDigits: 0,
+    ).format(gift.amount);
+
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          title: const Text('Confirm Redeem'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Do you want to redeem ${gift.categoryCode} ($amount) at ${location.location}?',
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Serial No: ${gift.srNo}',
+                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('No'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Constants.kSecondaryColor,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Yes, Redeem'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<RedeemLocation?> _showLocationPicker(
+    List<RedeemLocation> locations,
+  ) {
+    return showDialog<RedeemLocation>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          title: const Text('Select Location'),
+          contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: locations.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final location = locations[index];
+                return ListTile(
+                  leading: const Icon(
+                    Icons.location_on,
+                    color: Constants.kSecondaryColor,
+                  ),
+                  title: Text(location.location),
+                  onTap: () => Navigator.of(dialogContext).pop(location),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -420,6 +557,9 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> with Connec
                           itemCount: inactiveMembers.length,
                           itemBuilder: (context, index) {
                             final guest = inactiveMembers[index];
+                            final hasSerialNo =
+                                guest.srNo != null &&
+                                guest.srNo!.trim().isNotEmpty;
                             return InkWell(
                               key: ValueKey(guest.mid),
                               splashColor: Colors.transparent,
@@ -550,28 +690,64 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> with Connec
                                           ),
                                         ],
                                       ),
-                                      if (_isBellagio) ...[
+                                      if (hasSerialNo || _isBellagio) ...[
                                         const SizedBox(height: 8),
-                                        Align(
-                                          alignment: Alignment.centerRight,
-                                          child: ElevatedButton.icon(
-                                            onPressed: () =>
-                                                _onRedeemPressed(guest),
-                                            icon: const Icon(
-                                              Icons.redeem,
-                                              size: 18,
-                                            ),
-                                            label: const Text('Redeem'),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor:
-                                                  Constants.kSecondaryColor,
-                                              foregroundColor: Colors.white,
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
+                                        Row(
+                                          children: [
+                                            if (hasSerialNo)
+                                              Expanded(
+                                                child: Row(
+                                                  children: [
+                                                    const Icon(
+                                                      Icons
+                                                          .confirmation_number,
+                                                      color: Colors.grey,
+                                                      size: 18,
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Expanded(
+                                                      child: Text(
+                                                        'Serial No: ${guest.srNo}',
+                                                        style: TextStyle(
+                                                          fontSize: fontSettings
+                                                              .fontSize,
+                                                          fontWeight:
+                                                              fontSettings
+                                                                  .fontWeight,
+                                                          color:
+                                                              Colors.grey[600],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              )
+                                            else
+                                              const Spacer(),
+                                            if (_isBellagio)
+                                              ElevatedButton.icon(
+                                                onPressed: () =>
+                                                    _onRedeemPressed(guest),
+                                                icon: const Icon(
+                                                  Icons.redeem,
+                                                  size: 18,
+                                                ),
+                                                label: const Text('Redeem'),
+                                                style:
+                                                    ElevatedButton.styleFrom(
+                                                  backgroundColor: Constants
+                                                      .kSecondaryColor,
+                                                  foregroundColor:
+                                                      Colors.white,
+                                                  shape:
+                                                      RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8),
+                                                  ),
+                                                ),
                                               ),
-                                            ),
-                                          ),
+                                          ],
                                         ),
                                       ],
                                     ],

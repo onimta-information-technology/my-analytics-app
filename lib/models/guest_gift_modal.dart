@@ -10,6 +10,7 @@ class GuestGift {
   final String mobile;
   final String? mGroup;
   final int? rcNo;
+  final String? srNo;
 
   GuestGift({
     required this.mid,
@@ -23,6 +24,7 @@ class GuestGift {
      this.mobile = "",
       this.mGroup,
       this.rcNo,
+      this.srNo,
   });
 
   factory GuestGift.fromJson(Map<String, dynamic> json) {
@@ -65,6 +67,7 @@ class GuestGift {
       mobile: getValue(['Mobile', 'MOBILE']) ?? '',
       mGroup: getValue(['MGroup', 'MGROUP', 'mGroup']),
       rcNo: toInt(getValue(['RC_NO', 'RCNO', 'RC'])),
+      srNo: getValue(['Sr_No', 'SRNO', 'SR_NO']),
     );
   }
 }

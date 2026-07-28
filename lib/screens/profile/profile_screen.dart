@@ -1285,6 +1285,15 @@ bool _showFollowButton = false;
                                                       name == 'whatsapp1';
                                                   final iswhatsapp3 =
                                                       name == 'whatsapp2';
+                                                  // Name can arrive as
+                                                  // "Rewards Mobile",
+                                                  // "Rewards_Mobile", etc.
+                                                  final isRewardsMobile =
+                                                      name.replaceAll(
+                                                        RegExp(r'[\s_-]'),
+                                                        '',
+                                                      ) ==
+                                                      'rewardsmobile';
 
                                                   final isPhonePrimary =
                                                       name == 'phone_primary';
@@ -1315,7 +1324,8 @@ bool _showFollowButton = false;
                                                           isPhone3 ||
                                                           iswhatsapp ||
                                                           iswhatsapp2 ||
-                                                          iswhatsapp3) &&
+                                                          iswhatsapp3 ||
+                                                          isRewardsMobile) &&
                                                       detail.trim().isNotEmpty;
 
                                                   bool isPrimary = false;

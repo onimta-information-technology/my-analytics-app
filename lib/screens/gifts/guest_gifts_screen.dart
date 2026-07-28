@@ -59,8 +59,15 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> with Connec
     setState(() {
       _isLoading = true;
     });
-    final giftMembers_ = await widget.giftsRepository.getGuestGifts(widget.mid);
 
+    List<GuestGift> giftMembers_ = [];
+    try {
+      giftMembers_ = await widget.giftsRepository.getGuestGifts(widget.mid);
+    } catch (e) {
+      print('Error loading guest gifts: $e');
+    }
+
+    if (!mounted) return;
     setState(() {
       originalMembers = giftMembers_;
       inactiveMembers = List<GuestGift>.from(originalMembers);
@@ -376,19 +383,22 @@ class _GuestGiftsScreenState extends ConsumerState<GuestGiftsScreen> with Connec
                       GestureDetector(
                         onTap: () async {
                           final currentGuest = ref.read(selectedGuestProvider);
+                          // The list is empty once every gift has been redeemed.
+                          final firstGift = inactiveMembers.isNotEmpty
+                              ? inactiveMembers.first
+                              : null;
 
                           // Create the new guest object with all data including the loaded image
                           final guestToSet = Guest(
                             mid: selectedGuest.mid,
                             memberName: selectedGuest.memberName,
                             country: "",
-                            lastVisitDate:
-                                inactiveMembers.first.lvd ?? "1990-01-01",
+                            lastVisitDate: firstGift?.lvd ?? "1990-01-01",
 
                             age: 0,
                             gRating: displayRating,
-                            mGroup:  inactiveMembers.first.mGroup,
-                            gName: inactiveMembers.first.gName,
+                            mGroup: firstGift?.mGroup,
+                            gName: firstGift?.gName,
 
                             // IMPORTANT: Preserve the image from current guest if it exists
                             memImage2: currentGuest?.memImage2,

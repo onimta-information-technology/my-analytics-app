@@ -112,25 +112,17 @@ class GiftsRepository {
       "con": "1",
     });
 
+    // An empty Table is a valid result — the guest simply has no gifts left
+    // (e.g. right after the last one is redeemed), so return an empty list.
     if (response['CommonResult'] != null &&
-        response['CommonResult']['Table'] is List &&
-        response['CommonResult']['Table'].isNotEmpty) {
-      final tableData = response['CommonResult']['Table'];
+        response['CommonResult']['Table'] is List) {
+      final tableData = response['CommonResult']['Table'] as List;
 
-      List<GuestGift> guestGiftsList = [];
-
-      if (tableData.length > 0) {
-        for (var table in tableData) {
-          guestGiftsList.add(GuestGift.fromJson(table));
-        }
-
-        return guestGiftsList;
-      } else {
-        throw Exception('No gifts found');
-      }
-    } else {
-      throw Exception('No gifts found: unexpected response structure');
+      return tableData
+          .map((table) => GuestGift.fromJson(Map<String, dynamic>.from(table)))
+          .toList();
     }
+    return [];
   }
 
   /// Locations the logged-in user may redeem a gift at (iid 90332).

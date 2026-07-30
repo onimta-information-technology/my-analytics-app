@@ -4,6 +4,7 @@ import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_transport_provider.dart';
 import 'package:ballys_reservation_app/providers/transport_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -22,6 +23,13 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
   String _searchQuery = '';
   bool _isSearching = false;
 
+  // ── Visibility gating ──
+  // Sales code AD001 sees every transport request; everyone else only sees the
+  // requests they raised themselves.
+  String? _userSalesCode;
+  String? _userName;
+  bool _accessLoaded = false;
+
   @override
   void onConnectivityRestored() {
     _loadTransportData();
@@ -32,9 +40,34 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
     super.initState();
     _tabController =
         TabController(length: TransportStatus.values.length, vsync: this);
+    _loadAccessSettings();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadTransportData();
     });
+  }
+
+  Future<void> _loadAccessSettings() async {
+    final salesCode = await StorageUtil.getSalesCode();
+    final userName = await StorageUtil.getUserName();
+    if (!mounted) return;
+    setState(() {
+      _userSalesCode = salesCode;
+      _userName = userName;
+      _accessLoaded = true;
+    });
+  }
+
+  bool get _canSeeAllRequests =>
+      (_userSalesCode ?? '').trim().toUpperCase() == 'AD001';
+
+  /// AD001 sees everything; other users only see requests whose `user_name`
+  /// matches their own login.
+  bool _isVisibleToUser(TransportReservation reservation) {
+    if (_canSeeAllRequests) return true;
+    final loggedInUser = (_userName ?? '').trim().toLowerCase();
+    print('Logged-in user: $loggedInUser, Reservation user: ${reservation.userName.trim().toLowerCase()}');
+    if (loggedInUser.isEmpty) return false;
+    return reservation.userName.trim().toLowerCase() == loggedInUser;
   }
 
   @override
@@ -90,7 +123,13 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
   Widget build(BuildContext context) {
     final transportState = ref.watch(transportProvider);
 
-    final reservations = transportState.reservations.where((r) {
+    // Hold everything back until the logged-in user's sales code is known, so a
+    // non-AD001 user never sees other users' requests on the first frame.
+    final visible = _accessLoaded
+        ? transportState.reservations.where(_isVisibleToUser).toList()
+        : const <TransportReservation>[];
+
+    final reservations = visible.where((r) {
       if (_searchQuery.isEmpty) return true;
       return r.mid.toLowerCase().contains(_searchQuery) ||
           r.guestName.toLowerCase().contains(_searchQuery) ||
@@ -177,7 +216,7 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
             children: [
               for (final status in TransportStatus.values)
                 _buildTransportList(byStatus[status]!,
-                    isLoading: transportState.isLoading),
+                    isLoading: transportState.isLoading || !_accessLoaded),
             ],
           ),
           if (transportState.isLoading)

@@ -1,11 +1,22 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:ballys_reservation_app/core/constants.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 
 
 class VersionCheckService {
+
+  /// Version-check endpoint for the currently selected property. Bellagio
+  /// logins (bty.world) hit the Bellagio endpoint; everything else — including
+  /// a fresh install with no property selected yet — hits Ballys.
+  static Future<String> _versionCheckUrl() async {
+    final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+    return apiUrl.contains('bty.world')
+        ? Constants.bellagioVersionCheckUrl
+        : Constants.versionCheckUrl;
+  }
 
   /// Check if app version is latest
   /// Returns Map with keys: isLatest (bool), currentVersion (String)
@@ -24,12 +35,15 @@ class VersionCheckService {
         "Iid": platformId,
         "Version": currentVersion,
       };
+      final url = await _versionCheckUrl();
+print("verstiocheck $url");
       print("object");
       print(currentVersion);
-
+print(payload);
+print('Version check url $url');
       // Make API request
       final response = await http.post(
-        Uri.parse(Constants.versionCheckUrl),
+        Uri.parse(url),
         headers: {
           'Content-Type': 'application/json',
         },

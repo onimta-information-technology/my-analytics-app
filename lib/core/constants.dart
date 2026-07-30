@@ -6,7 +6,13 @@ class Constants {
   //static const baseUrl = "https://api.ballyscolombo.com/api/Ballys/CRM";
   //static const laravelAPIbaseUrl = "https://api.mkt.onimtaitsl.com/api";
 static const laravelAPIbaseUrl = "https://gift.myanalytics.lk/api";
-  static const versionCheckUrl = "https://api.ballyscolombo.com/api/Ballys/ApiVersion_CRM";
+  // Version check endpoints — picked per logged-in property (see
+  // VersionCheckService.checkVersion). Ballys is the default when no
+  // property has been selected yet.
+  static const versionCheckUrl =
+      "https://api.ballyscolombo.com/api/Ballys/ApiVersion_CRM";
+  static const bellagioVersionCheckUrl =
+      "https://bty.world/api/Bellagio/CRM/ApiVersion_CRM";
   
   // Update URL
   static const iosUpdateUrl = "https://apps.apple.com/lk/app/my-analytics/id6752925402";

@@ -41,6 +41,10 @@ const List<String> _kCarTypes = [
 
 const List<String> _kHireTypes = ['Pickup', 'Drop'];
 
+// Digit count allowed in the contact number, excluding the country code.
+const int _kMinContactDigits = 9;
+const int _kMaxContactDigits = 10;
+
 const TextStyle _kInputTextStyle = TextStyle(
   fontSize: 17,
   fontWeight: FontWeight.w600,
@@ -1171,14 +1175,24 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
                         keyboardType: TextInputType.phone,
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(
+                            _kMaxContactDigits,
+                          ),
                         ],
                         decoration: _fieldDeco(
                           'Contact Number *',
                           icon: Icons.phone_rounded,
                         ),
                         validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
+                          final digits = (value ?? '').trim();
+                          if (digits.isEmpty) {
                             return 'Contact Number is required';
+                          }
+                          if (digits.length < _kMinContactDigits) {
+                            return 'Enter at least $_kMinContactDigits digits';
+                          }
+                          if (digits.length > _kMaxContactDigits) {
+                            return 'Enter no more than $_kMaxContactDigits digits';
                           }
                           return null;
                         },

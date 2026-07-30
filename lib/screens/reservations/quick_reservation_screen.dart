@@ -54,6 +54,10 @@ const List<String> kHireTypes = [
   'Drop',
 ];
 
+// Digit count allowed in the contact number, excluding the country code.
+const int kMinContactDigits = 9;
+const int kMaxContactDigits = 10;
+
 const TextStyle kInputTextStyle = TextStyle(
   fontSize: 17,
   fontWeight: FontWeight.w600,
@@ -4405,14 +4409,25 @@ class _TransportForm extends StatelessWidget {
                   controller: state._t_contactNumber,
                   style: kInputTextStyle,
                   keyboardType: TextInputType.phone,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(kMaxContactDigits),
+                  ],
                   decoration: _fieldDeco(
                     'Contact Number *',
                     icon: Icons.phone_rounded,
                     accent: accent,
                   ),
                   validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
+                    final digits = (value ?? '').trim();
+                    if (digits.isEmpty) {
                       return 'Contact Number is required';
+                    }
+                    if (digits.length < kMinContactDigits) {
+                      return 'Enter at least $kMinContactDigits digits';
+                    }
+                    if (digits.length > kMaxContactDigits) {
+                      return 'Enter no more than $kMaxContactDigits digits';
                     }
                     return null;
                   },

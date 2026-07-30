@@ -19,7 +19,7 @@ import 'package:ballys_reservation_app/models/reservation/hotel_desc_ballys.dart
 import 'package:ballys_reservation_app/models/reservation/new_reservation_ballys.dart';
 import 'package:ballys_reservation_app/models/reservation/reservation_passport_image.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
-import 'package:ballys_reservation_app/providers/hotels_provider.dart';
+import 'package:ballys_reservation_app/providers/hotel_catalog_provider.dart';
 import 'package:ballys_reservation_app/providers/member_search_provider.dart';
 // import 'package:ballys_reservation_app/providers/new_reservation_provider.dart';
 
@@ -497,10 +497,9 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
   }
 
   Future<void> _getHotels() async {
-    final hotels = ref.read(hotelsProvider);
-    if (hotels.isEmpty) {
-      await ref.read(hotelsProvider.notifier).getAllHotels();
-    }
+    // One call brings hotels, hotel categories, room categories, room types
+    // and meal plans for the hotel selector.
+    await ref.read(hotelCatalogProvider.notifier).load();
   }
 
   String getGuestAndRoomCounts(List<HotelDescipBallys> hotels) {

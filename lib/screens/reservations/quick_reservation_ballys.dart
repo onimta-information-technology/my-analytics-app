@@ -19,7 +19,6 @@ import 'package:ballys_reservation_app/components/bottom_sheets/member_search-ne
 import 'package:ballys_reservation_app/components/guest_deatils_view_spGift.dart';
 import 'package:ballys_reservation_app/components/location_search_field.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
-import 'package:ballys_reservation_app/data/repositories/hotel_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/airport_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/airport_search_response.dart';
@@ -28,7 +27,7 @@ import 'package:ballys_reservation_app/models/guest_search_response.dart';
 import 'package:ballys_reservation_app/models/reservation/airport_cost_response.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_sector_entry.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
-import 'package:ballys_reservation_app/providers/hotels_provider.dart';
+import 'package:ballys_reservation_app/providers/hotel_catalog_provider.dart';
 import 'package:ballys_reservation_app/providers/airports_provider.dart';
 // import 'package:ballys_reservation_app/providers/new_reservation_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
@@ -83,6 +82,9 @@ class _HotelEntry {
   int? roomTypeId;
   String roomCategory;
   int? roomCategoryId;
+
+  /// Grading of the room category, e.g. "(Standard)".
+  String hotelCategory;
   String eciLco;
   String mealPlan;
   String paymentBy;
@@ -104,6 +106,7 @@ class _HotelEntry {
     this.roomTypeId,
     this.roomCategory = '',
     this.roomCategoryId,
+    this.hotelCategory = '',
     this.eciLco = 'NA',
     this.mealPlan = '',
     this.paymentBy = 'NA',
@@ -121,6 +124,7 @@ class _HotelEntry {
         'noOfChildren': noOfChildren,
         'roomType': roomType,
         'roomCategory': roomCategory,
+        'hotelCategory': hotelCategory,
         'eciLco': eciLco,
         'mealPlan': mealPlan,
         'paymentBy': paymentBy,
@@ -520,9 +524,10 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     });
   }
 
+  /// Hotels, hotel categories, room categories, room types and meal plans all
+  /// come back in one call — the dropdowns below filter it in memory.
   Future<void> _loadHotels() async {
-    final hotels = ref.read(hotelsProvider);
-    if (hotels.isEmpty) await ref.read(hotelsProvider.notifier).getAllHotels();
+    await ref.read(hotelCatalogProvider.notifier).load();
   }
 
   Future<void> _loadAirports() async {
@@ -571,44 +576,35 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     } catch (_) {}
   }
 
-  Future<void> _loadRoomCategories(double hotelId) async {
-    try {
-      final repo = HotelRepository(ApiService(const FlutterSecureStorage()));
-      final result = await repo.getSelectedHotelRoomCategories(hotelId);
-      setState(() {
-        _roomCategories = result.map((c) => c.toJson()).toList();
-        _selectedRoomCategory = null;
-        _selectedRoomCategoryId = null;
-        _selectedRoomCategoryName = null;
-        _selectedRoomType = null;
-        _selectedRoomTypeId = null;
-        _selectedRoomTypeName = null;
-        _roomTypes = [];
-        _roomCategoryDropdownKey = UniqueKey();
-        _roomTypeDropdownKey = UniqueKey();
-      });
-    } catch (_) {
-      setState(() => _roomCategories = []);
-    }
+  void _loadRoomCategories(double hotelId) {
+    final categories =
+        ref.read(hotelCatalogProvider.notifier).categoriesFor(hotelId);
+    setState(() {
+      _roomCategories = categories;
+      _selectedRoomCategory = null;
+      _selectedRoomCategoryId = null;
+      _selectedRoomCategoryName = null;
+      _selectedRoomType = null;
+      _selectedRoomTypeId = null;
+      _selectedRoomTypeName = null;
+      _h_mealPlan.clear();
+      _roomTypes = [];
+      _roomCategoryDropdownKey = UniqueKey();
+      _roomTypeDropdownKey = UniqueKey();
+    });
   }
 
-  Future<void> _loadRoomTypes(double hotelId, int categoryId) async {
-    try {
-      final repo = HotelRepository(ApiService(const FlutterSecureStorage()));
-      final result = await repo.getSelectedHotelCategoryRoomTypes(
-        hotelId,
-        categoryId,
-      );
-      setState(() {
-        _roomTypes = result.map((t) => t.toJson()).toList();
-        _selectedRoomType = null;
-        _selectedRoomTypeId = null;
-        _selectedRoomTypeName = null;
-        _roomTypeDropdownKey = UniqueKey();
-      });
-    } catch (_) {
-      setState(() => _roomTypes = []);
-    }
+  void _loadRoomTypes(double hotelId, int categoryId) {
+    final roomTypes =
+        ref.read(hotelCatalogProvider.notifier).roomTypesFor(hotelId, categoryId);
+    setState(() {
+      _roomTypes = roomTypes;
+      _selectedRoomType = null;
+      _selectedRoomTypeId = null;
+      _selectedRoomTypeName = null;
+      _h_mealPlan.clear();
+      _roomTypeDropdownKey = UniqueKey();
+    });
   }
 
   // ── Load airline costs from API 9023 ────────────────────────────────────────
@@ -731,6 +727,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       roomTypeId: _selectedRoomTypeId,
       roomCategory: _selectedRoomCategoryName ?? '',
       roomCategoryId: _selectedRoomCategoryId,
+      hotelCategory: (_selectedRoomCategory?['HotelCategory'] ?? '') as String,
       eciLco: _h_eciLco,
       mealPlan: _h_mealPlan.text,
       paymentBy: _h_paymentBy.text,
@@ -1634,7 +1631,8 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   No Of Pax            : ${h.noOfPax}
   No Of Children       : ${h.noOfChildren}
   Room Type            : ${h.roomType}
-  Room Category        : ${h.roomCategory}
+  Room Category        : ${h.roomCategory}${h.hotelCategory.isEmpty ? '' : ' ${h.hotelCategory}'}
+  Meal Plan            : ${h.mealPlan.isEmpty ? 'NA' : h.mealPlan}
   ECI/LCO Facility     : ${h.eciLco}
   Payment By           : ${h.paymentBy}
   Remarks              : ${h.remarks}''';
@@ -3700,10 +3698,22 @@ class _HotelForm extends StatelessWidget {
   static double? _hotelId(Map<String, dynamic>? item) =>
       (item?['hotel'] as num?)?.toDouble();
 
+  /// Grading of a room category, e.g. "(Standard)" — comes with the category
+  /// in the combined catalog.
+  static String _hotelCategory(Map<String, dynamic>? item) =>
+      (item?['HotelCategory'] ?? '') as String;
+
+  static String _categoryWithGrade(Map<String, dynamic>? item) {
+    final name = (item?['CatName'] ?? '') as String;
+    final grade = _hotelCategory(item);
+    if (name.isEmpty) return '';
+    return grade.isEmpty ? name : '$name $grade';
+  }
+
   @override
   Widget build(BuildContext context) {
     const accent = _QuickReservationBallysScreenState._hotelColor;
-    final hotels = state.ref.watch(hotelsProvider);
+    final hotels = state.ref.watch(hotelCatalogHotelsProvider);
     return Form(
       key: state._hotelFormKey,
       child: ListView(
@@ -4099,12 +4109,12 @@ class _HotelForm extends StatelessWidget {
             key: state._roomCategoryDropdownKey,
             items: (f, _) => state._roomCategories
                 .where(
-                  (c) => ((c['CatName'] ?? '') as String)
+                  (c) => _categoryWithGrade(c)
                       .toLowerCase()
                       .contains(f.toLowerCase()),
                 )
                 .toList(),
-            itemAsString: (item) => (item['CatName'] ?? '') as String,
+            itemAsString: (item) => _categoryWithGrade(item),
             compareFn: (a, b) => a['CatCode'] == b['CatCode'],
             selectedItem: state._selectedRoomCategory,
             enabled: state._roomCategories.isNotEmpty,
@@ -4118,7 +4128,7 @@ class _HotelForm extends StatelessWidget {
               ),
             ),
             dropdownBuilder: (context, selectedItem) => Text(
-              (selectedItem?['CatName'] ?? '') as String,
+              _categoryWithGrade(selectedItem),
               style: kInputTextStyle,
               overflow: TextOverflow.ellipsis,
             ),
@@ -4146,6 +4156,15 @@ class _HotelForm extends StatelessWidget {
                     fontSize: 15,
                   ),
                 ),
+                subtitle: _hotelCategory(item).isEmpty
+                    ? null
+                    : Text(
+                        _hotelCategory(item),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
                 selected: isSelected,
                 tileColor: isFocused ? Colors.grey.shade100 : null,
               ),
@@ -4193,6 +4212,8 @@ class _HotelForm extends StatelessWidget {
                 state._selectedRoomTypeId = val?['ID'] as int?;
                 state._selectedRoomTypeName =
                     '${val?['RoomType'] ?? ''} - ${val?['MealPlan'] ?? ''}';
+                // The meal plan rides along with the room type in the catalog.
+                state._h_mealPlan.text = (val?['MealPlan'] ?? '') as String;
               });
             },
             popupProps: PopupProps.dialog(

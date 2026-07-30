@@ -1,6 +1,7 @@
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_cost_response.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_response.dart';
+import 'package:ballys_reservation_app/models/reservation/hotel_room_catalog_entry.dart';
 import 'package:ballys_reservation_app/models/reservation/room_category_response.dart';
 import 'package:ballys_reservation_app/models/reservation/room_type_response.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
@@ -57,6 +58,47 @@ class HotelRepository {
     } else {
       throw Exception('Login failed: unexpected response structure');
     }
+  }
+
+  /// Hotels, hotel categories, room categories, room types and meal plans in
+  /// one call. Replaces the 9015 / 9016 / 9017 chain on the Ballys reservation
+  /// forms — the dropdowns filter this list in memory instead of re-fetching.
+  Future<List<HotelRoomCatalogEntry>> getHotelRoomCatalog() async {
+    final deviceId = await DeviceId.get();
+    final spName = await StorageUtil.getStoredProcedureName();
+    final response = await apiService.post('CommonExecute', {
+      "HasReturnData": "T",
+      "Parameters": [
+        {
+          "Para_Data": 90155,
+          "Para_Direction": "Input",
+          "Para_Lenth": 1,
+          "Para_Name": "@Iid",
+          "Para_Type": "int"
+        },
+        {
+          "Para_Data": deviceId,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text30",
+          "Para_Type": "varchar",
+        },
+      ],
+      "SpName": spName,
+      "con": "1"
+    });
+
+    if (response['CommonResult'] != null &&
+        response['CommonResult']['Table'] is List) {
+      final tableData = response['CommonResult']['Table'] as List;
+      return tableData
+          .whereType<Map>()
+          .map((json) =>
+              HotelRoomCatalogEntry.fromJson(Map<String, dynamic>.from(json)))
+          .toList();
+    }
+
+    throw Exception('Hotel room catalog API failed');
   }
 
   Future<List<RoomCategoryResponse>> getSelectedHotelRoomCategories(

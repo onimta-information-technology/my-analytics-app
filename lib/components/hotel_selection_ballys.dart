@@ -3,7 +3,8 @@ import 'package:ballys_reservation_app/data/repositories/hotel_repository.dart';
 import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_cost_response.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_desc_ballys.dart';
-import 'package:ballys_reservation_app/providers/hotels_provider.dart';
+import 'package:ballys_reservation_app/models/reservation/hotel_room_catalog_entry.dart';
+import 'package:ballys_reservation_app/providers/hotel_catalog_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_hotel_provider_ballys.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
@@ -62,6 +63,8 @@ class _HotelAndRoomSelectionBallysBottomSheetState
     super.initState();
     hotelList = List.from(ref.read(selectedHotelBallysProvider));
     _loadBrand();
+    // Hotels, categories, room types and meal plans all arrive in one call.
+    ref.read(hotelCatalogProvider.notifier).load();
   }
 
   Future<void> _loadBrand() async {
@@ -227,51 +230,57 @@ String selectedByPaymnet = 'NA';
     }
   }
 
-  Future<void> getSelectedHotelRoomCategories(
+  /// Categories of the picked hotel, filtered out of the catalog that already
+  /// carries hotel, category, room type and meal plan (API 90155).
+  void getSelectedHotelRoomCategories(
     double hotelId, {
     bool clearSelection = true,
-  }) async {
-    try {
-      final response = await widget.hotelRepository
-          .getSelectedHotelRoomCategories(hotelId);
-      roomCategoriesNotifier.value = response
-          .map((category) => category.toJson())
-          .toList();
+  }) {
+    roomCategoriesNotifier.value =
+        ref.read(hotelCatalogProvider.notifier).categoriesFor(hotelId);
 
-      if (clearSelection) {
-        selectedRoomCategory = null;
-        selectedRoomCategoryId = null;
-        selectedRoomCategoryName = null;
-        selectedRoomType = null;
-        selectedRoomTypeId = null;
-        selectedRoomTypeName = null;
-        roomTypesNotifier.value = [];
-      }
-    } catch (e) {
-      roomCategoriesNotifier.value = [];
+    if (clearSelection) {
+      selectedRoomCategory = null;
+      selectedRoomCategoryId = null;
+      selectedRoomCategoryName = null;
+      selectedRoomType = null;
+      selectedRoomTypeId = null;
+      selectedRoomTypeName = null;
+      roomTypesNotifier.value = [];
     }
   }
 
-  Future<void> getSelectedHotelCategoryRoomTypes(
+  /// Room types (each with its meal plan) of the picked hotel + category, from
+  /// the same catalog.
+  void getSelectedHotelCategoryRoomTypes(
     double hotelId,
     int categoryId, {
     bool clearSelection = true,
-  }) async {
-    try {
-      final response = await widget.hotelRepository
-          .getSelectedHotelCategoryRoomTypes(hotelId, categoryId);
-      roomTypesNotifier.value = response
-          .map((category) => category.toJson())
-          .toList();
+  }) {
+    roomTypesNotifier.value =
+        ref.read(hotelCatalogProvider.notifier).roomTypesFor(hotelId, categoryId);
 
-      if (clearSelection) {
-        selectedRoomType = null;
-        selectedRoomTypeId = null;
-        selectedRoomTypeName = null;
-      }
-    } catch (e) {
-      roomTypesNotifier.value = [];
+    if (clearSelection) {
+      selectedRoomType = null;
+      selectedRoomTypeId = null;
+      selectedRoomTypeName = null;
     }
+  }
+
+  /// Grading of a category, e.g. "(Standard)" — shown next to the category name.
+  String _hotelCategoryLabel(Map<String, dynamic>? category) {
+    final grade = (category?['HotelCategory'] ?? '') as String;
+    if (grade.isNotEmpty) return grade;
+    return ref
+        .read(hotelCatalogProvider.notifier)
+        .hotelCategoryOf(selectedHotelId, category?['CatCode'] as int?);
+  }
+
+  String _categoryWithGrade(Map<String, dynamic>? category) {
+    final name = (category?['CatName'] ?? '') as String;
+    if (name.isEmpty) return '';
+    final grade = _hotelCategoryLabel(category);
+    return grade.isEmpty ? name : '$name $grade';
   }
 
   Future<List<HotelCostResponse>?> getHotelCosts() async {
@@ -699,6 +708,23 @@ String selectedByPaymnet = 'NA';
 
   @override
   Widget build(BuildContext context) {
+    // Rebuilds when the combined catalog lands so the hotel list fills in.
+    final hotelOptions =
+        HotelRoomCatalogEntry.hotelsAsMapFrom(ref.watch(hotelCatalogProvider));
+
+    // A hotel row pulled in for editing selects its hotel and category before
+    // the catalog is necessarily loaded — refill those dropdowns once it is.
+    ref.listen<List<HotelRoomCatalogEntry>>(hotelCatalogProvider, (_, __) {
+      if (selectedHotelId == null) return;
+      getSelectedHotelRoomCategories(selectedHotelId!, clearSelection: false);
+      if (selectedRoomCategoryId != null) {
+        getSelectedHotelCategoryRoomTypes(
+          selectedHotelId!,
+          selectedRoomCategoryId!,
+          clearSelection: false,
+        );
+      }
+    });
     return FractionallySizedBox(
       heightFactor: 0.9,
       child: Padding(
@@ -826,8 +852,7 @@ String selectedByPaymnet = 'NA';
                         // ── Hotel Dropdown ─────────────────────
                         DropdownSearch<Map<String, dynamic>>(
                           selectedItem: selectedHotel,
-                          items: (filter, infiniteScrollProps) =>
-                              ref.watch(hotelsProvider.notifier).hotelsAsMap,
+                          items: (filter, infiniteScrollProps) => hotelOptions,
                           itemAsString: (item) => item['HotelName'] ?? '',
                           compareFn: (a, b) => a['Hotel_IID'] == b['Hotel_IID'],
                           decoratorProps: DropDownDecoratorProps(
@@ -895,7 +920,7 @@ String selectedByPaymnet = 'NA';
                               selectedItem: selectedRoomCategory,
                               items: (filter, infiniteScrollProps) =>
                                   roomCategories,
-                              itemAsString: (item) => item['CatName'] ?? '',
+                              itemAsString: _categoryWithGrade,
                               compareFn: (a, b) => a['CatCode'] == b['CatCode'],
                               decoratorProps: DropDownDecoratorProps(
                                 decoration: InputDecoration(
@@ -923,7 +948,7 @@ String selectedByPaymnet = 'NA';
                               ),
                               dropdownBuilder: (context, selectedItem) {
                                 return Text(
-                                  selectedItem?['CatName'] ?? '',
+                                  _categoryWithGrade(selectedItem),
                                   style: const TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
@@ -938,6 +963,7 @@ String selectedByPaymnet = 'NA';
                                 ),
                                 itemBuilder:
                                     (context, item, isSelected, isFocused) {
+                                      final grade = _hotelCategoryLabel(item);
                                       return ListTile(
                                         title: Text(
                                           item['CatName'] ?? '',
@@ -946,6 +972,15 @@ String selectedByPaymnet = 'NA';
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
+                                        subtitle: grade.isEmpty
+                                            ? null
+                                            : Text(
+                                                grade,
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
                                         selected: isSelected,
                                         tileColor: isFocused
                                             ? Colors.grey.shade200

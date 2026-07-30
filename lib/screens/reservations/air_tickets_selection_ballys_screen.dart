@@ -11,6 +11,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:ballys_reservation_app/models/airport_search_response.dart';
 import 'package:ballys_reservation_app/models/reservation/airport_cost_response.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.dart';
+import 'package:ballys_reservation_app/models/reservation/flight_sector_entry.dart';
 import 'package:ballys_reservation_app/providers/airports_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_flight_provider_ballys.dart';
 import 'package:ballys_reservation_app/providers/selected_passport_provider.dart';
@@ -139,6 +140,12 @@ class _AirTicketsSelectionBallysScreenState
 
   bool _isLoading = false;
   bool _isRoundTrip = false;
+
+  /// No direct flight is available, so the ticket routes through transit
+  /// airports the user adds between From and To on each leg.
+  bool _isMultiSector = false;
+  final List<FlightSectorEntry> _departureSectors = [];
+  final List<FlightSectorEntry> _returnSectors = [];
   bool _visa = false;
   bool _meal = false;
   bool _extraLegroomSeat = false;
@@ -389,9 +396,37 @@ String? _selectedContactPerson;
       _departureFromAirportKey = UniqueKey();
       _departureToAirportKey = UniqueKey();
 
+      // Flights saved before Multi Sector existed carry no stops; ones that do
+      // carry stops are multi sector whatever the flag says.
+      _isMultiSector = flight.isMultiSector ||
+          flight.departureSectors.isNotEmpty ||
+          flight.returnSectors.isNotEmpty;
+      _departureSectors
+        ..clear()
+        ..addAll(flight.departureSectors
+            .map((sector) => FlightSectorEntry(airport: sector.toAirport())));
+      _returnSectors
+        ..clear()
+        ..addAll(flight.returnSectors
+            .map((sector) => FlightSectorEntry(airport: sector.toAirport())));
+
       costNotifier.value = flight.selectedCost;
       airLineNotifier.value = flight.airLine;
     });
+  }
+
+  /// The picked stops of a leg, in the order the rows are shown. Rows with no
+  /// airport are dropped — [_saveTicketSelection] rejects those first anyway.
+  List<AirportInfo> _sectorInfos(List<FlightSectorEntry> sectors) {
+    return sectors
+        .where((sector) => sector.airport != null)
+        .map((sector) => AirportInfo(
+              airportCode: sector.airport!.airportCode ?? '',
+              cityName: sector.airport!.cityName ?? '',
+              airportName: sector.airport!.airportName ?? '',
+              country: sector.airport!.country ?? '',
+            ))
+        .toList();
   }
 
   void _removeFlight(int index) {
@@ -427,6 +462,35 @@ String? _selectedContactPerson;
       return;
     }
 
+    // A round trip without both return airports would save as a one-way
+    // silently, so ask for them instead.
+    if (_isRoundTrip &&
+        (_returnFromAirport == null || _returnToAirport == null)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text("Please select the return From and To airports.")),
+      );
+      return;
+    }
+
+    // Every added stop has to name an airport, or the route it describes has a
+    // hole in it.
+    if (_isMultiSector) {
+      final bool hasEmptyStop = _departureSectors.any((s) => s.airport == null) ||
+          (_isRoundTrip && _returnSectors.any((s) => s.airport == null));
+      final bool hasNoStops = _departureSectors.isEmpty && _returnSectors.isEmpty;
+      if (hasEmptyStop || hasNoStops) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(hasNoStops
+                ? "Please add at least one stop, or turn Multi Sector off."
+                : "Please select an airport for every stop."),
+          ),
+        );
+        return;
+      }
+    }
+
     // Cost is optional — no blocking if not calculated
 
     final FlightAirport airport = FlightAirport(
@@ -443,7 +507,7 @@ String? _selectedContactPerson;
               airportName: _departureToAirport!.airportName!,
               country: _departureToAirport!.country!,
             )),
-        returnFlight: _returnFromAirport != null
+        returnFlight: _returnFromAirport != null && _returnToAirport != null
             ? ReturnFlight(
                 rFrom: AirportInfo(
                   airportCode: _returnFromAirport!.airportCode!,
@@ -483,6 +547,12 @@ String? _selectedContactPerson;
       silkRouteType: _silkRouteFacility == "Yes" ? _silkRouteType : null,
       goldRouteType: _goldRoute ? _goldRouteType : null,
       mealRemark: _meal ? _mealRemarkController.text.trim() : null,
+      isMultiSector: _isMultiSector,
+      departureSectors: _isMultiSector ? _sectorInfos(_departureSectors) : const [],
+      // No return leg means the return stops describe nothing.
+      returnSectors: _isMultiSector && airport.returnFlight != null
+          ? _sectorInfos(_returnSectors)
+          : const [],
       airports: airport,
     );
 
@@ -523,6 +593,119 @@ String? _selectedContactPerson;
       }
     }
     return rows;
+  }
+
+  /// A right-aligned checkbox for the trip type answers ("Multi Sector",
+  /// "Round Trip") that sit under the Departure airports.
+  Widget _buildTripTypeCheckbox({
+    required String label,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        Flexible(
+          child: Text(
+            label,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        ),
+        Checkbox(
+          value: value,
+          onChanged: (v) => onChanged(v ?? false),
+        ),
+      ],
+    );
+  }
+
+  /// The transit airports for one leg: a row per stop in travel order, an "Add
+  /// Stop" button, and a preview of the full route so it is clear the stops sit
+  /// between that leg's From and To.
+  Widget _buildSectorSection({
+    required String label,
+    required List<FlightSectorEntry> sectors,
+    required Airport? from,
+    required Airport? to,
+  }) {
+    final routeCodes = [
+      from?.airportCode,
+      ...sectors.map((sector) => sector.airport?.airportCode),
+      to?.airportCode,
+    ].map((code) => (code == null || code.trim().isEmpty) ? "..." : code);
+
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Constants.kPrimaryColor.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFDADDE3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            routeCodes.join(" → "),
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Constants.kPrimaryColor,
+            ),
+          ),
+          for (var i = 0; i < sectors.length; i++) ...[
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: CustomAirportField(
+                    key: sectors[i].key,
+                    label: "Stop ${i + 1}",
+                    prefixIcon: Icons.connecting_airports,
+                    suffixIcon: Icons.arrow_drop_down,
+                    cityCountryText: sectors[i].airport != null
+                        ? "${sectors[i].airport!.cityName} - ${sectors[i].airport!.country}"
+                        : null,
+                    airportNameText: sectors[i].airport?.airportCode,
+                    onAirportSelected: (selectedAirport) {
+                      setState(() => sectors[i].airport = selectedAirport);
+                    },
+                  ),
+                ),
+                IconButton(
+                  tooltip: "Remove stop",
+                  icon: const Icon(Icons.remove_circle_outline,
+                      color: Colors.red),
+                  onPressed: () => setState(() => sectors.removeAt(i)),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => setState(() => sectors.add(FlightSectorEntry())),
+              icon: const Icon(Icons.add_circle_outline, size: 20),
+              label: const Text(
+                "Add Stop",
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+              style: TextButton.styleFrom(
+                foregroundColor: Constants.kPrimaryColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   /// A labelled Yes/No radio group, sized to fill its column so several can be
@@ -671,6 +854,9 @@ String? _selectedContactPerson;
       _silkRouteFacility = "No";
       _airportTranspotation = "No";
       _isRoundTrip = false;
+      _isMultiSector = false;
+      _departureSectors.clear();
+      _returnSectors.clear();
       _visa = false;
       _meal = false;
       _extraLegroomSeat = false;
@@ -985,33 +1171,56 @@ String? _selectedContactPerson;
                           });
                         },
                       ),
-                      Row(
-                        children: [
-                          const Spacer(),
-                          Row(
-                            children: [
-                              const Text(
-                                "Round Trip",
-                                style: TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                              Checkbox(
-                                value: _isRoundTrip,
-                                onChanged: (bool? value) {
-                                  setState(() {
-                                    _isRoundTrip = value ?? false;
-                                    if (_isRoundTrip) {
-                                      _returnFromAirport = _departureToAirport;
-                                    } else {
-                                      // Departure date is optional for one-way.
-                                      _departureDateError = false;
-                                    }
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
+                      // Asked before Round Trip: guests with no direct flight
+                      // route through transit airports, and that changes what
+                      // each leg below looks like.
+                      _buildTripTypeCheckbox(
+                        label: "Multi Sector (No Direct Flight)",
+                        value: _isMultiSector,
+                        onChanged: (value) {
+                          setState(() {
+                            _isMultiSector = value;
+                            if (_isMultiSector) {
+                              // Start each leg off with one empty stop, so
+                              // there is something to fill in straight away.
+                              if (_departureSectors.isEmpty) {
+                                _departureSectors.add(FlightSectorEntry());
+                              }
+                              if (_isRoundTrip && _returnSectors.isEmpty) {
+                                _returnSectors.add(FlightSectorEntry());
+                              }
+                            } else {
+                              _departureSectors.clear();
+                              _returnSectors.clear();
+                            }
+                          });
+                        },
+                      ),
+                      if (_isMultiSector)
+                        _buildSectorSection(
+                          label: "Departure Stops",
+                          sectors: _departureSectors,
+                          from: _departureFromAirport,
+                          to: _departureToAirport,
+                        ),
+                      _buildTripTypeCheckbox(
+                        label: "Round Trip",
+                        value: _isRoundTrip,
+                        onChanged: (value) {
+                          setState(() {
+                            _isRoundTrip = value;
+                            if (_isRoundTrip) {
+                              _returnFromAirport = _departureToAirport;
+                              if (_isMultiSector && _returnSectors.isEmpty) {
+                                _returnSectors.add(FlightSectorEntry());
+                              }
+                            } else {
+                              // Departure date is optional for one-way.
+                              _departureDateError = false;
+                              _returnSectors.clear();
+                            }
+                          });
+                        },
                       ),
                       const SizedBox(height: 0),
                       if (_isRoundTrip)
@@ -1056,6 +1265,13 @@ String? _selectedContactPerson;
                                 });
                               },
                             ),
+                            if (_isMultiSector)
+                              _buildSectorSection(
+                                label: "Return Stops",
+                                sectors: _returnSectors,
+                                from: _returnFromAirport ?? _departureToAirport,
+                                to: _returnToAirport,
+                              ),
                           ],
                         ),
                       const SizedBox(height: 20),

@@ -42,21 +42,29 @@ class FlightCardBallys extends StatelessWidget {
                       mainAxisSize: MainAxisSize.max,
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Column(
+                        // Bounded so a multi-sector route ("CMB → DXB → LHR")
+                        // wraps instead of running into the guest counts.
+                        Expanded(
+                          child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Icon(
                                   Icons.flight_takeoff,
                                   color: Colors.blue,
                                 ),
                                 const SizedBox(width: 8),
-                                Text(
-                                  "${flight.airports!.departure!.dFrom.airportCode} → ${flight.airports!.departure!.dTo.airportCode}",
-                                  style: const TextStyle(
-                                    fontSize: 19,
-                                    fontWeight: FontWeight.bold,
+                                Expanded(
+                                  child: Text(
+                                    // Includes every transit stop, so the whole
+                                    // outbound leg reads in travel order.
+                                    flight.departureRouteText,
+                                    style: const TextStyle(
+                                      fontSize: 19,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -64,17 +72,20 @@ class FlightCardBallys extends StatelessWidget {
                             const SizedBox(height: 4),
                             if (flight.airports!.returnFlight != null)
                               Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Icon(
                                     Icons.flight_land,
                                     color: Colors.green,
                                   ),
                                   const SizedBox(width: 8),
-                                  Text(
-                                    "${flight.airports!.returnFlight!.rFrom.airportCode} → ${flight.airports!.returnFlight!.rTo.airportCode}",
-                                    style: const TextStyle(
-                                      fontSize: 19,
-                                      fontWeight: FontWeight.w600,
+                                  Expanded(
+                                    child: Text(
+                                      flight.returnRouteText,
+                                      style: const TextStyle(
+                                        fontSize: 19,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -88,6 +99,7 @@ class FlightCardBallys extends StatelessWidget {
                               ),
                             ),
                           ],
+                          ),
                         ),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.center,
@@ -195,6 +207,16 @@ class FlightCardBallys extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    if (flight.isMultiSector == true) ...[
+                      const SizedBox(height: 5),
+                      const Text(
+                        "Multi Sector: Yes",
+                        style: TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                     if (flight.goldRoute) ...[
                       const SizedBox(height: 5),
                       Text(

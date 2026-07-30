@@ -1116,12 +1116,13 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
   /// "CMB → SIN — Round Trip, Business".
   List<String> _flightLines(GuestReservationEntryBallys entry) {
     return entry.flights.map((flight) {
-      final from = flight.airports?.departure?.dFrom.airportCode.trim() ?? '';
-      final to = flight.airports?.departure?.dTo.airportCode.trim() ?? '';
-      final route =
-          (from.isEmpty && to.isEmpty) ? "Air Ticket" : "$from → $to";
+      // Includes any transit stops, so a multi-sector ticket reads as
+      // "CMB → DXB → LHR" rather than hiding the stops.
+      final routeText = flight.departureRouteText;
+      final route = routeText.isEmpty ? "Air Ticket" : routeText;
       final details = [
         if (flight.isRoundTrip) "Round Trip",
+        if (flight.isMultiSector) "Multi Sector",
         if (flight.airTicketClassName.trim().isNotEmpty)
           flight.airTicketClassName.trim(),
       ];

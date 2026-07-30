@@ -26,6 +26,7 @@ import 'package:ballys_reservation_app/models/airport_search_response.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
 import 'package:ballys_reservation_app/models/reservation/airport_cost_response.dart';
+import 'package:ballys_reservation_app/models/reservation/flight_sector_entry.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/hotels_provider.dart';
 import 'package:ballys_reservation_app/providers/airports_provider.dart';
@@ -271,6 +272,13 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   Airport? _a_returnFromAirport;
   Airport? _a_returnToAirport;
   bool _a_isRoundTrip = false;
+
+  /// No direct flight is available, so the ticket routes through transit
+  /// airports the user adds between From and To on each leg.
+  bool _a_isMultiSector = false;
+  final List<FlightSectorEntry> _a_departureSectors = [];
+  final List<FlightSectorEntry> _a_returnSectors = [];
+
   Key _a_fromAirportKey = UniqueKey();
   Key _a_toAirportKey = UniqueKey();
   Key _a_returnFromAirportKey = UniqueKey();
@@ -803,6 +811,28 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   /// Just the ticket half of the air form — everything that belongs to a single
   /// flight rather than to the guest. Kept separate so "Add Another Air Ticket"
   /// can bank one ticket and reset those fields while the guest stays put.
+  /// The stops the user actually picked, in the order the rows are shown.
+  List<Airport> _pickedSectorAirports(List<FlightSectorEntry> sectors) => sectors
+      .where((sector) => sector.airport != null)
+      .map((sector) => sector.airport!)
+      .toList();
+
+  /// One leg written out with its transit stops, e.g.
+  /// "Colombo (CMB) → Dubai (DXB) → London (LHR)" — the same "City (CODE)"
+  /// shape the other airport display strings use.
+  String _airRouteText(
+      Airport? from, List<FlightSectorEntry> sectors, Airport? to) {
+    String name(Airport? a) => a == null
+        ? ''
+        : '${a.cityName ?? ''} (${a.airportCode ?? ''})';
+    final stops = _a_isMultiSector ? _pickedSectorAirports(sectors) : <Airport>[];
+    final parts = [from, ...stops, to]
+        .map(name)
+        .where((part) => part.isNotEmpty)
+        .toList();
+    return parts.length < 2 ? '' : parts.join(' → ');
+  }
+
   Map<String, dynamic> _captureCurrentAirTicket() {
     return {
       // display strings (used for copy text)
@@ -813,6 +843,15 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
           ? '${_a_toAirport!.cityName ?? ''} (${_a_toAirport!.airportCode ?? ''})'
           : '',
       'isRoundTrip': _a_isRoundTrip,
+      'isMultiSector': _a_isMultiSector,
+      // Full legs including transit stops, for the copy text and the ticket
+      // chips — 'fromAirport' / 'toAirport' stay the leg endpoints.
+      'departureRoute':
+          _airRouteText(_a_fromAirport, _a_departureSectors, _a_toAirport),
+      'returnRoute': _a_isRoundTrip
+          ? _airRouteText(
+              _a_returnFromAirport, _a_returnSectors, _a_returnToAirport)
+          : '',
       'returnFrom': _a_returnFromAirport != null
           ? '${_a_returnFromAirport!.cityName ?? ''} (${_a_returnFromAirport!.airportCode ?? ''})'
           : '',
@@ -847,6 +886,12 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       'toAirportData': _a_toAirport,
       'returnFromData': _a_returnFromAirport,
       'returnToData': _a_returnToAirport,
+      'departureSectorData':
+          _a_isMultiSector ? _pickedSectorAirports(_a_departureSectors) : <Airport>[],
+      // Return stops describe nothing without a return leg.
+      'returnSectorData': _a_isMultiSector && _a_isRoundTrip
+          ? _pickedSectorAirports(_a_returnSectors)
+          : <Airport>[],
       'arrDateObj': _a_arrDate,
       'depDateObj': _a_depDate,
       'classId': _a_selectedClass?['id'],
@@ -858,6 +903,22 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   /// will bank the ticket on screen.
   bool get _hasCompleteAirSector =>
       _a_fromAirport != null && _a_toAirport != null;
+
+  /// Multi Sector is on but the stops don't describe a route yet — a row with
+  /// no airport, or every row deleted.
+  bool get _hasIncompleteAirStops {
+    if (!_a_isMultiSector) return false;
+    if (_a_departureSectors.isEmpty && _a_returnSectors.isEmpty) return true;
+    return _a_departureSectors.any((sector) => sector.airport == null) ||
+        (_a_isRoundTrip &&
+            _a_returnSectors.any((sector) => sector.airport == null));
+  }
+
+  /// The matching complaint for [_hasIncompleteAirStops].
+  String get _incompleteAirStopsMessage =>
+      _a_departureSectors.isEmpty && _a_returnSectors.isEmpty
+          ? 'Please add at least one stop, or turn Multi Sector off'
+          : 'Please select an airport for every stop';
 
   /// Whether the ticket on screen is worth submitting. After "Add Another Air
   /// Ticket" the form is blank on purpose and must not become an empty ticket,
@@ -899,6 +960,9 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     _a_returnFromAirport = null;
     _a_returnToAirport = null;
     _a_isRoundTrip = false;
+    _a_isMultiSector = false;
+    _a_departureSectors.clear();
+    _a_returnSectors.clear();
     _a_fromAirportKey = UniqueKey();
     _a_toAirportKey = UniqueKey();
     _a_returnFromAirportKey = UniqueKey();
@@ -919,14 +983,18 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
 
   // ── Add another air ticket to the current pending-guest form ────────────────
   void _addAnotherAirTicket() {
-    if (!_hasCompleteAirSector) {
+    if (!_hasCompleteAirSector || _hasIncompleteAirStops) {
+      final message = !_hasCompleteAirSector
+          ? 'Please select the From and To airports first'
+          : _incompleteAirStopsMessage;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Row(
+          content: Row(
             children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.white, size: 18),
-              SizedBox(width: 8),
-              Text('Please select the From and To airports first'),
+              const Icon(Icons.warning_amber_rounded,
+                  color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Text(message),
             ],
           ),
           backgroundColor: Colors.orange.shade700,
@@ -1654,15 +1722,24 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   // ── Message builders — AIR ───────────────────────────────────────────────────
   String _singleAirText(Map<String, dynamic> m) {
     final isRound = m['isRoundTrip'] as bool? ?? false;
-    String sector = '';
-    if ((m['fromAirport'] as String).isNotEmpty &&
-        (m['toAirport'] as String).isNotEmpty)
-      sector = '${m['fromAirport']} → ${m['toAirport']}';
-    if (isRound &&
-        (m['returnFrom'] as String).isNotEmpty &&
-        (m['returnTo'] as String).isNotEmpty)
-      sector +=
-          '\n                         ${m['returnFrom']} → ${m['returnTo']}';
+    final isMultiSector = m['isMultiSector'] as bool? ?? false;
+    // The route strings already carry any transit stops; the plain endpoints
+    // are the fallback for tickets captured before Multi Sector existed.
+    final depRoute = (m['departureRoute'] as String? ?? '').isNotEmpty
+        ? m['departureRoute'] as String
+        : ((m['fromAirport'] as String).isNotEmpty &&
+                (m['toAirport'] as String).isNotEmpty
+            ? '${m['fromAirport']} → ${m['toAirport']}'
+            : '');
+    final retRoute = (m['returnRoute'] as String? ?? '').isNotEmpty
+        ? m['returnRoute'] as String
+        : ((m['returnFrom'] as String).isNotEmpty &&
+                (m['returnTo'] as String).isNotEmpty
+            ? '${m['returnFrom']} → ${m['returnTo']}'
+            : '');
+    String sector = depRoute;
+    if (isRound && retRoute.isNotEmpty)
+      sector += '\n                         $retRoute';
     final body = '''
 *AIR TICKET REQUEST*
 BM                       : ${m['memberId']}
@@ -1679,6 +1756,7 @@ No of Infants       : ${m['noOfInfants'] ?? '0'}
 Class                    : ${m['class']}
 Airline                  : ${m['airline']}${(m['sector'] as String? ?? '').isNotEmpty ? ' (${m['sector']})' : ''}
 Cost                      : ${m['cost']}
+Multi Sector         : ${isMultiSector ? 'Yes' : 'No'}
 Round Trip           : ${isRound ? 'Yes' : 'No'}
 Slik Route Facility : ${m['skipRouteFacility']}${(m['skipRouteFacility'] as String?) == 'Yes' ? ' (${m['silkRouteType'] ?? ''})' : ''}
 Airport Transport   : ${m['airportTransport']}
@@ -1891,7 +1969,26 @@ Remarks              : ${m['remarks']}''';
       'RT_CityName': returnTo?.cityName,
       'RT_AirportName': returnTo?.airportName,
       'RT_Country': returnTo?.country,
+      // Transit stops for guests with no direct flight, in travel order. The
+      // DF_/DT_ and RF_/RT_ fields above stay the leg endpoints. Matches
+      // FlightBookingBallys.toJson().
+      'is_multi_sector': m['isMultiSector'] as bool? ?? false,
+      'departure_sectors': _sectorsToJson(m['departureSectorData']),
+      'return_sectors': _sectorsToJson(m['returnSectorData']),
     };
+  }
+
+  /// Transit stops in the shape `FlightBookingBallys` sends them.
+  List<Map<String, dynamic>> _sectorsToJson(dynamic sectors) {
+    if (sectors is! List) return const [];
+    return sectors.whereType<Airport>().map((airport) {
+      return {
+        'AirportCode': airport.airportCode ?? '',
+        'CityName': airport.cityName ?? '',
+        'AirportName': airport.airportName ?? '',
+        'Country': airport.country ?? '',
+      };
+    }).toList();
   }
 
   List<Map<String, dynamic>> _buildPassportImages(
@@ -2304,6 +2401,13 @@ final phoneNumber = await StorageUtil.getMobileNumber();
     if (!_validateExtraMembers(
         _a_extraMembers,
         primaryMid: _sharedMemberId.text.trim())) {
+      return;
+    }
+
+    // A stop with no airport would just be dropped from the route, so ask for
+    // it rather than saving a ticket that reads wrong.
+    if (_hasIncompleteAirStops) {
+      _showSaveErrorSnack(_incompleteAirStopsMessage);
       return;
     }
 
@@ -3202,6 +3306,112 @@ Widget _familyMembersTick({
 // ─────────────────────────────────────────────────────────────────────────────
 // Airport dropdown
 // ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Transit stops for one leg (Multi Sector)
+// ─────────────────────────────────────────────────────────────────────────────
+/// A picker per transit stop, in travel order, with the whole leg previewed
+/// above so it is clear the stops sit between that leg's From and To.
+class _SectorEditor extends StatelessWidget {
+  final _QuickReservationBallysScreenState state;
+  final String label;
+  final Color accent;
+  final List<FlightSectorEntry> sectors;
+  final Airport? from;
+  final Airport? to;
+
+  const _SectorEditor({
+    required this.state,
+    required this.label,
+    required this.accent,
+    required this.sectors,
+    required this.from,
+    required this.to,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final routeCodes = [
+      from?.airportCode,
+      ...sectors.map((sector) => sector.airport?.airportCode),
+      to?.airportCode,
+    ].map((code) => (code == null || code.trim().isEmpty) ? '...' : code);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: accent.withOpacity(0.35), width: 1.2),
+      ),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.connecting_airports_rounded, color: accent, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            routeCodes.join(' → '),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: accent,
+            ),
+          ),
+          for (var i = 0; i < sectors.length; i++) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _AirportDropdown(
+                    key: sectors[i].key,
+                    label: 'Stop ${i + 1}',
+                    accent: accent,
+                    selectedAirport: sectors[i].airport,
+                    onChanged: (a) =>
+                        state.setState(() => sectors[i].airport = a),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Remove stop',
+                  icon: const Icon(Icons.remove_circle_outline_rounded,
+                      color: Colors.red, size: 22),
+                  onPressed: () => state.setState(() => sectors.removeAt(i)),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () =>
+                  state.setState(() => sectors.add(FlightSectorEntry())),
+              icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
+              label: const Text(
+                'Add Stop',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+              style: TextButton.styleFrom(foregroundColor: accent),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _AirportDropdown extends ConsumerWidget {
   final String label;
   final Color accent;
@@ -4254,11 +4464,17 @@ class _AirForm extends StatelessWidget {
             ...state._pendingAirTickets.asMap().entries.map((e) {
               final idx = e.key;
               final t = e.value;
-              final sector = [
-                if ((t['fromAirport'] as String? ?? '').isNotEmpty)
-                  t['fromAirport'],
-                if ((t['toAirport'] as String? ?? '').isNotEmpty) t['toAirport'],
-              ].join(' → ');
+              // The route carries any transit stops; the endpoints are the
+              // fallback for a ticket with none.
+              final route = t['departureRoute'] as String? ?? '';
+              final sector = route.isNotEmpty
+                  ? route
+                  : [
+                      if ((t['fromAirport'] as String? ?? '').isNotEmpty)
+                        t['fromAirport'],
+                      if ((t['toAirport'] as String? ?? '').isNotEmpty)
+                        t['toAirport'],
+                    ].join(' → ');
               return Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.all(12),
@@ -4435,6 +4651,69 @@ class _AirForm extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
+          // Asked before Round Trip: guests with no direct flight route through
+          // transit airports, and that changes what each leg below looks like.
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            child: Row(
+              children: [
+                Icon(Icons.connecting_airports_rounded,
+                    color: accent, size: 20),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'Multi Sector (No Direct Flight)',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15.5,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+                Switch(
+                  value: state._a_isMultiSector,
+                  activeColor: accent,
+                  onChanged: (v) {
+                    state.setState(() {
+                      state._a_isMultiSector = v;
+                      if (v) {
+                        // Start each leg off with one empty stop, so there is
+                        // something to fill in straight away.
+                        if (state._a_departureSectors.isEmpty) {
+                          state._a_departureSectors.add(FlightSectorEntry());
+                        }
+                        if (state._a_isRoundTrip &&
+                            state._a_returnSectors.isEmpty) {
+                          state._a_returnSectors.add(FlightSectorEntry());
+                        }
+                      } else {
+                        state._a_departureSectors.clear();
+                        state._a_returnSectors.clear();
+                      }
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          if (state._a_isMultiSector) ...[
+            const SizedBox(height: 12),
+            _SectorEditor(
+              state: state,
+              label: 'Departure Stops',
+              accent: accent,
+              sectors: state._a_departureSectors,
+              from: state._a_fromAirport,
+              to: state._a_toAirport,
+            ),
+          ],
+          const SizedBox(height: 12),
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -4467,9 +4746,14 @@ class _AirForm extends StatelessWidget {
                         state._a_returnToAirport = state._a_fromAirport;
                         state._a_returnFromAirportKey = UniqueKey();
                         state._a_returnToAirportKey = UniqueKey();
+                        if (state._a_isMultiSector &&
+                            state._a_returnSectors.isEmpty) {
+                          state._a_returnSectors.add(FlightSectorEntry());
+                        }
                       } else {
                         state._a_returnFromAirport = null;
                         state._a_returnToAirport = null;
+                        state._a_returnSectors.clear();
                       }
                       state._a_selectedAirline = null;
                       state._a_airlineCosts = [];
@@ -4509,6 +4793,17 @@ class _AirForm extends StatelessWidget {
                       state._loadAirlineCosts();
                     },
                   ),
+                  if (state._a_isMultiSector) ...[
+                    const SizedBox(height: 10),
+                    _SectorEditor(
+                      state: state,
+                      label: 'Return Stops',
+                      accent: accent,
+                      sectors: state._a_returnSectors,
+                      from: state._a_returnFromAirport,
+                      to: state._a_returnToAirport,
+                    ),
+                  ],
                 ],
               ),
             ),

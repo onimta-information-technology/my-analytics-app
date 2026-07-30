@@ -37,6 +37,20 @@ class FlightBookingBallys {
   /// Free-text meal requirement, captured only when [meal] is true.
   final String? mealRemark;
 
+  /// The guest is not flying direct — the ticket routes through one or more
+  /// transit airports. Only meaningful together with [departureSectors] /
+  /// [returnSectors].
+  final bool isMultiSector;
+
+  /// Transit airports on the outbound leg, in travel order. They sit *between*
+  /// `airports.departure.dFrom` and `airports.departure.dTo`, which stay the
+  /// origin and the final destination.
+  final List<AirportInfo> departureSectors;
+
+  /// Transit airports on the return leg, in travel order, between
+  /// `airports.return_.rFrom` and `airports.return_.rTo`.
+  final List<AirportInfo> returnSectors;
+
   FlightBookingBallys({
     required this.guestCount,
     this.childrenCount = 0,
@@ -59,7 +73,40 @@ class FlightBookingBallys {
     this.silkRouteType,
     this.goldRouteType,
     this.mealRemark,
+    this.isMultiSector = false,
+    this.departureSectors = const [],
+    this.returnSectors = const [],
   });
+
+  /// Outbound airport codes in travel order — origin, every transit stop, then
+  /// the final destination. Blank codes are dropped so a partly filled flight
+  /// still reads sensibly.
+  List<String> get departureRouteCodes {
+    final departure = airports?.departure;
+    if (departure == null) return const [];
+    return [
+      departure.dFrom.airportCode,
+      ...departureSectors.map((sector) => sector.airportCode),
+      departure.dTo.airportCode,
+    ].where((code) => code.trim().isNotEmpty).toList();
+  }
+
+  /// Return leg codes in travel order. Empty when the flight is one-way.
+  List<String> get returnRouteCodes {
+    final returnLeg = airports?.returnFlight;
+    if (returnLeg == null) return const [];
+    return [
+      returnLeg.rFrom.airportCode,
+      ...returnSectors.map((sector) => sector.airportCode),
+      returnLeg.rTo.airportCode,
+    ].where((code) => code.trim().isNotEmpty).toList();
+  }
+
+  /// e.g. "CMB → DXB → LHR" — the whole outbound leg on one line.
+  String get departureRouteText => departureRouteCodes.join(' → ');
+
+  /// e.g. "LHR → DOH → CMB". Empty when the flight is one-way.
+  String get returnRouteText => returnRouteCodes.join(' → ');
 
   factory FlightBookingBallys.fromJson(Map<String, dynamic> json) {
     return FlightBookingBallys(
@@ -86,7 +133,57 @@ class FlightBookingBallys {
       silkRouteType: json['silk_route_type'] as String?,
       goldRouteType: json['gold_route_type'] as String?,
       mealRemark: json['meal_remark'] as String?,
+      isMultiSector: _toBool(json['is_multi_sector']),
+      departureSectors: _parseSectors(json['departure_sectors']),
+      returnSectors: _parseSectors(json['return_sectors']),
     );
+  }
+
+  /// The JSON-string payload gives real booleans; the flattened DB response
+  /// gives 1/0 or "1"/"0".
+  static bool _toBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      final v = value.trim().toLowerCase();
+      return v == '1' || v == 'true' || v == 'yes';
+    }
+    return false;
+  }
+
+  /// Transit airports arrive either as full objects (our own payload) or as a
+  /// bare list / comma-separated string of codes if the back office only keeps
+  /// the codes.
+  static List<AirportInfo> _parseSectors(dynamic value) {
+    if (value == null) return const [];
+
+    List<dynamic> items;
+    if (value is List) {
+      items = value;
+    } else if (value is String) {
+      if (value.trim().isEmpty) return const [];
+      items = value.split(',');
+    } else {
+      return const [];
+    }
+
+    final sectors = <AirportInfo>[];
+    for (final item in items) {
+      if (item is Map<String, dynamic>) {
+        sectors.add(AirportInfo.fromSectorJson(item));
+      } else if (item is Map) {
+        sectors.add(AirportInfo.fromSectorJson(
+            item.map((k, v) => MapEntry(k.toString(), v))));
+      } else if (item is String && item.trim().isNotEmpty) {
+        sectors.add(AirportInfo(
+          airportCode: item.trim(),
+          cityName: '',
+          airportName: '',
+          country: '',
+        ));
+      }
+    }
+    return sectors;
   }
 
   /// Child / infant counts come back as either a number or a string depending
@@ -204,6 +301,14 @@ class FlightBookingBallys {
       'RT_CityName': airports?.returnFlight?.rTo.cityName,
       'RT_AirportName': airports?.returnFlight?.rTo.airportName,
       'RT_Country': airports?.returnFlight?.rTo.country,
+      // Transit stops for guests with no direct flight. DF_/DT_ and RF_/RT_
+      // above stay the leg endpoints, so anything reading only those keeps
+      // working; the stops ride along in order.
+      'is_multi_sector': isMultiSector,
+      'departure_sectors':
+          departureSectors.map((sector) => sector.toSectorJson()).toList(),
+      'return_sectors':
+          returnSectors.map((sector) => sector.toSectorJson()).toList(),
     };
   }
 }
@@ -311,6 +416,34 @@ class AirportInfo {
       airportName: json['${prefix}AirportName'] ?? '',
       country: json['${prefix}Country'] ?? '',
     );
+  }
+
+  /// A transit stop, keyed the same way as the flattened `DF_`/`DT_` fields
+  /// minus the leg prefix.
+  factory AirportInfo.fromSectorJson(Map<String, dynamic> json) {
+    // Key casing differs between our payload ("CityName") and the nested
+    // airport objects ("Cityname"), so match case-insensitively.
+    final byLowerKey = <String, dynamic>{
+      for (final entry in json.entries) entry.key.toLowerCase(): entry.value,
+    };
+    String read(String name) =>
+        byLowerKey[name.toLowerCase()]?.toString() ?? '';
+
+    return AirportInfo(
+      airportCode: read('AirportCode'),
+      cityName: read('CityName'),
+      airportName: read('AirportName'),
+      country: read('Country'),
+    );
+  }
+
+  Map<String, dynamic> toSectorJson() {
+    return {
+      'AirportCode': airportCode,
+      'CityName': cityName,
+      'AirportName': airportName,
+      'Country': country,
+    };
   }
 
   Airport toAirport() {

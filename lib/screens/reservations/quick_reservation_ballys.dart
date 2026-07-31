@@ -525,9 +525,11 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   }
 
   /// Hotels, hotel categories, room categories, room types and meal plans all
-  /// come back in one call — the dropdowns below filter it in memory.
+  /// come back in one call — the dropdowns below filter it in memory. Refreshed
+  /// on entry so the hotel dropdown reflects the API's current list instead of
+  /// whatever was cached earlier in the session.
   Future<void> _loadHotels() async {
-    await ref.read(hotelCatalogProvider.notifier).load();
+    await ref.read(hotelCatalogProvider.notifier).refresh();
   }
 
   Future<void> _loadAirports() async {

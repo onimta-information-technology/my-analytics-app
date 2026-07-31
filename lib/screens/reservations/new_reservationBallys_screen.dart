@@ -498,7 +498,9 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
 
   Future<void> _getHotels() async {
     // One call brings hotels, hotel categories, room categories, room types
-    // and meal plans for the hotel selector.
+    // and meal plans for the hotel selector. Only warms the cache so the sheet
+    // opens with something on screen — the sheet itself re-reads the API, so a
+    // hotel added since app start still shows up in the dropdown.
     await ref.read(hotelCatalogProvider.notifier).load();
   }
 

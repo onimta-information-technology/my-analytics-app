@@ -87,7 +87,7 @@ class HotelRepository {
       "SpName": spName,
       "con": "1"
     });
-
+print('API response for hotel room catalog: $response');
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List) {
       final tableData = response['CommonResult']['Table'] as List;

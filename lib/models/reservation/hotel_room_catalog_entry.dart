@@ -39,18 +39,23 @@ class HotelRoomCatalogEntry {
   factory HotelRoomCatalogEntry.fromJson(Map<String, dynamic> json) {
     return HotelRoomCatalogEntry(
       hotelId: _toDouble(json['HotelId']),
-      hotelCode: json['HotelCode']?.toString() ?? '',
-      hotelName: json['HotelName']?.toString() ?? '',
+      hotelCode: _text(json['HotelCode']),
+      hotelName: _text(json['HotelName']),
       roomCategoryId: _toInt(json['RoomCategoryId']),
-      roomCategoryCode: json['RoomCategoryCode']?.toString() ?? '',
-      hotelCategory: json['HotelCategory']?.toString().trim() ?? '',
-      roomCategoryName: json['RoomCategoryName']?.toString() ?? '',
-      mealPlan: json['MealPlan']?.toString() ?? '',
+      roomCategoryCode: _text(json['RoomCategoryCode']),
+      hotelCategory: _text(json['HotelCategory']),
+      roomCategoryName: _text(json['RoomCategoryName']),
+      mealPlan: _text(json['MealPlan']),
       roomTypeId: _toInt(json['RoomTypeId']),
-      roomTypeCode: json['RoomTypeCode']?.toString() ?? '',
-      roomTypeName: json['RoomTypeName']?.toString() ?? '',
+      roomTypeCode: _text(json['RoomTypeCode']),
+      roomTypeName: _text(json['RoomTypeName']),
     );
   }
+
+  /// Every name off this API is trimmed. The columns behind it are fixed-width
+  /// and hand-maintained, so values come back padded, and the padding shows:
+  /// a leading space indents that row away from the rest of the dropdown.
+  static String _text(dynamic value) => value?.toString().trim() ?? '';
 
   static double _toDouble(dynamic value) {
     if (value is num) return value.toDouble();
@@ -76,6 +81,11 @@ class HotelRoomCatalogEntry {
   // ── Derivations for the dropdowns ─────────────────────────────────────────
   // The map shapes below are the ones the reservation forms and the hotel cost
   // API (9022) already speak, so only the data source changes.
+  //
+  // Each keeps the order 90155 returned. The API decides how the lists read —
+  // re-sorting them here would override an ordering the back office controls.
+  // Deduping runs through a plain map, which keeps insertion order, so first
+  // occurrence wins and the rest follow as they arrived.
 
   static List<HotelResponse> hotelsFrom(List<HotelRoomCatalogEntry> entries) {
     final byId = <double, HotelResponse>{};
@@ -85,9 +95,7 @@ class HotelRoomCatalogEntry {
         () => HotelResponse(hotelId: e.hotelId, hotelName: e.hotelName),
       );
     }
-    final hotels = byId.values.toList()
-      ..sort((a, b) => a.hotelName.toLowerCase().compareTo(b.hotelName.toLowerCase()));
-    return hotels;
+    return byId.values.toList();
   }
 
   static List<Map<String, dynamic>> hotelsAsMapFrom(
@@ -112,11 +120,7 @@ class HotelRoomCatalogEntry {
         },
       );
     }
-    final categories = byId.values.toList()
-      ..sort((a, b) => (a['CatName'] as String)
-          .toLowerCase()
-          .compareTo((b['CatName'] as String).toLowerCase()));
-    return categories;
+    return byId.values.toList();
   }
 
   static List<Map<String, dynamic>> roomTypesFrom(
@@ -137,11 +141,7 @@ class HotelRoomCatalogEntry {
         },
       );
     }
-    final roomTypes = byKey.values.toList()
-      ..sort((a, b) => (a['RoomType'] as String)
-          .toLowerCase()
-          .compareTo((b['RoomType'] as String).toLowerCase()));
-    return roomTypes;
+    return byKey.values.toList();
   }
 
   /// Grading of a category, used to label a category picked before the catalog

@@ -54,6 +54,13 @@ class _HotelAndRoomSelectionBallysBottomSheetState
 
   final ValueNotifier<String> costNotifier = ValueNotifier<String>("0");
 
+  /// Set when part of an edited row named something the catalog no longer
+  /// carries, so the form can say why that dropdown came back empty. A
+  /// notifier rather than plain state: it is written from the catalog listener
+  /// in build(), which must not call setState.
+  final ValueNotifier<String?> staleSelectionNotifier =
+      ValueNotifier<String?>(null);
+
   /// Bellagio (bty.world) swaps the "Payment By" options to the Beyond
   /// Borders wording.
   bool _isBellagio = false;
@@ -64,7 +71,11 @@ class _HotelAndRoomSelectionBallysBottomSheetState
     hotelList = List.from(ref.read(selectedHotelBallysProvider));
     _loadBrand();
     // Hotels, categories, room types and meal plans all arrive in one call.
-    ref.read(hotelCatalogProvider.notifier).load();
+    // Re-read rather than reuse the cached list: this sheet is where a hotel
+    // gets picked, so it has to offer what the API holds now, not what it held
+    // when the app started. The cached list paints immediately meanwhile and
+    // the listener in build() refills the dependent dropdowns when it lands.
+    ref.read(hotelCatalogProvider.notifier).refresh();
   }
 
   Future<void> _loadBrand() async {
@@ -87,6 +98,7 @@ class _HotelAndRoomSelectionBallysBottomSheetState
     roomCategoriesNotifier.dispose();
     roomTypesNotifier.dispose();
     costNotifier.dispose();
+    staleSelectionNotifier.dispose();
     super.dispose();
   }
 
@@ -98,7 +110,7 @@ class _HotelAndRoomSelectionBallysBottomSheetState
   DateTime? departureDate;
 
   double? selectedHotelId;
-  String? selectedHotelName;
+  String?  selectedHotelName;
   Map<String, dynamic>? selectedHotel;
 
   int? selectedRoomCategoryId;
@@ -267,6 +279,83 @@ String selectedByPaymnet = 'NA';
     }
   }
 
+  /// Drops any part of the current selection that the catalog no longer carries.
+  ///
+  /// A booked row keeps the hotel, category and room type it was saved with, so
+  /// a reservation opened for amendment can name a hotel 90155 has since
+  /// retired or renamed. Left alone the field shows that old hotel while the
+  /// category and room type dropdowns sit empty — there is nothing in the
+  /// catalog to filter — and the row could be re-submitted against a hotel the
+  /// back office no longer knows. Whatever is stale is cleared so the dropdowns
+  /// offer what the API returns now, and the user is told what went.
+  void _dropStaleSelection() {
+    final catalog = ref.read(hotelCatalogProvider);
+    // Nothing to check against until the catalog lands; the listener in build()
+    // runs this again when it does.
+    if (catalog.isEmpty || selectedHotelId == null) return;
+
+    final forHotel =
+        catalog.where((e) => e.hotelId == selectedHotelId).toList();
+
+    if (forHotel.isEmpty) {
+      staleSelectionNotifier.value =
+          '"${selectedHotelName ?? 'The saved hotel'}" is no longer available. '
+          'Please choose a hotel.';
+      selectedHotel = null;
+      selectedHotelId = null;
+      selectedHotelName = null;
+      roomCategoriesNotifier.value = [];
+      _clearCategoryAndRoomType();
+      return;
+    }
+
+    // Still listed, but it may have been renamed since it was booked — show the
+    // catalog's wording so the field matches the list behind it.
+    selectedHotelName = forHotel.first.hotelName;
+    selectedHotel = {
+      'Hotel_IID': selectedHotelId,
+      'HotelName': selectedHotelName,
+    };
+
+    if (selectedRoomCategoryId != null &&
+        !forHotel.any((e) => e.roomCategoryId == selectedRoomCategoryId)) {
+      staleSelectionNotifier.value =
+          '"${selectedRoomCategoryName ?? 'The saved room category'}" is no '
+          'longer offered at $selectedHotelName. Please choose a room category.';
+      _clearCategoryAndRoomType();
+      return;
+    }
+
+    if (selectedRoomTypeId != null &&
+        !forHotel.any((e) =>
+            e.roomCategoryId == selectedRoomCategoryId &&
+            e.roomTypeId == selectedRoomTypeId)) {
+      staleSelectionNotifier.value =
+          '"${selectedRoomTypeName ?? 'The saved room type'}" is no longer '
+          'offered for $selectedRoomCategoryName. Please choose a room type.';
+      _clearRoomType();
+      return;
+    }
+
+    staleSelectionNotifier.value = null;
+  }
+
+  void _clearCategoryAndRoomType() {
+    selectedRoomCategory = null;
+    selectedRoomCategoryId = null;
+    selectedRoomCategoryName = null;
+    _clearRoomType();
+  }
+
+  void _clearRoomType() {
+    selectedRoomType = null;
+    selectedRoomTypeId = null;
+    selectedRoomTypeName = null;
+    sRoomTypeName = null;
+    sMealPlanName = null;
+    roomTypesNotifier.value = [];
+  }
+
   /// Grading of a category, e.g. "(Standard)" — shown next to the category name.
   String _hotelCategoryLabel(Map<String, dynamic>? category) {
     final grade = (category?['HotelCategory'] ?? '') as String;
@@ -298,6 +387,8 @@ String selectedByPaymnet = 'NA';
   }
 
   void _setHotel(Map<String, dynamic>? hotel) {
+    // Picked from the live list, so whatever was stale has been answered.
+    staleSelectionNotifier.value = null;
     selectedHotel = hotel;
     selectedHotelId = hotel?['Hotel_IID'];
     selectedHotelName = hotel?['HotelName'] ?? '';
@@ -312,6 +403,7 @@ String selectedByPaymnet = 'NA';
   }
 
   void _setRoomCategory(Map<String, dynamic>? roomCategory) {
+    staleSelectionNotifier.value = null;
     selectedRoomCategory = roomCategory;
     selectedRoomCategoryId = roomCategory?['CatCode'];
     selectedRoomCategoryName = roomCategory?['CatName'] ?? '';
@@ -328,6 +420,7 @@ String selectedByPaymnet = 'NA';
   }
 
   void _setRoomType(Map<String, dynamic>? roomtype) {
+    staleSelectionNotifier.value = null;
     selectedRoomType = roomtype;
     selectedRoomTypeId = roomtype?['ID'];
     sRoomTypeName = roomtype?['RoomType'] ?? '';
@@ -406,6 +499,10 @@ String selectedByPaymnet = 'NA';
       selectedCost = hotel.selectedCost;
       costNotifier.value = hotel.selectedCost;
       costIndex = hotel.costIndex;
+
+      // Everything above came off the saved row, not the catalog — anything the
+      // API has since dropped goes now rather than being offered as valid.
+      _dropStaleSelection();
     });
 
     // Scroll to top so user sees the form
@@ -532,6 +629,7 @@ String selectedByPaymnet = 'NA';
 
       editMode = false;
       editIndex = null;
+      staleSelectionNotifier.value = null;
       selectedEcLcoFacility = 'NA';
       selectedByPaymnet = _isBellagio ? 'N/A' : 'NA';
 
@@ -716,6 +814,10 @@ String selectedByPaymnet = 'NA';
     // the catalog is necessarily loaded — refill those dropdowns once it is.
     ref.listen<List<HotelRoomCatalogEntry>>(hotelCatalogProvider, (_, __) {
       if (selectedHotelId == null) return;
+      // The refreshed catalog may have dropped what was picked, so settle the
+      // selection against it before refilling anything that hangs off it.
+      _dropStaleSelection();
+      if (selectedHotelId == null) return;
       getSelectedHotelRoomCategories(selectedHotelId!, clearSelection: false);
       if (selectedRoomCategoryId != null) {
         getSelectedHotelCategoryRoomTypes(
@@ -848,6 +950,49 @@ String selectedByPaymnet = 'NA';
                         const SizedBox(height: 16),
                         _buildCounter("Rooms", numberOfRooms, _updateRooms),
                         const SizedBox(height: 16),
+
+                        // ── Stale selection notice ─────────────
+                        // Explains an emptied dropdown when the row being
+                        // amended was booked against something the catalog no
+                        // longer returns.
+                        ValueListenableBuilder<String?>(
+                          valueListenable: staleSelectionNotifier,
+                          builder: (context, notice, _) {
+                            if (notice == null) return const SizedBox.shrink();
+                            return Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF4E5),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: const Color(0xFFE0A800),
+                                ),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(
+                                    Icons.info_outline,
+                                    size: 20,
+                                    color: Color(0xFF8A6100),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      notice,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Color(0xFF8A6100),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
 
                         // ── Hotel Dropdown ─────────────────────
                         DropdownSearch<Map<String, dynamic>>(

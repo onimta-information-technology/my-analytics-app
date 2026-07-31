@@ -1122,6 +1122,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
       final routeText = flight.departureRouteText;
       final route = routeText.isEmpty ? "Air Ticket" : routeText;
       final details = [
+        if ((flight.airLine ?? '').trim().isNotEmpty) flight.airLine!.trim(),
         if (flight.isRoundTrip) "Round Trip",
         if (flight.isMultiSector) "Multi Sector",
         if (flight.airTicketClassName.trim().isNotEmpty)

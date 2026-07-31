@@ -9,7 +9,7 @@ import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:ballys_reservation_app/models/airport_search_response.dart';
-import 'package:ballys_reservation_app/models/reservation/airport_cost_response.dart';
+import 'package:ballys_reservation_app/models/reservation/airline_response.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_sector_entry.dart';
 import 'package:ballys_reservation_app/providers/airports_provider.dart';
@@ -60,8 +60,12 @@ class _AirTicketsSelectionBallysScreenState
   final ValueNotifier<List<Map<String, dynamic>>> roomTypesNotifier =
       ValueNotifier<List<Map<String, dynamic>>>([]);
 
-  final ValueNotifier<String> costNotifier = ValueNotifier<String>("0");
-  final ValueNotifier<String?> airLineNotifier = ValueNotifier<String?>(null);
+  /// Airline master list (API 90156) and the one picked for this ticket.
+  List<AirlineResponse> _airlines = [];
+  AirlineResponse? _selectedAirline;
+  bool _airlinesLoading = false;
+  Key _airlineKey = UniqueKey();
+
   List<String> _contactPersons = [];
   List<PassportFile> _passportFiles = [];
 
@@ -80,6 +84,7 @@ class _AirTicketsSelectionBallysScreenState
     _getAirports();
     _loadBrand();
     _loadContactPersons();
+    _loadAirlines();
     _arrivalDate = widget.arrivalDate;
     _departureDate = widget.departureDate;
   }
@@ -174,9 +179,6 @@ class _AirTicketsSelectionBallysScreenState
   int? selectedHotelAndRoom;
   int? numberOfNights;
 
-  dynamic selectedCost;
-  int? costIndex;
-
   int numberOfGuests = 1;
   int numberOfChildren = 0;
   int numberOfInfants = 0;
@@ -212,45 +214,35 @@ String? _selectedContactPerson;
         departureDate = pickedDateRange.end;
         _dateRangeController.text =
             "${DateFormat('yyyy-MM-dd').format(pickedDateRange.start)} - ${DateFormat('yyyy-MM-dd').format(pickedDateRange.end)}";
-      });
-      _clearSelectedCost();
-    }
+      });    }
   }
 
   void _updateAdults(count) {
     if (count >= 1) {
       setState(() {
         numberOfGuests = count;
-      });
-      _clearSelectedCost();
-    }
+      });    }
   }
 
   void _updateChildren(count) {
     if (count >= 0) {
       setState(() {
         numberOfChildren = count;
-      });
-      _clearSelectedCost();
-    }
+      });    }
   }
 
   void _updateInfants(count) {
     if (count >= 0) {
       setState(() {
         numberOfInfants = count;
-      });
-      _clearSelectedCost();
-    }
+      });    }
   }
 
   void _updateRooms(count) {
     if (count >= 1) {
       setState(() {
         numberOfRooms = count;
-      });
-      _clearSelectedCost();
-    }
+      });    }
   }
 
   Future<void> getSelectedHotelRoomCategories(double hotelId,
@@ -294,24 +286,45 @@ String? _selectedContactPerson;
     }
   }
 
-  Future<List<AirportCostResponse>?> getAirportCosts() async {
+  /// The airline list is the same whatever route is picked, so it is fetched
+  /// once when the screen opens.
+  Future<void> _loadAirlines() async {
+    setState(() => _airlinesLoading = true);
     try {
-      final response = await widget.airportRepository.getAirportCosts(
-          departureFrom: _departureFromAirport!.airportCode!,
-          departureTo: _departureToAirport!.airportCode!,
-          returnTo: _returnToAirport!.airportCode!);
-      return response;
-    } catch (e) {
-      return null;
+      final airlines = await widget.airportRepository.getAirlines();
+      if (!mounted) return;
+      setState(() {
+        _airlines = airlines;
+        _airlinesLoading = false;
+        _airlineKey = UniqueKey();
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _airlines = [];
+        _airlinesLoading = false;
+        _airlineKey = UniqueKey();
+      });
     }
+  }
+
+  /// The list entry matching a name saved on an earlier ticket, so editing one
+  /// shows its airline selected instead of blank.
+  AirlineResponse? _airlineByName(String? name) {
+    final target = name?.trim();
+    if (target == null || target.isEmpty) return null;
+    for (final airline in _airlines) {
+      if (airline.airlineName.trim().toLowerCase() == target.toLowerCase()) {
+        return airline;
+      }
+    }
+    return null;
   }
 
   void _setHotel(flight) {
     selectedHotel = flight;
     selectedHotelId = flight?['Hotel_IID'];
     selectedHotelName = flight?['HotelName'] ?? '';
-    _clearSelectedCost();
-
     if (selectedHotelId != null) {
       roomCategoriesNotifier.value = [];
       roomTypesNotifier.value = [];
@@ -322,9 +335,7 @@ String? _selectedContactPerson;
   void _setRoomCategory(roomCategory) {
     selectedRoomCategory = roomCategory;
     selectedRoomCategoryId = roomCategory?['CatCode'];
-    selectedRoomCategoryName = roomCategory?['CatName'] ?? '';
-    _clearSelectedCost();
-    if (selectedHotelId != null && selectedRoomCategoryId != null) {
+    selectedRoomCategoryName = roomCategory?['CatName'] ?? '';    if (selectedHotelId != null && selectedRoomCategoryId != null) {
       roomTypesNotifier.value = [];
       getSelectedHotelCategoryRoomTypes(
           selectedHotelId!, selectedRoomCategoryId!);
@@ -336,18 +347,7 @@ String? _selectedContactPerson;
     selectedRoomTypeId = roomtype?['ID'];
     sRoomTypeName = roomtype?['RoomType'] ?? '';
     sMealPlanName = roomtype?['MealPlan'] ?? '';
-    selectedRoomTypeName = '$sRoomTypeName - $sMealPlanName';
-    _clearSelectedCost();
-  }
-
-  void _handleItemSelected(AirportCostResponse cost, int index) {
-    setState(() {
-      costIndex = index;
-      double calculation = cost.cost! * numberOfGuests;
-      costNotifier.value = NumberFormat().format(calculation.round());
-      airLineNotifier.value = cost.airLine;
-    });
-  }
+    selectedRoomTypeName = '$sRoomTypeName - $sMealPlanName';  }
 
   void __editFlightDetails(FlightBookingBallys flight, int index) {
     setState(() {
@@ -410,8 +410,8 @@ String? _selectedContactPerson;
         ..addAll(flight.returnSectors
             .map((sector) => FlightSectorEntry(airport: sector.toAirport())));
 
-      costNotifier.value = flight.selectedCost;
-      airLineNotifier.value = flight.airLine;
+      _selectedAirline = _airlineByName(flight.airLine);
+      _airlineKey = UniqueKey();
     });
   }
 
@@ -536,8 +536,11 @@ String? _selectedContactPerson;
       airportTransportation: _airportTranspotation == "Yes" ? 1 : 0,
       airTicketClassName: _airTicketClassName!,
       isRoundTrip: _isRoundTrip,
-      selectedCost: costNotifier.value,
-      airLine: airLineNotifier.value,
+      // Air ticket costs are no longer captured on this screen.
+      selectedCost: 0,
+      airLine: _selectedAirline?.airlineName,
+      airLineCode: _selectedAirline?.airlineCode,
+      iataCode: _selectedAirline?.iataCode,
       contactPerson: _selectedContactPerson,
       visa: _visa,
       meal: _meal,
@@ -832,13 +835,6 @@ String? _selectedContactPerson;
     );
   }
 
-  void _clearSelectedCost() {
-    costNotifier.value = "0";
-    airLineNotifier.value = null;
-    selectedCost = null;
-    costIndex = null;
-  }
-
   void _clearSelection() {
     setState(() {
       numberOfGuests = 1;
@@ -876,10 +872,8 @@ String? _selectedContactPerson;
       _departureFromAirportKey = UniqueKey();
       _departureToAirportKey = UniqueKey();
 
-      selectedCost = null;
-      costNotifier.value = "0";
-      airLineNotifier.value = null;
-      costIndex = null;
+      _selectedAirline = null;
+      _airlineKey = UniqueKey();
 
       editMode = false;
       editIndex = null;
@@ -892,26 +886,70 @@ String? _selectedContactPerson;
     });
   }
 
-  void _showCostCalculator(BuildContext context) async {
-    if (_departureFromAirport == null || _departureToAirport == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("Please select departure and arrival airports")),
+  /// Airline picker — the active airlines from API 90156, by name.
+  Widget _buildAirlineDropdown() {
+    if (_airlinesLoading) {
+      return InputDecorator(
+        decoration: InputDecoration(
+          labelText: "Airline",
+          labelStyle: const TextStyle(
+              fontSize: 20,
+              color: Color.fromARGB(255, 0, 0, 0),
+              fontWeight: FontWeight.bold),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+          prefixIcon: const Icon(Icons.airplanemode_active),
+        ),
+        child: Row(
+          children: const [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 12),
+            Text("Loading airlines...", style: TextStyle(fontSize: 16)),
+          ],
+        ),
       );
-      return;
     }
-    final airportCosts = await getAirportCosts();
 
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return CostCalculatorBottomSheet(
-            onBackPressed: () {
-              Navigator.pop(context);
-            },
-            onItemSelected: _handleItemSelected,
-            airportCosts: airportCosts ?? []);
-      },
+    return DropdownSearch<AirlineResponse>(
+      key: _airlineKey,
+      selectedItem: _selectedAirline,
+      items: (filter, infiniteScrollProps) => _airlines
+          .where((airline) => airline.airlineName
+              .toLowerCase()
+              .contains(filter.toLowerCase()))
+          .toList(),
+      itemAsString: (airline) => airline.airlineName,
+      compareFn: (a, b) => a.airlineName == b.airlineName,
+      enabled: _airlines.isNotEmpty,
+      onChanged: (airline) => setState(() => _selectedAirline = airline),
+      decoratorProps: DropDownDecoratorProps(
+        decoration: InputDecoration(
+          labelText: _airlines.isEmpty ? "Airline (unavailable)" : "Airline",
+          labelStyle: const TextStyle(
+              fontSize: 20,
+              color: Color.fromARGB(255, 0, 0, 0),
+              fontWeight: FontWeight.bold),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+          prefixIcon: const Icon(Icons.airplanemode_active),
+        ),
+      ),
+      popupProps: PopupProps.menu(
+        showSearchBox: true,
+        searchFieldProps: const TextFieldProps(
+          decoration: InputDecoration(
+            hintText: "Search airline",
+            border: OutlineInputBorder(),
+          ),
+        ),
+        itemBuilder: (context, airline, isSelected, isFocused) => ListTile(
+          title: Text(airline.airlineName,
+              style: const TextStyle(fontSize: 16)),
+          selected: isSelected,
+        ),
+      ),
     );
   }
 
@@ -1295,6 +1333,8 @@ String? _selectedContactPerson;
                         },
                       ),
                       const SizedBox(height: 16),
+                      _buildAirlineDropdown(),
+                      const SizedBox(height: 16),
                       TextFormField(
                         controller: _arrivalDateController,
                         readOnly: true,
@@ -1514,64 +1554,6 @@ DropdownSearch<String>(
                         ),
                       ],
                       const SizedBox(height: 35),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            _showCostCalculator(context);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Constants.kPrimaryColor,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 16,
-                              horizontal: 20,
-                            ),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.calculate, size: 20),
-                              SizedBox(width: 10),
-                              Text(
-                                "Cost Calculator",
-                                style: TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // ── Estimated Cost with soft warning ──────
-                      Row(
-                        children: [
-                          ValueListenableBuilder<String>(
-                            valueListenable: costNotifier,
-                            builder: (context, cost, child) {
-                              final hasNoCost = cost == "0";
-                              return Text(
-                                hasNoCost
-                                    ? "Est. Cost: No cost calculation done"
-                                    : "Est. Cost LKR $cost",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                  color: hasNoCost
-                                      ? Colors.red
-                                      : Colors.black,
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 16),
                       Align(
                         alignment: Alignment.bottomCenter,
                         child: SizedBox(
@@ -1727,210 +1709,6 @@ DropdownSearch<String>(
             )
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Cost Calculator Bottom Sheet
-// ─────────────────────────────────────────────────────────────────────────────
-
-class CostCalculatorBottomSheet extends StatefulWidget {
-  final Function onBackPressed;
-  final List<AirportCostResponse>? airportCosts;
-  final Function(AirportCostResponse, int) onItemSelected;
-
-  const CostCalculatorBottomSheet({
-    super.key,
-    required this.onBackPressed,
-    required this.airportCosts,
-    required this.onItemSelected,
-  });
-
-  @override
-  _CostCalculatorBottomSheetState createState() =>
-      _CostCalculatorBottomSheetState();
-}
-
-class _CostCalculatorBottomSheetState extends State<CostCalculatorBottomSheet>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                "Cost Calculator",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => widget.onBackPressed(),
-              ),
-            ],
-          ),
-          const SizedBox(height: 0),
-          TabBar(
-            controller: _tabController,
-            tabs: const [
-              Tab(text: "General"),
-              Tab(text: "Guest's Prev Data"),
-            ],
-            labelColor: Colors.black,
-            indicatorColor: Colors.blue,
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                widget.airportCosts == null || widget.airportCosts!.isEmpty
-                    ? const Center(
-                        child: Text(
-                          "No data available.",
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      )
-                    : ListView.builder(
-                        itemCount: widget.airportCosts?.length ?? 0,
-                        itemBuilder: (context, index) {
-                          final cost = widget.airportCosts![index];
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            child: Padding(
-                              padding: const EdgeInsets.all(2.0),
-                              child: ListTile(
-                                onTap: () {
-                                  widget.onItemSelected(cost, index);
-                                  Navigator.pop(context);
-                                },
-                                title: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        RichText(
-                                          text: TextSpan(
-                                            children: [
-                                              const TextSpan(
-                                                text: "Airline: ",
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.black,
-                                                  fontSize: 18,
-                                                ),
-                                              ),
-                                              TextSpan(
-                                                text: cost.airLine!,
-                                                style: const TextStyle(
-                                                  fontSize: 18,
-                                                  color: Colors.black,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        RichText(
-                                          text: TextSpan(
-                                            children: [
-                                              const TextSpan(
-                                                text: "Class: ",
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.black,
-                                                  fontSize: 18,
-                                                ),
-                                              ),
-                                              TextSpan(
-                                                text: cost.travelClass!,
-                                                style: const TextStyle(
-                                                  fontSize: 18,
-                                                  color: Colors.black,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        RichText(
-                                          text: TextSpan(
-                                            children: [
-                                              const TextSpan(
-                                                text: "Month: ",
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.black,
-                                                  fontSize: 18,
-                                                ),
-                                              ),
-                                              TextSpan(
-                                                text: DateFormat('MMMM yyyy')
-                                                    .format(cost.arrivalDate!),
-                                                style: const TextStyle(
-                                                  fontSize: 18,
-                                                  color: Colors.black,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    Column(
-                                      children: [
-                                        const Text("Net Rate: "),
-                                        Text(
-                                          NumberFormat("#,##0")
-                                              .format(cost.cost),
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-
-                // Guest's Prev Data Tab
-                const Center(
-                  child: Text(
-                    "No previous data available.",
-                    style: TextStyle(fontSize: 16),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/airport_search_response.dart';
+import 'package:ballys_reservation_app/models/reservation/airline_response.dart';
 import 'package:ballys_reservation_app/models/reservation/airport_cost_response.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_response.dart';
 import 'package:ballys_reservation_app/models/reservation/room_category_response.dart';
@@ -226,6 +227,48 @@ print('Room Type Response: $response');
     } else {
       throw Exception('Room Types API failed');
     }
+  }
+
+  /// The airline master list (API 90156). Inactive airlines are dropped — the
+  /// dropdowns only ever offer the ones still flying.
+  Future<List<AirlineResponse>> getAirlines() async {
+    final deviceId = await DeviceId.get();
+    final spName = await StorageUtil.getStoredProcedureName();
+    final response = await apiService.post('CommonExecute', {
+      "HasReturnData": "T",
+      "Parameters": [
+        {
+          "Para_Data": 90156,
+          "Para_Direction": "Input",
+          "Para_Lenth": 1,
+          "Para_Name": "@Iid",
+          "Para_Type": "int"
+        },
+        {
+          "Para_Data": deviceId,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text30",
+          "Para_Type": "varchar",
+        },
+      ],
+      "SpName": spName,
+      "con": "1"
+    });
+
+    if (response['CommonResult'] != null &&
+        response['CommonResult']['Table'] is List) {
+      final tableData = response['CommonResult']['Table'] as List;
+
+      return tableData
+          .whereType<Map>()
+          .map((json) => AirlineResponse.fromJson(
+              json.map((k, v) => MapEntry(k.toString(), v))))
+          .where((airline) => airline.isActive && airline.airlineName.isNotEmpty)
+          .toList();
+    }
+
+    throw Exception('Airlines API failed');
   }
 
   Future<List<AirportCostResponse>> getAirportCosts(

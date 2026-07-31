@@ -24,7 +24,7 @@ import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/airport_search_response.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
-import 'package:ballys_reservation_app/models/reservation/airport_cost_response.dart';
+import 'package:ballys_reservation_app/models/reservation/airline_response.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_sector_entry.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/hotel_catalog_provider.dart';
@@ -250,9 +250,9 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   Map<String, dynamic>? _a_selectedClass;
   Key _a_classKey = UniqueKey();
 
-  // Airlines — now an AirportCostResponse selected from dropdown
-  AirportCostResponse? _a_selectedAirline;
-  List<AirportCostResponse> _a_airlineCosts = [];
+  // Airlines — picked by name from the master list (API 90156)
+  AirlineResponse? _a_selectedAirline;
+  List<AirlineResponse> _a_airlines = [];
   bool _a_airlinesLoading = false;
   Key _a_airlineKey = UniqueKey();
 
@@ -435,6 +435,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     _loadAirports();
     _loadLocationPrefix();
     _loadContactPersons();
+    _loadAirlines();
   }
 
   @override
@@ -609,42 +610,24 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     });
   }
 
-  // ── Load airline costs from API 9023 ────────────────────────────────────────
-  Future<void> _loadAirlineCosts() async {
-    final from = _a_fromAirport?.airportCode ?? '';
-    final to = _a_toAirport?.airportCode ?? '';
-    final returnTo = _a_returnToAirport?.airportCode ?? to;
-
-    if (from.isEmpty || to.isEmpty) {
-      setState(() {
-        _a_airlineCosts = [];
-        _a_selectedAirline = null;
-        _a_airlineKey = UniqueKey();
-      });
-      return;
-    }
-
-    setState(() {
-      _a_airlinesLoading = true;
-      _a_selectedAirline = null;
-      _a_airlineKey = UniqueKey();
-    });
+  // ── Load airlines from API 90156 ───────────────────────────────────────────
+  /// The list is the same whatever route is picked, so it is fetched once.
+  Future<void> _loadAirlines() async {
+    setState(() => _a_airlinesLoading = true);
 
     try {
       final repo = AirportRepository(ApiService(const FlutterSecureStorage()));
-      final costs = await repo.getAirportCosts(
-        departureFrom: from,
-        departureTo: to,
-        returnTo: returnTo,
-      );
+      final airlines = await repo.getAirlines();
+      if (!mounted) return;
       setState(() {
-        _a_airlineCosts = costs;
+        _a_airlines = airlines;
         _a_airlinesLoading = false;
         _a_airlineKey = UniqueKey();
       });
     } catch (_) {
+      if (!mounted) return;
       setState(() {
-        _a_airlineCosts = [];
+        _a_airlines = [];
         _a_airlinesLoading = false;
         _a_airlineKey = UniqueKey();
       });
@@ -863,9 +846,9 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       'noOfChildren': _a_noOfChildren.text,
       'noOfInfants': _a_noOfInfants.text,
       'class': _a_selectedClass?['type'] ?? '',
-      'airline': _a_selectedAirline?.airLine ?? '',
-      'sector': _a_selectedAirline?.sector ?? '',
-      'cost': _a_selectedAirline?.cost?.toString() ?? '',
+      'airline': _a_selectedAirline?.airlineName ?? '',
+      'airlineCode': _a_selectedAirline?.airlineCode ?? '',
+      'iataCode': _a_selectedAirline?.iataCode ?? '',
       'remarks': _a_remarksCtrl.text,
       'skipRouteFacility': _a_skipRouteFacility,
       'airportTransport': _a_airportTransport,
@@ -944,7 +927,6 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     _a_selectedClass = null;
     _a_classKey = UniqueKey();
     _a_selectedAirline = null;
-    _a_airlineCosts = [];
     _a_airlineKey = UniqueKey();
     _a_arrCtrl.clear();
     _a_depCtrl.clear();
@@ -1754,8 +1736,7 @@ No of Seats         : ${m['noOfSeats']}
 No of Children     : ${m['noOfChildren'] ?? '0'}
 No of Infants       : ${m['noOfInfants'] ?? '0'}
 Class                    : ${m['class']}
-Airline                  : ${m['airline']}${(m['sector'] as String? ?? '').isNotEmpty ? ' (${m['sector']})' : ''}
-Cost                      : ${m['cost']}
+Airline                  : ${m['airline']}
 Multi Sector         : ${isMultiSector ? 'Yes' : 'No'}
 Round Trip           : ${isRound ? 'Yes' : 'No'}
 Slik Route Facility : ${m['skipRouteFacility']}${(m['skipRouteFacility'] as String?) == 'Yes' ? ' (${m['silkRouteType'] ?? ''})' : ''}
@@ -1930,6 +1911,8 @@ Remarks              : ${m['remarks']}''';
       'air_ticket_class': m['classId'],
       'air_ticket_class_name': m['class'],
       'air_line': m['airline'],
+      'air_line_code': m['airlineCode'],
+      'iata_code': m['iataCode'],
       'contact_person': m['hamoueContactPerson'],
       'visa': (m['visa'] as String?) == 'Yes',
       'meal': (m['meal'] as String?) == 'Yes',
@@ -1951,7 +1934,8 @@ Remarks              : ${m['remarks']}''';
       'airport_transportation': (m['airportTransport'] as String?) == 'Yes' ? 1 : 0,
       'arrival_date': arrDate?.toIso8601String(),
       'departure_date': depDate?.toIso8601String(),
-      'selected_cost': double.tryParse(m['cost'] as String? ?? '0') ?? 0.0,
+      // Air ticket costs are no longer captured on this screen.
+      'selected_cost': 0.0,
       'BMNumber': m['memberId'],
       'DF_AirportCode': fromAirport?.airportCode,
       'DF_CityName': fromAirport?.cityName,
@@ -3522,15 +3506,15 @@ class _AirportDropdown extends ConsumerWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Airline cost dropdown — fetches from API 9023
+// Airline dropdown — the active airlines from API 90156, by name
 // ─────────────────────────────────────────────────────────────────────────────
 class _AirlineDropdown extends StatelessWidget {
   final Key dropdownKey;
-  final List<AirportCostResponse> items;
-  final AirportCostResponse? selectedItem;
+  final List<AirlineResponse> items;
+  final AirlineResponse? selectedItem;
   final bool isLoading;
   final Color accent;
-  final ValueChanged<AirportCostResponse?> onChanged;
+  final ValueChanged<AirlineResponse?> onChanged;
 
   const _AirlineDropdown({
     required this.dropdownKey,
@@ -3540,15 +3524,6 @@ class _AirlineDropdown extends StatelessWidget {
     required this.accent,
     required this.onChanged,
   });
-
-  String _itemLabel(AirportCostResponse a) {
-    final parts = <String>[];
-    if ((a.airLine ?? '').isNotEmpty) parts.add(a.airLine!);
-    if ((a.sector ?? '').isNotEmpty) parts.add(a.sector!.trim());
-    if (a.cost != null) parts.add('LKR ${a.cost}');
-    if ((a.travelClass ?? '').isNotEmpty) parts.add('Class: ${a.travelClass}');
-    return parts.join(' | ');
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -3585,30 +3560,22 @@ class _AirlineDropdown extends StatelessWidget {
       );
     }
 
-    return DropdownSearch<AirportCostResponse>(
+    return DropdownSearch<AirlineResponse>(
       key: dropdownKey,
       selectedItem: selectedItem,
       items: (filter, _) {
         if (filter.isEmpty) return items;
         final lf = filter.toLowerCase();
         return items
-            .where((a) =>
-                (a.airLine ?? '').toLowerCase().contains(lf) ||
-                (a.sector ?? '').toLowerCase().contains(lf) ||
-                (a.travelClass ?? '').toLowerCase().contains(lf))
+            .where((a) => a.airlineName.toLowerCase().contains(lf))
             .toList();
       },
-      itemAsString: _itemLabel,
-      compareFn: (a, b) =>
-          a.airLine == b.airLine &&
-          a.sector == b.sector &&
-          a.cost == b.cost,
+      itemAsString: (airline) => airline.airlineName,
+      compareFn: (a, b) => a.airlineName == b.airlineName,
       enabled: items.isNotEmpty,
       decoratorProps: DropDownDecoratorProps(
         decoration: _fieldDeco(
-          items.isEmpty
-              ? 'Airline  (select From/To airports first)'
-              : 'Select Airline *',
+          items.isEmpty ? 'Airline  (unavailable)' : 'Select Airline',
           icon: Icons.airplanemode_active_rounded,
           accent: accent,
         ),
@@ -3616,7 +3583,7 @@ class _AirlineDropdown extends StatelessWidget {
       dropdownBuilder: (context, item) {
         if (item == null) return const Text('');
         return Text(
-          _itemLabel(item),
+          item.airlineName,
           style: kInputTextStyle,
           overflow: TextOverflow.ellipsis,
         );
@@ -3628,7 +3595,7 @@ class _AirlineDropdown extends StatelessWidget {
           autofocus: true,
           style: kInputTextStyle,
           decoration: InputDecoration(
-            hintText: 'Search airline or sector...',
+            hintText: 'Search airline...',
             hintStyle: const TextStyle(
               color: Colors.black87,
               fontWeight: FontWeight.bold,
@@ -3640,41 +3607,9 @@ class _AirlineDropdown extends StatelessWidget {
           ),
         ),
         itemBuilder: (ctx, item, isSelected, isFocused) => ListTile(
-          leading: CircleAvatar(
-            backgroundColor: accent.withOpacity(0.12),
-            child: Text(
-              (item.airLine ?? '??').length > 3
-                  ? (item.airLine ?? '??').substring(0, 3)
-                  : (item.airLine ?? '??'),
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: accent,
-              ),
-            ),
-          ),
           title: Text(
-            '${item.airLine ?? ''} — ${(item.sector ?? '').trim()}',
+            item.airlineName,
             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if ((item.travelClass ?? '').isNotEmpty)
-                Text('Class: ${item.travelClass}',
-                    style:
-                        const TextStyle(fontSize: 13, color: Colors.grey)),
-              if (item.cost != null)
-                Text('Cost: LKR ${item.cost}',
-                    style: TextStyle(
-                        fontSize: 13,
-                        color: accent,
-                        fontWeight: FontWeight.w600)),
-              if (item.usRate != null)
-                Text('USD Rate: ${item.usRate}',
-                    style:
-                        const TextStyle(fontSize: 12, color: Colors.grey)),
-            ],
           ),
           selected: isSelected,
           tileColor: isFocused ? Colors.grey.shade100 : null,
@@ -4641,12 +4576,7 @@ class _AirForm extends StatelessWidget {
                         state._a_returnToAirport = a;
                         state._a_returnToAirportKey = UniqueKey();
                       }
-                      // Reset airline when route changes
-                      state._a_selectedAirline = null;
-                      state._a_airlineCosts = [];
-                      state._a_airlineKey = UniqueKey();
                     });
-                    state._loadAirlineCosts();
                   },
                 ),
                 const SizedBox(height: 10),
@@ -4662,12 +4592,7 @@ class _AirForm extends StatelessWidget {
                         state._a_returnFromAirport = a;
                         state._a_returnFromAirportKey = UniqueKey();
                       }
-                      // Reset airline when route changes
-                      state._a_selectedAirline = null;
-                      state._a_airlineCosts = [];
-                      state._a_airlineKey = UniqueKey();
                     });
-                    state._loadAirlineCosts();
                   },
                 ),
               ],
@@ -4778,11 +4703,7 @@ class _AirForm extends StatelessWidget {
                         state._a_returnToAirport = null;
                         state._a_returnSectors.clear();
                       }
-                      state._a_selectedAirline = null;
-                      state._a_airlineCosts = [];
-                      state._a_airlineKey = UniqueKey();
                     });
-                    state._loadAirlineCosts();
                   },
                 ),
               ],
@@ -4800,10 +4721,8 @@ class _AirForm extends StatelessWidget {
                     label: 'Return From',
                     accent: accent,
                     selectedAirport: state._a_returnFromAirport,
-                    onChanged: (a) {
-                      state.setState(() => state._a_returnFromAirport = a);
-                      state._loadAirlineCosts();
-                    },
+                    onChanged: (a) =>
+                        state.setState(() => state._a_returnFromAirport = a),
                   ),
                   const SizedBox(height: 10),
                   _AirportDropdown(
@@ -4811,10 +4730,8 @@ class _AirForm extends StatelessWidget {
                     label: 'Return To',
                     accent: accent,
                     selectedAirport: state._a_returnToAirport,
-                    onChanged: (a) {
-                      state.setState(() => state._a_returnToAirport = a);
-                      state._loadAirlineCosts();
-                    },
+                    onChanged: (a) =>
+                        state.setState(() => state._a_returnToAirport = a),
                   ),
                   if (state._a_isMultiSector) ...[
                     const SizedBox(height: 10),
@@ -4865,70 +4782,16 @@ class _AirForm extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // ── Airline dropdown (from API 9023) ──────────────────────────────────
+          // ── Airline dropdown (from API 90156) ────────────────────────────────
           _AirlineDropdown(
             dropdownKey: state._a_airlineKey,
-            items: state._a_airlineCosts,
+            items: state._a_airlines,
             selectedItem: state._a_selectedAirline,
             isLoading: state._a_airlinesLoading,
             accent: accent,
             onChanged: (val) =>
                 state.setState(() => state._a_selectedAirline = val),
           ),
-
-          // ── Selected airline info card ─────────────────────────────────────
-          if (state._a_selectedAirline != null) ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: accent.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: accent.withOpacity(0.25)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.flight_rounded, color: accent, size: 16),
-                      const SizedBox(width: 6),
-                      Text(
-                        state._a_selectedAirline!.airLine ?? '',
-                        style: TextStyle(
-                          color: accent,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  if ((state._a_selectedAirline!.sector ?? '').isNotEmpty)
-                    Text(
-                      'Sector: ${state._a_selectedAirline!.sector!.trim()}',
-                      style: const TextStyle(
-                          fontSize: 13, color: Colors.black87),
-                    ),
-                  if (state._a_selectedAirline!.cost != null)
-                    Text(
-                      'Cost: LKR ${state._a_selectedAirline!.cost}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: accent,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  if (state._a_selectedAirline!.usRate != null)
-                    Text(
-                      'USD Rate: ${state._a_selectedAirline!.usRate}',
-                      style: const TextStyle(
-                          fontSize: 12, color: Colors.grey),
-                    ),
-                ],
-              ),
-            ),
-          ],
 
           const SizedBox(height: 12),
 

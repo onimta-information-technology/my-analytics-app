@@ -19,7 +19,12 @@ class FlightBookingBallys {
   final String airTicketClassName;
   final bool isRoundTrip;
   final dynamic selectedCost;
+
+  /// The airline picked from the master list (API 90156) — its name, its code
+  /// ("AIR0015") and its IATA code ("TG"). All three are sent on save.
   final String? airLine;
+  final String? airLineCode;
+  final String? iataCode;
   final String? contactPerson;
   final bool visa;
   final bool meal;
@@ -65,6 +70,8 @@ class FlightBookingBallys {
     required this.isRoundTrip,
     required this.selectedCost,
     this.airLine,
+    this.airLineCode,
+    this.iataCode,
     this.contactPerson,
     this.visa = false,
     this.meal = false,
@@ -125,6 +132,8 @@ class FlightBookingBallys {
       isRoundTrip: json['is_round_trip'] ?? false,
       selectedCost: _parseCost(json['selected_cost']),
       airLine: json['air_line'] as String?,
+      airLineCode: json['air_line_code'] as String?,
+      iataCode: json['iata_code'] as String?,
       contactPerson: json['contact_person'] as String?,
       visa: json['visa'] as bool? ?? false,
       meal: json['meal'] as bool? ?? false,
@@ -269,6 +278,8 @@ class FlightBookingBallys {
       'air_ticket_class': airTicketClass,
       'air_ticket_class_name': airTicketClassName,
       'air_line': airLine,
+      'air_line_code': airLineCode,
+      'iata_code': iataCode,
       'contact_person': contactPerson,
       'visa': visa,
       'meal': meal,

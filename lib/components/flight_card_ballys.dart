@@ -24,6 +24,16 @@ class FlightCardBallys extends StatelessWidget {
     return leg.isEmpty ? '' : ' ($leg)';
   }
 
+  /// Costs are only carried by tickets saved while the cost calculator still
+  /// existed, so the line is dropped when there is nothing to show.
+  static String? _costText(dynamic cost) {
+    final text = cost?.toString().trim() ?? '';
+    if (text.isEmpty) return null;
+    final value = double.tryParse(text.replaceAll(',', ''));
+    if (value == null || value == 0) return null;
+    return text;
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -163,14 +173,27 @@ class FlightCardBallys extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 5),
-                    Text(
-                      "Estimated Cost: ${flight.selectedCost}",
-                      style: const TextStyle(
-                        fontSize: 19,
-                        fontWeight: FontWeight.bold,
+                    if ((flight.airLine as String?)?.trim().isNotEmpty ==
+                        true) ...[
+                      const SizedBox(height: 5),
+                      Text(
+                        "Airline: ${flight.airLine}",
+                        style: const TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
+                    ],
+                    if (_costText(flight.selectedCost) != null) ...[
+                      const SizedBox(height: 5),
+                      Text(
+                        "Estimated Cost: ${_costText(flight.selectedCost)}",
+                        style: const TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                     if (flight.contactPerson != null &&
                         (flight.contactPerson as String).trim().isNotEmpty) ...[
                       const SizedBox(height: 5),

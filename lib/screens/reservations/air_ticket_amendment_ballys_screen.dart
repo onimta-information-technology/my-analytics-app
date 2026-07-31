@@ -2,6 +2,7 @@ import 'package:ballys_reservation_app/components/amendment_guest_header_ballys.
 import 'package:ballys_reservation_app/components/flight_card_ballys.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
+import 'package:ballys_reservation_app/models/reervationBallys.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/selectedReservationforBallys_provider.dart';
@@ -55,6 +56,79 @@ class _AirTicketAmendmentBallysScreenState
 
   String? _category;
   String? _type;
+
+  // ── Guest selection ────────────────────────────────────────────────────
+  //
+  // An amendment is raised against particular guests, not the whole booking, so
+  // the guests are picked first. Indexes into `reservation.guests` — see the
+  // header component for why not BM numbers.
+  final Set<int> _selectedGuestIndexes = <int>{};
+
+  /// How many of the selected guests this amendment covers. Stepped by hand
+  /// rather than derived, so it can be set to fewer than the guests ticked.
+  int _guestCount = 0;
+
+  void _toggleGuest(int index) {
+    setState(() {
+      if (!_selectedGuestIndexes.remove(index)) {
+        _selectedGuestIndexes.add(index);
+      }
+    });
+  }
+
+  /// Guests ticked, and the tickets they hold between them. Each guest entry
+  /// carries its own `flights`, so a subset of guests is a subset of tickets.
+  ({int guests, int tickets}) _selectedCounts(ReservationBallys reservation) {
+    int guests = 0;
+    int tickets = 0;
+    for (final index in _selectedGuestIndexes) {
+      if (index < 0 || index >= reservation.guests.length) continue;
+      guests++;
+      tickets += reservation.guests[index].flights.length;
+    }
+    return (guests: guests, tickets: tickets);
+  }
+
+  /// Tickets behind the ticked guests, shown as context under the stepper.
+  /// Older payloads carry the tickets only at reservation level and leave each
+  /// guest's `flights` empty, so fall back to the reservation's own list.
+  int _selectedTickets(
+    ReservationBallys reservation,
+    List<FlightBookingBallys> reservationFlights,
+  ) {
+    if (_selectedGuestIndexes.isEmpty) return 0;
+    final fromGuests = _selectedCounts(reservation).tickets;
+    return fromGuests > 0 ? fromGuests : reservationFlights.length;
+  }
+
+  /// One square of the guest-count stepper. A null [onTap] greys it out — the
+  /// button stays in place so the row doesn't reflow at the ends of the range.
+  Widget _stepperButton({required IconData icon, VoidCallback? onTap}) {
+    final enabled = onTap != null;
+    return Material(
+      color: enabled ? Constants.kPrimaryColor : Colors.grey.shade300,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: SizedBox(
+          width: 38,
+          height: 38,
+          child: Icon(
+            icon,
+            size: 22,
+            color: enabled ? Colors.white : Colors.grey.shade500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  static String _countsLabel(int guests, int tickets) {
+    final guestText = guests == 1 ? "$guests GUEST" : "$guests GUESTS";
+    final ticketText = tickets == 1 ? "$tickets TICKET" : "$tickets TICKETS";
+    return "$guestText, $ticketText";
+  }
 
   // ── Cabin upgrade detail ───────────────────────────────────────────────
   // Only collected for Exchange → Cabin Upgrade; cleared whenever the type
@@ -239,7 +313,83 @@ class _AirTicketAmendmentBallysScreenState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        AmendmentGuestHeaderBallys(reservation: reservation),
+                        AmendmentGuestHeaderBallys(
+                          reservation: reservation,
+                          selectable: true,
+                          selectedGuestIndexes: _selectedGuestIndexes,
+                          onGuestToggled: _toggleGuest,
+                        ),
+                        const SizedBox(height: 10.0),
+
+                        // ── Guest count ──────────────────────────────────
+                        //
+                        // Stepped by hand. The guests ticked above only set the
+                        // ceiling — how many of them this amendment actually
+                        // covers is the user's call.
+                        Builder(
+                          builder: (context) {
+                            final counts = _selectedCounts(reservation);
+                            final available = counts.guests;
+                            final tickets =
+                                _selectedTickets(reservation, selectedFlights);
+                            // A count left over from a wider selection would sit
+                            // above the new ceiling, so trim it as we render.
+                            final count = _guestCount.clamp(0, available);
+
+                            return InputDecorator(
+                              decoration: _dropdownDeco(
+                                "Guest Count",
+                                fontSettings,
+                              ).copyWith(
+                                helperText: available == 0
+                                    ? "Select a guest first"
+                                    : "Selected: ${_countsLabel(available, tickets)}",
+                                helperStyle: TextStyle(
+                                  fontSize: fontSettings.fontSize - 3,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  _stepperButton(
+                                    icon: Icons.remove,
+                                    // Nothing below zero, and nothing to step
+                                    // through until a guest is ticked.
+                                    onTap: count > 0
+                                        ? () => setState(
+                                              () => _guestCount = count - 1,
+                                            )
+                                        : null,
+                                  ),
+                                  Expanded(
+                                    child: Center(
+                                      child: Text(
+                                        count == 1
+                                            ? "1 GUEST"
+                                            : "$count GUESTS",
+                                        style: TextStyle(
+                                          fontSize: fontSettings.fontSize,
+                                          fontWeight: FontWeight.bold,
+                                          color: count == 0
+                                              ? Colors.grey.shade600
+                                              : Colors.black,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  _stepperButton(
+                                    icon: Icons.add,
+                                    onTap: count < available
+                                        ? () => setState(
+                                              () => _guestCount = count + 1,
+                                            )
+                                        : null,
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
                         const SizedBox(height: 10.0),
 
                         // ── Amendment category ───────────────────────────

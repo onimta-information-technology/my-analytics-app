@@ -1,4 +1,5 @@
 import 'package:ballys_reservation_app/components/guest_deatils_view_spGift.dart';
+import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart';
 import 'package:ballys_reservation_app/models/reervationBallys.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
@@ -18,6 +19,9 @@ class AmendmentGuestHeaderBallys extends ConsumerWidget {
     super.key,
     required this.reservation,
     this.isGuestLoading = false,
+    this.selectable = false,
+    this.selectedGuestIndexes = const <int>{},
+    this.onGuestToggled,
   });
 
   final ReservationBallys reservation;
@@ -25,6 +29,19 @@ class AmendmentGuestHeaderBallys extends ConsumerWidget {
   /// True while the member's profile card is still being fetched, so the card
   /// can show its own spinner instead of an empty avatar.
   final bool isGuestLoading;
+
+  /// When true each guest card carries a checkbox, so an amendment can be
+  /// raised against a subset of the reservation's guests rather than all of it.
+  final bool selectable;
+
+  /// Positions within `reservation.guests` that are ticked. Indexes rather than
+  /// BM numbers: a guest entry can come back with a blank `mid`, which would
+  /// make several of them share one key.
+  final Set<int> selectedGuestIndexes;
+
+  /// Fired with the guest's index when its checkbox (or card) is tapped. The
+  /// parent owns the selection, so it decides what a tap means.
+  final ValueChanged<int>? onGuestToggled;
 
   /// A guest's package amount as it should be shown. Guests who carry no
   /// package of their own come back as a bare `0.00` with a blank currency —
@@ -88,10 +105,21 @@ class AmendmentGuestHeaderBallys extends ConsumerWidget {
           final index = entry.key;
           final guest = entry.value;
           final packageLabel = _packageLabel(guest.packageAmount);
+          final isSelected = selectedGuestIndexes.contains(index);
 
-          return Card(
-            color: const Color.fromARGB(255, 228, 224, 224),
+          final card = Card(
+            // A ticked guest lifts out of the grey so the chosen ones read at a
+            // glance without having to scan the checkboxes.
+            color: selectable && isSelected
+                ? const Color.fromARGB(255, 245, 233, 208)
+                : const Color.fromARGB(255, 228, 224, 224),
             margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(4),
+              side: selectable && isSelected
+                  ? const BorderSide(color: Constants.kPrimaryColor, width: 1.5)
+                  : BorderSide.none,
+            ),
             child: Padding(
               padding: const EdgeInsets.all(12.0),
               child: Column(
@@ -99,17 +127,32 @@ class AmendmentGuestHeaderBallys extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      CircleAvatar(
-                        radius: 14,
-                        backgroundColor: Colors.black,
-                        child: Text(
-                          "${index + 1}",
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
+                      if (selectable)
+                        SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: Checkbox(
+                            value: isSelected,
+                            activeColor: Constants.kPrimaryColor,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            onChanged: onGuestToggled == null
+                                ? null
+                                : (_) => onGuestToggled!(index),
+                          ),
+                        )
+                      else
+                        CircleAvatar(
+                          radius: 14,
+                          backgroundColor: Colors.black,
+                          child: Text(
+                            "${index + 1}",
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -172,6 +215,15 @@ class AmendmentGuestHeaderBallys extends ConsumerWidget {
                 ],
               ),
             ),
+          );
+
+          // Tapping anywhere on the card toggles it — the checkbox alone is a
+          // small target for a card this size.
+          if (!selectable || onGuestToggled == null) return card;
+          return InkWell(
+            onTap: () => onGuestToggled!(index),
+            borderRadius: BorderRadius.circular(4),
+            child: card,
           );
         }),
       ],

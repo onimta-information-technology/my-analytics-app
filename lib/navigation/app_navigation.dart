@@ -52,6 +52,8 @@ import 'package:ballys_reservation_app/screens/report_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/air_tickets_selection_ballys_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/air_tickets_selection_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/main_reservation.dart';
+import 'package:ballys_reservation_app/screens/reservations/air_ticket_amendment_ballys_screen.dart';
+import 'package:ballys_reservation_app/screens/reservations/hotel_amendment_ballys_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/new_reservationBallys_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/new_reservation_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/quick_reservation_ballys.dart';
@@ -512,6 +514,37 @@ class AppNavigation {
             fullscreenDialog: false,
             key: state.pageKey,
             child: const ReservationViewScreenBallys(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(
+                opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+                child: child,
+              );
+            },
+          ),
+        ),
+        // Amendment screens — pushed from the Amendment button on the Ballys
+        // detail view once the user picks hotel or air ticket. Both read the
+        // selection providers that view already populated.
+        GoRoute(
+          path: 'hotel-amendment-ballys',
+          pageBuilder: (context, state) => CustomTransitionPage(
+            fullscreenDialog: false,
+            key: state.pageKey,
+            child: const HotelAmendmentBallysScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(
+                opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+                child: child,
+              );
+            },
+          ),
+        ),
+        GoRoute(
+          path: 'air-ticket-amendment-ballys',
+          pageBuilder: (context, state) => CustomTransitionPage(
+            fullscreenDialog: false,
+            key: state.pageKey,
+            child: const AirTicketAmendmentBallysScreen(),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return FadeTransition(
                 opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),

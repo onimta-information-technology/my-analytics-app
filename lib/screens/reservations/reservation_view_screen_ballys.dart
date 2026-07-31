@@ -1181,6 +1181,120 @@ class _ReservationViewScreenBallysState
     ref.read(selectedFlightBallysProvider.notifier).setFlights([]);
   }
 
+  // ── Amendment ──────────────────────────────────────────────────────────
+  //
+  // A reservation carries two amendable parts, and each has its own screen, so
+  // the button asks which one first. Both screens read the selection providers
+  // this screen already populated, hence nothing to pass along.
+  //
+  // Only the parts the reservation actually holds are offered: a stay with no
+  // air tickets gets no AIR TICKET option, and vice versa.
+  Future<void> _showAmendmentTypeDialog({
+    required bool hasHotels,
+    required bool hasAirTickets,
+  }) async {
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Amendment',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          content: const Text(
+            'What would you like to amend?',
+            style: TextStyle(fontSize: 15),
+          ),
+          contentPadding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          actions: [
+            Column(
+              children: [
+                if (hasHotels) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => Navigator.of(dialogContext).pop('hotel'),
+                      icon: const Icon(Icons.hotel, size: 20),
+                      label: const Text(
+                        'HOTEL',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Constants.kPrimaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                if (hasAirTickets)
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () =>
+                          Navigator.of(dialogContext).pop('air-ticket'),
+                      icon: const Icon(Icons.flight_takeoff, size: 20),
+                      label: const Text(
+                        'AIR TICKET',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 6),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+
+    if (choice == null || !mounted) return;
+
+    await context.push(
+      choice == 'hotel'
+          ? '/reservationMain/reservations/hotel-amendment-ballys'
+          : '/reservationMain/reservations/air-ticket-amendment-ballys',
+    );
+  }
+
   // ── Build ──────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
@@ -1903,6 +2017,43 @@ class _ReservationViewScreenBallysState
                         fontSettings.fontSize,
                         fontSettings.fontWeight,
                       ),
+                  ],
+
+                  // ── Pending: Amendment ───────────────────────────────
+                  //
+                  // Only a pending reservation can still be amended; once it is
+                  // checked/approved/rejected the workflow has moved on. With
+                  // neither hotels nor air tickets on the reservation there is
+                  // nothing to amend, so the button stays hidden too.
+                  if (selectedReservation?.requestStatus != 'Rejected' &&
+                      (selectedHotels.isNotEmpty ||
+                          selectedFlights.isNotEmpty)) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _showAmendmentTypeDialog(
+                          hasHotels: selectedHotels.isNotEmpty,
+                          hasAirTickets: selectedFlights.isNotEmpty,
+                        ),
+                        icon: const Icon(Icons.edit_note, size: 20),
+                        label: Text(
+                          'AMENDMENT',
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize + 2,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Constants.kPrimaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                   ],
 
                   // ── Pending: Check + Reject ──────────────────────────

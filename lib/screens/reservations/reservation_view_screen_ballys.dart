@@ -1658,6 +1658,35 @@ class _ReservationViewScreenBallysState
                                           fontWeight: fontSettings.fontWeight,
                                         ),
                                       ),
+                                      // The rooms are listed once for the whole
+                                      // reservation, so each one names the
+                                      // guest(s) it was booked for.
+                                      if (hotel.assignedGuests.isNotEmpty) ...[
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            const Icon(Icons.group,
+                                                size: 16,
+                                                color: Colors.blueGrey),
+                                            const SizedBox(width: 6),
+                                            Expanded(
+                                              child: Text(
+                                                hotel.assignedGuests
+                                                    .map((g) => g.label)
+                                                    .join(", "),
+                                                style: TextStyle(
+                                                  fontSize:
+                                                      fontSettings.fontSize,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.blueGrey,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                       const SizedBox(height: 8),
                                       RichText(
                                         text: TextSpan(

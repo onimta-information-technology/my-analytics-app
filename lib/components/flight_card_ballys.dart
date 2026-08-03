@@ -34,8 +34,18 @@ class FlightCardBallys extends StatelessWidget {
     return text;
   }
 
+  /// "BM0012 — John Doe, BM0043 — Mary Doe" — who the ticket is booked for.
+  /// Blank on tickets picked before the assignment existed.
+  static String _assignedText(dynamic flight) {
+    final assigned = flight.assignedGuests as List?;
+    if (assigned == null || assigned.isEmpty) return '';
+    return assigned.map((g) => g.label as String).join(", ");
+  }
+
   @override
   Widget build(BuildContext context) {
+    final assignedText = _assignedText(flight);
+
     return GestureDetector(
       onDoubleTap: onDoubleTap,
       child: Card(
@@ -48,6 +58,29 @@ class FlightCardBallys extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Who the ticket is booked for, ahead of the route: a
+                    // reservation can carry a ticket per guest.
+                    if (assignedText.isNotEmpty) ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.group,
+                              size: 16, color: Colors.blueGrey),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              assignedText,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.blueGrey,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                    ],
                     Row(
                       mainAxisSize: MainAxisSize.max,
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,

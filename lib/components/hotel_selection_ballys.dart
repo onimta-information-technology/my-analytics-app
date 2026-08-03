@@ -1,6 +1,7 @@
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/hotel_repository.dart';
 import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart';
+import 'package:ballys_reservation_app/models/reservation/assigned_guest.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_cost_response.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_desc_ballys.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_room_catalog_entry.dart';
@@ -22,9 +23,8 @@ class HotelAndRoomSelectionBallysBottomSheet extends ConsumerStatefulWidget {
   final DateTime? reservationArrivalDate;
   final DateTime? reservationDepartureDate;
 
-  /// Everyone already on the reservation, listed at the top of the sheet so
-  /// rooms can be picked against the right head count — each guest's BM number
-  /// and whether family members travel with them.
+  /// Everyone already on the reservation, listed at the top of the sheet so a
+  /// room can be assigned to the guest — or guests — it is booked for.
   final List<AccompanyingMember> guests;
 
   const HotelAndRoomSelectionBallysBottomSheet(
@@ -69,6 +69,7 @@ class _HotelAndRoomSelectionBallysBottomSheetState
   void initState() {
     super.initState();
     hotelList = List.from(ref.read(selectedHotelBallysProvider));
+    _preselectSoleGuest();
     _loadBrand();
     // Hotels, categories, room types and meal plans all arrive in one call.
     // Re-read rather than reuse the cached list: this sheet is where a hotel
@@ -141,6 +142,48 @@ String selectedByPaymnet = 'NA';
   bool _hotelError = false;
   bool _roomCategoryError = false;
   bool _roomTypeError = false;
+  bool _guestAssignError = false;
+
+  /// The guests the room being added is booked for, by [_guestKey]. A room can
+  /// go to one guest or to several, so this is a set rather than a single pick.
+  final Set<String> _assignedGuestKeys = {};
+
+  /// Identifies a guest across rebuilds. BM number alone is not enough — a
+  /// member typed in but not yet searched can still be sitting there nameless.
+  String _guestKey(AccompanyingMember guest) =>
+      "${guest.mid.trim()}|${guest.guestName.trim()}";
+
+  /// The ticked guests, in the order they appear on the reservation. The first
+  /// one owns the room; the rest each get their own copy of it on save.
+  List<AssignedGuest> _selectedAssignedGuests() {
+    return widget.guests
+        .where((guest) => _assignedGuestKeys.contains(_guestKey(guest)))
+        .map((guest) =>
+            AssignedGuest(mid: guest.mid.trim(), guestName: guest.guestName.trim()))
+        .toList();
+  }
+
+  /// Ticks the guests a room already names, matching on BM number so a room
+  /// pulled back for editing keeps its assignment even if the name was tidied
+  /// up since.
+  void _applyAssignedGuests(List<AssignedGuest> assigned) {
+    _assignedGuestKeys.clear();
+    for (final guest in widget.guests) {
+      final matches = assigned.any((a) =>
+          (a.mid.trim().isNotEmpty && a.mid.trim() == guest.mid.trim()) ||
+          (a.mid.trim().isEmpty &&
+              a.guestName.trim() == guest.guestName.trim()));
+      if (matches) _assignedGuestKeys.add(_guestKey(guest));
+    }
+  }
+
+  /// A single guest on the reservation is the only one a room can be for, so it
+  /// starts ticked rather than making every add a two-step job.
+  void _preselectSoleGuest() {
+    if (widget.guests.length == 1) {
+      _assignedGuestKeys.add(_guestKey(widget.guests.first));
+    }
+  }
 
   /// When true the date range mirrors the reservation arrival / departure
   /// dates and the range picker is locked.
@@ -500,6 +543,9 @@ String selectedByPaymnet = 'NA';
       costNotifier.value = hotel.selectedCost;
       costIndex = hotel.costIndex;
 
+      _applyAssignedGuests(hotel.assignedGuests);
+      _guestAssignError = false;
+
       // Everything above came off the saved row, not the catalog — anything the
       // API has since dropped goes now rather than being offered as valid.
       _dropStaleSelection();
@@ -524,13 +570,22 @@ String selectedByPaymnet = 'NA';
     final bool hotelMissing = selectedHotelId == null;
     final bool categoryMissing = selectedRoomCategoryId == null;
     final bool roomTypeMissing = selectedRoomTypeId == null;
+    // A room has to name who it is for, but only once there is somebody on the
+    // reservation to name — the very first guest is still being filled in.
+    final bool guestsMissing =
+        widget.guests.isNotEmpty && _assignedGuestKeys.isEmpty;
 
-    if (dateMissing || hotelMissing || categoryMissing || roomTypeMissing) {
+    if (dateMissing ||
+        hotelMissing ||
+        categoryMissing ||
+        roomTypeMissing ||
+        guestsMissing) {
       setState(() {
         _dateRangeError = dateMissing;
         _hotelError = hotelMissing;
         _roomCategoryError = categoryMissing;
         _roomTypeError = roomTypeMissing;
+        _guestAssignError = guestsMissing;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please complete all required fields.")),
@@ -558,6 +613,7 @@ String selectedByPaymnet = 'NA';
       costIndex: costIndex,
       ecLcoFacility: selectedEcLcoFacility,
       paymentBy: selectedByPaymnet,
+      assignedGuests: _selectedAssignedGuests(),
     );
 
     setState(() {
@@ -638,6 +694,12 @@ String selectedByPaymnet = 'NA';
       _hotelError = false;
       _roomCategoryError = false;
       _roomTypeError = false;
+
+      // The next room is picked for whoever it is picked for, so the ticks
+      // start clean — except where there is only one guest to tick.
+      _assignedGuestKeys.clear();
+      _preselectSoleGuest();
+      _guestAssignError = false;
     });
 
     if (keepReservationDates) {
@@ -729,16 +791,23 @@ String selectedByPaymnet = 'NA';
     );
   }
 
-  /// Who the rooms are being picked for: every guest already on the
-  /// reservation with their BM number and family-members status.
-  Widget _guestSummary() {
+  /// Who the room being added is for: every guest on the reservation, ticked
+  /// one by one or several at a time. Each ticked guest gets the room booked
+  /// against their BM number.
+  Widget _guestAssignment() {
+    final allSelected = widget.guests
+        .every((guest) => _assignedGuestKeys.contains(_guestKey(guest)));
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFFF7F8FA),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFDADDE3)),
+        border: Border.all(
+          color: _guestAssignError ? Colors.red : const Color(0xFFDADDE3),
+          width: _guestAssignError ? 1.5 : 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -747,59 +816,126 @@ String selectedByPaymnet = 'NA';
             children: [
               const Icon(Icons.group, size: 18, color: Constants.kPrimaryColor),
               const SizedBox(width: 6),
-              Text(
-                "Guests on this reservation (${widget.guests.length})",
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Text(
+                  "Assign this room to (${_assignedGuestKeys.length}/${widget.guests.length})",
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
+              if (widget.guests.length > 1)
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _assignedGuestKeys.clear();
+                      if (!allSelected) {
+                        _assignedGuestKeys
+                            .addAll(widget.guests.map(_guestKey));
+                      }
+                      _guestAssignError = false;
+                    });
+                  },
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    allSelected ? "Clear" : "Select all",
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
             ],
           ),
-          const SizedBox(height: 8),
-          ...widget.guests.map(_guestSummaryRow),
+          const SizedBox(height: 4),
+          ...widget.guests.map(_guestAssignmentRow),
+          if (_guestAssignError)
+            const Padding(
+              padding: EdgeInsets.only(top: 4),
+              child: Text(
+                "Select at least one guest for this room",
+                style: TextStyle(fontSize: 13, color: Colors.red),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  Widget _guestSummaryRow(AccompanyingMember guest) {
+  Widget _guestAssignmentRow(AccompanyingMember guest) {
+    final key = _guestKey(guest);
+    final selected = _assignedGuestKeys.contains(key);
     final label = [
       if (guest.mid.trim().isNotEmpty) guest.mid.trim(),
       if (guest.guestName.trim().isNotEmpty) guest.guestName.trim(),
     ].join(" — ");
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+    return InkWell(
+      onTap: () {
+        setState(() {
+          if (selected) {
+            _assignedGuestKeys.remove(key);
+          } else {
+            _assignedGuestKeys.add(key);
+          }
+          _guestAssignError = false;
+        });
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 1),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 32,
+              child: Checkbox(
+                value: selected,
+                visualDensity: VisualDensity.compact,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                onChanged: (checked) {
+                  setState(() {
+                    if (checked == true) {
+                      _assignedGuestKeys.add(key);
+                    } else {
+                      _assignedGuestKeys.remove(key);
+                    }
+                    _guestAssignError = false;
+                  });
+                },
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Icon(
-            guest.hasFamilyMembers
-                ? Icons.family_restroom
-                : Icons.person_outline,
-            size: 16,
-            color: guest.hasFamilyMembers
-                ? Colors.green.shade700
-                : Colors.grey.shade600,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            guest.hasFamilyMembers ? "Family included" : "No family",
-            style: TextStyle(
-              fontSize: 13,
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              guest.hasFamilyMembers
+                  ? Icons.family_restroom
+                  : Icons.person_outline,
+              size: 16,
               color: guest.hasFamilyMembers
                   ? Colors.green.shade700
                   : Colors.grey.shade600,
             ),
-          ),
-        ],
+            const SizedBox(width: 4),
+            Text(
+              guest.hasFamilyMembers ? "Family included" : "No family",
+              style: TextStyle(
+                fontSize: 13,
+                color: guest.hasFamilyMembers
+                    ? Colors.green.shade700
+                    : Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -861,10 +997,10 @@ String selectedByPaymnet = 'NA';
                   child: IntrinsicHeight(
                     child: Column(
                       children: [
-                        // ── Guests on this reservation ─────────
+                        // ── Assign this room to guests ─────────
                         if (widget.guests.isNotEmpty) ...[
                           const SizedBox(height: 5),
-                          _guestSummary(),
+                          _guestAssignment(),
                         ],
 
                         // ── Date Range ─────────────────────────
@@ -1434,6 +1570,46 @@ const SizedBox(height: 16),
                                                           FontWeight.w900,
                                                     ),
                                                   ),
+                                                  // Who the room is booked for
+                                                  // — the whole point of the
+                                                  // ticks above the form.
+                                                  if (hotel.assignedGuests
+                                                      .isNotEmpty) ...[
+                                                    const SizedBox(height: 4),
+                                                    Row(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        const Icon(
+                                                          Icons.group,
+                                                          size: 16,
+                                                          color: Constants
+                                                              .kPrimaryColor,
+                                                        ),
+                                                        const SizedBox(
+                                                            width: 6),
+                                                        Expanded(
+                                                          child: Text(
+                                                            hotel
+                                                                .assignedGuests
+                                                                .map((g) =>
+                                                                    g.label)
+                                                                .join(", "),
+                                                            style:
+                                                                const TextStyle(
+                                                              fontSize: 14,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                              color: Constants
+                                                                  .kPrimaryColor,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
                                                   const SizedBox(height: 8),
                                                   RichText(
                                                     text: TextSpan(

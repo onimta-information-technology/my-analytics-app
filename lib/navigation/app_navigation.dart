@@ -15,6 +15,7 @@ import 'package:ballys_reservation_app/screens/member_visits/cdd_names_screen.da
 import 'package:ballys_reservation_app/models/gift/birthday_gift_request.dart';
 import 'package:ballys_reservation_app/models/gift/special_gift_request.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
+import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart';
 import 'package:ballys_reservation_app/screens/air_ticket_screen.dart';
 import 'package:ballys_reservation_app/screens/approve_reject_show_screen.dart';
 import 'package:ballys_reservation_app/screens/auth/login_screen.dart';
@@ -473,6 +474,11 @@ class AppNavigation {
                     state.extra as Map<String, dynamic>;
                 final arrivalDate = data['arrivalDate'] ?? '';
                 final departureDate = data['departureDate'] ?? '';
+                // Everyone on the reservation, so a ticket can be assigned to
+                // the guest(s) it is booked for.
+                final guests =
+                    (data['guests'] as List<AccompanyingMember>?) ??
+                        const <AccompanyingMember>[];
                 return CustomTransitionPage(
                   fullscreenDialog: false,
                   key: state.pageKey,
@@ -480,6 +486,7 @@ class AppNavigation {
                     AirportRepository(ApiService(const FlutterSecureStorage())),
                     arrivalDate: arrivalDate,
                     departureDate: departureDate,
+                    guests: guests,
                   ),
                   transitionsBuilder: (context, animation, secondaryAnimation, child) {
                     return FadeTransition(

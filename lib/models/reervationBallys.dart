@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart';
 
+import 'package:ballys_reservation_app/models/reservation/assigned_guest.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.dart';
 
 import 'package:ballys_reservation_app/models/reservation/hotel_desc_ballys.dart';
@@ -243,10 +244,15 @@ class ReservationBallys {
       return 0;
     }
 
+    // A room / ticket booked for several guests comes back once per guest, so
+    // the reservation-wide lists keep only the owner's copy — otherwise a
+    // shared room is counted, shown and re-saved as many times as it has
+    // guests.
     List<HotelDescipBallys> parseRooms(dynamic list) {
       if (list is List) {
         return list
             .whereType<Map<String, dynamic>>()
+            .where(AssignedGuest.isOwnerRow)
             .map((item) => HotelDescipBallys.fromJson(item))
             .toList();
       }
@@ -257,15 +263,16 @@ class ReservationBallys {
       if (list is List) {
         return list
             .whereType<Map<String, dynamic>>()
+            .where(AssignedGuest.isOwnerRow)
             .map((item) => FlightBookingBallys.fromJson(item))
             .toList();
       }
       return [];
     }
 
-    // Build one entry per guest, attaching only the rooms / air tickets whose
-    // BMNumber matches that guest so the detail view can show each guest with
-    // their own hotels and flights.
+    // Build one entry per guest, attaching only the rooms / air tickets
+    // assigned to that guest so the detail view can show each guest with their
+    // own hotels and flights.
     List<GuestReservationEntryBallys> parseGuests() {
       final guestList = json['guests'];
       if (guestList is! List) return [];
@@ -273,11 +280,15 @@ class ReservationBallys {
       final rooms = json['room_details'];
       final flights = json['air_ticket_details'];
 
+      // A room shared with other guests names them all in `assigned_guests`
+      // and hangs off the first of them, so it lands on one guest rather than
+      // on each of them.
       List<HotelDescipBallys> roomsFor(String bm) {
         if (rooms is! List) return [];
         return rooms
             .whereType<Map<String, dynamic>>()
-            .where((r) => r['BMNumber'] == bm)
+            .where((r) =>
+                AssignedGuest.ownerBmOf(r) == bm && AssignedGuest.isOwnerRow(r))
             .map((r) => HotelDescipBallys.fromJson(r))
             .toList();
       }
@@ -286,7 +297,8 @@ class ReservationBallys {
         if (flights is! List) return [];
         return flights
             .whereType<Map<String, dynamic>>()
-            .where((f) => f['BMNumber'] == bm)
+            .where((f) =>
+                AssignedGuest.ownerBmOf(f) == bm && AssignedGuest.isOwnerRow(f))
             .map((f) => FlightBookingBallys.fromJson(f))
             .toList();
       }

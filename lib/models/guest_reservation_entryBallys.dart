@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:ballys_reservation_app/models/reservation/assigned_guest.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_desc.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_booking.dart';
@@ -160,26 +161,39 @@ class GuestReservationEntryBallys {
     return passportImages.map((p) => p.toJsonWithGuest(mid)).toList();
   }
 
-  /// Room details for this guest for the top-level `room_details` array,
-  /// each tagged with this guest's BM number.
+  /// Room details for this guest for the top-level `room_details` array.
+  ///
+  /// Each room is sent once, whoever it is for: the guests it was booked for
+  /// travel inside its own `assigned_guests`, so the row itself carries no
+  /// BM number. A room picked before anyone was ticked belongs to this guest
+  /// alone, which is what it gets assigned to.
   List<Map<String, dynamic>> toRoomDetailsJson() {
     return hotels
-        .map((h) => {
-              ...h.toJson(),
-              'BMNumber': mid,
-            })
+        .map((h) => _withAssignment(h.toJson(), h.assignedGuests))
         .toList();
   }
 
   /// Air-ticket details for this guest for the top-level `air_ticket_details`
-  /// array, each tagged with this guest's BM number.
+  /// array, assigned the same way as the rooms above.
   List<Map<String, dynamic>> toAirTicketDetailsJson() {
     return flights
-        .map((f) => {
-              ...f.toJson(),
-              'BMNumber': mid,
-            })
+        .map((f) => _withAssignment(f.toJson(), f.assignedGuests))
         .toList();
+  }
+
+  /// [row] with its assignment settled — falling back to this guest when the
+  /// room / ticket was picked without one, so every row names who it is for.
+  Map<String, dynamic> _withAssignment(
+    Map<String, dynamic> row,
+    List<AssignedGuest> assigned,
+  ) {
+    if (assigned.isNotEmpty) return row;
+    return {
+      ...row,
+      'assigned_guests': [
+        AssignedGuest(mid: mid, guestName: guestName).toJson(),
+      ],
+    };
   }
 
   GuestReservationEntryBallys copyWith({

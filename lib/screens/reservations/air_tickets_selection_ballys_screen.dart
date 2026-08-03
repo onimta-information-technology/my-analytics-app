@@ -9,6 +9,8 @@ import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:ballys_reservation_app/models/airport_search_response.dart';
+import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart';
+import 'package:ballys_reservation_app/models/reservation/assigned_guest.dart';
 import 'package:ballys_reservation_app/models/reservation/airline_response.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_sector_entry.dart';
@@ -25,11 +27,17 @@ class AirTicketsSelectionBallysScreen extends ConsumerStatefulWidget {
   final AirportRepository airportRepository;
   final String arrivalDate;
   final String departureDate;
+
+  /// Everyone already on the reservation, listed at the top of the form so a
+  /// ticket can be assigned to the guest — or guests — it is booked for.
+  final List<AccompanyingMember> guests;
+
   const AirTicketsSelectionBallysScreen(
     this.airportRepository, {
     super.key,
     required this.arrivalDate,
     required this.departureDate,
+    this.guests = const [],
   });
 
   @override
@@ -81,6 +89,7 @@ class _AirTicketsSelectionBallysScreenState
     super.initState();
     flightList = List.from(ref.read(selectedFlightBallysProvider));
     _passportFiles = List.from(ref.read(selectedPassportProvider));
+    _preselectSoleGuest();
     _getAirports();
     _loadBrand();
     _loadContactPersons();
@@ -140,6 +149,197 @@ class _AirTicketsSelectionBallysScreenState
   bool _airTicketClassError = false;
   bool _arrivalDateError = false;
   bool _departureDateError = false;
+  bool _guestAssignError = false;
+
+  /// The guests the ticket being added is booked for, by [_guestKey]. A ticket
+  /// can go to one guest or to several, so this is a set rather than a single
+  /// pick.
+  final Set<String> _assignedGuestKeys = {};
+
+  /// Identifies a guest across rebuilds. BM number alone is not enough — a
+  /// member typed in but not yet searched can still be sitting there nameless.
+  String _guestKey(AccompanyingMember guest) =>
+      "${guest.mid.trim()}|${guest.guestName.trim()}";
+
+  /// The ticked guests, in the order they appear on the reservation. The first
+  /// one owns the ticket; the rest each get their own copy of it on save.
+  List<AssignedGuest> _selectedAssignedGuests() {
+    return widget.guests
+        .where((guest) => _assignedGuestKeys.contains(_guestKey(guest)))
+        .map((guest) => AssignedGuest(
+            mid: guest.mid.trim(), guestName: guest.guestName.trim()))
+        .toList();
+  }
+
+  /// Ticks the guests a ticket already names, matching on BM number so a ticket
+  /// pulled back for editing keeps its assignment even if the name was tidied
+  /// up since.
+  void _applyAssignedGuests(List<AssignedGuest> assigned) {
+    _assignedGuestKeys.clear();
+    for (final guest in widget.guests) {
+      final matches = assigned.any((a) =>
+          (a.mid.trim().isNotEmpty && a.mid.trim() == guest.mid.trim()) ||
+          (a.mid.trim().isEmpty &&
+              a.guestName.trim() == guest.guestName.trim()));
+      if (matches) _assignedGuestKeys.add(_guestKey(guest));
+    }
+  }
+
+  /// A single guest on the reservation is the only one a ticket can be for, so
+  /// it starts ticked rather than making every add a two-step job.
+  void _preselectSoleGuest() {
+    if (widget.guests.length == 1) {
+      _assignedGuestKeys.add(_guestKey(widget.guests.first));
+    }
+  }
+
+  /// Who the ticket being added is for: every guest on the reservation, ticked
+  /// one by one or several at a time. Each ticked guest gets the ticket booked
+  /// against their BM number.
+  Widget _guestAssignment() {
+    final allSelected = widget.guests
+        .every((guest) => _assignedGuestKeys.contains(_guestKey(guest)));
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F8FA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _guestAssignError ? Colors.red : const Color(0xFFDADDE3),
+          width: _guestAssignError ? 1.5 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.group, size: 18, color: Constants.kPrimaryColor),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  "Assign this ticket to (${_assignedGuestKeys.length}/${widget.guests.length})",
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              if (widget.guests.length > 1)
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _assignedGuestKeys.clear();
+                      if (!allSelected) {
+                        _assignedGuestKeys.addAll(widget.guests.map(_guestKey));
+                      }
+                      _guestAssignError = false;
+                    });
+                  },
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    allSelected ? "Clear" : "Select all",
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          ...widget.guests.map(_guestAssignmentRow),
+          if (_guestAssignError)
+            const Padding(
+              padding: EdgeInsets.only(top: 4),
+              child: Text(
+                "Select at least one guest for this ticket",
+                style: TextStyle(fontSize: 13, color: Colors.red),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _guestAssignmentRow(AccompanyingMember guest) {
+    final key = _guestKey(guest);
+    final selected = _assignedGuestKeys.contains(key);
+    final label = [
+      if (guest.mid.trim().isNotEmpty) guest.mid.trim(),
+      if (guest.guestName.trim().isNotEmpty) guest.guestName.trim(),
+    ].join(" — ");
+
+    return InkWell(
+      onTap: () {
+        setState(() {
+          if (selected) {
+            _assignedGuestKeys.remove(key);
+          } else {
+            _assignedGuestKeys.add(key);
+          }
+          _guestAssignError = false;
+        });
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 1),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 32,
+              child: Checkbox(
+                value: selected,
+                visualDensity: VisualDensity.compact,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                onChanged: (checked) {
+                  setState(() {
+                    if (checked == true) {
+                      _assignedGuestKeys.add(key);
+                    } else {
+                      _assignedGuestKeys.remove(key);
+                    }
+                    _guestAssignError = false;
+                  });
+                },
+              ),
+            ),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              guest.hasFamilyMembers
+                  ? Icons.family_restroom
+                  : Icons.person_outline,
+              size: 16,
+              color: guest.hasFamilyMembers
+                  ? Colors.green.shade700
+                  : Colors.grey.shade600,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              guest.hasFamilyMembers ? "Family included" : "No family",
+              style: TextStyle(
+                fontSize: 13,
+                color: guest.hasFamilyMembers
+                    ? Colors.green.shade700
+                    : Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Key _airTicketClassKey = UniqueKey();
 
@@ -412,6 +612,9 @@ String? _selectedContactPerson;
 
       _selectedAirline = _airlineByName(flight.airLine);
       _airlineKey = UniqueKey();
+
+      _applyAssignedGuests(flight.assignedGuests);
+      _guestAssignError = false;
     });
   }
 
@@ -443,18 +646,24 @@ String? _selectedContactPerson;
     // Departure date is only required for round trips; optional for one-way.
     final bool departureMissing =
         _isRoundTrip && _departureDateController.text == "";
+    // A ticket has to name who it is for, but only once there is somebody on
+    // the reservation to name — the very first guest is still being filled in.
+    final bool guestsMissing =
+        widget.guests.isNotEmpty && _assignedGuestKeys.isEmpty;
 
     if (departureFromMissing ||
         departureToMissing ||
         classMissing ||
         arrivalMissing ||
-        departureMissing) {
+        departureMissing ||
+        guestsMissing) {
       setState(() {
         _departureFromError = departureFromMissing;
         _departureToError = departureToMissing;
         _airTicketClassError = classMissing;
         _arrivalDateError = arrivalMissing;
         _departureDateError = departureMissing;
+        _guestAssignError = guestsMissing;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please complete all required fields.")),
@@ -557,6 +766,7 @@ String? _selectedContactPerson;
           ? _sectorInfos(_returnSectors)
           : const [],
       airports: airport,
+      assignedGuests: _selectedAssignedGuests(),
     );
 
     setState(() {
@@ -883,6 +1093,12 @@ String? _selectedContactPerson;
       _airTicketClassError = false;
       _arrivalDateError = false;
       _departureDateError = false;
+
+      // The next ticket is booked for whoever it is booked for, so the ticks
+      // start clean — except where there is only one guest to tick.
+      _assignedGuestKeys.clear();
+      _preselectSoleGuest();
+      _guestAssignError = false;
     });
   }
 
@@ -1155,6 +1371,11 @@ String? _selectedContactPerson;
                   controller: _scrollController,
                   child: Column(
                     children: [
+                      // ── Assign this ticket to guests ──────────────────
+                      if (widget.guests.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        _guestAssignment(),
+                      ],
                       const SizedBox(height: 16),
                       _buildCounter("Guests", numberOfGuests, 1,
                           (count) => _updateAdults(count)),

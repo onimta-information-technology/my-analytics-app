@@ -1,4 +1,5 @@
 import 'package:ballys_reservation_app/models/airport_search_response.dart';
+import 'package:ballys_reservation_app/models/reservation/assigned_guest.dart';
 import 'package:intl/intl.dart';
 
 class FlightBookingBallys {
@@ -56,6 +57,10 @@ class FlightBookingBallys {
   /// `airports.return_.rFrom` and `airports.return_.rTo`.
   final List<AirportInfo> returnSectors;
 
+  /// The guests this ticket is booked for. Empty on tickets picked before the
+  /// assignment existed, which belong to the guest that owns them.
+  final List<AssignedGuest> assignedGuests;
+
   FlightBookingBallys({
     required this.guestCount,
     this.childrenCount = 0,
@@ -83,6 +88,7 @@ class FlightBookingBallys {
     this.isMultiSector = false,
     this.departureSectors = const [],
     this.returnSectors = const [],
+    this.assignedGuests = const [],
   });
 
   /// Outbound airport codes in travel order — origin, every transit stop, then
@@ -145,6 +151,7 @@ class FlightBookingBallys {
       isMultiSector: _toBool(json['is_multi_sector']),
       departureSectors: _parseSectors(json['departure_sectors']),
       returnSectors: _parseSectors(json['return_sectors']),
+      assignedGuests: AssignedGuest.listFrom(json['assigned_guests']),
     );
   }
 
@@ -320,6 +327,10 @@ class FlightBookingBallys {
           departureSectors.map((sector) => sector.toSectorJson()).toList(),
       'return_sectors':
           returnSectors.map((sector) => sector.toSectorJson()).toList(),
+      // Everyone the ticket is booked for. The row itself is repeated per
+      // assigned guest under their own BMNumber; this list says who else shares
+      // it, so re-opening the reservation restores the assignment.
+      'assigned_guests': assignedGuests.map((g) => g.toJson()).toList(),
     };
   }
 }

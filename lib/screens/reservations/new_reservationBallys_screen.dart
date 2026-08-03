@@ -15,6 +15,7 @@ import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
 import 'package:ballys_reservation_app/models/reervationBallys.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.dart';
+import 'package:ballys_reservation_app/models/reservation/assigned_guest.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_desc_ballys.dart';
 import 'package:ballys_reservation_app/models/reservation/new_reservation_ballys.dart';
 import 'package:ballys_reservation_app/models/reservation/reservation_passport_image.dart';
@@ -592,6 +593,9 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
       extra: {
         'arrivalDate': _arrivalDateController.text,
         'departureDate': _departureDateController.text,
+        // Same list the hotel sheet gets, so a ticket can be assigned to the
+        // guest(s) it is booked for.
+        'guests': _reservationGuestSummary(),
       },
     );
   }
@@ -1095,6 +1099,14 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
     return parts.join(", ");
   }
 
+  /// " · For: BM0012 — John, BM0043 — Mary" on a room / ticket booked for more
+  /// than one guest. A single assignment is just the guest whose card this is,
+  /// so it says nothing worth the space.
+  String _assignedSuffix(List<AssignedGuest> assigned) {
+    if (assigned.length < 2) return "";
+    return " · For: ${assigned.map((g) => g.label).join(', ')}";
+  }
+
   /// One line per hotel this guest booked, e.g.
   /// "Hilton Colombo — Deluxe, 2 Rooms, 3 Nights".
   List<String> _hotelLines(GuestReservationEntryBallys entry) {
@@ -1109,7 +1121,8 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
         if (nights > 0) nights == 1 ? "1 Night" : "$nights Nights",
       ];
       final title = (name != null && name.isNotEmpty) ? name : "Hotel";
-      return details.isEmpty ? title : "$title — ${details.join(', ')}";
+      final line = details.isEmpty ? title : "$title — ${details.join(', ')}";
+      return "$line${_assignedSuffix(hotel.assignedGuests)}";
     }).toList();
   }
 
@@ -1128,7 +1141,8 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
         if (flight.airTicketClassName.trim().isNotEmpty)
           flight.airTicketClassName.trim(),
       ];
-      return details.isEmpty ? route : "$route — ${details.join(', ')}";
+      final line = details.isEmpty ? route : "$route — ${details.join(', ')}";
+      return "$line${_assignedSuffix(flight.assignedGuests)}";
     }).toList();
   }
 
@@ -1230,9 +1244,10 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
     }
 
     // The top-level bmNumber/guestName/dates mirror the FIRST guest for
-    // backward compatibility. roomDetails/airTicketDetails/passportImages span
-    // ALL guests, each item tagged with its owner's BMNumber. The lightweight
-    // per-guest payload travels in `guests`.
+    // backward compatibility. roomDetails/airTicketDetails span ALL guests,
+    // each row naming the guests it was booked for in its own `assigned_guests`;
+    // passportImages stay tagged with their owner's GuestBMNumber. The
+    // lightweight per-guest payload travels in `guests`.
     final firstGuest = allGuests.first;
 
     final reservation = NewReservationBallys(
@@ -2694,6 +2709,38 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
                                                     const Color(0xFF1F2430),
                                               ),
                                             ),
+                                            // Who the room is booked for, as
+                                            // ticked in the selector sheet.
+                                            if (hotel.assignedGuests
+                                                .isNotEmpty) ...[
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  const Icon(
+                                                    Icons.group,
+                                                    size: 16,
+                                                    color: Colors.blueGrey,
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Expanded(
+                                                    child: Text(
+                                                      hotel.assignedGuests
+                                                          .map((g) => g.label)
+                                                          .join(", "),
+                                                      style: TextStyle(
+                                                        fontSize: fontSettings
+                                                            .fontSize,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: Colors.blueGrey,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
                                             const SizedBox(height: 8),
                                             RichText(
                                               text: TextSpan(

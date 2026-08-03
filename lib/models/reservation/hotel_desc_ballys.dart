@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/models/reservation/assigned_guest.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -20,6 +21,10 @@ class HotelDescipBallys {
   final String? ecLcoFacility;
   final String? paymentBy;
 
+  /// The guests this room is booked for. Empty on rooms picked before the
+  /// assignment existed, which belong to the guest that owns them.
+  final List<AssignedGuest> assignedGuests;
+
   HotelDescipBallys({
     this.hotel,
     this.hotelName,
@@ -38,6 +43,7 @@ class HotelDescipBallys {
     this.costIndex,
     this.ecLcoFacility,
     this.paymentBy,
+    this.assignedGuests = const [],
   });
 
   factory HotelDescipBallys.fromJson(Map<String, dynamic> json) {
@@ -59,6 +65,7 @@ class HotelDescipBallys {
       costIndex: _toInt(json['cost_index']),
       ecLcoFacility: json['ec_lco_facility'] as String?,
       paymentBy: json['payment_by'] as String?,
+      assignedGuests: AssignedGuest.listFrom(json['assigned_guests']),
     );
   }
 
@@ -140,6 +147,10 @@ class HotelDescipBallys {
       'cost_index': costIndex,
       'ec_lco_facility': ecLcoFacility,
       'payment_by': paymentBy,
+      // Everyone the room is booked for. The row itself is repeated per
+      // assigned guest under their own BMNumber; this list says who else shares
+      // it, so re-opening the reservation restores the assignment.
+      'assigned_guests': assignedGuests.map((g) => g.toJson()).toList(),
     };
   }
 }

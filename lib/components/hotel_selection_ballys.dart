@@ -169,20 +169,44 @@ String selectedByPaymnet = 'NA';
   void _applyAssignedGuests(List<AssignedGuest> assigned) {
     _assignedGuestKeys.clear();
     for (final guest in widget.guests) {
-      final matches = assigned.any((a) =>
-          (a.mid.trim().isNotEmpty && a.mid.trim() == guest.mid.trim()) ||
-          (a.mid.trim().isEmpty &&
-              a.guestName.trim() == guest.guestName.trim()));
-      if (matches) _assignedGuestKeys.add(_guestKey(guest));
+      if (assigned.any((a) => _namesGuest(a, guest))) {
+        _assignedGuestKeys.add(_guestKey(guest));
+      }
     }
   }
 
-  /// A single guest on the reservation is the only one a room can be for, so it
-  /// starts ticked rather than making every add a two-step job.
-  void _preselectSoleGuest() {
-    if (widget.guests.length == 1) {
-      _assignedGuestKeys.add(_guestKey(widget.guests.first));
+  /// Whether [assigned] is [guest] — by BM number where there is one, by name
+  /// for a member typed in but never searched.
+  bool _namesGuest(AssignedGuest assigned, AccompanyingMember guest) {
+    final mid = assigned.mid.trim();
+    return (mid.isNotEmpty && mid == guest.mid.trim()) ||
+        (mid.isEmpty && assigned.guestName.trim() == guest.guestName.trim());
+  }
+
+  /// Guests who already have a room on this reservation. They are shown greyed
+  /// out rather than offered again — the room being edited is skipped, so its
+  /// own guests stay pickable.
+  Set<String> _guestsInOtherRooms() {
+    final taken = <String>{};
+    for (var i = 0; i < hotelList.length; i++) {
+      if (editMode && i == editIndex) continue;
+      for (final guest in widget.guests) {
+        if (hotelList[i].assignedGuests.any((a) => _namesGuest(a, guest))) {
+          taken.add(_guestKey(guest));
+        }
+      }
     }
+    return taken;
+  }
+
+  /// A single guest on the reservation is the only one a room can be for, so it
+  /// starts ticked rather than making every add a two-step job — unless that
+  /// guest already has a room.
+  void _preselectSoleGuest() {
+    if (widget.guests.length != 1) return;
+    final key = _guestKey(widget.guests.first);
+    if (_guestsInOtherRooms().contains(key)) return;
+    _assignedGuestKeys.add(key);
   }
 
   /// When true the date range mirrors the reservation arrival / departure
@@ -795,8 +819,15 @@ String selectedByPaymnet = 'NA';
   /// one by one or several at a time. Each ticked guest gets the room booked
   /// against their BM number.
   Widget _guestAssignment() {
-    final allSelected = widget.guests
-        .every((guest) => _assignedGuestKeys.contains(_guestKey(guest)));
+    // Guests already in another room are along for the ride but can't be
+    // picked, so "Select all" and its label only ever count the rest.
+    final locked = _guestsInOtherRooms();
+    final selectable = widget.guests
+        .where((guest) => !locked.contains(_guestKey(guest)))
+        .toList();
+    final allSelected = selectable.isNotEmpty &&
+        selectable
+            .every((guest) => _assignedGuestKeys.contains(_guestKey(guest)));
 
     return Container(
       width: double.infinity,
@@ -818,21 +849,20 @@ String selectedByPaymnet = 'NA';
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  "Assign this room to (${_assignedGuestKeys.length}/${widget.guests.length})",
+                  "Assign this room to (${_assignedGuestKeys.length}/${selectable.length})",
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-              if (widget.guests.length > 1)
+              if (selectable.length > 1)
                 TextButton(
                   onPressed: () {
                     setState(() {
                       _assignedGuestKeys.clear();
                       if (!allSelected) {
-                        _assignedGuestKeys
-                            .addAll(widget.guests.map(_guestKey));
+                        _assignedGuestKeys.addAll(selectable.map(_guestKey));
                       }
                       _guestAssignError = false;
                     });
@@ -850,7 +880,16 @@ String selectedByPaymnet = 'NA';
             ],
           ),
           const SizedBox(height: 4),
-          ...widget.guests.map(_guestAssignmentRow),
+          ...widget.guests.map((guest) =>
+              _guestAssignmentRow(guest, locked.contains(_guestKey(guest)))),
+          if (selectable.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: 4),
+              child: Text(
+                "Every guest already has a room",
+                style: TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+            ),
           if (_guestAssignError)
             const Padding(
               padding: EdgeInsets.only(top: 4),
@@ -864,7 +903,9 @@ String selectedByPaymnet = 'NA';
     );
   }
 
-  Widget _guestAssignmentRow(AccompanyingMember guest) {
+  /// One guest. [locked] means they already have a room, so the row is greyed
+  /// out and says so instead of offering the tick again.
+  Widget _guestAssignmentRow(AccompanyingMember guest, bool locked) {
     final key = _guestKey(guest);
     final selected = _assignedGuestKeys.contains(key);
     final label = [
@@ -873,16 +914,18 @@ String selectedByPaymnet = 'NA';
     ].join(" — ");
 
     return InkWell(
-      onTap: () {
-        setState(() {
-          if (selected) {
-            _assignedGuestKeys.remove(key);
-          } else {
-            _assignedGuestKeys.add(key);
-          }
-          _guestAssignError = false;
-        });
-      },
+      onTap: locked
+          ? null
+          : () {
+              setState(() {
+                if (selected) {
+                  _assignedGuestKeys.remove(key);
+                } else {
+                  _assignedGuestKeys.add(key);
+                }
+                _guestAssignError = false;
+              });
+            },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 1),
         child: Row(
@@ -893,47 +936,60 @@ String selectedByPaymnet = 'NA';
                 value: selected,
                 visualDensity: VisualDensity.compact,
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                onChanged: (checked) {
-                  setState(() {
-                    if (checked == true) {
-                      _assignedGuestKeys.add(key);
-                    } else {
-                      _assignedGuestKeys.remove(key);
-                    }
-                    _guestAssignError = false;
-                  });
-                },
+                onChanged: locked
+                    ? null
+                    : (checked) {
+                        setState(() {
+                          if (checked == true) {
+                            _assignedGuestKeys.add(key);
+                          } else {
+                            _assignedGuestKeys.remove(key);
+                          }
+                          _guestAssignError = false;
+                        });
+                      },
               ),
             ),
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
+                  color: locked ? Colors.grey : null,
                 ),
               ),
             ),
             const SizedBox(width: 8),
-            Icon(
-              guest.hasFamilyMembers
-                  ? Icons.family_restroom
-                  : Icons.person_outline,
-              size: 16,
-              color: guest.hasFamilyMembers
-                  ? Colors.green.shade700
-                  : Colors.grey.shade600,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              guest.hasFamilyMembers ? "Family included" : "No family",
-              style: TextStyle(
-                fontSize: 13,
+            if (locked) ...[
+              Icon(Icons.check_circle_outline,
+                  size: 16, color: Colors.grey.shade500),
+              const SizedBox(width: 4),
+              Text(
+                "Already has a room",
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+              ),
+            ] else ...[
+              Icon(
+                guest.hasFamilyMembers
+                    ? Icons.family_restroom
+                    : Icons.person_outline,
+                size: 16,
                 color: guest.hasFamilyMembers
                     ? Colors.green.shade700
                     : Colors.grey.shade600,
               ),
-            ),
+              const SizedBox(width: 4),
+              Text(
+                guest.hasFamilyMembers ? "Family included" : "No family",
+                style: TextStyle(
+                  fontSize: 13,
+                  color: guest.hasFamilyMembers
+                      ? Colors.green.shade700
+                      : Colors.grey.shade600,
+                ),
+              ),
+            ],
           ],
         ),
       ),

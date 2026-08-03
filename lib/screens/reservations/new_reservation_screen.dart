@@ -89,6 +89,16 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
   bool _isGuestLoading = false;
   List<String> _prefixes = ["BM", "BL", "BN"];
 
+  // Registered members are picked through the member-search sheets, which fill
+  // ID + name and the profile card. Non-registered ones already have a number
+  // issued outside the system: it can't be searched, so it is typed by hand and
+  // saved into exactly the same MID field.
+  bool _isRegisteredMember = true;
+
+  /// Every non-registered number is issued under DHL, so the prefix is fixed
+  /// instead of being picked from [_prefixes].
+  static const String _nonRegisteredPrefix = "DBH";
+
   // ── Multi-guest support ───────────────────────────────────────────────
   // Guests already "added" to this single reservation. They all share one
   // reservationNo but each carries its own hotel(s) / flight(s) / dates.
@@ -143,8 +153,50 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
     super.dispose();
   }
 
+  /// Switches between picking a registered member and typing a non-registered
+  /// one. The identity fields are cleared either way so a member selected in
+  /// one mode can never leak into the other.
+  void _onMemberTypeChanged(bool isRegistered) {
+    if (_isRegisteredMember == isRegistered) return;
+
+    setState(() {
+      _isRegisteredMember = isRegistered;
+      // Going back to a searchable member restores the location's own prefix;
+      // the non-registered side always shows DHL and ignores this.
+      _selectedPrefix = _isNumericOnlyLocation ? "" : "BM";
+      _memberIdController.clear();
+      _memberIdNumberController.clear();
+      _memberNameController.clear();
+    });
+
+    ref.read(selectedGuestProvider.notifier).clearGuest();
+    ref.read(newReservationProvider.notifier).resetState();
+    ref.read(memberSearchProvider.notifier).resetState();
+  }
+
+  /// Keeps the saved MID in sync while a non-registered number is typed. The
+  /// registered flow gets this for free from the search sheet; here there is no
+  /// search step, so the prefix + typed number is mirrored across by hand.
+  void _syncManualMemberId() {
+    final numberPart = _memberIdNumberController.text.trim();
+    _memberIdController.text =
+        numberPart.isEmpty ? '' : '$_nonRegisteredPrefix$numberPart';
+  }
+
   void _updateMemberIdFields(String fullMemberId) {
     if (fullMemberId.isNotEmpty) {
+      // A DHL number was typed in by hand, so put the form back into
+      // non-registered mode rather than treating it as a searchable member.
+      if (fullMemberId.startsWith(_nonRegisteredPrefix)) {
+        setState(() {
+          _isRegisteredMember = false;
+          _memberIdNumberController.text =
+              fullMemberId.substring(_nonRegisteredPrefix.length);
+          _memberIdController.text = fullMemberId;
+        });
+        return;
+      }
+
       if (_isNumericOnlyLocation) {
         setState(() {
           _memberIdNumberController.text = fullMemberId;
@@ -882,7 +934,9 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
   /// Fills selectedGuestProvider (rating / last visit / photo) for the member
   /// currently in the form.
   Future<void> _loadGuestProfile(String mid, String guestName) async {
-    if (mid.isEmpty) {
+    // Non-registered numbers exist outside the system — searching for one only
+    // burns a request and comes back empty.
+    if (mid.isEmpty || mid.startsWith(_nonRegisteredPrefix)) {
       ref.read(selectedGuestProvider.notifier).clearGuest();
       if (mounted) setState(() => _isGuestLoading = false);
       return;
@@ -1171,6 +1225,42 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
         );
       }
     }
+  }
+
+  /// One tappable radio + label of the registered / non-registered pair.
+  Widget _memberTypeOption({
+    required String label,
+    required bool isRegistered,
+    required double fontSize,
+    required FontWeight fontWeight,
+  }) {
+    return InkWell(
+      onTap: () => _onMemberTypeChanged(isRegistered),
+      borderRadius: BorderRadius.circular(8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Radio<bool>(
+            value: isRegistered,
+            groupValue: _isRegisteredMember,
+            activeColor: Constants.kSecondaryColor,
+            visualDensity: VisualDensity.compact,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            onChanged: (value) => _onMemberTypeChanged(value!),
+          ),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: fontSize * 0.9,
+                fontWeight: fontWeight,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _navigateToProfile() async {
@@ -1602,6 +1692,29 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                           ),
                           const SizedBox(height: 8.0),
                         ],
+                        // ── Registered / Non-Registered member ─
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _memberTypeOption(
+                                label: "Member",
+                                isRegistered: true,
+                                fontSize: fontSettings.fontSize,
+                                fontWeight: fontSettings.fontWeight,
+                              ),
+                            ),
+                            Expanded(
+                              child: _memberTypeOption(
+                                label: "DB Holder",
+                                isRegistered: false,
+                                fontSize: fontSettings.fontSize,
+                                fontWeight: fontSettings.fontWeight,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6.0),
+
                         // ── MID + Profile Button ───────────────
                         Row(
                           children: [
@@ -1629,7 +1742,30 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                                           horizontal: 12.0,
                                           vertical: -5.0,
                                         ),
-                                        prefixIcon: _isNumericOnlyLocation
+                                        // Non-registered numbers are always
+                                        // issued under DHL, so the prefix is
+                                        // fixed rather than chosen.
+                                        prefixIcon: !_isRegisteredMember
+                                            ? Padding(
+                                                padding: const EdgeInsets.only(
+                                                  left: 12,
+                                                  right: 4,
+                                                ),
+                                                child: Center(
+                                                  widthFactor: 1,
+                                                  child: Text(
+                                                    _nonRegisteredPrefix,
+                                                    style: TextStyle(
+                                                      fontSize:
+                                                          fontSettings.fontSize,
+                                                      fontWeight: fontSettings
+                                                          .fontWeight,
+                                                      color: Colors.black,
+                                                    ),
+                                                  ),
+                                                ),
+                                              )
+                                            : _isNumericOnlyLocation
                                             ? null
                                             : Padding(
                                                 padding:
@@ -1673,19 +1809,25 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                                                   ),
                                                 ),
                                               ),
-                                        suffixIcon: IconButton(
-                                          icon: const Icon(Icons.search),
-                                          onPressed: () {
-                                            FocusScope.of(context).unfocus();
-                                            _memberIdController.text =
-                                                _isNumericOnlyLocation
-                                                    ? _memberIdNumberController
-                                                        .text
-                                                    : '$_selectedPrefix${_memberIdNumberController.text}';
-                                            _openMemberSearchBottomSheet(
-                                                8002);
-                                          },
-                                        ),
+                                        // A non-registered number exists only
+                                        // outside the system — there is
+                                        // nothing to search it against.
+                                        suffixIcon: !_isRegisteredMember
+                                            ? null
+                                            : IconButton(
+                                                icon: const Icon(Icons.search),
+                                                onPressed: () {
+                                                  FocusScope.of(context)
+                                                      .unfocus();
+                                                  _memberIdController.text =
+                                                      _isNumericOnlyLocation
+                                                          ? _memberIdNumberController
+                                                              .text
+                                                          : '$_selectedPrefix${_memberIdNumberController.text}';
+                                                  _openMemberSearchBottomSheet(
+                                                      8002);
+                                                },
+                                              ),
                                       ),
                                       validator: (value) {
                                         // Skip the "required" check when the
@@ -1707,6 +1849,12 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                                         return null;
                                       },
                                       onChanged: (value) {
+                                        if (!_isRegisteredMember) {
+                                          // Typed by hand, so this is the only
+                                          // place the saved MID gets set.
+                                          _syncManualMemberId();
+                                          return;
+                                        }
                                         _memberNameController.text = '';
                                         ref
                                             .read(newReservationProvider
@@ -1715,29 +1863,33 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                                       },
                                     ),
                             ),
-                            const SizedBox(width: 10.0),
-                            ElevatedButton(
-                              onPressed: _memberIdController.text.trim().isEmpty
-                                  ? null
-                                  : _navigateToProfile,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor:
+                            // Non-registered members have no profile to open.
+                            if (_isRegisteredMember) ...[
+                              const SizedBox(width: 10.0),
+                              ElevatedButton(
+                                onPressed:
                                     _memberIdController.text.trim().isEmpty
-                                        ? Colors.grey.shade400
-                                        : const Color.fromARGB(
-                                            255, 70, 70, 70),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                        ? null
+                                        : _navigateToProfile,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      _memberIdController.text.trim().isEmpty
+                                          ? Colors.grey.shade400
+                                          : const Color.fromARGB(
+                                              255, 70, 70, 70),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                    horizontal: 14,
+                                  ),
                                 ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                  horizontal: 14,
-                                ),
+                                child:
+                                    const Icon(Icons.person_search, size: 25),
                               ),
-                              child:
-                                  const Icon(Icons.person_search, size: 25),
-                            ),
+                            ],
                           ],
                         ),
                         const SizedBox(height: 10.0),
@@ -1764,14 +1916,16 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                               horizontal: 12.0,
                               vertical: -5.0,
                             ),
-                            suffixIcon: IconButton(
-                              icon: const Icon(Icons.search),
-                              onPressed: () {
-                                FocusScope.of(context)
-                                    .requestFocus(FocusNode());
-                                _openMemberSearchBottomSheet(8003);
-                              },
-                            ),
+                            suffixIcon: !_isRegisteredMember
+                                ? null
+                                : IconButton(
+                                    icon: const Icon(Icons.search),
+                                    onPressed: () {
+                                      FocusScope.of(context)
+                                          .requestFocus(FocusNode());
+                                      _openMemberSearchBottomSheet(8003);
+                                    },
+                                  ),
                           ),
                           validator: (value) {
                             // Same exemption as Member ID above.
@@ -1786,6 +1940,10 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                             return null;
                           },
                           onChanged: (value) {
+                            // The name is typed alongside the number for a
+                            // non-registered member; clearing the ID here
+                            // would wipe what was just entered.
+                            if (!_isRegisteredMember) return;
                             _memberIdController.text = '';
                             ref
                                 .read(newReservationProvider.notifier)
@@ -1794,14 +1952,17 @@ class _NewReservationScreenState extends ConsumerState<NewReservationScreen>
                         ),
 
                         // ── Guest Card ─────────────────────────
-                        GuestDisplayCardSpecialGiftview(
-                          memberIdText: _memberIdController.text,
-                          memberNameText: _memberNameController.text,
-                          showCard: _memberIdController.text.isNotEmpty &&
-                              _memberNameController.text.isNotEmpty,
-                          isLoading: _isGuestLoading,
-                          showLastVisitDate: true,
-                        ),
+                        // Nothing to show for a non-registered member: there is
+                        // no profile behind the number.
+                        if (_isRegisteredMember)
+                          GuestDisplayCardSpecialGiftview(
+                            memberIdText: _memberIdController.text,
+                            memberNameText: _memberNameController.text,
+                            showCard: _memberIdController.text.isNotEmpty &&
+                                _memberNameController.text.isNotEmpty,
+                            isLoading: _isGuestLoading,
+                            showLastVisitDate: true,
+                          ),
  const SizedBox(height: 10.0),
                           PackageAmountField(
                           controller: _packageAmountController,

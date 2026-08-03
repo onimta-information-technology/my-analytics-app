@@ -10,8 +10,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 class FirebaseApiService {
   //   static const String domain = 'https://ballysnotifications.onimtaitsl.com';
   //  static const String fmcDomain = 'https://ballysnotifications.onimtaitsl.com';
-  static const String domain = 'https://chat.bcqr.lk';
-  static const String fmcDomain = 'https://chat.bcqr.lk';
+  // Chat backend host, picked from the logged-in property: Bellagio logins
+  // (API url on bty.world) talk to the Bellagio chat server, everything else —
+  // including Bally's — stays on the default host.
+  static const String ballysDomain = 'https://chat.bcqr.lk';
+  static const String bellagioDomain = 'https://chat.bty.world';
+
+  /// Chat host for the currently logged-in property. Every request resolves
+  /// this first so a re-login onto another property switches servers.
+  static Future<String> resolveDomain() async {
+    final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+    return apiUrl.contains('bty.world') ? bellagioDomain : ballysDomain;
+  }
+
   static const Map<String, String> endpoints = {
     'InsertFcmToken': '/api/users/update-fcm-token',
     'InsertChatFMCToken': '/api/users/sync',
@@ -175,6 +186,8 @@ class FirebaseApiService {
     required List<String> filePaths,
   }) async {
     try {
+      final domain = await resolveDomain();
+     
       final token = await _getToken();
       final deviceId = await DeviceId.get();
       final senderName = await StorageUtil.getUserName() ?? '';
@@ -258,6 +271,7 @@ class FirebaseApiService {
     List<String> messageIds,
   ) async {
     try {
+      final domain = await resolveDomain();
       final deviceId = await DeviceId.get();
       final url = '$domain${endpoints['markAsRead']}/$chatId/messages/read';
       return await putRequest(url, {
@@ -274,10 +288,11 @@ class FirebaseApiService {
     String name,
     String fcmToken,
   ) async {
+    final domain = await resolveDomain();
     final deviceId = await DeviceId.get();
     final actualSalesCode = await StorageUtil.getSalesCode();
      final phoneNumber = await StorageUtil.getMobileNumber();
-    final url = '$fmcDomain${endpoints['InsertChatFMCToken']}';
+    final url = '$domain${endpoints['InsertChatFMCToken']}';
     final timestamp = DateTime.now().toIso8601String();
   final location = await StorageUtil.getCurrentLocation();
   print('Syncing FCM token with deviceId: $deviceId, name: $name, fcmToken: $fcmToken, salesCode: $actualSalesCode, phoneNumber: $phoneNumber, location: ${location?.code ?? "N/A"}');
@@ -309,6 +324,7 @@ class FirebaseApiService {
   static Future<String?> createChat(String userUid) async {
     final deviceId = await DeviceId.get();
     try {
+      final domain = await resolveDomain();
       final url = '$domain${endpoints['createChat']}';
       final response = await postRequest(url, {
         "participants": [userUid, deviceId],
@@ -324,6 +340,7 @@ class FirebaseApiService {
 
   static Future<bool> deleteChat(String chatId) async {
     try {
+      final domain = await resolveDomain();
       final deviceId = await DeviceId.get();
       final url = '$domain${endpoints['deleteMessage']}/$chatId/hide';
       final response = await postRequest(url, {'userId': deviceId, 'appType': 2});
@@ -336,6 +353,8 @@ class FirebaseApiService {
   static Future<Map<String, dynamic>> fetchUserChats() async {
     try {
       print('fetchUserChats called');
+      final domain = await resolveDomain();
+      print('Resolved domain: $domain');
       final deviceId = await DeviceId.get();
       final location = await StorageUtil.getCurrentLocation();
       if (deviceId == null || deviceId.isEmpty) {
@@ -357,6 +376,7 @@ class FirebaseApiService {
 
   static Future<Map<String, dynamic>> fetchAllUsers() async {
     try {
+      final domain = await resolveDomain();
       final deviceId = await DeviceId.get();
       final location = await StorageUtil.getCurrentLocation();
       final url = '$domain${endpoints['fetchAllUsers']}/$deviceId?location=${location?.code}&appType=2';
@@ -375,6 +395,7 @@ class FirebaseApiService {
 
   static Future<Map<String, dynamic>> fetchMessages(String chatId) async {
     try {
+      final domain = await resolveDomain();
       final url = '$domain${endpoints['fetchMessages']}/$chatId/messages';
       print("rrrr, $url");
       final response =
@@ -396,6 +417,7 @@ class FirebaseApiService {
     try {
       print(
           'sendMessage called with recipientUuid: $recipientUuid, chatId: $chatId, message: $message ,recipientAppType: $recipientAppType');
+      final domain = await resolveDomain();
       final deviceId = await DeviceId.get();
       final url = '$domain${endpoints['sendMessage']}';
       final response = await postRequest(url, {
@@ -437,6 +459,7 @@ static Future<Map<String, dynamic>> softDeleteMessage(
 ) async {
   try {
     print('softDeleteMessage called with chatId: $chatId, messageId: $messageId');
+    final domain = await resolveDomain();
     final deviceId = await DeviceId.get();
     final url = '$domain/api/chats/$chatId/messages/$messageId/soft-delete';
     return await patchRequest(url, {'userId': deviceId,'appType': 2});
@@ -452,6 +475,7 @@ static Future<Map<String, dynamic>> deleteMessageForEveryone(
 ) async {
   try {
     print('deleteMessageForEveryone called with chatId: $chatId, messageId: $messageId');
+    final domain = await resolveDomain();
     final deviceId = await DeviceId.get();
     final url = '$domain/api/chats/$chatId/messages/$messageId';
     return await deleteRequestWithBody(url, {'userId': deviceId,'appType': 2});

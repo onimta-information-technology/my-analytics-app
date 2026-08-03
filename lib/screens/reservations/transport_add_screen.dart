@@ -74,6 +74,16 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
   List<String> _prefixes = const ['BM', 'BL', 'BN'];
   String _selectedPrefix = 'BM';
 
+  // Registered members are picked through the guest-search sheet, which fills
+  // ID + name and unlocks the profile card. Non-registered ones already have a
+  // DHL number issued outside the system: it can't be searched, so it is typed
+  // by hand and saved into exactly the same membership-no field.
+  bool _isRegisteredMember = true;
+
+  /// Every non-registered number is issued under DHL, so the prefix is fixed
+  /// instead of being picked from [_prefixes].
+  static const String _nonRegisteredPrefix = 'DBH';
+
   // Transport fields
   final _pickupDateCtrl = TextEditingController();
   final _pickupTimeCtrl = TextEditingController();
@@ -193,8 +203,47 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
   }
 
   // ── Guest search ───────────────────────────────────────────────────────────
+  /// Switches between picking a registered member and typing a non-registered
+  /// one. The identity fields are cleared either way so a member selected in
+  /// one mode can never leak into the other.
+  void _onMemberTypeChanged(bool isRegistered) {
+    if (_isRegisteredMember == isRegistered) return;
+    setState(() {
+      _isRegisteredMember = isRegistered;
+      // Going back to a searchable member restores the location's own prefix;
+      // the non-registered side always shows DHL and ignores this.
+      _selectedPrefix = _isNumericOnlyLocation ? '' : 'BM';
+      _memberIdCtrl.clear();
+      _midNumberCtrl.clear();
+      _guestNameCtrl.clear();
+      // The card belongs to a searched member; nothing backs it now.
+      _guestCardVisible = false;
+    });
+    ref.read(selectedGuestProvider.notifier).clearGuest();
+  }
+
+  /// Keeps the saved membership no in sync while a non-registered number is
+  /// typed. The registered flow gets this from the search sheet; here there is
+  /// no search step, so DHL + the typed number is joined by hand.
+  void _syncManualMemberId() {
+    final numberPart = _midNumberCtrl.text.trim();
+    _memberIdCtrl.text =
+        numberPart.isEmpty ? '' : '$_nonRegisteredPrefix$numberPart';
+  }
+
   void _updateMemberIdFields(String fullMemberId) {
     if (fullMemberId.isEmpty) return;
+    // A DHL number was typed in by hand, so put the form back into
+    // non-registered mode rather than treating it as a searchable member.
+    if (fullMemberId.startsWith(_nonRegisteredPrefix)) {
+      setState(() {
+        _isRegisteredMember = false;
+        _midNumberCtrl.text =
+            fullMemberId.substring(_nonRegisteredPrefix.length);
+        _memberIdCtrl.text = fullMemberId;
+      });
+      return;
+    }
     if (_isNumericOnlyLocation) {
       setState(() {
         _midNumberCtrl.text = fullMemberId;
@@ -1282,10 +1331,54 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
     );
   }
 
+  /// One tappable radio + label of the registered / non-registered pair.
+  Widget _memberTypeOption({
+    required String label,
+    required bool isRegistered,
+  }) {
+    return InkWell(
+      onTap: () => _onMemberTypeChanged(isRegistered),
+      borderRadius: BorderRadius.circular(8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Radio<bool>(
+            value: isRegistered,
+            groupValue: _isRegisteredMember,
+            activeColor: _kAccent,
+            visualDensity: VisualDensity.compact,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            onChanged: (v) => _onMemberTypeChanged(v!),
+          ),
+          const SizedBox(width: 4),
+          Flexible(child: Text(label, style: _kInputTextStyle)),
+        ],
+      ),
+    );
+  }
+
   Widget _guestIdentityRow() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // ── Registered / Non-Registered member ──
+        Row(
+          children: [
+            Expanded(
+              child: _memberTypeOption(
+                label: 'Member',
+                isRegistered: true,
+              ),
+            ),
+            Expanded(
+              child: _memberTypeOption(
+                label: 'DB Holder',
+                isRegistered: false,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
         Row(
           children: [
             Expanded(
@@ -1300,7 +1393,20 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
                   return null;
                 },
                 decoration: _fieldDeco('Membership No *').copyWith(
-                  prefixIcon: _isNumericOnlyLocation
+                  // Non-registered numbers are always issued under DHL, so the
+                  // prefix is fixed rather than chosen.
+                  prefixIcon: !_isRegisteredMember
+                      ? const Padding(
+                          padding: EdgeInsets.only(left: 12, right: 4),
+                          child: Center(
+                            widthFactor: 1,
+                            child: Text(
+                              _nonRegisteredPrefix,
+                              style: _kInputTextStyle,
+                            ),
+                          ),
+                        )
+                      : _isNumericOnlyLocation
                       ? null
                       : Padding(
                           padding: const EdgeInsets.only(left: 12, right: 4),
@@ -1327,17 +1433,27 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
                             ),
                           ),
                         ),
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.search, color: _kAccent),
-                    onPressed: () {
-                      _memberIdCtrl.text = _isNumericOnlyLocation
-                          ? _midNumberCtrl.text
-                          : '$_selectedPrefix${_midNumberCtrl.text}';
-                      _openGuestSearch(iid: 8002);
-                    },
-                  ),
+                  // A non-registered number exists only outside the system —
+                  // there is nothing to search it against.
+                  suffixIcon: !_isRegisteredMember
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.search, color: _kAccent),
+                          onPressed: () {
+                            _memberIdCtrl.text = _isNumericOnlyLocation
+                                ? _midNumberCtrl.text
+                                : '$_selectedPrefix${_midNumberCtrl.text}';
+                            _openGuestSearch(iid: 8002);
+                          },
+                        ),
                 ),
                 onChanged: (value) {
+                  if (!_isRegisteredMember) {
+                    // Typed by hand, so this is the only place the saved
+                    // membership no gets set.
+                    _syncManualMemberId();
+                    return;
+                  }
                   _guestNameCtrl.clear();
                   _memberIdCtrl.text = _isNumericOnlyLocation
                       ? value
@@ -1345,24 +1461,27 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
                 },
               ),
             ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: _guestCardVisible ? _navigateToProfile : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _guestCardVisible
-                    ? Colors.black
-                    : Colors.grey.shade400,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            // Non-registered members have no profile to open.
+            if (_isRegisteredMember) ...[
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: _guestCardVisible ? _navigateToProfile : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _guestCardVisible
+                      ? Colors.black
+                      : Colors.grey.shade400,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                    horizontal: 14,
+                  ),
                 ),
-                padding: const EdgeInsets.symmetric(
-                  vertical: 16,
-                  horizontal: 14,
-                ),
+                child: const Icon(Icons.person_search, size: 25),
               ),
-              child: const Icon(Icons.person_search, size: 25),
-            ),
+            ],
           ],
         ),
         const SizedBox(height: 10),
@@ -1372,12 +1491,20 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
           textCapitalization: TextCapitalization.words,
           decoration: _fieldDeco('Guest Name', icon: Icons.person_outline)
               .copyWith(
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.search, color: _kAccent),
-                  onPressed: () => _openGuestSearch(iid: 8003),
-                ),
+                suffixIcon: !_isRegisteredMember
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.search, color: _kAccent),
+                        onPressed: () => _openGuestSearch(iid: 8003),
+                      ),
               ),
-          onChanged: (_) => _midNumberCtrl.clear(),
+          onChanged: (_) {
+            // The name is typed alongside the number for a non-registered
+            // member; clearing the number here would wipe what was just
+            // entered.
+            if (!_isRegisteredMember) return;
+            _midNumberCtrl.clear();
+          },
         ),
       ],
     );

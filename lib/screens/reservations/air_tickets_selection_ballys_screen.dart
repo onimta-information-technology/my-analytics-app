@@ -627,6 +627,12 @@ String? _selectedContactPerson;
       _departureDateController.text = flight.departureDate != null
           ? dateFormat.format(flight.departureDate!)
           : '';
+      // Tick only where the ticket really does run to the reservation's own
+      // dates, so the box matches what is in the field above it.
+      _isSameAsHotelForArrival = _arrivalDateController.text.isNotEmpty &&
+          _arrivalDateController.text == _arrivalDate;
+      _isSameAsHotelForDeparture = _departureDateController.text.isNotEmpty &&
+          _departureDateController.text == _departureDate;
 
       _silkRouteFacility = flight.silkRoute == 1 ? "Yes" : "No";
       _airportTranspotation = flight.airportTransportation == 1 ? "Yes" : "No";
@@ -1114,6 +1120,10 @@ String? _selectedContactPerson;
       arrivalDate = null;
       _arrivalDateController.text = "";
       _departureDateController.text = "";
+      // The ticks belong to the dates they filled in — leaving them on with the
+      // dates now blank reads as if the next ticket already has them.
+      _isSameAsHotelForArrival = false;
+      _isSameAsHotelForDeparture = false;
       _ticketClasses = [];
 
       _silkRouteFacility = "No";
@@ -1624,10 +1634,16 @@ String? _selectedContactPerson;
                         ),
                         onTap: () async {
                           await _selectDate(context, _arrivalDateController);
-                          if (_arrivalDateController.text.isNotEmpty &&
-                              _arrivalDateError) {
-                            setState(() => _arrivalDateError = false);
-                          }
+                          setState(() {
+                            // Picking a date by hand can move it off the
+                            // reservation's own date, which unticks the box.
+                            _isSameAsHotelForArrival =
+                                _arrivalDateController.text.isNotEmpty &&
+                                    _arrivalDateController.text == _arrivalDate;
+                            if (_arrivalDateController.text.isNotEmpty) {
+                              _arrivalDateError = false;
+                            }
+                          });
                         },
                       ),
                       if (_arrivalDate.isNotEmpty)
@@ -1668,10 +1684,15 @@ String? _selectedContactPerson;
                         ),
                         onTap: () async {
                           await _selectDate(context, _departureDateController);
-                          if (_departureDateController.text.isNotEmpty &&
-                              _departureDateError) {
-                            setState(() => _departureDateError = false);
-                          }
+                          setState(() {
+                            _isSameAsHotelForDeparture =
+                                _departureDateController.text.isNotEmpty &&
+                                    _departureDateController.text ==
+                                        _departureDate;
+                            if (_departureDateController.text.isNotEmpty) {
+                              _departureDateError = false;
+                            }
+                          });
                         },
                       ),
                       if (_departureDate.isNotEmpty)

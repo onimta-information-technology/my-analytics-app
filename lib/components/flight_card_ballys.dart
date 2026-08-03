@@ -135,7 +135,9 @@ class FlightCardBallys extends StatelessWidget {
                               ),
                             const SizedBox(height: 8),
                             Text(
-                              "Class: ${flight.airTicketClassName}",
+                              // Every class on the ticket with its seat count,
+                              // e.g. "Economy x2, Business x1".
+                              "Class: ${flight.ticketClassSummary}",
                               style: const TextStyle(
                                 fontSize: 19,
                                 fontWeight: FontWeight.bold,

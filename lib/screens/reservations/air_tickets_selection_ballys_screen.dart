@@ -1,4 +1,4 @@
-import 'package:ballys_reservation_app/components/air_ticket_class_selector.dart';
+import 'package:ballys_reservation_app/components/air_ticket_class_count_selector.dart';
 import 'package:ballys_reservation_app/components/custom_airport_field.dart';
 import 'package:ballys_reservation_app/components/flight_card_ballys.dart';
 import 'package:ballys_reservation_app/components/passport_upload_widget.dart';
@@ -10,6 +10,7 @@ import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:ballys_reservation_app/models/airport_search_response.dart';
 import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart';
+import 'package:ballys_reservation_app/models/reservation/air_ticket_class_count.dart';
 import 'package:ballys_reservation_app/models/reservation/assigned_guest.dart';
 import 'package:ballys_reservation_app/models/reservation/airline_response.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.dart';
@@ -140,8 +141,11 @@ class _AirTicketsSelectionBallysScreenState
   final TextEditingController _mealRemarkController = TextEditingController();
 
   String _airportTranspotation = "No";
-  int? _airTicketClass;
-  String? _airTicketClassName;
+
+  /// The classes on the ticket being added, each with its own seat count. A
+  /// ticket can mix them, so this is a list rather than a single pick; the
+  /// first entry is what goes out as the ticket's primary class.
+  List<AirTicketClassCount> _ticketClasses = [];
 
   // Validation error flags for required fields
   bool _departureFromError = false;
@@ -340,8 +344,6 @@ class _AirTicketsSelectionBallysScreenState
       ),
     );
   }
-
-  Key _airTicketClassKey = UniqueKey();
 
   bool _isLoading = false;
   bool _isRoundTrip = false;
@@ -557,10 +559,9 @@ String? _selectedContactPerson;
       numberOfChildren = flight.childrenCount;
       numberOfInfants = flight.infantCount;
 
-      _airTicketClass = flight.airTicketClass;
-      _airTicketClassName = flight.airTicketClassName;
-
-      _airTicketClassKey = UniqueKey();
+      // Tickets saved before classes could be mixed carry no breakdown; the
+      // model builds one from their single class, so this is never empty.
+      _ticketClasses = List<AirTicketClassCount>.from(flight.ticketClasses);
 
       final dateFormat = DateFormat('yyyy-MM-dd');
       _arrivalDateController.text = flight.arrivalDate != null
@@ -641,7 +642,7 @@ String? _selectedContactPerson;
   void _saveTicketSelection() {
     final bool departureFromMissing = _departureFromAirport == null;
     final bool departureToMissing = _departureToAirport == null;
-    final bool classMissing = _airTicketClass == null;
+    final bool classMissing = _ticketClasses.isEmpty;
     final bool arrivalMissing = _arrivalDateController.text == "";
     // Departure date is only required for round trips; optional for one-way.
     final bool departureMissing =
@@ -736,14 +737,17 @@ String? _selectedContactPerson;
       guestCount: numberOfGuests,
       childrenCount: numberOfChildren,
       infantCount: numberOfInfants,
-      airTicketClass: _airTicketClass!,
+      // The first picked class stays the ticket's primary one; the full
+      // breakdown goes out beside it.
+      airTicketClass: _ticketClasses.first.id,
       arrivalDate: DateFormat("yyyy-MM-dd").parse(_arrivalDateController.text),
       departureDate: _departureDateController.text.isEmpty
           ? null
           : DateFormat("yyyy-MM-dd").parse(_departureDateController.text),
       silkRoute: _silkRouteFacility == "Yes" ? 1 : 0,
       airportTransportation: _airportTranspotation == "Yes" ? 1 : 0,
-      airTicketClassName: _airTicketClassName!,
+      airTicketClassName: _ticketClasses.first.name,
+      ticketClasses: List<AirTicketClassCount>.from(_ticketClasses),
       isRoundTrip: _isRoundTrip,
       // Air ticket costs are no longer captured on this screen.
       selectedCost: 0,
@@ -1053,9 +1057,7 @@ String? _selectedContactPerson;
       arrivalDate = null;
       _arrivalDateController.text = "";
       _departureDateController.text = "";
-      _airTicketClass = null;
-      _airTicketClassName = null;
-      _airTicketClassKey = UniqueKey();
+      _ticketClasses = [];
 
       _silkRouteFacility = "No";
       _airportTranspotation = "No";
@@ -1534,23 +1536,16 @@ String? _selectedContactPerson;
                           ],
                         ),
                       const SizedBox(height: 20),
-                      AirTicketClassSelector(
-                        key: _airTicketClassKey,
+                      AirTicketClassCountSelector(
                         hasError: _airTicketClassError,
-                        selectedClass: _airTicketClass == null
-                            ? null
-                            : {
-                                "id": _airTicketClass!,
-                                "type": _airTicketClassName!
-                              },
-                        onClassSelected: (selectedClass) {
-                          if (selectedClass != null) {
-                            _airTicketClass = selectedClass['id'];
-                            _airTicketClassName = selectedClass['type'];
-                            if (_airTicketClassError) {
-                              setState(() => _airTicketClassError = false);
+                        selectedClasses: _ticketClasses,
+                        onChanged: (classes) {
+                          setState(() {
+                            _ticketClasses = classes;
+                            if (classes.isNotEmpty) {
+                              _airTicketClassError = false;
                             }
-                          }
+                          });
                         },
                       ),
                       const SizedBox(height: 16),

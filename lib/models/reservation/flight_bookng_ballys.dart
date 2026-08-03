@@ -1,4 +1,5 @@
 import 'package:ballys_reservation_app/models/airport_search_response.dart';
+import 'package:ballys_reservation_app/models/reservation/air_ticket_class_count.dart';
 import 'package:ballys_reservation_app/models/reservation/assigned_guest.dart';
 import 'package:intl/intl.dart';
 
@@ -12,6 +13,8 @@ class FlightBookingBallys {
   /// Infants travelling on the ticket.
   final int infantCount;
   final FlightAirport? airports;
+  /// The ticket's primary class — the first entry of [ticketClasses]. Kept as
+  /// its own field because the back office still stores one class per row.
   final int airTicketClass;
   final DateTime? arrivalDate;
   final DateTime? departureDate;
@@ -61,6 +64,11 @@ class FlightBookingBallys {
   /// assignment existed, which belong to the guest that owns them.
   final List<AssignedGuest> assignedGuests;
 
+  /// Every cabin class on the ticket with its own seat count — a booking can
+  /// mix them, e.g. Economy x2 plus Business x1. [airTicketClass] /
+  /// [airTicketClassName] mirror the first entry.
+  final List<AirTicketClassCount> ticketClasses;
+
   FlightBookingBallys({
     required this.guestCount,
     this.childrenCount = 0,
@@ -89,6 +97,7 @@ class FlightBookingBallys {
     this.departureSectors = const [],
     this.returnSectors = const [],
     this.assignedGuests = const [],
+    this.ticketClasses = const [],
   });
 
   /// Outbound airport codes in travel order — origin, every transit stop, then
@@ -152,8 +161,41 @@ class FlightBookingBallys {
       departureSectors: _parseSectors(json['departure_sectors']),
       returnSectors: _parseSectors(json['return_sectors']),
       assignedGuests: AssignedGuest.listFrom(json['assigned_guests']),
+      ticketClasses: _parseTicketClasses(json),
     );
   }
+
+  /// The per-class seat counts. Tickets saved before a ticket could mix classes
+  /// carry only the single class, so that one class stands for every seat on
+  /// the ticket.
+  static List<AirTicketClassCount> _parseTicketClasses(
+      Map<String, dynamic> json) {
+    final classes = AirTicketClassCount.listFrom(json['air_ticket_classes']);
+    if (classes.isNotEmpty) return classes;
+
+    final id = _toInt(json['air_ticket_class']);
+    if (id == 0) return const [];
+    final seats = _toInt(json['guest_count']) +
+        _toInt(json['children_count']) +
+        _toInt(json['infant_count']);
+    return [
+      AirTicketClassCount(
+        id: id,
+        name: json['air_ticket_class_name']?.toString() ?? '',
+        count: seats < 1 ? 1 : seats,
+      ),
+    ];
+  }
+
+  /// Seats across every class on the ticket.
+  int get totalTicketCount =>
+      ticketClasses.fold(0, (sum, item) => sum + item.count);
+
+  /// "Economy x2, Business x1" — every class on the ticket on one line. Falls
+  /// back to the single class name for tickets that carry no breakdown.
+  String get ticketClassSummary => ticketClasses.isEmpty
+      ? airTicketClassName
+      : AirTicketClassCount.summary(ticketClasses);
 
   /// The JSON-string payload gives real booleans; the flattened DB response
   /// gives 1/0 or "1"/"0".
@@ -282,8 +324,10 @@ class FlightBookingBallys {
       'guest_count': guestCount,
       'children_count': childrenCount,
       'infant_count': infantCount,
-      'air_ticket_class': airTicketClass,
-      'air_ticket_class_name': airTicketClassName,
+      // Every class on the ticket with its own seat count. This replaces the
+      // single `air_ticket_class` / `air_ticket_class_name` pair, which is no
+      // longer sent — reading them back is still supported for older rows.
+      'air_ticket_classes': ticketClasses.map((c) => c.toJson()).toList(),
       'air_line': airLine,
       'air_line_code': airLineCode,
       'iata_code': iataCode,

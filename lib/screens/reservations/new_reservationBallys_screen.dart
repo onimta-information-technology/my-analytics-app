@@ -1138,8 +1138,8 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
         if ((flight.airLine ?? '').trim().isNotEmpty) flight.airLine!.trim(),
         if (flight.isRoundTrip) "Round Trip",
         if (flight.isMultiSector) "Multi Sector",
-        if (flight.airTicketClassName.trim().isNotEmpty)
-          flight.airTicketClassName.trim(),
+        if (flight.ticketClassSummary.trim().isNotEmpty)
+          flight.ticketClassSummary.trim(),
       ];
       final line = details.isEmpty ? route : "$route — ${details.join(', ')}";
       return "$line${_assignedSuffix(flight.assignedGuests)}";

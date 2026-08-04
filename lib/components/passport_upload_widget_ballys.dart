@@ -10,11 +10,37 @@ class PassportFileBallys {
   final String fileName;
   final bool isPdf;
 
+  /// The member this passport belongs to. Tagged where the file is picked —
+  /// the air-ticket screen files each upload against the guest it was added
+  /// for — so the image goes out under that member's BM number rather than
+  /// under whoever owns the reservation form. Empty means untagged, and the
+  /// owning guest is used at save time.
+  final String guestBmNumber;
+  final String guestName;
+
   PassportFileBallys({
     required this.path,
     required this.fileName,
     required this.isPdf,
+    this.guestBmNumber = '',
+    this.guestName = '',
   });
+
+  PassportFileBallys copyWith({
+    String? path,
+    String? fileName,
+    bool? isPdf,
+    String? guestBmNumber,
+    String? guestName,
+  }) {
+    return PassportFileBallys(
+      path: path ?? this.path,
+      fileName: fileName ?? this.fileName,
+      isPdf: isPdf ?? this.isPdf,
+      guestBmNumber: guestBmNumber ?? this.guestBmNumber,
+      guestName: guestName ?? this.guestName,
+    );
+  }
 }
 
 /// A reusable widget for uploading one or more passport bio data pages.
@@ -27,10 +53,23 @@ class PassportUploadWidgetBallys extends StatefulWidget {
   /// Pre-populate with existing files (e.g. when editing a flight booking).
   final List<PassportFileBallys>? initialFiles;
 
+  /// The member every file picked here belongs to. Stamped onto each
+  /// [PassportFileBallys] so the upload is filed against that member, and left
+  /// blank where the passport belongs to whoever owns the reservation form.
+  final String guestBmNumber;
+  final String guestName;
+
+  /// Section heading, defaulting to the generic one. Pass the member's name
+  /// when a screen shows one uploader per guest.
+  final String title;
+
   const PassportUploadWidgetBallys({
     super.key,
     this.onFilesChanged,
     this.initialFiles,
+    this.guestBmNumber = '',
+    this.guestName = '',
+    this.title = "Passport Bio Data Page",
   });
 
   @override
@@ -192,6 +231,8 @@ class _PassportUploadWidgetBallysState extends State<PassportUploadWidgetBallys>
         path: persistentPath,
         fileName: originalName,
         isPdf: isPdf,
+        guestBmNumber: widget.guestBmNumber,
+        guestName: widget.guestName,
       ));
     });
     widget.onFilesChanged?.call(List.unmodifiable(_files));
@@ -221,9 +262,11 @@ class _PassportUploadWidgetBallysState extends State<PassportUploadWidgetBallys>
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              "Passport Bio Data Page",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Expanded(
+              child: Text(
+                widget.title,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
             ),
             TextButton.icon(
               onPressed: _showSourcePicker,

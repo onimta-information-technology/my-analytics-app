@@ -12,16 +12,28 @@ class PassportImageBallys {
   final String fileName;
   final bool isPdf;
 
+  /// The member this passport belongs to, carried from where it was picked.
+  /// A guest's package can be shared by several members, each with their own
+  /// passport, so the image names its own owner instead of inheriting the
+  /// guest that owns the entry. Empty means untagged — the entry's guest.
+  final String guestBmNumber;
+  final String guestName;
+
   PassportImageBallys({
     required this.path,
     required this.fileName,
     required this.isPdf,
+    this.guestBmNumber = '',
+    this.guestName = '',
   });
 
-  Map<String, dynamic> toJsonWithGuest(String guestBmNumber) {
+  /// [ownerBmNumber] is the guest that owns the entry, used only for passports
+  /// picked before anyone was named — a tagged image keeps its own member.
+  Map<String, dynamic> toJsonWithGuest(String ownerBmNumber) {
     final bytes = File(path).readAsBytesSync();
     return {
-      'GuestBMNumber': guestBmNumber,
+      'GuestBMNumber':
+          guestBmNumber.trim().isNotEmpty ? guestBmNumber.trim() : ownerBmNumber,
       'FileName': fileName,
       'IsPdf': isPdf,
       'Base64Data': base64Encode(bytes),
@@ -155,7 +167,8 @@ class GuestReservationEntryBallys {
   }
 
   /// Returns passport images for this guest to be added to the top-level
-  /// `passport_images` array, each tagged with this guest's BM number.
+  /// `passport_images` array. An image picked for a named member goes out
+  /// under that member's BM number; the rest fall back to this guest's.
   List<Map<String, dynamic>> toPassportImagesJson() {
     return passportImages.map((p) => p.toJsonWithGuest(mid)).toList();
   }

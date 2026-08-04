@@ -77,7 +77,19 @@ class _AirTicketsSelectionBallysScreenState
   Key _airlineKey = UniqueKey();
 
   List<String> _contactPersons = [];
-  List<PassportFileBallys> _passportFiles = [];
+
+  /// Passports picked on this screen, kept per guest by [_guestKey] so each
+  /// member's bio page is filed against them. Only the guests ticked for the
+  /// ticket being added are shown an uploader, so adding a ticket — which
+  /// clears the ticks — clears the upload area and leaves the next guest a
+  /// blank one, while what has already been picked stays put under its owner.
+  final Map<String, List<PassportFileBallys>> _passportsByGuest = {};
+
+  /// Passports no guest on this screen has an uploader for: picked while the
+  /// reservation had nobody to name yet (the first guest is still being filled
+  /// in), or tagged with a member who has since left the reservation. They are
+  /// carried through untouched so nothing already picked is dropped.
+  List<PassportFileBallys> _otherPassports = [];
 
   /// Bellagio (bty.world) hides the Hamoos contact person dropdown.
   bool _isBellagio = false;
@@ -90,7 +102,7 @@ class _AirTicketsSelectionBallysScreenState
   void initState() {
     super.initState();
     flightList = List.from(ref.read(selectedFlightBallysProvider));
-    _passportFiles = List.from(ref.read(selectedPassportBallysProvider));
+    _restorePassports(ref.read(selectedPassportBallysProvider));
     _preselectSoleGuest();
     _syncHeadCountsToGuests();
     _getAirports();
@@ -459,6 +471,133 @@ class _AirTicketsSelectionBallysScreenState
           ],
         ),
       ),
+    );
+  }
+
+  // ── Passports ─────────────────────────────────────────────────────────────
+
+  /// Files the screen to the guest each one names, so re-opening the screen
+  /// shows every member's passport back under that member. A file naming
+  /// nobody on the reservation is carried through as-is rather than being
+  /// handed to a guest it does not belong to.
+  void _restorePassports(List<PassportFileBallys> files) {
+    _passportsByGuest.clear();
+    _otherPassports = [];
+
+    for (final file in files) {
+      final bm = file.guestBmNumber.trim();
+      AccompanyingMember? owner;
+      if (bm.isNotEmpty) {
+        for (final guest in widget.guests) {
+          if (guest.mid.trim() == bm) {
+            owner = guest;
+            break;
+          }
+        }
+      }
+
+      if (owner == null) {
+        _otherPassports.add(file);
+      } else {
+        _passportsByGuest.putIfAbsent(_guestKey(owner), () => []).add(file);
+      }
+    }
+  }
+
+  /// Every passport picked on this screen, in the order the guests appear on
+  /// the reservation, each still naming its owner.
+  List<PassportFileBallys> _allPassports() {
+    final files = <PassportFileBallys>[];
+    for (final guest in widget.guests) {
+      files.addAll(_passportsByGuest[_guestKey(guest)] ?? const []);
+    }
+    // Guests dropped from the reservation take their passports with them, so
+    // only the buckets above go out — plus whatever named nobody to begin with.
+    files.addAll(_otherPassports);
+    return files;
+  }
+
+  /// The bio pages for this ticket's guests: one uploader per ticked guest, so
+  /// a passport is filed against the member it belongs to instead of landing
+  /// on the guest that owns the reservation. Adding the ticket clears the
+  /// ticks, which clears the uploaders — the next guest gets an empty one, and
+  /// re-ticking a guest brings their pages back.
+  Widget _passportSection() {
+    // No guests to name yet (the first one is still being filled in), so the
+    // passport goes to whoever ends up owning the entry.
+    if (widget.guests.isEmpty) {
+      return PassportUploadWidgetBallys(
+        initialFiles: _otherPassports,
+        onFilesChanged: (files) {
+          setState(() => _otherPassports = List.from(files));
+        },
+      );
+    }
+
+    final selected = widget.guests
+        .where((guest) => _assignedGuestKeys.contains(_guestKey(guest)))
+        .toList();
+
+    if (selected.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Passport Bio Data Page",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              "Select a guest above to upload their passport bio page.",
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < selected.length; i++) ...[
+          if (i > 0) const SizedBox(height: 16),
+          _guestPassportUploader(selected[i]),
+        ],
+      ],
+    );
+  }
+
+  /// One guest's uploader, headed with their name so it is plain whose bio
+  /// page is being picked.
+  Widget _guestPassportUploader(AccompanyingMember guest) {
+    final key = _guestKey(guest);
+    final label = [
+      if (guest.guestName.trim().isNotEmpty) guest.guestName.trim(),
+      if (guest.mid.trim().isNotEmpty) guest.mid.trim(),
+    ].join(" — ");
+
+    return PassportUploadWidgetBallys(
+      // Keyed by guest so switching who the ticket is for rebuilds the
+      // uploader with that guest's own files rather than keeping the last
+      // guest's on screen.
+      key: ValueKey("passport-$key"),
+      title: label.isNotEmpty
+          ? "Passport Bio Data Page — $label"
+          : "Passport Bio Data Page",
+      guestBmNumber: guest.mid.trim(),
+      guestName: guest.guestName.trim(),
+      initialFiles: _passportsByGuest[key] ?? const [],
+      onFilesChanged: (files) {
+        setState(() => _passportsByGuest[key] = List.from(files));
+      },
     );
   }
 
@@ -913,7 +1052,7 @@ String? _selectedContactPerson;
 
   void _acceptChanges() {
     ref.read(selectedFlightBallysProvider.notifier).addFlights(flightList);
-    ref.read(selectedPassportBallysProvider.notifier).setFiles(_passportFiles);
+    ref.read(selectedPassportBallysProvider.notifier).setFiles(_allPassports());
     Navigator.pop(context);
   }
 
@@ -1228,7 +1367,9 @@ String? _selectedContactPerson;
       _departureDateError = false;
 
       // The next ticket is booked for whoever it is booked for, so the ticks
-      // start clean — except where there is only one guest to tick.
+      // start clean — except where there is only one guest to tick. Clearing
+      // them also empties the passport uploaders, leaving the next guest a
+      // blank one; what was already picked stays filed under its own guest.
       _assignedGuestKeys.clear();
       _preselectSoleGuest();
       _syncHeadCountsToGuests();
@@ -1805,14 +1946,7 @@ String? _selectedContactPerson;
                           ],
                         ),
                            const SizedBox(height: 16),
-  PassportUploadWidgetBallys(
-    initialFiles: _passportFiles,
-    onFilesChanged: (files) {
-      setState(() {
-        _passportFiles = List.from(files);
-      });
-    },
-  ),
+  _passportSection(),
   const SizedBox(height: 20),
 // const Align(
 //   alignment: Alignment.topLeft,

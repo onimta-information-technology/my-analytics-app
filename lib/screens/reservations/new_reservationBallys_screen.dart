@@ -387,7 +387,28 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
     final entries = <GuestReservationEntryBallys>[];
 
     if (reservation.guests.isNotEmpty) {
+      // A passport is filed against the member it belongs to, which may be
+      // somebody sharing the guest's package rather than the guest themselves,
+      // so a guest's passports are its own plus its members'.
+      bool ownedBy(
+        ReservationPassportImageBallys image,
+        GuestReservationEntryBallys guest,
+      ) {
+        final bm = image.guestBmNumber.trim();
+        return bm == guest.mid.trim() ||
+            guest.accompanyingMembers.any((m) => m.mid.trim() == bm);
+      }
+
+      // Passports naming nobody still on the reservation would be dropped by
+      // the reload and lost on the next update, so they ride along on the first
+      // guest — still tagged with the member they came back under.
+      final unclaimed = reservation.passportImages
+          .where((image) =>
+              !reservation.guests.any((guest) => ownedBy(image, guest)))
+          .toList();
+
       for (final guest in reservation.guests) {
+        final isFirst = identical(guest, reservation.guests.first);
         entries.add(
           GuestReservationEntryBallys(
             mid: guest.mid,
@@ -398,10 +419,11 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
             departureDate: guest.departureDate ?? reservation.depDate,
             remarks: guest.remarks,
             airTicketRequisition: guest.airTicketRequisition,
-            passportImages: await _materializePassports(
-              reservation.passportImages
-                  .where((p) => p.guestBmNumber == guest.mid),
-            ),
+            passportImages: await _materializePassports([
+              ...reservation.passportImages
+                  .where((image) => ownedBy(image, guest)),
+              if (isFirst) ...unclaimed,
+            ]),
             // Carried through so an update re-sends what was booked instead
             // of blanking these out.
             hasFamilyMembers: guest.hasFamilyMembers,
@@ -481,6 +503,10 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
             path: file.path,
             fileName: fileName,
             isPdf: image.isPdf,
+            // Keeps the image with the member it came back under, so an update
+            // re-sends it against them rather than against the guest it was
+            // hung off for editing.
+            guestBmNumber: image.guestBmNumber,
           ),
         );
       }
@@ -980,11 +1006,16 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
       departureDate: _departureDate,
       remarks: _remarksController.text,
       airTicketRequisition: _airTicketRequisition,
+      // Each file keeps the member it was picked for on the air-ticket screen,
+      // so a passport belonging to somebody sharing this guest's package goes
+      // out under their own BM number.
       passportImages: selectedPassports
           .map((f) => PassportImageBallys(
                 path: f.path,
                 fileName: f.fileName,
                 isPdf: f.isPdf,
+                guestBmNumber: f.guestBmNumber,
+                guestName: f.guestName,
               ))
           .toList(),
       hasFamilyMembers: _hasFamilyMembers,
@@ -1034,6 +1065,8 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
                     path: p.path,
                     fileName: p.fileName,
                     isPdf: p.isPdf,
+                    guestBmNumber: p.guestBmNumber,
+                    guestName: p.guestName,
                   ))
               .toList(),
         );

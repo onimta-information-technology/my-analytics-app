@@ -869,12 +869,12 @@ String? _selectedContactPerson;
           flight.returnSectors.isNotEmpty;
       _departureSectors
         ..clear()
-        ..addAll(flight.departureSectors
-            .map((sector) => FlightSectorEntry(airport: sector.toAirport())));
+        ..addAll(flight.departureSectors.map((sector) => FlightSectorEntry(
+            airport: sector.toAirport(), date: sector.sectorDate)));
       _returnSectors
         ..clear()
-        ..addAll(flight.returnSectors
-            .map((sector) => FlightSectorEntry(airport: sector.toAirport())));
+        ..addAll(flight.returnSectors.map((sector) => FlightSectorEntry(
+            airport: sector.toAirport(), date: sector.sectorDate)));
 
       _selectedAirline = _airlineByName(flight.airLine);
       _airlineKey = UniqueKey();
@@ -895,6 +895,7 @@ String? _selectedContactPerson;
               cityName: sector.airport!.cityName ?? '',
               airportName: sector.airport!.airportName ?? '',
               country: sector.airport!.country ?? '',
+              sectorDate: sector.date,
             ))
         .toList();
   }
@@ -949,18 +950,22 @@ String? _selectedContactPerson;
       return;
     }
 
-    // Every added stop has to name an airport, or the route it describes has a
-    // hole in it.
+    // Every added stop has to name an airport and the day it is flown, or the
+    // route it describes has a hole in it.
     if (_isMultiSector) {
       final bool hasEmptyStop = _departureSectors.any((s) => s.airport == null) ||
           (_isRoundTrip && _returnSectors.any((s) => s.airport == null));
+      final bool hasUndatedStop = _departureSectors.any((s) => s.date == null) ||
+          (_isRoundTrip && _returnSectors.any((s) => s.date == null));
       final bool hasNoStops = _departureSectors.isEmpty && _returnSectors.isEmpty;
-      if (hasEmptyStop || hasNoStops) {
+      if (hasEmptyStop || hasUndatedStop || hasNoStops) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(hasNoStops
                 ? "Please add at least one stop, or turn Multi Sector off."
-                : "Please select an airport for every stop."),
+                : hasEmptyStop
+                    ? "Please select an airport for every stop."
+                    : "Please select a date for every stop."),
           ),
         );
         return;
@@ -1170,6 +1175,17 @@ String? _selectedContactPerson;
                 ),
               ],
             ),
+            // The stop's own travel day, so a route spread over several days
+            // reads in order rather than as a bare list of airports.
+            Padding(
+              // Lines the field up with the airport field above, clear of the
+              // remove button's column.
+              padding: const EdgeInsets.only(top: 8, right: 48),
+              child: _buildSectorDateField(
+                sector: sectors[i],
+                label: "Stop ${i + 1} Date",
+              ),
+            ),
           ],
           const SizedBox(height: 8),
           Align(
@@ -1189,6 +1205,140 @@ String? _selectedContactPerson;
         ],
       ),
     );
+  }
+
+  /// The tap target for one stop's date. Reads "Select date" until a day is
+  /// picked, which is also what [_saveTicketSelection] refuses to save.
+  Widget _buildSectorDateField({
+    required FlightSectorEntry sector,
+    required String label,
+  }) {
+    final bool hasDate = sector.date != null;
+    return InkWell(
+      onTap: () => _selectSectorDate(sector, label),
+      borderRadius: BorderRadius.circular(8.0),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(
+              fontSize: 16,
+              color: Color.fromARGB(255, 0, 0, 0),
+              fontWeight: FontWeight.bold),
+          border:
+              OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+          prefixIcon: const Icon(Icons.calendar_today),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        ),
+        child: Text(
+          hasDate ? DateFormat('yyyy-MM-dd').format(sector.date!) : "Select date",
+          style: TextStyle(
+            fontSize: 16,
+            color: hasDate ? Colors.black : Colors.grey.shade600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Picks the day a single stop is flown. Unlike the ticket's arrival and
+  /// departure dates this writes straight onto the stop, so there is no
+  /// controller to keep in step.
+  Future<void> _selectSectorDate(FlightSectorEntry sector, String title) async {
+    final now = DateTime(
+      DateTime.now().year,
+      DateTime.now().month,
+      DateTime.now().day,
+    );
+
+    // A stop saved earlier can sit in the past; keep it inside the picker's
+    // bounds rather than tripping its assertions when the ticket is reopened.
+    final DateTime minimum =
+        sector.date != null && sector.date!.isBefore(now) ? sector.date! : now;
+
+    DateTime initial = sector.date ?? _arrivalDateOrNull() ?? now;
+    if (initial.isBefore(minimum)) initial = minimum;
+
+    final DateTime yearOut = DateTime(now.year + 1, now.month, now.day);
+    final DateTime maximum = initial.isAfter(yearOut) ? initial : yearOut;
+
+    DateTime selectedDate = initial;
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                "Select $title",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ),
+            SizedBox(
+              height: 200,
+              child: CupertinoDatePicker(
+                mode: CupertinoDatePickerMode.date,
+                initialDateTime: initial,
+                minimumDate: minimum,
+                maximumDate: maximum,
+                onDateTimeChanged: (DateTime newDate) {
+                  selectedDate = newDate;
+                },
+              ),
+            ),
+            const Divider(height: 1),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  sector.date = DateTime(
+                    selectedDate.year,
+                    selectedDate.month,
+                    selectedDate.day,
+                  );
+                });
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                "Confirm",
+                style: TextStyle(fontSize: 18, color: Colors.blue),
+              ),
+            ),
+            const Divider(height: 1),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                "Cancel",
+                style: TextStyle(fontSize: 18, color: Colors.blue),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        );
+      },
+    );
+  }
+
+  /// The ticket's arrival date, when one has been picked — stops usually fall
+  /// around it, so it makes a better starting point than today.
+  DateTime? _arrivalDateOrNull() {
+    if (_arrivalDateController.text.isEmpty) return null;
+    try {
+      return DateFormat('yyyy-MM-dd').parseStrict(_arrivalDateController.text);
+    } catch (_) {
+      return null;
+    }
   }
 
   /// A labelled Yes/No radio group, sized to fill its column so several can be

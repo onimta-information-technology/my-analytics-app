@@ -467,11 +467,17 @@ class AirportInfo {
   String airportName;
   String country;
 
+  /// Only used when this airport is a transit stop: the day the guest flies
+  /// that stop. Null on the leg endpoints, and on stops saved before stops
+  /// carried a date.
+  DateTime? sectorDate;
+
   AirportInfo({
     required this.airportCode,
     required this.cityName,
     required this.airportName,
     required this.country,
+    this.sectorDate,
   });
 
   factory AirportInfo.fromJson(Map<String, dynamic> json,
@@ -500,7 +506,26 @@ class AirportInfo {
       cityName: read('CityName'),
       airportName: read('AirportName'),
       country: read('Country'),
+      sectorDate: _parseSectorDate(byLowerKey['sectordate']),
     );
+  }
+
+  /// A stop's date, written by us as `yyyy-MM-dd` but tolerating the ISO and
+  /// `dd/MM/yyyy` shapes the back office uses for the other dates.
+  static DateTime? _parseSectorDate(dynamic value) {
+    if (value == null) return null;
+    final text = value.toString().trim();
+    if (text.isEmpty) return null;
+
+    try {
+      return DateTime.parse(text);
+    } catch (_) {
+      try {
+        return DateFormat('dd/MM/yyyy').parseStrict(text);
+      } catch (_) {
+        return null;
+      }
+    }
   }
 
   Map<String, dynamic> toSectorJson() {
@@ -509,6 +534,8 @@ class AirportInfo {
       'CityName': cityName,
       'AirportName': airportName,
       'Country': country,
+      'SectorDate':
+          sectorDate == null ? '' : DateFormat('yyyy-MM-dd').format(sectorDate!),
     };
   }
 

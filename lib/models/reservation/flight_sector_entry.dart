@@ -7,8 +7,12 @@ import 'package:flutter/foundation.dart';
 /// added and removed — without it Flutter reuses the picker state and a deleted
 /// stop's airport shows up on the next row.
 class FlightSectorEntry {
-  FlightSectorEntry({this.airport});
+  FlightSectorEntry({this.airport, this.date});
 
   final Key key = UniqueKey();
   Airport? airport;
+
+  /// The day the guest flies this stop. Null on stops saved before stops
+  /// carried a date, and on a row that is still being filled in.
+  DateTime? date;
 }

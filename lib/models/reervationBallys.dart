@@ -6,7 +6,8 @@ import 'package:ballys_reservation_app/models/reservation/assigned_guest.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.dart';
 
 import 'package:ballys_reservation_app/models/reservation/hotel_desc_ballys.dart';
-import 'package:ballys_reservation_app/models/reservation/reservation_passport_image.dart';
+
+import 'package:ballys_reservation_app/models/reservation/reservation_passport_image_ballys.dart';
 
 class ReservationBallys {
   int idNo;
@@ -69,8 +70,8 @@ class ReservationBallys {
   List<GuestReservationEntryBallys> guests;
 
   /// Passport images/PDFs returned by the API, each tagged with the owning
-  /// guest's BM number via [ReservationPassportImage.guestBmNumber].
-  List<ReservationPassportImage> passportImages;
+  /// guest's BM number via [ReservationPassportImageBallys.guestBmNumber].
+  List<ReservationPassportImageBallys> passportImages;
 
   ReservationBallys({
     required this.idNo,
@@ -363,11 +364,11 @@ class ReservationBallys {
       return entries;
     }
 
-    List<ReservationPassportImage> parsePassportImages(dynamic list) {
+    List<ReservationPassportImageBallys> parsePassportImages(dynamic list) {
       if (list is List) {
         return list
             .whereType<Map<String, dynamic>>()
-            .map((item) => ReservationPassportImage.fromJson(item))
+            .map((item) => ReservationPassportImageBallys.fromJson(item))
             .toList();
       }
       return [];

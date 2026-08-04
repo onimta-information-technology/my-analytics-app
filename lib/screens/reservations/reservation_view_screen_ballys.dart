@@ -11,7 +11,8 @@ import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_desc_ballys.dart';
-import 'package:ballys_reservation_app/models/reservation/reservation_passport_image.dart';
+import 'package:ballys_reservation_app/models/reservation/reservation_passport_image_ballys.dart';
+//  import 'package:ballys_reservation_app/models/reservation/reservation_passport_image.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/hotels_provider.dart';
 import 'package:ballys_reservation_app/providers/reservation_provider_ballys.dart';
@@ -818,15 +819,15 @@ class _ReservationViewScreenBallysState
   // guests still shows whose passport is whose.
   Widget _buildPassportsSection(
     List<GuestReservationEntryBallys> guests,
-    List<ReservationPassportImage> passportImages,
+    List<ReservationPassportImageBallys> passportImages,
     FontSettings fontSettings,
   ) {
     if (passportImages.isEmpty) return const SizedBox.shrink();
 
     // Guests first, in reservation order. Anything tagged with a BM number
     // that matches no guest still gets shown rather than silently dropped.
-    final groups = <({String label, List<ReservationPassportImage> images})>[];
-    final claimed = <ReservationPassportImage>{};
+    final groups = <({String label, List<ReservationPassportImageBallys> images})>[];
+    final claimed = <ReservationPassportImageBallys>{};
 
     for (final guest in guests) {
       final images =
@@ -887,7 +888,7 @@ class _ReservationViewScreenBallysState
   /// chips. Returns an empty widget when there are none. The heading and the
   /// owning-guest label come from [_buildPassportsSection].
   Widget _buildPassportThumbnails(
-    List<ReservationPassportImage> images,
+    List<ReservationPassportImageBallys> images,
     FontSettings fontSettings,
   ) {
     if (images.isEmpty) return const SizedBox.shrink();

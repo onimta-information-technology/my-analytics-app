@@ -15,7 +15,8 @@ import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_booking.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_desc.dart';
-import 'package:ballys_reservation_app/models/reservation/reservation_passport_image.dart';
+import 'package:ballys_reservation_app/models/reservation/reservation_passport_image_ballys.dart';
+// import 'package:ballys_reservation_app/models/reservation/reservation_passport_image.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/hotels_provider.dart';
 import 'package:ballys_reservation_app/providers/reservation_provider.dart';
@@ -687,7 +688,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
   // are visible when the card is opened.
   Widget _buildGuestsSection(
     List<GuestReservationEntryBallys> guests,
-    List<ReservationPassportImage> passportImages,
+    List<ReservationPassportImageBallys> passportImages,
     FontSettings fontSettings,
   ) {
     if (guests.isEmpty) return const SizedBox.shrink();
@@ -836,7 +837,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
   /// Renders a guest's passport images as tappable thumbnails and PDFs as
   /// labelled chips. Returns an empty widget when the guest has none.
   Widget _buildPassportThumbnails(
-    List<ReservationPassportImage> images,
+    List<ReservationPassportImageBallys> images,
     FontSettings fontSettings,
   ) {
     if (images.isEmpty) return const SizedBox.shrink();

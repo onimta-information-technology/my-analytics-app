@@ -3,17 +3,16 @@ import 'dart:io';
 
 import 'package:ballys_reservation_app/models/reservation/assigned_guest.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.dart';
-import 'package:ballys_reservation_app/models/reservation/hotel_desc.dart';
-import 'package:ballys_reservation_app/models/reservation/flight_booking.dart';
+
 import 'package:ballys_reservation_app/models/reservation/hotel_desc_ballys.dart';
 import 'package:ballys_reservation_app/utils/amount_util.dart';
 
-class PassportImage {
+class PassportImageBallys {
   final String path;
   final String fileName;
   final bool isPdf;
 
-  PassportImage({
+  PassportImageBallys({
     required this.path,
     required this.fileName,
     required this.isPdf,
@@ -93,7 +92,7 @@ class GuestReservationEntryBallys {
   final DateTime? departureDate;
   final String remarks;
   final String airTicketRequisition; // "Yes" / "No"
-  final List<PassportImage> passportImages;
+  final List<PassportImageBallys> passportImages;
 
   /// Whether family members travel with THIS guest — a plain yes/no tick.
   final bool hasFamilyMembers;
@@ -205,7 +204,7 @@ class GuestReservationEntryBallys {
     DateTime? departureDate,
     String? remarks,
     String? airTicketRequisition,
-    List<PassportImage>? passportImages,
+    List<PassportImageBallys>? passportImages,
     bool? hasFamilyMembers,
     List<AccompanyingMember>? accompanyingMembers,
     String? packageAmount,

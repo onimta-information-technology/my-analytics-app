@@ -1,11 +1,12 @@
 import 'package:ballys_reservation_app/components/air_ticket_class_count_selector.dart';
 import 'package:ballys_reservation_app/components/custom_airport_field.dart';
 import 'package:ballys_reservation_app/components/flight_card_ballys.dart';
-import 'package:ballys_reservation_app/components/passport_upload_widget.dart';
+import 'package:ballys_reservation_app/components/passport_upload_widget_ballys.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/airport_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/contact_person_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
+import 'package:ballys_reservation_app/providers/selected_passport_provider_ballys.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:ballys_reservation_app/models/airport_search_response.dart';
@@ -17,7 +18,7 @@ import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.d
 import 'package:ballys_reservation_app/models/reservation/flight_sector_entry.dart';
 import 'package:ballys_reservation_app/providers/airports_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_flight_provider_ballys.dart';
-import 'package:ballys_reservation_app/providers/selected_passport_provider.dart';
+// import 'package:ballys_reservation_app/providers/selected_passport_provider.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -76,7 +77,7 @@ class _AirTicketsSelectionBallysScreenState
   Key _airlineKey = UniqueKey();
 
   List<String> _contactPersons = [];
-  List<PassportFile> _passportFiles = [];
+  List<PassportFileBallys> _passportFiles = [];
 
   /// Bellagio (bty.world) hides the Hamoos contact person dropdown.
   bool _isBellagio = false;
@@ -89,7 +90,7 @@ class _AirTicketsSelectionBallysScreenState
   void initState() {
     super.initState();
     flightList = List.from(ref.read(selectedFlightBallysProvider));
-    _passportFiles = List.from(ref.read(selectedPassportProvider));
+    _passportFiles = List.from(ref.read(selectedPassportBallysProvider));
     _preselectSoleGuest();
     _syncHeadCountsToGuests();
     _getAirports();
@@ -912,7 +913,7 @@ String? _selectedContactPerson;
 
   void _acceptChanges() {
     ref.read(selectedFlightBallysProvider.notifier).addFlights(flightList);
-    ref.read(selectedPassportProvider.notifier).setFiles(_passportFiles);
+    ref.read(selectedPassportBallysProvider.notifier).setFiles(_passportFiles);
     Navigator.pop(context);
   }
 
@@ -1804,7 +1805,7 @@ String? _selectedContactPerson;
                           ],
                         ),
                            const SizedBox(height: 16),
-  PassportUploadWidget(
+  PassportUploadWidgetBallys(
     initialFiles: _passportFiles,
     onFilesChanged: (files) {
       setState(() {

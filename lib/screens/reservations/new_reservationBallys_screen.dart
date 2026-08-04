@@ -5,6 +5,7 @@ import 'package:ballys_reservation_app/components/flight_card_ballys.dart';
 import 'package:ballys_reservation_app/components/guest_deatils_view_spGift.dart';
 import 'package:ballys_reservation_app/components/hotel_selection_ballys.dart';
 import 'package:ballys_reservation_app/components/package_amount_field_ballys.dart';
+import 'package:ballys_reservation_app/components/passport_upload_widget_ballys.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/hotel_repository.dart';
@@ -18,7 +19,8 @@ import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.d
 import 'package:ballys_reservation_app/models/reservation/assigned_guest.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_desc_ballys.dart';
 import 'package:ballys_reservation_app/models/reservation/new_reservation_ballys.dart';
-import 'package:ballys_reservation_app/models/reservation/reservation_passport_image.dart';
+// import 'package:ballys_reservation_app/models/reservation/reservation_passport_image.dart';
+import 'package:ballys_reservation_app/models/reservation/reservation_passport_image_ballys.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/hotel_catalog_provider.dart';
 import 'package:ballys_reservation_app/providers/member_search_provider.dart';
@@ -32,7 +34,8 @@ import 'package:ballys_reservation_app/providers/selectedReservationforBallys_pr
 import 'package:ballys_reservation_app/providers/selected_flight_provider_ballys.dart';
  import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_hotel_provider_ballys.dart';
-import 'package:ballys_reservation_app/providers/selected_passport_provider.dart';
+import 'package:ballys_reservation_app/providers/selected_passport_provider_ballys.dart';
+// import 'package:ballys_reservation_app/providers/selected_passport_provider.dart';
 // import 'package:ballys_reservation_app/providers/selected_reservation_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -444,17 +447,17 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
     // empty for the next guest.
     ref.read(selectedHotelBallysProvider.notifier).setHotels([]);
     ref.read(selectedFlightBallysProvider.notifier).setFlights([]);
-    ref.read(selectedPassportProvider.notifier).setFiles([]);
+    ref.read(selectedPassportBallysProvider.notifier).setFiles([]);
     ref.read(selectedGuestProvider.notifier).clearGuest();
   }
 
   /// Writes API passport images (base64) to disk so they behave like freshly
   /// picked files: the upload widget can show them and they get re-encoded on
   /// save, which keeps existing passports attached when the record is replaced.
-  Future<List<PassportImage>> _materializePassports(
-    Iterable<ReservationPassportImage> images,
+  Future<List<PassportImageBallys>> _materializePassports(
+    Iterable<ReservationPassportImageBallys> images,
   ) async {
-    final result = <PassportImage>[];
+    final result = <PassportImageBallys>[];
 
     try {
       final dir = await getApplicationDocumentsDirectory();
@@ -474,7 +477,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
         );
         await file.writeAsBytes(bytes);
         result.add(
-          PassportImage(
+          PassportImageBallys(
             path: file.path,
             fileName: fileName,
             isPdf: image.isPdf,
@@ -966,7 +969,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
   GuestReservationEntryBallys _snapshotCurrentGuest() {
     final selectedHotels = ref.read(selectedHotelBallysProvider);
     final selectedFlights = ref.read(selectedFlightBallysProvider);
-    final selectedPassports = ref.read(selectedPassportProvider);
+    final selectedPassports = ref.read(selectedPassportBallysProvider);
 
     return GuestReservationEntryBallys(
       mid: _memberIdController.text.trim(),
@@ -978,7 +981,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
       remarks: _remarksController.text,
       airTicketRequisition: _airTicketRequisition,
       passportImages: selectedPassports
-          .map((f) => PassportImage(
+          .map((f) => PassportImageBallys(
                 path: f.path,
                 fileName: f.fileName,
                 isPdf: f.isPdf,
@@ -1025,9 +1028,9 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
 
     ref.read(selectedHotelBallysProvider.notifier).setHotels(entry.hotels);
     ref.read(selectedFlightBallysProvider.notifier).setFlights(entry.flights);
-    ref.read(selectedPassportProvider.notifier).setFiles(
+    ref.read(selectedPassportBallysProvider.notifier).setFiles(
           entry.passportImages
-              .map((p) => PassportFile(
+              .map((p) => PassportFileBallys(
                     path: p.path,
                     fileName: p.fileName,
                     isPdf: p.isPdf,
@@ -1326,7 +1329,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
       // Clear all provider state
       ref.read(selectedHotelBallysProvider.notifier).setHotels([]);
       ref.read(selectedFlightBallysProvider.notifier).setFlights([]);
-      ref.read(selectedPassportProvider.notifier).setFiles([]);
+      ref.read(selectedPassportBallysProvider.notifier).setFiles([]);
       ref.read(selectedGuestProvider.notifier).clearGuest();
       ref.read(newReservationBallysProvider.notifier).resetState();
       ref.read(memberSearchProvider.notifier).resetState();
@@ -1739,7 +1742,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
                   .clearSelectedBallysReservation();
               ref.read(selectedHotelBallysProvider.notifier).setHotels([]);
               ref.read(selectedFlightBallysProvider.notifier).setFlights([]);
-              ref.read(selectedPassportProvider.notifier).setFiles([]);
+              ref.read(selectedPassportBallysProvider.notifier).setFiles([]);
             },
             child: Stack(
               children: [

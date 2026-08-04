@@ -70,6 +70,7 @@ class _HotelAndRoomSelectionBallysBottomSheetState
     super.initState();
     hotelList = List.from(ref.read(selectedHotelBallysProvider));
     _preselectSoleGuest();
+    _syncRoomCountToGuests();
     _loadBrand();
     // Hotels, categories, room types and meal plans all arrive in one call.
     // Re-read rather than reuse the cached list: this sheet is where a hotel
@@ -209,6 +210,32 @@ String selectedByPaymnet = 'NA';
     _assignedGuestKeys.add(key);
   }
 
+  /// Rooms are counted per ticked guest who carries a package amount of their
+  /// own — a guest with no amount is on somebody else's package and shares
+  /// their room. Never below one: a room booked for guests who all share still
+  /// is a room.
+  int get _roomsForAssignedGuests {
+    final paying = widget.guests
+        .where((guest) => _assignedGuestKeys.contains(_guestKey(guest)))
+        .where((guest) => guest.packageAmount.trim().isNotEmpty)
+        .length;
+    return paying < 1 ? 1 : paying;
+  }
+
+  /// The room count is the ticked guests' business once there are any, so the
+  /// counter is read-only then and can't drift off the assignment.
+  bool get _roomCountLocked => _assignedGuestKeys.isNotEmpty;
+
+  /// Pins the room count to the ticked guests while [_roomCountLocked]. Call
+  /// after every change to the assignment.
+  void _syncRoomCountToGuests() {
+    if (!_roomCountLocked) return;
+    final rooms = _roomsForAssignedGuests;
+    if (rooms == numberOfRooms) return;
+    numberOfRooms = rooms;
+    _clearSelectedCost();
+  }
+
   /// When true the date range mirrors the reservation arrival / departure
   /// dates and the range picker is locked.
   bool _useReservationDates = false;
@@ -303,6 +330,7 @@ String selectedByPaymnet = 'NA';
   }
 
   void _updateRooms(int count) {
+    if (_roomCountLocked) return;
     if (count >= 1) {
       setState(() => numberOfRooms = count);
       _clearSelectedCost();
@@ -568,6 +596,7 @@ String selectedByPaymnet = 'NA';
       costIndex = hotel.costIndex;
 
       _applyAssignedGuests(hotel.assignedGuests);
+      _syncRoomCountToGuests();
       _guestAssignError = false;
 
       // Everything above came off the saved row, not the catalog — anything the
@@ -723,6 +752,7 @@ String selectedByPaymnet = 'NA';
       // start clean — except where there is only one guest to tick.
       _assignedGuestKeys.clear();
       _preselectSoleGuest();
+      _syncRoomCountToGuests();
       _guestAssignError = false;
     });
 
@@ -762,7 +792,11 @@ String selectedByPaymnet = 'NA';
     );
   }
 
-  Widget _buildCounter(String label, int count, Function(int) onCountChange) {
+  /// A head count. [enabled] false shows the number but takes the buttons away,
+  /// for a count the room's guests have already settled.
+  Widget _buildCounter(String label, int count, Function(int) onCountChange,
+      {bool enabled = true}) {
+    final buttonColor = enabled ? Colors.grey : Colors.grey.shade300;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -771,16 +805,20 @@ String selectedByPaymnet = 'NA';
           children: [
             Text(
               label,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: enabled ? null : Colors.grey,
+              ),
             ),
             Row(
               children: [
                 GestureDetector(
-                  onTap: () => onCountChange(count - 1),
+                  onTap: enabled ? () => onCountChange(count - 1) : null,
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.grey,
+                      color: buttonColor,
                       borderRadius: BorderRadius.circular(50),
                     ),
                     child: const Icon(Icons.remove, color: Colors.white),
@@ -792,16 +830,19 @@ String selectedByPaymnet = 'NA';
                   child: Text(
                     count.toString(),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 18),
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: enabled ? null : Colors.grey,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 GestureDetector(
-                  onTap: () => onCountChange(count + 1),
+                  onTap: enabled ? () => onCountChange(count + 1) : null,
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.grey,
+                      color: buttonColor,
                       borderRadius: BorderRadius.circular(50),
                     ),
                     child: const Icon(Icons.add, color: Colors.white),
@@ -864,6 +905,7 @@ String selectedByPaymnet = 'NA';
                       if (!allSelected) {
                         _assignedGuestKeys.addAll(selectable.map(_guestKey));
                       }
+                      _syncRoomCountToGuests();
                       _guestAssignError = false;
                     });
                   },
@@ -923,6 +965,7 @@ String selectedByPaymnet = 'NA';
                 } else {
                   _assignedGuestKeys.add(key);
                 }
+                _syncRoomCountToGuests();
                 _guestAssignError = false;
               });
             },
@@ -945,6 +988,7 @@ String selectedByPaymnet = 'NA';
                           } else {
                             _assignedGuestKeys.remove(key);
                           }
+                          _syncRoomCountToGuests();
                           _guestAssignError = false;
                         });
                       },
@@ -1140,7 +1184,12 @@ String selectedByPaymnet = 'NA';
                           _updateChildren,
                         ),
                         const SizedBox(height: 16),
-                        _buildCounter("Rooms", numberOfRooms, _updateRooms),
+                        _buildCounter(
+                          "Rooms",
+                          numberOfRooms,
+                          _updateRooms,
+                          enabled: !_roomCountLocked,
+                        ),
                         const SizedBox(height: 16),
 
                         // ── Stale selection notice ─────────────

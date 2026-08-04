@@ -568,7 +568,9 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
   //    dropdown dialog dismissal does NOT close the bottom sheet.
   /// Everyone currently on the reservation — guests already added to a card
   /// plus the member in the form and anyone sharing their package — flattened
-  /// to BM number, name and family-members status for the selector sheets.
+  /// to BM number, name, family-members status and package amount for the
+  /// selector sheets. The amount comes along because a room is counted per
+  /// guest who carries one, so the hotel sheet has to see it.
   List<AccompanyingMember> _reservationGuestSummary() {
     final summary = <AccompanyingMember>[];
 
@@ -581,6 +583,8 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
         mid: entry.mid,
         guestName: entry.guestName,
         hasFamilyMembers: entry.hasFamilyMembers,
+        packageAmount: entry.packageAmount,
+        sharedPackage: entry.sharedPackage,
       ));
       summary.addAll(entry.accompanyingMembers);
     }
@@ -592,6 +596,8 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
         mid: mid,
         guestName: name,
         hasFamilyMembers: _hasFamilyMembers,
+        packageAmount: _packageAmountController.text.trim(),
+        sharedPackage: _sharedPackage,
       ));
     }
     summary.addAll(_collectExtraMembers());

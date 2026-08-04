@@ -32,9 +32,15 @@ class PackageAmountFieldBallys extends ConsumerStatefulWidget {
   /// Accent colour for the selected currency filter chip.
   final Color accent;
 
-  /// When ticked the guest takes no package: the picker is locked, its value
-  /// cleared, and [validator] is skipped so the empty amount still passes.
+  /// When ticked the guest is on a shared package: [validator] is skipped so an
+  /// empty amount still passes. Unless [allowAmountWhenShared] is set the
+  /// picker is also locked and its value cleared.
   final bool noPackage;
+
+  /// Keeps the picker usable while [noPackage] is ticked, so a shared guest who
+  /// does carry an amount of their own can still have one entered. Ticking the
+  /// box then leaves whatever was already picked alone instead of clearing it.
+  final bool allowAmountWhenShared;
 
   /// Set to render the tick box beside the dropdown. Left null the box is
   /// hidden and the field behaves exactly as before.
@@ -52,6 +58,7 @@ class PackageAmountFieldBallys extends ConsumerStatefulWidget {
     this.enabled = true,
     this.accent = const Color(0xFFCC963A),
     this.noPackage = false,
+    this.allowAmountWhenShared = false,
     this.onNoPackageChanged,
     this.noPackageLabel = 'Shared',
   });
@@ -93,8 +100,10 @@ class _PackageAmountFieldState extends ConsumerState<PackageAmountFieldBallys> {
 
   /// Ticking the box drops any amount already picked — the two are mutually
   /// exclusive, and leaving a stale value behind would still be submitted.
+  /// With [allowAmountWhenShared] the amount is the guest's own either way, so
+  /// the tick only records that they are sharing and the value stays.
   void _setNoPackage(bool value) {
-    if (value) {
+    if (value && !widget.allowAmountWhenShared) {
       setState(() {
         _selected = null;
         _currencyFilter = null;
@@ -105,7 +114,8 @@ class _PackageAmountFieldState extends ConsumerState<PackageAmountFieldBallys> {
   }
 
   /// True while the picker accepts input.
-  bool get _inputEnabled => widget.enabled && !widget.noPackage;
+  bool get _inputEnabled =>
+      widget.enabled && (widget.allowAmountWhenShared || !widget.noPackage);
 
   @override
   Widget build(BuildContext context) {
@@ -209,7 +219,8 @@ class _PackageAmountFieldState extends ConsumerState<PackageAmountFieldBallys> {
       children: [
         // Filtering is pointless while the guest is on no package, so the
         // chips go away with the picker's input.
-        if (currencies.length > 1 && !widget.noPackage)
+        if (currencies.length > 1 &&
+            (widget.allowAmountWhenShared || !widget.noPackage))
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Wrap(

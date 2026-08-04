@@ -82,9 +82,10 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
   // Whether family members travel with the member currently in the form.
   bool _hasFamilyMembers = false;
 
-  // Ticked when the member takes no package: the amount picker is locked and
-  // an empty package amount is accepted on save.
-  bool _noPackageAmount = false;
+  // Ticked when the member is on a shared package: an empty package amount is
+  // accepted on save, and the tick itself is sent as a true/false of its own —
+  // the amount stays editable, since a shared package can still carry one.
+  bool _sharedPackage = false;
 
   DateTime? _arrivalDate;
   DateTime? _departureDate;
@@ -241,8 +242,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
           name: member.guestName,
           hasFamilyMembers: member.hasFamilyMembers,
           packageAmount: member.packageAmount,
-          // Saved with no amount means the row was on no package.
-          noPackage: member.packageAmount.trim().isEmpty,
+          sharedPackage: member.sharedPackage,
         ),
       );
     }
@@ -256,6 +256,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
               guestName: row.nameController.text.trim(),
               hasFamilyMembers: row.hasFamilyMembers,
               packageAmount: row.packageAmountController.text.trim(),
+              sharedPackage: row.sharedPackage,
             ))
         .where((m) => m.mid.isNotEmpty || m.guestName.isNotEmpty)
         .toList();
@@ -281,7 +282,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
         _showError('Guest ${i + 2}: both Member ID and Name are required');
         return false;
       }
-      if (packageAmount.isEmpty && !row.noPackage) {
+      if (packageAmount.isEmpty && !row.sharedPackage) {
         _showError('Guest ${i + 2}: Package Amount is required');
         return false;
       }
@@ -429,6 +430,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
             hasFamilyMembers: guest.hasFamilyMembers,
             accompanyingMembers: guest.accompanyingMembers,
             packageAmount: guest.packageAmount,
+            sharedPackage: guest.sharedPackage,
           ),
         );
       }
@@ -449,8 +451,10 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
               reservation.airticketDescrip.isNotEmpty ? "Yes" : "No",
           passportImages:
               await _materializePassports(reservation.passportImages),
-          // Pre-multi-guest records kept the amount on the reservation.
+          // Pre-multi-guest records kept the amount on the reservation, and
+          // carry no tick — a missing amount stands in for one.
           packageAmount: reservation.packageAmountDisplay,
+          sharedPackage: reservation.packageAmountDisplay.trim().isEmpty,
         ),
       );
     }
@@ -521,7 +525,9 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
     _reservationNoController.text = selectedReservation.reservNo;
     _noOfNightsController.text = selectedReservation.noOfNights.toString();
     _packageAmountController.text = selectedReservation.packageAmountDisplay;
-    _noPackageAmount = selectedReservation.packageAmountDisplay.trim().isEmpty;
+    // Reservation-level rows carry no tick of their own, so a missing amount
+    // still stands in for a shared package here.
+    _sharedPackage = selectedReservation.packageAmountDisplay.trim().isEmpty;
     _reservationnewnumberController.text =
         selectedReservation.reservationnewnumber ?? '';
   }
@@ -1021,6 +1027,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
       hasFamilyMembers: _hasFamilyMembers,
       accompanyingMembers: _collectExtraMembers(),
       packageAmount: _packageAmountController.text.trim(),
+      sharedPackage: _sharedPackage,
     );
   }
 
@@ -1049,9 +1056,9 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
       }
       _remarksController.text = entry.remarks;
       _packageAmountController.text = entry.packageAmount;
-      // A guest saved without an amount was on no package, so the tick has to
-      // come back with them or re-saving would demand one.
-      _noPackageAmount = entry.packageAmount.trim().isEmpty;
+      // The tick has to come back with the guest or re-saving would demand an
+      // amount they were saved without.
+      _sharedPackage = entry.sharedPackage;
       _airTicketRequisition = entry.airTicketRequisition;
       _hasFamilyMembers = entry.hasFamilyMembers;
       _loadExtraMembers(entry.accompanyingMembers);
@@ -1303,6 +1310,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
           allGuests.expand((g) => g.toAirTicketDetailsJson()).toList(),
       reservationnewnumber: _reservationnewnumberController.text,
       packageAmount: _packageAmountController.text,
+      isSharedAmount: _sharedPackage,
       // Each guest expands to itself plus anyone sharing its package, so two
       // members on one package travel as two `guests` rows against one set of
       // rooms / air tickets.
@@ -1347,7 +1355,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
         _packageAmountController.clear();
         _reservationNoController.clear();
         _hasFamilyMembers = false;
-        _noPackageAmount = false;
+        _sharedPackage = false;
         _clearExtraMembers();
         _arrivalDate = null;
         _departureDate = null;
@@ -1648,9 +1656,12 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
             PackageAmountFieldBallys(
               key: ValueKey(row),
               controller: row.packageAmountController,
-              noPackage: row.noPackage,
+              noPackage: row.sharedPackage,
+              // A shared member can still be billed an amount of their own, so
+              // ticking Shared records that and leaves the picker usable.
+              allowAmountWhenShared: true,
               onNoPackageChanged: (value) =>
-                  setState(() => row.noPackage = value),
+                  setState(() => row.sharedPackage = value),
               textStyle: TextStyle(
                 fontSize: fontSettings.fontSize,
                 fontWeight: fontSettings.fontWeight,
@@ -2055,6 +2066,8 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
                                                       .trim()
                                                       .isNotEmpty)
                                                     m.packageAmount.trim(),
+                                                  if (m.sharedPackage)
+                                                    "shared package",
                                                   if (m.hasFamilyMembers)
                                                     "family members included",
                                                 ].join(" — "),
@@ -2288,9 +2301,12 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
                         PackageAmountFieldBallys(
                           controller: _packageAmountController,
                           enabled: true,
-                          noPackage: _noPackageAmount,
+                          noPackage: _sharedPackage,
+                          // Shared only records that the package is shared —
+                          // an amount can still be picked alongside it.
+                          allowAmountWhenShared: true,
                           onNoPackageChanged: (value) =>
-                              setState(() => _noPackageAmount = value),
+                              setState(() => _sharedPackage = value),
                           textStyle: TextStyle(
                             fontSize: fontSettings.fontSize,
                             fontWeight: fontSettings.fontWeight,
@@ -3092,9 +3108,11 @@ class _ExtraMemberRow {
   String prefix;
   bool hasFamilyMembers;
 
-  /// Ticked when this member takes no package, which makes an empty
-  /// [packageAmountController] a valid state rather than a missing field.
-  bool noPackage;
+  /// Ticked when this member is on a shared package, which makes an empty
+  /// [packageAmountController] a valid state rather than a missing field. The
+  /// amount stays editable either way — a shared member may still have one —
+  /// so the tick is saved as its own true/false rather than inferred.
+  bool sharedPackage;
 
   _ExtraMemberRow({
     this.prefix = "BM",
@@ -3102,7 +3120,7 @@ class _ExtraMemberRow {
     String name = "",
     this.hasFamilyMembers = false,
     String packageAmount = "",
-    this.noPackage = false,
+    this.sharedPackage = false,
   })  : midNumberController = TextEditingController(text: midNumber),
         nameController = TextEditingController(text: name),
         packageAmountController = TextEditingController(text: packageAmount);

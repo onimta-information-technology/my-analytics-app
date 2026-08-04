@@ -358,6 +358,9 @@ class ReservationBallys {
           packageAmount: amount.isEmpty || currency.isEmpty
               ? amount
               : '$currency $amount',
+          // Rows written before the tick was sent only showed a shared package
+          // by carrying no amount, so that still stands in when it is absent.
+          sharedPackage: g['IsSharedAmount'] as bool? ?? amount.isEmpty,
         ));
       }
 

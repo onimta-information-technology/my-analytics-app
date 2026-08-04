@@ -681,6 +681,9 @@ class _ReservationViewScreenBallysState
   /// A guest's package amount as it should be shown, or `''` when there isn't
   /// one. Guests who carry no package of their own come back as a bare `0.00`
   /// with a blank currency, which is worth no line at all.
+  ///
+  /// The amount arrives as `"<currency> <number>"` — the currency is kept as
+  /// it is and the number is shown whole, grouped in thousands: `IND 10,000`.
   String _packageLabel(String raw) {
     final amount = raw.trim();
     final numeric = amount.isEmpty
@@ -688,7 +691,10 @@ class _ReservationViewScreenBallysState
         : double.tryParse(amount.replaceAll(RegExp(r'[^0-9.]'), ''));
     // No package of their own — they travel on another guest's package.
     if (numeric == null || numeric == 0) return 'Shared';
-    return amount;
+
+    final currency = amount.replaceAll(RegExp(r'[0-9.,]'), '').trim();
+    final formatted = NumberFormat('#,##0').format(numeric);
+    return currency.isEmpty ? formatted : '$currency $formatted';
   }
 
   // ── Guests section ─────────────────────────────────────────────────────

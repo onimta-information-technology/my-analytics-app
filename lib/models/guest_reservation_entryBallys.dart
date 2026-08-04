@@ -57,11 +57,18 @@ class AccompanyingMember {
   /// each is billed their own package, so the amount is per member.
   final String packageAmount;
 
+  /// The "Shared" tick beside this member's package amount: they are on a
+  /// shared package rather than one of their own. Recorded in its own right —
+  /// a shared member may still carry an amount — and travels to the API as
+  /// `IsSharedAmount` so an empty amount no longer has to stand in for it.
+  final bool sharedPackage;
+
   const AccompanyingMember({
     required this.mid,
     required this.guestName,
     this.hasFamilyMembers = false,
     this.packageAmount = '',
+    this.sharedPackage = false,
   });
 
   factory AccompanyingMember.fromJson(Map<String, dynamic> json) {
@@ -77,6 +84,9 @@ class AccompanyingMember {
       packageAmount: amount.isEmpty || currency.isEmpty
           ? amount
           : '$currency $amount',
+      // Records saved before the flag existed only marked a shared package by
+      // leaving the amount out, so that still stands in when it is absent.
+      sharedPackage: json['IsSharedAmount'] as bool? ?? amount.isEmpty,
     );
   }
 
@@ -85,12 +95,14 @@ class AccompanyingMember {
     String? guestName,
     bool? hasFamilyMembers,
     String? packageAmount,
+    bool? sharedPackage,
   }) {
     return AccompanyingMember(
       mid: mid ?? this.mid,
       guestName: guestName ?? this.guestName,
       hasFamilyMembers: hasFamilyMembers ?? this.hasFamilyMembers,
       packageAmount: packageAmount ?? this.packageAmount,
+      sharedPackage: sharedPackage ?? this.sharedPackage,
     );
   }
 }
@@ -117,6 +129,11 @@ class GuestReservationEntryBallys {
   /// travels per guest inside `guests` rather than on the reservation.
   final String packageAmount;
 
+  /// The "Shared" tick beside this guest's package amount — see
+  /// [AccompanyingMember.sharedPackage]. Independent of [packageAmount]: a
+  /// guest on a shared package may still have an amount of their own.
+  final bool sharedPackage;
+
   GuestReservationEntryBallys({
     required this.mid,
     required this.guestName,
@@ -130,6 +147,7 @@ class GuestReservationEntryBallys {
     this.hasFamilyMembers = false,
     this.accompanyingMembers = const [],
     this.packageAmount = '',
+    this.sharedPackage = false,
   });
 
   /// Simplified guest entry sent inside the `guests` array.
@@ -142,6 +160,7 @@ class GuestReservationEntryBallys {
       'HasFamilyMembers': hasFamilyMembers,
       'PackageAmount': packageAmountToInt(packageAmount),
       'CurrencyType': packageAmountCurrency(packageAmount),
+      'IsSharedAmount': sharedPackage,
     };
   }
 
@@ -149,6 +168,11 @@ class GuestReservationEntryBallys {
   /// top-level `guests` array. Shared members repeat the owner's dates and
   /// contribute no rooms or air tickets of their own, but each carries its own
   /// package amount.
+  ///
+  /// A member row also names the guest it hangs off in `PrimaryBMNumber` and is
+  /// flagged `IsSharedPackage`, which is what marks it as one of that guest's
+  /// members on the way back — as opposed to `IsSharedAmount`, which is the
+  /// member's own "Shared" tick beside their package amount.
   List<Map<String, dynamic>> toGuestsJson() {
     return [
       toJson(),
@@ -156,11 +180,14 @@ class GuestReservationEntryBallys {
         (m) => {
           'BMNumber': m.mid,
           'GuestName': m.guestName,
+          'PrimaryBMNumber': mid,
+          'IsSharedPackage': true,
           'ArrivalDate': arrivalDate?.toIso8601String(),
           'DepartureDate': departureDate?.toIso8601String(),
           'HasFamilyMembers': m.hasFamilyMembers,
           'PackageAmount': packageAmountToInt(m.packageAmount),
           'CurrencyType': packageAmountCurrency(m.packageAmount),
+          'IsSharedAmount': m.sharedPackage,
         },
       ),
     ];
@@ -221,6 +248,7 @@ class GuestReservationEntryBallys {
     bool? hasFamilyMembers,
     List<AccompanyingMember>? accompanyingMembers,
     String? packageAmount,
+    bool? sharedPackage,
   }) {
     return GuestReservationEntryBallys(
       mid: mid ?? this.mid,
@@ -235,6 +263,7 @@ class GuestReservationEntryBallys {
       hasFamilyMembers: hasFamilyMembers ?? this.hasFamilyMembers,
       accompanyingMembers: accompanyingMembers ?? this.accompanyingMembers,
       packageAmount: packageAmount ?? this.packageAmount,
+      sharedPackage: sharedPackage ?? this.sharedPackage,
     );
   }
 }

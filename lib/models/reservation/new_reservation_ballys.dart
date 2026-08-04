@@ -13,6 +13,11 @@ class NewReservationBallys {
   String? reservationNo;
   String? reservationnewnumber;
   String? packageAmount;
+
+  /// The "Shared" tick beside the package amount: the reservation is on a
+  /// shared package. Sent in its own right so an empty [packageAmount] no
+  /// longer has to stand in for it — a shared package may still carry one.
+  bool isSharedAmount;
   String? selectedMarketingPerson;
   List<Map<String, dynamic>>? guests;
   List<Map<String, dynamic>>? passportImages;
@@ -31,6 +36,7 @@ class NewReservationBallys {
     this.reservationNo,
     this.reservationnewnumber,
     this.packageAmount,
+    this.isSharedAmount = false,
     this.selectedMarketingPerson,
     this.guests,
     this.passportImages,
@@ -51,6 +57,7 @@ class NewReservationBallys {
       'reservation_no': reservationNo,
       'manual_reserv_no': reservationnewnumber,
       'package_amount': packageAmount,
+      'is_shared_amount': isSharedAmount,
       'selected_marketing_person': selectedMarketingPerson,
       'guests': guests,
       'passport_images': passportImages,

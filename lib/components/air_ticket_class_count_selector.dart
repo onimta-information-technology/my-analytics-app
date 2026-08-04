@@ -12,11 +12,18 @@ class AirTicketClassCountSelector extends StatelessWidget {
   final ValueChanged<List<AirTicketClassCount>> onChanged;
   final bool hasError;
 
+  /// Seats the ticket may hold in total, across every class. Set when the
+  /// guests it is booked for bring no family with them — one seat each, so a
+  /// lone guest gets one class and one seat. Null means no ceiling, which is
+  /// what family members need since their headcount is not known here.
+  final int? maxSeats;
+
   const AirTicketClassCountSelector({
     super.key,
     required this.selectedClasses,
     required this.onChanged,
     this.hasError = false,
+    this.maxSeats,
   });
 
   /// The cabin classes on offer — the same list, in the same order and with the
@@ -39,6 +46,8 @@ class AirTicketClassCountSelector extends StatelessWidget {
   /// The picks stay in [classes] order however they were ticked, so the ticket
   /// always reads the same way.
   void _toggle(int id, String name, bool selected) {
+    // A new class needs a seat to sit in, and at the ceiling there is none.
+    if (selected && _selected(id) == null && _atLimit) return;
     final next = List<AirTicketClassCount>.from(selectedClasses)
       ..removeWhere((item) => item.id == id);
     if (selected) {
@@ -52,6 +61,8 @@ class AirTicketClassCountSelector extends StatelessWidget {
     // One seat is the floor — no seats means the class is not on the ticket,
     // which is what unticking it is for.
     if (count < 1) return;
+    final current = _selected(id)?.count ?? 0;
+    if (count > current && _atLimit) return;
     onChanged(selectedClasses
         .map((item) => item.id == id ? item.copyWith(count: count) : item)
         .toList());
@@ -62,10 +73,17 @@ class AirTicketClassCountSelector extends StatelessWidget {
     return index == -1 ? classes.length : index;
   }
 
+  /// Seats already on the ticket, across every class.
+  int get _totalSeats =>
+      selectedClasses.fold<int>(0, (sum, item) => sum + item.count);
+
+  /// No more seats can go on the ticket, so ticking another class and adding
+  /// to a count are both off.
+  bool get _atLimit => maxSeats != null && _totalSeats >= maxSeats!;
+
   @override
   Widget build(BuildContext context) {
-    final totalSeats =
-        selectedClasses.fold<int>(0, (sum, item) => sum + item.count);
+    final totalSeats = _totalSeats;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,9 +96,7 @@ class AirTicketClassCountSelector extends StatelessWidget {
                 OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
             prefixIcon: const Icon(Icons.event_seat_outlined),
             errorText: hasError ? "Select at least one class" : null,
-            helperText: selectedClasses.isEmpty
-                ? "Pick one or more classes"
-                : "Total tickets: $totalSeats",
+            helperText: _helperText(totalSeats),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -97,21 +113,44 @@ class AirTicketClassCountSelector extends StatelessWidget {
     );
   }
 
+  /// Says how many seats are on the ticket and, where there is a ceiling, how
+  /// many it may hold — a single guest with no family sees "1 of 1" and can go
+  /// no further.
+  String _helperText(int totalSeats) {
+    if (maxSeats != null) {
+      final seatWord = maxSeats == 1 ? "ticket" : "tickets";
+      if (selectedClasses.isEmpty) {
+        return "Pick a class — $maxSeats $seatWord for the guests on this ticket";
+      }
+      return "Total tickets: $totalSeats of $maxSeats";
+    }
+    return selectedClasses.isEmpty
+        ? "Pick one or more classes"
+        : "Total tickets: $totalSeats";
+  }
+
   Widget _classRow({required int id, required String name}) {
     final selected = _selected(id);
+    // A class that is not on the ticket can only be ticked while there are
+    // seats left for it.
+    final canTick = selected != null || !_atLimit;
 
     return Row(
       children: [
         Checkbox(
           value: selected != null,
-          onChanged: (value) => _toggle(id, name, value ?? false),
+          onChanged:
+              canTick ? (value) => _toggle(id, name, value ?? false) : null,
         ),
         Expanded(
           child: GestureDetector(
-            onTap: () => _toggle(id, name, selected == null),
+            onTap: canTick ? () => _toggle(id, name, selected == null) : null,
             child: Text(
               name,
-              style: const TextStyle(fontSize: 16),
+              style: TextStyle(
+                fontSize: 16,
+                color: canTick ? null : Colors.grey,
+              ),
             ),
           ),
         ),
@@ -138,7 +177,9 @@ class AirTicketClassCountSelector extends StatelessWidget {
               ),
               _countButton(
                 icon: Icons.add,
-                onTap: () => _setCount(id, selected.count + 1),
+                // Adding a seat is off once the ticket holds a seat for every
+                // guest it is booked for.
+                onTap: _atLimit ? null : () => _setCount(id, selected.count + 1),
               ),
             ],
           ),

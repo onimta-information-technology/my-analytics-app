@@ -91,6 +91,7 @@ class _AirTicketsSelectionBallysScreenState
     flightList = List.from(ref.read(selectedFlightBallysProvider));
     _passportFiles = List.from(ref.read(selectedPassportProvider));
     _preselectSoleGuest();
+    _syncHeadCountsToGuests();
     _getAirports();
     _loadBrand();
     _loadContactPersons();
@@ -221,6 +222,58 @@ class _AirTicketsSelectionBallysScreenState
     _assignedGuestKeys.add(key);
   }
 
+  /// Seats this ticket may hold across all classes: one per ticked guest, so a
+  /// lone guest gets a single class and a single seat. Null is no ceiling —
+  /// what a guest who brings family needs, since the family flying with them is
+  /// counted on the ticket, not here.
+  int? get _maxTicketSeats {
+    if (_ticketHasFamily) return null;
+    final assigned = _assignedGuestKeys.length;
+    return assigned == 0 ? null : assigned;
+  }
+
+  /// Whether any guest this ticket is booked for brings family along. Without
+  /// family there is nobody on the ticket but the guests themselves.
+  bool get _ticketHasFamily => widget.guests
+      .where((guest) => _assignedGuestKeys.contains(_guestKey(guest)))
+      .any((guest) => guest.hasFamilyMembers);
+
+  /// Head counts are the guests and nothing else once the ticket is assigned to
+  /// guests who bring no family: one seat each, no children, no infants. The
+  /// counters are read-only then, so the numbers can't drift off the ticket.
+  bool get _headCountsLocked =>
+      _assignedGuestKeys.isNotEmpty && !_ticketHasFamily;
+
+  /// Pins the head counts to the ticked guests while [_headCountsLocked]. Call
+  /// after every change to the assignment — ticking a guest who brings family
+  /// hands the counters back, unticking them takes the counters away again.
+  void _syncHeadCountsToGuests() {
+    if (!_headCountsLocked) return;
+    numberOfGuests = _assignedGuestKeys.length;
+    numberOfChildren = 0;
+    numberOfInfants = 0;
+  }
+
+  /// Unticking a guest can leave more seats on the ticket than the rest of them
+  /// can hold, so the classes are pared back to fit — counts first, then whole
+  /// classes off the end.
+  void _trimTicketClassesToLimit() {
+    final maxSeats = _maxTicketSeats;
+    if (maxSeats == null) return;
+    final trimmed = <AirTicketClassCount>[];
+    var used = 0;
+    for (final item in _ticketClasses) {
+      final remaining = maxSeats - used;
+      if (remaining < 1) break;
+      final entry =
+          item.count > remaining ? item.copyWith(count: remaining) : item;
+      trimmed.add(entry);
+      used += entry.count;
+    }
+    // Within the ceiling this is the same list it started as.
+    _ticketClasses = trimmed;
+  }
+
   /// Who the ticket being added is for: every guest on the reservation, ticked
   /// one by one or several at a time. Each ticked guest gets the ticket booked
   /// against their BM number.
@@ -271,6 +324,8 @@ class _AirTicketsSelectionBallysScreenState
                         _assignedGuestKeys.addAll(selectable.map(_guestKey));
                       }
                       _guestAssignError = false;
+                      _trimTicketClassesToLimit();
+                      _syncHeadCountsToGuests();
                     });
                   },
                   style: TextButton.styleFrom(
@@ -330,6 +385,8 @@ class _AirTicketsSelectionBallysScreenState
                   _assignedGuestKeys.add(key);
                 }
                 _guestAssignError = false;
+                _trimTicketClassesToLimit();
+                _syncHeadCountsToGuests();
               });
             },
       child: Padding(
@@ -352,6 +409,8 @@ class _AirTicketsSelectionBallysScreenState
                             _assignedGuestKeys.remove(key);
                           }
                           _guestAssignError = false;
+                          _trimTicketClassesToLimit();
+                          _syncHeadCountsToGuests();
                         });
                       },
               ),
@@ -477,6 +536,7 @@ String? _selectedContactPerson;
   }
 
   void _updateAdults(count) {
+    if (_headCountsLocked) return;
     if (count >= 1) {
       setState(() {
         numberOfGuests = count;
@@ -484,6 +544,7 @@ String? _selectedContactPerson;
   }
 
   void _updateChildren(count) {
+    if (_headCountsLocked) return;
     if (count >= 0) {
       setState(() {
         numberOfChildren = count;
@@ -491,6 +552,7 @@ String? _selectedContactPerson;
   }
 
   void _updateInfants(count) {
+    if (_headCountsLocked) return;
     if (count >= 0) {
       setState(() {
         numberOfInfants = count;
@@ -678,6 +740,7 @@ String? _selectedContactPerson;
       _airlineKey = UniqueKey();
 
       _applyAssignedGuests(flight.assignedGuests);
+      _syncHeadCountsToGuests();
       _guestAssignError = false;
     });
   }
@@ -1167,6 +1230,7 @@ String? _selectedContactPerson;
       // start clean — except where there is only one guest to tick.
       _assignedGuestKeys.clear();
       _preselectSoleGuest();
+      _syncHeadCountsToGuests();
       _guestAssignError = false;
     });
   }
@@ -1362,8 +1426,12 @@ String? _selectedContactPerson;
     );
   }
 
+  /// A head count. [enabled] false shows the number but takes the buttons away,
+  /// for a count the ticket's guests have already settled.
   Widget _buildCounter(
-      String label, int count, int type, Function(int) onCountChange) {
+      String label, int count, int type, Function(int) onCountChange,
+      {bool enabled = true}) {
+    final buttonColor = enabled ? Colors.grey : Colors.grey.shade300;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1371,16 +1439,18 @@ String? _selectedContactPerson;
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(label,
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: enabled ? null : Colors.grey)),
             Row(
               children: [
                 GestureDetector(
-                  onTap: () => onCountChange(count - 1),
+                  onTap: enabled ? () => onCountChange(count - 1) : null,
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.grey,
+                      color: buttonColor,
                       borderRadius: BorderRadius.circular(50),
                     ),
                     child: const Icon(Icons.remove, color: Colors.white),
@@ -1392,16 +1462,19 @@ String? _selectedContactPerson;
                   child: Text(
                     count.toString(),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 18),
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: enabled ? null : Colors.grey,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 GestureDetector(
-                  onTap: () => onCountChange(count + 1),
+                  onTap: enabled ? () => onCountChange(count + 1) : null,
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.grey,
+                      color: buttonColor,
                       borderRadius: BorderRadius.circular(50),
                     ),
                     child: const Icon(Icons.add, color: Colors.white),
@@ -1447,13 +1520,27 @@ String? _selectedContactPerson;
                       ],
                       const SizedBox(height: 16),
                       _buildCounter("Guests", numberOfGuests, 1,
-                          (count) => _updateAdults(count)),
+                          (count) => _updateAdults(count),
+                          enabled: !_headCountsLocked),
                       const SizedBox(height: 12),
                       _buildCounter("Children", numberOfChildren, 2,
-                          (count) => _updateChildren(count)),
+                          (count) => _updateChildren(count),
+                          enabled: !_headCountsLocked),
                       const SizedBox(height: 12),
                       _buildCounter("Infants", numberOfInfants, 3,
-                          (count) => _updateInfants(count)),
+                          (count) => _updateInfants(count),
+                          enabled: !_headCountsLocked),
+                      if (_headCountsLocked) ...[
+                        const SizedBox(height: 8),
+                        const Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            "This ticket is for the selected guest only — no family members to add",
+                            style:
+                                TextStyle(fontSize: 12, color: Colors.black54),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 20),
                       const Align(
                         alignment: Alignment.topLeft,
@@ -1606,6 +1693,7 @@ String? _selectedContactPerson;
                       AirTicketClassCountSelector(
                         hasError: _airTicketClassError,
                         selectedClasses: _ticketClasses,
+                        maxSeats: _maxTicketSeats,
                         onChanged: (classes) {
                           setState(() {
                             _ticketClasses = classes;

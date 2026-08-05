@@ -10,11 +10,17 @@ class PendingCountRepository {
   Future<PendingCounts> getPendingCounts() async {
     print('Fetching pending counts from API...');
      final spName = await StorageUtil.getStoredProcedureName();
+    final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+    final isBellagio = apiUrl.contains('bty.world');
+
+    // Bellagio runs its own stored-procedure branch; Ballys stays on 88965.
+    final iid = isBellagio ? 8896590 : 88965;
+
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
         {
-          "Para_Data": 88965,
+          "Para_Data": iid,
           "Para_Direction": "Input",
           "Para_Lenth": 1,
           "Para_Name": "@Iid",

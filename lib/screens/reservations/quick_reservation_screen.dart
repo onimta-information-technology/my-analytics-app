@@ -54,6 +54,10 @@ const List<String> kHireTypes = [
   'Drop',
 ];
 
+// Placeholder saved as the transport drop location when the guest has not
+// settled on one yet and will call it in later.
+const String kGuestWillInform = 'Guest Will Inform';
+
 // Digit count allowed in the contact number, excluding the country code.
 const int kMinContactDigits = 9;
 const int kMaxContactDigits = 10;
@@ -299,6 +303,9 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
   String? _t_hireType;
   String _t_pickupPlaceId = '';
   String _t_dropPlaceId = '';
+  // When set, no place is searched at all — the drop location is saved as
+  // [kGuestWillInform] and the guest phones the real one in later.
+  bool _t_guestWillInformDrop = false;
   String _t_silkRoute = 'No';
   String _t_airportPickup = 'No';
 
@@ -1025,6 +1032,18 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     };
   }
 
+  /// Swaps the transport drop location between a searched place and the
+  /// "Guest Will Inform" placeholder. Any place already picked is dropped when
+  /// the placeholder is turned on so a stale place id can never be saved with
+  /// it.
+  void _setTransportGuestWillInformDrop(bool value) {
+    setState(() {
+      _t_guestWillInformDrop = value;
+      _t_dropPlaceId = '';
+      _t_dropLocationCtrl.text = value ? kGuestWillInform : '';
+    });
+  }
+
   void _resetTransportFields() {
     _t_pickupDateCtrl.clear();
     _t_pickupTimeCtrl.clear();
@@ -1043,6 +1062,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     _t_hireType = null;
     _t_pickupPlaceId = '';
     _t_dropPlaceId = '';
+    _t_guestWillInformDrop = false;
     _t_silkRoute = 'No';
     _t_airportPickup = 'No';
     _t_passportFiles = [];
@@ -4227,6 +4247,50 @@ class _TransportForm extends StatelessWidget {
   final _QuickReservationScreenState state;
   const _TransportForm({super.key, required this.state});
 
+  /// Marks the drop location as "the guest will call it in", for bookings made
+  /// before the guest has settled on where they are going.
+  Widget _guestWillInformCheckbox(Color accent) {
+    final checked = state._t_guestWillInformDrop;
+    return InkWell(
+      onTap: () => state._setTransportGuestWillInformDrop(!checked),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: checked ? accent : Colors.grey.shade300,
+            width: checked ? 1.8 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Checkbox(
+              value: checked,
+              activeColor: accent,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+              onChanged: (v) =>
+                  state._setTransportGuestWillInformDrop(v ?? false),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                kGuestWillInform,
+                style: TextStyle(
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.bold,
+                  color: checked ? accent : Colors.black,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     const accent = _QuickReservationScreenState._transportColor;
@@ -4495,6 +4559,9 @@ class _TransportForm extends StatelessWidget {
                   controller: state._t_dropLocationCtrl,
                   textStyle: kInputTextStyle,
                   accent: accent,
+                  // Held by the "Guest Will Inform" placeholder — there is
+                  // nothing to search for until the guest calls it in.
+                  enabled: !state._t_guestWillInformDrop,
                   sheetTitle: 'Search Drop Location',
                   decoration: _fieldDeco(
                     'Drop Location *',
@@ -4512,6 +4579,8 @@ class _TransportForm extends StatelessWidget {
                     return null;
                   },
                 ),
+                const SizedBox(height: 8),
+                _guestWillInformCheckbox(accent),
               ],
             ),
           ),

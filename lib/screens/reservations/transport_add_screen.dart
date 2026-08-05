@@ -41,6 +41,10 @@ const List<String> _kCarTypes = [
 
 const List<String> _kHireTypes = ['Pickup', 'Drop'];
 
+// Placeholder saved as the drop location when the guest has not settled on one
+// yet and will call it in later.
+const String _kGuestWillInform = 'Guest Will Inform';
+
 // Digit count allowed in the contact number, excluding the country code.
 const int _kMinContactDigits = 9;
 const int _kMaxContactDigits = 10;
@@ -95,6 +99,9 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
   Country _country = _defaultCountry();
   DateTime? _pickupDate;
   TimeOfDay? _pickupTime;
+  // When set, no place is searched at all — the drop location is saved as
+  // [_kGuestWillInform] and the guest phones the real one in later.
+  bool _guestWillInformDrop = false;
   // One Car Type selection per vehicle — resized whenever "No of Vehicles"
   // changes (see _syncVehicleDetailsWithCount). Defaults to 'Normal Car'.
   List<String?> _carTypes = ['Normal Car'];
@@ -555,6 +562,17 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
     );
   }
 
+  /// Swaps the drop location between a searched place and the "Guest Will
+  /// Inform" placeholder. Any place already picked is dropped when the
+  /// placeholder is turned on so a stale place id can never be saved with it.
+  void _setGuestWillInformDrop(bool value) {
+    setState(() {
+      _guestWillInformDrop = value;
+      _dropPlaceId = '';
+      _dropLocationCtrl.text = value ? _kGuestWillInform : '';
+    });
+  }
+
   String _fmtDate(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
@@ -607,6 +625,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
     _country = _defaultCountry();
     _pickupDate = null;
     _pickupTime = null;
+    _guestWillInformDrop = false;
     _carTypes = ['Normal Car'];
     for (final c in _passengerCtrls) {
       c.dispose();
@@ -1158,10 +1177,16 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
                   },
                 ),
                 const SizedBox(height: 12),
+                    
+                _guestWillInformCheckbox(),
+                      const SizedBox(height: 8),
                 LocationSearchField(
                   controller: _dropLocationCtrl,
                   textStyle: _kInputTextStyle,
                   accent: _kAccent,
+                  // Held by the "Guest Will Inform" placeholder — there is
+                  // nothing to search for until the guest calls it in.
+                  enabled: !_guestWillInformDrop,
                   sheetTitle: 'Search Drop Location',
                   decoration: _fieldDeco(
                     'Drop Location *',
@@ -1178,6 +1203,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
                     return null;
                   },
                 ),
+      
                 const SizedBox(height: 12),
 
                 // Contact number with country code
@@ -1301,6 +1327,48 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
         borderSide: const BorderSide(color: _kAccent, width: 1.8),
+      ),
+    );
+  }
+
+  /// Marks the drop location as "the guest will call it in", for bookings made
+  /// before the guest has settled on where they are going.
+  Widget _guestWillInformCheckbox() {
+    return InkWell(
+      onTap: () => _setGuestWillInformDrop(!_guestWillInformDrop),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: _guestWillInformDrop ? _kAccent : Colors.grey.shade300,
+            width: _guestWillInformDrop ? 1.8 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Checkbox(
+              value: _guestWillInformDrop,
+              activeColor: _kAccent,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+              onChanged: (v) => _setGuestWillInformDrop(v ?? false),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                _kGuestWillInform,
+                style: TextStyle(
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.bold,
+                  color: _guestWillInformDrop ? _kAccent : Colors.black,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

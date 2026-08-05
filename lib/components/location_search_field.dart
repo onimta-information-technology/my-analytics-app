@@ -20,6 +20,10 @@ class LocationSearchField extends StatelessWidget {
 
   final FormFieldValidator<String>? validator;
 
+  /// When false the search sheet can't be opened and the value shown is left
+  /// alone — for callers that fill the field from somewhere else.
+  final bool enabled;
+
   const LocationSearchField({
     super.key,
     required this.controller,
@@ -29,6 +33,7 @@ class LocationSearchField extends StatelessWidget {
     required this.sheetTitle,
     required this.onSelected,
     this.validator,
+    this.enabled = true,
   });
 
   @override
@@ -41,29 +46,35 @@ class LocationSearchField extends StatelessWidget {
       minLines: 1,
       validator: validator,
       decoration: decoration.copyWith(
-        suffixIcon: controller.text.isEmpty
+        suffixIcon: !enabled
+            ? null
+            : controller.text.isEmpty
             ? Icon(Icons.search, color: accent)
             : IconButton(
                 icon: Icon(Icons.clear, color: accent),
                 onPressed: () => onSelected('', ''),
               ),
       ),
-      onTap: () async {
-        final result = await showModalBottomSheet<PlacePrediction>(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Colors.white,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          builder: (_) => _PlaceSearchSheet(
-            title: sheetTitle,
-            accent: accent,
-            initialTerm: controller.text,
-          ),
-        );
-        if (result != null) onSelected(result.description, result.placeId);
-      },
+      onTap: !enabled
+          ? null
+          : () async {
+              final result = await showModalBottomSheet<PlacePrediction>(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.white,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                builder: (_) => _PlaceSearchSheet(
+                  title: sheetTitle,
+                  accent: accent,
+                  initialTerm: controller.text,
+                ),
+              );
+              if (result != null) {
+                onSelected(result.description, result.placeId);
+              }
+            },
     );
   }
 }

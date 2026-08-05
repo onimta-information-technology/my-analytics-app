@@ -7,9 +7,11 @@ import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/components/developer_banner.dart';
 import 'package:ballys_reservation_app/components/localNotificationService.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
+import 'package:ballys_reservation_app/data/services/notification_store.dart';
 import 'package:ballys_reservation_app/data/services/versioncehck_service.dart';
 import 'package:ballys_reservation_app/models/Guest/guest_booking.dart';
 import 'package:ballys_reservation_app/navigation/app_navigation.dart';
+import 'package:ballys_reservation_app/providers/app_notifications_provider.dart';
 import 'package:ballys_reservation_app/providers/auth_provider.dart';
 import 'package:ballys_reservation_app/providers/guest_booking_provider.dart';
 import 'package:ballys_reservation_app/utils/badge_sync_helper.dart';
@@ -34,6 +36,14 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
+
+  // Keep non-chat notifications in local history so the home screen bell shows
+  // them the next time the app is opened.
+  try {
+    await NotificationStore.add(message);
+  } catch (e) {
+    print('Error storing background notification: $e');
+  }
 
   try {
     final badgeService = BadgeService();
@@ -156,6 +166,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     if (state == AppLifecycleState.resumed) {
       _syncBadgeIfLoggedIn();
+      _reloadNotificationHistory();
     } else if (state == AppLifecycleState.paused) {
       _syncBadgeIfLoggedIn();
     }
@@ -192,6 +203,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     });
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      _recordNotification(message);
+
       if (message.data['msg_type'] == '35') {
         _showForegroundNotification(message);
         _badgeService.addBadge(1);
@@ -204,6 +217,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     // Handle notification tap when app is in background
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      _recordNotification(message);
       BadgeSyncHelper.syncBadgeWithServer();
       _handleNotificationTap(message);
     });
@@ -213,10 +227,33 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       RemoteMessage? message,
     ) {
       if (message != null) {
+        _recordNotification(message);
         BadgeSyncHelper.syncBadgeWithServer();
         _handleNotificationTap(message);
       }
     });
+  }
+
+  /// Stores the push in the home screen's notification list.
+  /// Chat pushes are skipped by [NotificationStore], and duplicates
+  /// (already saved by the background isolate) are ignored.
+  void _recordNotification(RemoteMessage message) {
+    try {
+      globalContainer
+          .read(appNotificationsProvider.notifier)
+          .addFromMessage(message);
+    } catch (e) {
+      print('Error recording notification: $e');
+    }
+  }
+
+  /// Picks up notifications the background isolate wrote while we were away.
+  void _reloadNotificationHistory() {
+    try {
+      globalContainer.read(appNotificationsProvider.notifier).load();
+    } catch (e) {
+      print('Error reloading notification history: $e');
+    }
   }
 
   Future<void> _showForegroundNotification(RemoteMessage message) async {

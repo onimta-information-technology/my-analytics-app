@@ -39,6 +39,7 @@ import 'package:ballys_reservation_app/screens/guest_booking_screen.dart';
 import 'package:ballys_reservation_app/screens/home_screen.dart';
 import 'package:ballys_reservation_app/screens/inactive_members.dart';
 import 'package:ballys_reservation_app/screens/member_visits.dart';
+import 'package:ballys_reservation_app/screens/notifications_screen.dart';
 import 'package:ballys_reservation_app/screens/member_visits/cdd_view_screen.dart';
 import 'package:ballys_reservation_app/screens/member_visits/customer_due_diligence_screen.dart';
 import 'package:ballys_reservation_app/screens/member_visits/sales_persons.dart';
@@ -240,6 +241,26 @@ class AppNavigation {
                     },
                   ),
                 ],
+              ),
+              GoRoute(
+                path: 'notifications',
+                pageBuilder: (context, state) {
+                  return CustomTransitionPage(
+                    fullscreenDialog: false,
+                    key: state.pageKey,
+                    child: const NotificationsScreen(),
+                    transitionsBuilder:
+                        (context, animation, secondaryAnimation, child) {
+                          return FadeTransition(
+                            opacity: CurveTween(
+                              curve: Curves.easeInOutCirc,
+                            ).animate(animation),
+                            child: child,
+                          );
+                        },
+                  );
+                },
+                routes: const [],
               ),
               GoRoute(
                 path: 'member-visits',

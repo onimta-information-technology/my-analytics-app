@@ -210,14 +210,14 @@ String selectedByPaymnet = 'NA';
     _assignedGuestKeys.add(key);
   }
 
-  /// Rooms are counted per ticked guest who carries a package amount of their
-  /// own — a guest with no amount is on somebody else's package and shares
-  /// their room. Never below one: a room booked for guests who all share still
-  /// is a room.
+  /// Rooms are counted per ticked guest on a package of their own — a guest
+  /// with "Shared" ticked is on somebody else's package and shares their room,
+  /// whether or not they carry an amount of their own. Never below one: a room
+  /// booked for guests who all share still is a room.
   int get _roomsForAssignedGuests {
     final paying = widget.guests
         .where((guest) => _assignedGuestKeys.contains(_guestKey(guest)))
-        .where((guest) => guest.packageAmount.trim().isNotEmpty)
+        .where((guest) => !guest.sharedPackage)
         .length;
     return paying < 1 ? 1 : paying;
   }

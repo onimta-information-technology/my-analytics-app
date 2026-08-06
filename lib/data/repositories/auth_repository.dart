@@ -121,7 +121,7 @@ print("hellooo");
           otgiChk: tableData['G_CHK'],
           bgApp: tableData['BG_APP'],
           bgChk: tableData['BG_CHK'],
-
+          marketingP: User.parseMarketingP(tableData),
         );
       } else {
         // Handle login failure cases

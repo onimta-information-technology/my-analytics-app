@@ -1,13 +1,15 @@
 import 'package:ballys_reservation_app/data/repositories/birthday_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/birthday.dart';
+import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class BirthdaysNotifier extends StateNotifier<Map<String, List<Birthday>>> {
   final BirthdayRepository birthdayRepository;
+  final Ref ref;
 
-  BirthdaysNotifier(this.birthdayRepository)
+  BirthdaysNotifier(this.birthdayRepository, this.ref)
     : super({
         'past': [],
         'recentPast': [],
@@ -24,7 +26,10 @@ void clearBirthdays() {
   }
   Future<Map<String, List<Birthday>>> getBirthdays() async {
     try {
-      final birthdayMap = await birthdayRepository.getBirthdays();
+      final appMode = ref.read(appmodeSettingsProvider).appMode;
+      final birthdayMap = await birthdayRepository.getBirthdays(
+        isMyDataMode: appMode == AppMode.myData,
+      );
       print('birthdays provider -> past: ${birthdayMap['past']?.length}, recentPast: ${birthdayMap['recentPast']?.length}, recentUpcoming: ${birthdayMap['recentUpcoming']?.length}, upcoming: ${birthdayMap['upcoming']?.length}');
       state = {
         'past': birthdayMap['past'] ?? [],
@@ -122,5 +127,17 @@ final birthdayProvider =
       ref,
     ) {
       final birthdayRepository = ref.read(birthdaysRepositoryProvider);
-      return BirthdaysNotifier(birthdayRepository);
+      final notifier = BirthdaysNotifier(birthdayRepository, ref);
+
+      // Birthdays are fetched under a scope code that depends on the app mode,
+      // so cached results go stale the moment the mode changes. Dropping them
+      // here makes BirthdayScreen hit the API again next time it opens instead
+      // of showing the previous mode's data until a manual refresh.
+      ref.listen<AppModeSettings>(appmodeSettingsProvider, (previous, next) {
+        if (previous?.appMode != next.appMode) {
+          notifier.clearBirthdays();
+        }
+      });
+
+      return notifier;
     });

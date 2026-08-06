@@ -244,22 +244,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }
   }
 Future<void> _loadMissingData(GuestsState guestsState) async {
-  String? salesCode = await StorageUtil.getSalesCode();
-  if (salesCode == null || salesCode.isEmpty) return;
-
   final currentMode = ref.read(appmodeSettingsProvider).appMode;
+  final scopeCode = await _guestScopeCode(currentMode);
+  if (scopeCode == null || scopeCode.isEmpty) return;
 
   // Fire only the calls that are missing — don't touch already-loaded data
   if (guestsState.todayGuests.isEmpty) {
-    unawaited(_fetchAndUpdateCount(9009, "today", salesCode, currentMode));
+    unawaited(_fetchAndUpdateCount(9009, "today", scopeCode, currentMode));
   }
   if (guestsState.yesterdayGuests.isEmpty) {
-    unawaited(_fetchAndUpdateCount(9010, "yesterday", salesCode, currentMode));
+    unawaited(_fetchAndUpdateCount(9010, "yesterday", scopeCode, currentMode));
   }
   if (guestsState.monthlyGuests.isEmpty) {
-    unawaited(_fetchAndUpdateCount(9011, "monthly", salesCode, currentMode));
+    unawaited(_fetchAndUpdateCount(9011, "monthly", scopeCode, currentMode));
   }
 }
+
+  // Guest reports are scoped by sales code, except for marketing-permission
+  // users viewing "My Data" — their guests hang off the marketing code.
+  Future<String?> _guestScopeCode(AppMode mode) {
+    return StorageUtil.getDataScopeCode(isMyDataMode: mode == AppMode.myData);
+  }
   Future<void> _initializeAppMode() async {
     try {
       final salesCode = await StorageUtil.getSalesCode();
@@ -345,13 +350,13 @@ Future<void> _loadGuestData() async {
   if (_isLoadingData) return;
   _isLoadingData = true;
 
-  String? salesCode = await StorageUtil.getSalesCode();
-  if (salesCode == null || salesCode.isEmpty) {
+  final currentMode = ref.read(appmodeSettingsProvider).appMode;
+  final scopeCode = await _guestScopeCode(currentMode);
+  if (scopeCode == null || scopeCode.isEmpty) {
     _isLoadingData = false;
     return;
   }
 
-  final currentMode = ref.read(appmodeSettingsProvider).appMode;
   ref.read(guestsProvider.notifier).resetData();
   ref.read(guestCountsProvider.notifier).state = {
     "today": null,
@@ -360,9 +365,9 @@ Future<void> _loadGuestData() async {
   };
 
   // 🔥 Fire all 3 in background — no await, does NOT block navigation
-  unawaited(_fetchAndUpdateCount(9009, "today", salesCode, currentMode));
-  unawaited(_fetchAndUpdateCount(9010, "yesterday", salesCode, currentMode));
-  unawaited(_fetchAndUpdateCount(9011, "monthly", salesCode, currentMode));
+  unawaited(_fetchAndUpdateCount(9009, "today", scopeCode, currentMode));
+  unawaited(_fetchAndUpdateCount(9010, "yesterday", scopeCode, currentMode));
+  unawaited(_fetchAndUpdateCount(9011, "monthly", scopeCode, currentMode));
 
   _isLoadingData = false; // immediately released
 }
@@ -370,11 +375,11 @@ Future<void> _loadGuestData() async {
 Future<void> _fetchAndUpdateCount(
   int iid,
   String key,
-  String salesCode,
+  String scopeCode,
   AppMode mode,
 ) async {
   try {
-    await ref.read(guestsProvider.notifier).getGuestData(iid, salesCode, mode);
+    await ref.read(guestsProvider.notifier).getGuestData(iid, scopeCode, mode);
 
     if (!mounted) return; // user navigated away — do nothing
 

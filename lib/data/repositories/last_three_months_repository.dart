@@ -27,7 +27,12 @@ class LastThreeMonthsRepository {
     AppMode appMode,
     String userSalesCode,
   ) async {
-    final actualSalesCode = await StorageUtil.getSalesCode();
+    final isMyDataMode = appMode == AppMode.myData;
+    // Marketing-permission users see their own numbers under their marketing
+    // code, so "My Data" is scoped by that instead of the sales code.
+    final scopeCode =
+        await StorageUtil.getDataScopeCode(isMyDataMode: isMyDataMode);
+    final showsEverything = !isMyDataMode && await StorageUtil.getMarketingP();
     final deviceId = await DeviceId.get();
     final spName = await StorageUtil.getStoredProcedureName();
 
@@ -42,7 +47,7 @@ class LastThreeMonthsRepository {
           "Para_Type": "int",
         },
         {
-          "Para_Data": actualSalesCode,
+          "Para_Data": scopeCode,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text1",
@@ -68,9 +73,9 @@ class LastThreeMonthsRepository {
         response['CommonResult']['Table'].isNotEmpty) {
       for (final row in response['CommonResult']['Table']) {
         final performance = LastThreeMonthsPerformance.fromJson(row);
-        _applySalesCodeFilter(
-          actualSalesCode,
-          appMode,
+        _applyScopeFilter(
+          scopeCode,
+          showsEverything,
           performance.sm,
           () => performanceList.add(performance),
         );
@@ -82,9 +87,9 @@ class LastThreeMonthsRepository {
         response['CommonResult']['Table1'].isNotEmpty) {
       for (final row in response['CommonResult']['Table1']) {
         final detailed = LastThreeMonthsDetailedData.fromJson(row);
-        _applySalesCodeFilter(
-          actualSalesCode,
-          appMode,
+        _applyScopeFilter(
+          scopeCode,
+          showsEverything,
           detailed.sm,
           () => detailedList.add(detailed),
         );
@@ -97,18 +102,16 @@ class LastThreeMonthsRepository {
     );
   }
 
-  // Same "admin (AD001) in overall mode sees everything, everyone else
-  // only sees their own SM" rule used in MarketingRepository, applied
-  // identically to both Table and Table1.
-  void _applySalesCodeFilter(
-    String? actualSalesCode,
-    AppMode appMode,
+  // Same "marketing user in overall mode sees everything, everyone else only
+  // sees the rows matching their scope code" rule used in MarketingRepository,
+  // applied identically to both Table and Table1.
+  void _applyScopeFilter(
+    String? scopeCode,
+    bool showsEverything,
     String rowSmCode,
     void Function() onMatch,
   ) {
-    if (actualSalesCode == 'AD001' && appMode == AppMode.overallData) {
-      onMatch();
-    } else if (rowSmCode == actualSalesCode) {
+    if (showsEverything || rowSmCode == scopeCode) {
       onMatch();
     }
   }

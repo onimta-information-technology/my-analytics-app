@@ -213,8 +213,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
     if (salesCode != null) {
       ref.read(appmodeSettingsProvider.notifier).setSalesCode(salesCode);
     }
+    // Only MArketing_P users may switch between their own and overall data.
+    final canShowOverallData = await StorageUtil.getMarketingP();
+    if (!mounted) return;
     setState(() {
-      _canShowOverallData = salesCode == 'AD001';
+      _canShowOverallData = canShowOverallData;
     });
   }
 

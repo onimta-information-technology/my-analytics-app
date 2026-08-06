@@ -26,6 +26,7 @@ class StorageUtil {
     bool? otgiChk,
     bool? bgApp,
     bool? bgChk,
+    bool? marketingP,
   ) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
@@ -57,6 +58,9 @@ class StorageUtil {
     }
     if (bgChk != null) {
       await prefs.setBool('bgChk', bgChk);
+    }
+    if (marketingP != null) {
+      await prefs.setBool('marketingP', marketingP);
     }
     final now = DateTime.now();
     final expiryTime = now.add(const Duration(days: 365));
@@ -95,7 +99,31 @@ class StorageUtil {
 
   static Future<String?> getMarketingCode() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('marketingCode');
+    final code = prefs.getString('marketingCode');
+    // Marketing_Code arrives via toString(), so a missing value lands as "null".
+    if (code == null || code.isEmpty || code == 'null') return null;
+    return code;
+  }
+
+  /// MArketing_P from the login response — the user manages a marketing group,
+  /// so their own numbers live under the marketing code, not the sales code.
+  /// This is what unlocks the My Data / Overall Data switch in Settings.
+  static Future<bool> getMarketingP() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('marketingP') ?? false;
+  }
+
+  /// The code to send as @Text1 on data-scoping reports (marketing performance,
+  /// last three months, guests 9009-9011, birthdays 9004).
+  ///
+  /// A marketing-permission user asking for "Show My Data" is scoped by their
+  /// marketing code — their rows are tagged with it rather than their sales
+  /// code. Everyone else, and overall-data mode, keeps using the sales code.
+  static Future<String?> getDataScopeCode({required bool isMyDataMode}) async {
+    final salesCode = await getSalesCode();
+    if (!isMyDataMode) return salesCode;
+    if (!await getMarketingP()) return salesCode;
+    return await getMarketingCode() ?? salesCode;
   }
 
   static Future<void> saveAppVersion(String version) async {

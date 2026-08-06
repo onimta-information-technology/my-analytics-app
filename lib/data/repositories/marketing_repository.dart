@@ -39,7 +39,12 @@ class MarketingRepository {
     AppMode appMode,
     String userSalesCode,
   ) async {
-    final actualSalesCode = await StorageUtil.getSalesCode();
+    final isMyDataMode = appMode == AppMode.myData;
+    // Marketing-permission users see their own numbers under their marketing
+    // code, so "My Data" is scoped by that instead of the sales code.
+    final scopeCode =
+        await StorageUtil.getDataScopeCode(isMyDataMode: isMyDataMode);
+    final showsEverything = !isMyDataMode && await StorageUtil.getMarketingP();
     final deviceId = await DeviceId.get();
     final spName = await StorageUtil.getStoredProcedureName();
 
@@ -54,7 +59,7 @@ class MarketingRepository {
           "Para_Type": "int",
         },
         {
-          "Para_Data": actualSalesCode,
+          "Para_Data": scopeCode,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text1",
@@ -81,12 +86,8 @@ class MarketingRepository {
         response['CommonResult']['Table'].isNotEmpty) {
       for (var table in response['CommonResult']['Table']) {
         final performance = MarketingPerformance.fromJson(table);
-        if (actualSalesCode == 'AD001' && appMode == AppMode.overallData) {
+        if (showsEverything || performance.sm.toString() == scopeCode) {
           marketingPerformanceList.add(performance);
-        } else {
-          if (performance.sm.toString() == actualSalesCode) {
-            marketingPerformanceList.add(performance);
-          }
         }
       }
     }
@@ -96,12 +97,8 @@ class MarketingRepository {
         response['CommonResult']['Table1'].isNotEmpty) {
       for (var memberData in response['CommonResult']['Table1']) {
         final detailed = MarketingDetailedData.fromJson(memberData);
-        if (actualSalesCode == 'AD001' && appMode == AppMode.overallData) {
+        if (showsEverything || detailed.sm.toString() == scopeCode) {
           marketingDetailedList.add(detailed);
-        } else {
-          if (detailed.sm.toString() == actualSalesCode) {
-            marketingDetailedList.add(detailed);
-          }
         }
       }
     }
@@ -111,12 +108,8 @@ class MarketingRepository {
         response['CommonResult']['Table2'].isNotEmpty) {
       for (var resultData in response['CommonResult']['Table2']) {
         final result = MarketingResult.fromJson(resultData);
-        if (actualSalesCode == 'AD001' && appMode == AppMode.overallData) {
+        if (showsEverything || result.sm.toString() == scopeCode) {
           marketingResultList.add(result);
-        } else {
-          if (result.sm.toString() == actualSalesCode) {
-            marketingResultList.add(result);
-          }
         }
       }
     }

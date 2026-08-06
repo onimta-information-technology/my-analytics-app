@@ -13,6 +13,7 @@ class User {
   final bool? otgiChk;
   final bool? bgApp;
   final bool? bgChk;
+  final bool? marketingP;
   User({
     required this.userName,
     required this.userLevel,
@@ -26,8 +27,9 @@ class User {
     this.resChk,
     this.otgiApp,
     this.otgiChk,
-    this.bgApp,    
+    this.bgApp,
     this.bgChk,
+    this.marketingP,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -46,6 +48,16 @@ class User {
       otgiChk: json['G_CHK'],
       bgApp: json['BG_APP'],
       bgChk: json['BG_CHK'],
+      marketingP: parseMarketingP(json),
     );
+  }
+
+  // The login response spells this key "MArketing_P" and may send it as a bool
+  // or as a "True"/"False" string, so read it defensively.
+  static bool? parseMarketingP(Map<String, dynamic> json) {
+    final raw = json['MArketing_P'] ?? json['Marketing_P'];
+    if (raw == null) return null;
+    if (raw is bool) return raw;
+    return raw.toString().toLowerCase() == 'true';
   }
 }

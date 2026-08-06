@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -30,6 +31,7 @@ class AppModeSettings {
 
 class AppModeSettingsNotifier extends StateNotifier<AppModeSettings> {
   String? _currentSalesCode;
+  bool _hasMarketingPermission = false;
 
   AppModeSettingsNotifier() : super(AppModeSettings(appMode: AppMode.myData));
 
@@ -37,17 +39,19 @@ class AppModeSettingsNotifier extends StateNotifier<AppModeSettings> {
     final prefs = await SharedPreferences.getInstance();
 
     if (_currentSalesCode == null) {
-    
+
       return;
     }
+
+    _hasMarketingPermission = await StorageUtil.getMarketingP();
 
     // Check if this is the first login for this user
     final isFirstLogin =
         prefs.getBool('isFirstLogin_$_currentSalesCode') ?? true;
     final savedAppModeIndex = prefs.getInt('appMode_$_currentSalesCode');
 
-    if (_currentSalesCode == 'AD001' && isFirstLogin) {
-      // AD001 user logging in for the first time - set to overallData
+    if (_hasMarketingPermission && isFirstLogin) {
+      // Marketing-permission user logging in for the first time - overallData
       state = AppModeSettings(
         appMode: AppMode.overallData,
         isFirstLogin: false, // Mark as no longer first login
@@ -75,17 +79,17 @@ class AppModeSettingsNotifier extends StateNotifier<AppModeSettings> {
     }
   }
 
-  Future<void> _saveSettings() async {
+  Future<void> _saveSettings(AppMode mode) async {
     if (_currentSalesCode == null) return;
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('appMode_$_currentSalesCode', state.appMode.index);
+    await prefs.setInt('appMode_$_currentSalesCode', mode.index);
     await prefs.setBool('isFirstLogin_$_currentSalesCode', false);
   }
 
   void setAppMode(AppMode mode) {
     state = state.copyWith(appMode: mode, isFirstLogin: false);
-    _saveSettings();
+    _saveSettings(mode);
   }
 
   void setSalesCode(String salesCode) async {
@@ -96,7 +100,7 @@ class AppModeSettingsNotifier extends StateNotifier<AppModeSettings> {
   }
 
   bool canShowOverallData() {
-    return _currentSalesCode == 'AD001';
+    return _hasMarketingPermission;
   }
 
   String? get currentSalesCode => _currentSalesCode;

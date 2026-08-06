@@ -166,7 +166,8 @@ class AuthNotifier extends StateNotifier<AuthState?> {
           _pendingUser.otgiApp,
           _pendingUser.otgiChk,
           _pendingUser.bgApp,
-          _pendingUser.bgChk, 
+          _pendingUser.bgChk,
+          _pendingUser.marketingP,
         );
 
         // Update state to fully authenticated

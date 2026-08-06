@@ -16,8 +16,15 @@ class BirthdayRepository {
 
   BirthdayRepository(this.apiService);
 
-  Future<Map<String, List<Birthday>>> getBirthdays() async {
-    final salesCode = await StorageUtil.getSalesCode();
+  Future<Map<String, List<Birthday>>> getBirthdays({
+    required bool isMyDataMode,
+  }) async {
+    // Marketing-permission users see their own birthdays under their marketing
+    // code, so "My Data" is scoped by that instead of the sales code.
+    final salesCode =
+        await StorageUtil.getDataScopeCode(isMyDataMode: isMyDataMode);
+
+        print('salesCode1111: $salesCode');
     final deviceId = await DeviceId.get();
      final spName = await StorageUtil.getStoredProcedureName();
     final response = await apiService.post('CommonExecute', {

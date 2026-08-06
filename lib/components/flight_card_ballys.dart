@@ -285,6 +285,16 @@ class FlightCardBallys extends StatelessWidget {
                         ),
                       ),
                     ],
+                    if (flight.extraLegroomSeat == true) ...[
+                      const SizedBox(height: 5),
+                      const Text(
+                        "Extra Legroom Seat: Yes",
+                        style: TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                     if (flight.meal) ...[
                       const SizedBox(height: 5),
                       Text(

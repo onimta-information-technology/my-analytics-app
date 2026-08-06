@@ -42,6 +42,14 @@ class ReservationBallys {
   /// Sent as `currency_type` on insert/update and returned by the API.
   String? currencyType;
 
+  /// The marketing person the request was raised for, as picked on the form.
+  /// Blank when the requester raised it under their own name.
+  String? selectedMarketingPerson;
+
+  /// Sales code of the user that raised the request, returned alongside
+  /// [reqBy] by `Reservation_GetAllReservations`.
+  String? salesCode;
+
   /// Per-stage audit trail returned by `Reservation_GetAllReservations`.
   /// Each workflow stage (Pending → Checked → Approved/Rejected) records who
   /// actioned it, when, and their remark. Fields are null when that stage has
@@ -100,6 +108,8 @@ class ReservationBallys {
     this.reservationnewnumber,
     this.packageAmount,
     this.currencyType,
+    this.selectedMarketingPerson,
+    this.salesCode,
     this.pendingBy,
     this.pendingTime,
     this.checkedStatus,
@@ -419,6 +429,9 @@ class ReservationBallys {
       packageAmount: json['package_amount']?.toString(),
       currencyType:
           (json['currency_type'] ?? json['Currency_Type'])?.toString(),
+      selectedMarketingPerson:
+          json['selected_marketing_person']?.toString(),
+      salesCode: json['sales_code']?.toString(),
       pendingBy: json['pending_by'] as String?,
       pendingTime: parseDate(json['pending_time']),
       checkedStatus: json['checked_status'] as String?,

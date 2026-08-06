@@ -9,6 +9,7 @@ import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart';
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
+import 'package:ballys_reservation_app/models/reervationBallys.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_desc_ballys.dart';
 import 'package:ballys_reservation_app/models/reservation/reservation_passport_image_ballys.dart';
@@ -317,6 +318,112 @@ class _ReservationViewScreenBallysState
                         ),
                       ),
                     ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Request Info Card ──────────────────────────────────────────────────
+  //
+  // Who raised the reservation and when, from the `user_name`, `sales_code`,
+  // `selected_marketing_person` and `created_date` the payload carries. The
+  // stage cards below cover what happened to it afterwards.
+  Widget _buildRequestInfoCard(
+    ReservationBallys reservation,
+    double fontSize,
+    FontWeight fontWeight,
+  ) {
+    const color = Constants.kPrimaryColor;
+    final requestedBy = reservation.reqBy.trim();
+    final marketingPerson = reservation.selectedMarketingPerson?.trim() ?? '';
+    final salesCode = reservation.salesCode?.trim() ?? '';
+
+    if (requestedBy.isEmpty && marketingPerson.isEmpty && salesCode.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.4), width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.15),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(11),
+                topRight: Radius.circular(11),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.assignment_outlined, color: color, size: 22),
+                const SizedBox(width: 8),
+                Text(
+                  'Request Information',
+                  style: TextStyle(
+                    fontSize: fontSize + 4,
+                    fontWeight: FontWeight.w900,
+                    color: color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (requestedBy.isNotEmpty) ...[
+                  _buildCardRow(
+                    icon: Icons.person_outline,
+                    iconColor: color,
+                    label: 'Requested By',
+                    // The sales code the request was raised under, when the
+                    // payload names one.
+                    value: salesCode.isEmpty
+                        ? requestedBy
+                        : '$requestedBy ($salesCode)',
+                    valueColor: Colors.black87,
+                    fontSize: fontSize,
+                    fontWeight: fontWeight,
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                _buildCardRow(
+                  icon: Icons.access_time_outlined,
+                  iconColor: color,
+                  label: 'Requested On',
+                  value: _formatDateTime(reservation.insertDate),
+                  valueColor: Colors.black87,
+                  fontSize: fontSize,
+                  fontWeight: fontWeight,
+                ),
+                // Only raised on someone else's behalf, so blank on most rows.
+                if (marketingPerson.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _buildCardRow(
+                    icon: Icons.badge_outlined,
+                    iconColor: color,
+                    label: 'Marketing Person',
+                    value: marketingPerson,
+                    valueColor: Colors.black87,
+                    fontSize: fontSize,
+                    fontWeight: fontWeight,
                   ),
                 ],
               ],
@@ -678,13 +785,18 @@ class _ReservationViewScreenBallysState
     return txt;
   }
 
-  /// A guest's package amount as it should be shown, or `''` when there isn't
-  /// one. Guests who carry no package of their own come back as a bare `0.00`
-  /// with a blank currency, which is worth no line at all.
+  /// A guest's package amount as it should be shown. Guests who carry no
+  /// package of their own come back as a bare `0.00` with a blank currency,
+  /// which reads as travelling on someone else's package.
   ///
   /// The amount arrives as `"<currency> <number>"` — the currency is kept as
   /// it is and the number is shown whole, grouped in thousands: `IND 10,000`.
-  String _packageLabel(String raw) {
+  ///
+  /// [shared] is the guest's own `IsSharedAmount` tick, which the payload now
+  /// sends in its own right: an amount can be both real and shared with the
+  /// members on the package, so the tick is shown next to it rather than
+  /// inferred from a missing amount.
+  String _packageLabel(String raw, {bool shared = false}) {
     final amount = raw.trim();
     final numeric = amount.isEmpty
         ? null
@@ -694,39 +806,123 @@ class _ReservationViewScreenBallysState
 
     final currency = amount.replaceAll(RegExp(r'[0-9.,]'), '').trim();
     final formatted = NumberFormat('#,##0').format(numeric);
-    return currency.isEmpty ? formatted : '$currency $formatted';
+    final label = currency.isEmpty ? formatted : '$currency $formatted';
+    return shared ? '$label (Shared)' : label;
+  }
+
+  /// A guest's / room's own stay, shown only when it differs from the
+  /// reservation's — the payload repeats the reservation dates on every guest
+  /// and every room, so printing them each time would say nothing.
+  String? _stayLabel(
+    DateTime? arrival,
+    DateTime? departure,
+    DateTime? reservationArrival,
+    DateTime? reservationDeparture,
+  ) {
+    if (arrival == null && departure == null) return null;
+
+    bool sameDay(DateTime? a, DateTime? b) =>
+        a != null &&
+        b != null &&
+        a.year == b.year &&
+        a.month == b.month &&
+        a.day == b.day;
+
+    if (sameDay(arrival, reservationArrival) &&
+        sameDay(departure, reservationDeparture)) {
+      return null;
+    }
+
+    final format = DateFormat('yyyy-MM-dd');
+    final from = arrival != null ? format.format(arrival) : '—';
+    final to = departure != null ? format.format(departure) : '—';
+    return '$from → $to';
   }
 
   // ── Guests section ─────────────────────────────────────────────────────
   //
   // A reservation number can carry more than one guest (the `guests` array of
   // the payload). The list shows a single card per reservation; here every
-  // guest is expanded, together with the members sharing their package.
+  // guest gets a card of their own — one per row of `guests`, members sharing
+  // someone's package included. The model hangs a shared member off the guest
+  // whose package they are on, but a card is per person, so those are flattened
+  // back out here and the member's card names whose package it is.
   //
-  // Each card carries only the guest's own details — name, BM number, package
+  // Each card carries only that person's own details — name, BM number, package
   // amount and whether family members travel with them. The rooms, air tickets
   // and dates they were booked against are shown once, further down the screen.
   Widget _buildGuestsSection(
     List<GuestReservationEntryBallys> guests,
-    FontSettings fontSettings,
-  ) {
+    FontSettings fontSettings, {
+    DateTime? reservationArrival,
+    DateTime? reservationDeparture,
+  }) {
     if (guests.isEmpty) return const SizedBox.shrink();
+
+    final cards = <({
+      String mid,
+      String name,
+      String package,
+      bool hasFamilyMembers,
+      String? stay,
+      // Whose package this person is on — null for a guest on their own.
+      String? sharesWith,
+    })>[];
+
+    for (final guest in guests) {
+      // Members travel on the owner's dates, so both carry the same stay.
+      final stay = _stayLabel(
+        guest.arrivalDate,
+        guest.departureDate,
+        reservationArrival,
+        reservationDeparture,
+      );
+      final owner = guest.guestName.trim().isNotEmpty
+          ? guest.guestName.trim()
+          : guest.mid;
+
+      cards.add((
+        mid: guest.mid,
+        name: guest.guestName,
+        package: _packageLabel(
+          guest.packageAmount,
+          shared: guest.sharedPackage,
+        ),
+        hasFamilyMembers: guest.hasFamilyMembers,
+        stay: stay,
+        sharesWith: null,
+      ));
+
+      for (final member in guest.accompanyingMembers) {
+        cards.add((
+          mid: member.mid,
+          name: member.guestName,
+          package: _packageLabel(
+            member.packageAmount,
+            shared: member.sharedPackage,
+          ),
+          hasFamilyMembers: member.hasFamilyMembers,
+          stay: stay,
+          sharesWith: owner,
+        ));
+      }
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          guests.length == 1 ? "Guest" : "Guests (${guests.length})",
+          cards.length == 1 ? "Guest" : "Guests (${cards.length})",
           style: TextStyle(
             fontSize: fontSettings.fontSize,
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 6.0),
-        ...guests.asMap().entries.map((entry) {
+        ...cards.asMap().entries.map((entry) {
           final index = entry.key;
-          final guest = entry.value;
-          final packageLabel = _packageLabel(guest.packageAmount);
+          final card = entry.value;
+          final isMember = card.sharesWith != null;
 
           return Card(
             color: const Color.fromARGB(255, 228, 224, 224),
@@ -740,7 +936,10 @@ class _ReservationViewScreenBallysState
                     children: [
                       CircleAvatar(
                         radius: 14,
-                        backgroundColor: Colors.black,
+                        // A member reads as one of the party rather than a
+                        // guest standing on their own.
+                        backgroundColor:
+                            isMember ? Colors.blueGrey : Colors.black,
                         child: Text(
                           "${index + 1}",
                           style: const TextStyle(
@@ -752,9 +951,7 @@ class _ReservationViewScreenBallysState
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          guest.guestName.isNotEmpty
-                              ? guest.guestName
-                              : "Unnamed guest",
+                          card.name.isNotEmpty ? card.name : "Unnamed guest",
                           style: TextStyle(
                             fontSize: fontSettings.fontSize,
                             fontWeight: FontWeight.bold,
@@ -764,19 +961,41 @@ class _ReservationViewScreenBallysState
                       ),
                     ],
                   ),
-                  if (guest.mid.isNotEmpty) ...[
+                  if (card.mid.isNotEmpty) ...[
                     const SizedBox(height: 6),
                     Text(
-                      guest.mid,
+                      card.mid,
                       style: TextStyle(
                         fontSize: fontSettings.fontSize,
                         fontWeight: fontSettings.fontWeight,
                       ),
                     ),
                   ],
+                  // The rooms, tickets and dates sit on the guest whose package
+                  // this member is on, so the card says whose that is.
+                  // if (isMember) ...[
+                  //   const SizedBox(height: 2),
+                  //   Row(
+                  //     crossAxisAlignment: CrossAxisAlignment.start,
+                  //     children: [
+                  //       const Icon(Icons.link, size: 16, color: Colors.blueGrey),
+                  //       const SizedBox(width: 6),
+                  //       Expanded(
+                  //         child: Text(
+                  //           "Shared package with ${card.sharesWith}",
+                  //           style: TextStyle(
+                  //             fontSize: fontSettings.fontSize,
+                  //             fontWeight: FontWeight.w600,
+                  //             color: Colors.blueGrey,
+                  //           ),
+                  //         ),
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ],
                   const SizedBox(height: 2),
                   Text(
-                    "Package: $packageLabel",
+                    "Package: ${card.package}",
                     style: TextStyle(
                       fontSize: fontSettings.fontSize,
                       fontWeight: fontSettings.fontWeight,
@@ -784,7 +1003,7 @@ class _ReservationViewScreenBallysState
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    guest.hasFamilyMembers
+                    card.hasFamilyMembers
                         ? "Family members: Included"
                         : "Family members: Not included",
                     style: TextStyle(
@@ -792,22 +1011,18 @@ class _ReservationViewScreenBallysState
                       fontWeight: fontSettings.fontWeight,
                     ),
                   ),
-                  // Members on this guest's package: they hold no rooms or
-                  // tickets of their own, so they only show up here.
-                  ...guest.accompanyingMembers.map(
-                    (m) => Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text(
-                        "Same package: ${m.guestName} (${m.mid})"
-                        " · ${_packageLabel(m.packageAmount)}"
-                        "${m.hasFamilyMembers ? ' · Family members included' : ''}",
-                        style: TextStyle(
-                          fontSize: fontSettings.fontSize,
-                          fontWeight: fontSettings.fontWeight,
-                        ),
+                  // A guest travelling on their own dates rather than the
+                  // reservation's.
+                  if (card.stay != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      "Stay: ${card.stay}",
+                      style: TextStyle(
+                        fontSize: fontSettings.fontSize,
+                        fontWeight: fontSettings.fontWeight,
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -830,19 +1045,29 @@ class _ReservationViewScreenBallysState
   ) {
     if (passportImages.isEmpty) return const SizedBox.shrink();
 
-    // Guests first, in reservation order. Anything tagged with a BM number
-    // that matches no guest still gets shown rather than silently dropped.
+    // Guests first, in reservation order — members sharing a package included,
+    // since each carries a passport of its own under its own BM number.
+    // Anything tagged with a BM number that matches nobody still gets shown
+    // rather than silently dropped.
     final groups = <({String label, List<ReservationPassportImageBallys> images})>[];
     final claimed = <ReservationPassportImageBallys>{};
 
-    for (final guest in guests) {
+    final owners = <({String mid, String name})>[
+      for (final guest in guests) ...[
+        (mid: guest.mid, name: guest.guestName),
+        for (final member in guest.accompanyingMembers)
+          (mid: member.mid, name: member.guestName),
+      ],
+    ];
+
+    for (final owner in owners) {
       final images =
-          passportImages.where((p) => p.guestBmNumber == guest.mid).toList();
+          passportImages.where((p) => p.guestBmNumber == owner.mid).toList();
       if (images.isEmpty) continue;
       claimed.addAll(images);
-      final name = guest.guestName.trim();
+      final name = owner.name.trim();
       groups.add((
-        label: name.isEmpty ? guest.mid : '${guest.mid} - $name',
+        label: name.isEmpty ? owner.mid : '${owner.mid} - $name',
         images: images,
       ));
     }
@@ -1593,6 +1818,8 @@ class _ReservationViewScreenBallysState
                   _buildGuestsSection(
                     selectedReservation?.guests ?? const [],
                     fontSettings,
+                    reservationArrival: selectedReservation?.arrDate,
+                    reservationDeparture: selectedReservation?.depDate,
                   ),
 
                   // ── Passports, grouped by guest ──────────────────────
@@ -1644,6 +1871,12 @@ class _ReservationViewScreenBallysState
                         )
                       : Column(
                           children: selectedHotels.map((hotel) {
+                            final roomStayLabel = _stayLabel(
+                              hotel.arrivalDate,
+                              hotel.departureDate,
+                              selectedReservation?.arrDate,
+                              selectedReservation?.depDate,
+                            );
                             return SizedBox(
                               width: double.infinity,
                               child: Card(
@@ -1746,8 +1979,14 @@ class _ReservationViewScreenBallysState
                                         ),
                                       ),
                                       const SizedBox(height: 8),
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
+                                      // Wrapped rather than a fixed row: the
+                                      // children count only joins the line once
+                                      // the room carries one, and four counts
+                                      // no longer fit at the larger font
+                                      // settings.
+                                      Wrap(
+                                        spacing: 20,
+                                        runSpacing: 4,
                                         children: [
                                           Text(
                                             "Guests: ${hotel.guestCount}",
@@ -1757,7 +1996,15 @@ class _ReservationViewScreenBallysState
                                                   fontSettings.fontWeight,
                                             ),
                                           ),
-                                          const SizedBox(width: 20),
+                                          if ((hotel.childrenCount ?? 0) > 0)
+                                            Text(
+                                              "Children: ${hotel.childrenCount}",
+                                              style: TextStyle(
+                                                fontSize: fontSettings.fontSize,
+                                                fontWeight:
+                                                    fontSettings.fontWeight,
+                                              ),
+                                            ),
                                           Text(
                                             "Nights: ${hotel.noOfNights}",
                                             style: TextStyle(
@@ -1766,7 +2013,6 @@ class _ReservationViewScreenBallysState
                                                   fontSettings.fontWeight,
                                             ),
                                           ),
-                                          const SizedBox(width: 20),
                                           Text(
                                             "Rooms: ${hotel.roomCount}",
                                             style: TextStyle(
@@ -1777,6 +2023,19 @@ class _ReservationViewScreenBallysState
                                           ),
                                         ],
                                       ),
+                                      // A room booked over its own dates —
+                                      // an amendment can move one room without
+                                      // moving the reservation.
+                                      if (roomStayLabel != null) ...[
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          "Stay: $roomStayLabel",
+                                          style: TextStyle(
+                                            fontSize: fontSettings.fontSize,
+                                            fontWeight: fontSettings.fontWeight,
+                                          ),
+                                        ),
+                                      ],
                                       const SizedBox(height: 8),
                                       Text(
                                         "Estimated Cost: ${hotel.selectedCost}",
@@ -1969,6 +2228,14 @@ class _ReservationViewScreenBallysState
                     keyboardType: TextInputType.multiline,
                   ),
                   const SizedBox(height: 16.0),
+
+                  // ── Who raised the request, and when ─────────────────
+                  if (selectedReservation != null)
+                    _buildRequestInfoCard(
+                      selectedReservation,
+                      fontSettings.fontSize,
+                      fontSettings.fontWeight,
+                    ),
 
                   // ════════════════════════════════════════════════════
                   // ── Action Info Cards (Checked / Approved / Rejected) ─

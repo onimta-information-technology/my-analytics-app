@@ -2,6 +2,7 @@ import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/models/birthday.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
+import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
 import 'package:ballys_reservation_app/providers/birthdays_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
@@ -265,13 +266,14 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
       final birthdays = await ref
           .read(birthdayProvider.notifier)
           .getBirthdays();
+      if (!mounted) return;
       setState(() {
         _recentBirthdays = _showRecentUpcoming
             ? birthdays['recentUpcoming']!
             : birthdays['recentPast']!;
       });
     } finally {
-      setState(() => _isRefreshing = false);
+      if (mounted) setState(() => _isRefreshing = false);
     }
   }
 
@@ -507,6 +509,15 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Settings is pushed on top of this screen, so switching My Data /
+    // Overall Data there leaves this screen mounted — initState won't run
+    // again on the way back. Refetch 9004 under the new scope code instead.
+    ref.listen<AppModeSettings>(appmodeSettingsProvider, (previous, next) {
+      if (previous?.appMode != next.appMode) {
+        _refreshBirthdays();
+      }
+    });
+
     final birthdayData = ref.read(birthdayProvider);
     final allBirthdays = _getAllBirthdays();
 

@@ -4,6 +4,7 @@ import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/transport/transport_reservation.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_transport_provider.dart';
+import 'package:ballys_reservation_app/providers/transport_provider.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -144,6 +145,13 @@ class TransportViewScreen extends ConsumerWidget {
                             ),
                           ),
                         ),
+                      ),
+                    ],
+                    if (transport.amendments.isNotEmpty) ...[
+                      const SizedBox(height: 20),
+                      _AmendmentsSection(
+                        amendments: transport.amendments,
+                        fontSettings: fontSettings,
                       ),
                     ],
                     if (transport.passportFiles.isNotEmpty) ...[
@@ -799,19 +807,123 @@ class _TripCardState extends State<_TripCard> {
   }
 }
 
+/// Amendment notes already raised against the request, newest first.
+class _AmendmentsSection extends StatelessWidget {
+  const _AmendmentsSection({
+    required this.amendments,
+    required this.fontSettings,
+  });
+
+  final List<TransportAmendment> amendments;
+  final FontSettings fontSettings;
+
+  /// Newest first — the API returns them in insertion order.
+  List<TransportAmendment> get _sorted {
+    final list = [...amendments];
+    list.sort((a, b) {
+      final aDate = a.createdDate;
+      final bDate = b.createdDate;
+      if (aDate == null && bDate == null) return 0;
+      if (aDate == null) return 1;
+      if (bDate == null) return -1;
+      return bDate.compareTo(aDate);
+    });
+    return list;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sorted = _sorted;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.edit_note, size: 22, color: Colors.deepOrange),
+            const SizedBox(width: 6),
+            Text(
+              'Amendments (${sorted.length})',
+              style: TextStyle(
+                fontSize: fontSettings.fontSize + 2,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ...sorted.map((a) => _amendmentCard(a)),
+      ],
+    );
+  }
+
+  Widget _amendmentCard(TransportAmendment amendment) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(255, 255, 248, 240),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.deepOrange.withOpacity(0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            amendment.amendment.isEmpty ? 'N/A' : amendment.amendment,
+            style: TextStyle(
+              fontSize: fontSettings.fontSize,
+              fontWeight: fontSettings.fontWeight,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(Icons.person_outline, size: 16, color: Colors.black45),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  amendment.userName.isEmpty ? 'N/A' : amendment.userName,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: fontSettings.fontSize - 2,
+                    color: Colors.black54,
+                  ),
+                ),
+              ),
+              const Icon(Icons.schedule, size: 16, color: Colors.black45),
+              const SizedBox(width: 4),
+              Text(
+                TransportViewScreen._formatDateTime(amendment.createdDate),
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize - 2,
+                  color: Colors.black54,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Free-text amendment note for an existing request, posted to `amendment`
 /// with the request's `master_id`.
-class _AmendmentDialog extends StatefulWidget {
+class _AmendmentDialog extends ConsumerStatefulWidget {
   const _AmendmentDialog({required this.transport, required this.fontSettings});
 
   final TransportReservation transport;
   final FontSettings fontSettings;
 
   @override
-  State<_AmendmentDialog> createState() => _AmendmentDialogState();
+  ConsumerState<_AmendmentDialog> createState() => _AmendmentDialogState();
 }
 
-class _AmendmentDialogState extends State<_AmendmentDialog> {
+class _AmendmentDialogState extends ConsumerState<_AmendmentDialog> {
   final TextEditingController _controller = TextEditingController();
   bool _submitting = false;
   String? _error;
@@ -820,6 +932,27 @@ class _AmendmentDialogState extends State<_AmendmentDialog> {
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  /// Reloads the transport list and re-points the selected request at the
+  /// fresh copy, so this screen rebuilds with the amendment just saved.
+  /// A failed reload is ignored — the amendment itself already went through.
+  Future<void> _refreshSelectedTransport() async {
+    try {
+      await ref.read(transportProvider.notifier).getTransportData();
+      if (!mounted) return;
+      final updated = ref
+          .read(transportProvider)
+          .reservations
+          .where((r) => r.masterId == widget.transport.masterId);
+      if (updated.isNotEmpty) {
+        ref
+            .read(selectedTransportProvider.notifier)
+            .setSelectedTransport(updated.first);
+      }
+    } catch (_) {
+      // Leave the screen on the copy it already has.
+    }
   }
 
   Future<void> _submit() async {
@@ -847,6 +980,11 @@ class _AmendmentDialogState extends State<_AmendmentDialog> {
       if (!mounted) return;
 
       if (result.success) {
+        // Pull the request back down so the new note shows up in the
+        // Amendments section (and on the list card) without a manual refresh.
+        await _refreshSelectedTransport();
+        if (!mounted) return;
+
         // Grab the messenger before popping — the dialog's own context is gone
         // once the route is removed.
         final messenger = ScaffoldMessenger.of(context);

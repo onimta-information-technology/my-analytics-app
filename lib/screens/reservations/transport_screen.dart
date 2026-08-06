@@ -389,9 +389,47 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
               ],
             ],
 
+            // ✅ Latest amendment note, so it's visible without opening the card
+            if (reservation.hasAmendments) ...[
+              const SizedBox(height: 8),
+              _amendmentPreview(reservation, fontSettings),
+            ],
+
             const SizedBox(height: 8),
             Row(
               children: [
+                if (reservation.hasAmendments) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.deepOrange,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.edit_note,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          '${reservation.amendments.length}',
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 Flexible(
                   child: Container(
                     padding:
@@ -457,6 +495,61 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
               .setSelectedTransport(reservation);
           context.push('/reservationMain/transport/transport-view');
         },
+      ),
+    );
+  }
+
+  /// Latest amendment note on the card, with a hint when there are older ones.
+  Widget _amendmentPreview(
+    TransportReservation reservation,
+    FontSettings fontSettings,
+  ) {
+    final latest = reservation.latestAmendment!;
+    final older = reservation.amendments.length - 1;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(255, 255, 248, 240),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.deepOrange.withOpacity(0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.edit_note, size: 20, color: Colors.deepOrange),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  latest.amendment.isEmpty ? 'N/A' : latest.amendment,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: fontSettings.fontSize,
+                    fontWeight: fontSettings.fontWeight,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            [
+              if (latest.userName.isNotEmpty) latest.userName,
+              _formatDateTime(latest.createdDate),
+              if (older > 0) '+$older more',
+            ].join('  •  '),
+            style: TextStyle(
+              fontSize: fontSettings.fontSize - 2,
+              color: Colors.black54,
+            ),
+          ),
+        ],
       ),
     );
   }

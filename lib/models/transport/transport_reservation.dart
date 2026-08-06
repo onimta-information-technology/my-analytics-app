@@ -24,6 +24,10 @@ class TransportReservation {
   /// host (see [TransportPassportFile.urlFrom]).
   final List<TransportPassportFile> passportFiles;
 
+  /// Amendment notes raised against this request, newest last as returned by
+  /// the API.
+  final List<TransportAmendment> amendments;
+
   TransportReservation({
     required this.masterId,
     required this.mid,
@@ -42,7 +46,26 @@ class TransportReservation {
     this.driverPhoneNumber,
     required this.details,
     this.passportFiles = const [],
+    this.amendments = const [],
   });
+
+  /// True when at least one amendment note was raised against this request.
+  bool get hasAmendments => amendments.isNotEmpty;
+
+  /// Most recent amendment by `created_date`, or the last one the API returned
+  /// when the dates are missing. Null when there are none.
+  TransportAmendment? get latestAmendment {
+    if (amendments.isEmpty) return null;
+    TransportAmendment latest = amendments.first;
+    for (final a in amendments.skip(1)) {
+      final current = a.createdDate;
+      final best = latest.createdDate;
+      if (best == null || (current != null && current.isAfter(best))) {
+        latest = a;
+      }
+    }
+    return latest;
+  }
 
   /// Anything the API doesn't recognise falls back to [TransportStatus.requested]
   /// so a request is never dropped from every tab.
@@ -65,6 +88,7 @@ class TransportReservation {
   factory TransportReservation.fromJson(Map<String, dynamic> json) {
     final rawDetails = json['transport_details'];
     final rawFiles = json['passport_files'];
+    final rawAmendments = json['amendments'];
 
     return TransportReservation(
       masterId: json['master_id']?.toString() ?? '',
@@ -94,6 +118,13 @@ class TransportReservation {
               .whereType<Map>()
               .map((f) =>
                   TransportPassportFile.fromJson(Map<String, dynamic>.from(f)))
+              .toList()
+          : const [],
+      amendments: rawAmendments is List
+          ? rawAmendments
+              .whereType<Map>()
+              .map((a) =>
+                  TransportAmendment.fromJson(Map<String, dynamic>.from(a)))
               .toList()
           : const [],
     );
@@ -200,6 +231,43 @@ class TransportDetail {
       taxiPlateNumber: _parseText(json['taxi_plate_number']),
       driverName: _parseText(json['driver_name']),
       driverPhoneNumber: _parseText(json['driver_phone_number']),
+    );
+  }
+}
+
+/// A free-text amendment note raised against a transport request, as posted by
+/// `Transport_Amendment_Insert` and returned under `amendments`.
+class TransportAmendment {
+  final int amendmentId;
+  final String masterId;
+  final String mid;
+  final String guestName;
+  final String amendment;
+  final String userName;
+  final String deviceId;
+  final DateTime? createdDate;
+
+  TransportAmendment({
+    required this.amendmentId,
+    required this.masterId,
+    required this.mid,
+    required this.guestName,
+    required this.amendment,
+    required this.userName,
+    required this.deviceId,
+    this.createdDate,
+  });
+
+  factory TransportAmendment.fromJson(Map<String, dynamic> json) {
+    return TransportAmendment(
+      amendmentId: _parseInt(json['amendment_id']),
+      masterId: json['master_id']?.toString() ?? '',
+      mid: json['mid']?.toString() ?? '',
+      guestName: json['guest_name']?.toString() ?? '',
+      amendment: json['amendment']?.toString().trim() ?? '',
+      userName: json['user_name']?.toString() ?? '',
+      deviceId: json['device_id']?.toString() ?? '',
+      createdDate: _parseDate(json['created_date']),
     );
   }
 }

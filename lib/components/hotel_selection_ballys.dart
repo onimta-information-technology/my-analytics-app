@@ -154,10 +154,25 @@ String selectedByPaymnet = 'NA';
   String _guestKey(AccompanyingMember guest) =>
       "${guest.mid.trim()}|${guest.guestName.trim()}";
 
+  /// Guests a room can actually be booked for: a member with "Shared" ticked is
+  /// on somebody else's package and sleeps in that guest's room, so they are
+  /// listed on the assignment but never get a room of their own.
+  List<AccompanyingMember> get _assignableGuests =>
+      widget.guests.where((guest) => !guest.sharedPackage).toList();
+
+  /// The guests the room being added can still be ticked for — assignable and
+  /// not already holding another room.
+  List<AccompanyingMember> _selectableGuests() {
+    final locked = _guestsInOtherRooms();
+    return _assignableGuests
+        .where((guest) => !locked.contains(_guestKey(guest)))
+        .toList();
+  }
+
   /// The ticked guests, in the order they appear on the reservation. The first
   /// one owns the room; the rest each get their own copy of it on save.
   List<AssignedGuest> _selectedAssignedGuests() {
-    return widget.guests
+    return _assignableGuests
         .where((guest) => _assignedGuestKeys.contains(_guestKey(guest)))
         .map((guest) =>
             AssignedGuest(mid: guest.mid.trim(), guestName: guest.guestName.trim()))
@@ -166,10 +181,11 @@ String selectedByPaymnet = 'NA';
 
   /// Ticks the guests a room already names, matching on BM number so a room
   /// pulled back for editing keeps its assignment even if the name was tidied
-  /// up since.
+  /// up since. A shared member is skipped — a room saved against one before the
+  /// rule existed is dropped rather than shown as a tick that can't be undone.
   void _applyAssignedGuests(List<AssignedGuest> assigned) {
     _assignedGuestKeys.clear();
-    for (final guest in widget.guests) {
+    for (final guest in _assignableGuests) {
       if (assigned.any((a) => _namesGuest(a, guest))) {
         _assignedGuestKeys.add(_guestKey(guest));
       }
@@ -204,20 +220,19 @@ String selectedByPaymnet = 'NA';
   /// starts ticked rather than making every add a two-step job — unless that
   /// guest already has a room.
   void _preselectSoleGuest() {
-    if (widget.guests.length != 1) return;
-    final key = _guestKey(widget.guests.first);
+    if (_assignableGuests.length != 1) return;
+    final key = _guestKey(_assignableGuests.first);
     if (_guestsInOtherRooms().contains(key)) return;
     _assignedGuestKeys.add(key);
   }
 
-  /// Rooms are counted per ticked guest on a package of their own — a guest
-  /// with "Shared" ticked is on somebody else's package and shares their room,
-  /// whether or not they carry an amount of their own. Never below one: a room
-  /// booked for guests who all share still is a room.
+  /// Rooms are counted per ticked guest: one room each. Shared members never
+  /// reach the tick — they are on somebody else's package and sleep in that
+  /// guest's room — so they add nothing here either. Never below one: a room is
+  /// a room even before anybody is ticked.
   int get _roomsForAssignedGuests {
-    final paying = widget.guests
+    final paying = _assignableGuests
         .where((guest) => _assignedGuestKeys.contains(_guestKey(guest)))
-        .where((guest) => !guest.sharedPackage)
         .length;
     return paying < 1 ? 1 : paying;
   }
@@ -623,10 +638,11 @@ String selectedByPaymnet = 'NA';
     final bool hotelMissing = selectedHotelId == null;
     final bool categoryMissing = selectedRoomCategoryId == null;
     final bool roomTypeMissing = selectedRoomTypeId == null;
-    // A room has to name who it is for, but only once there is somebody on the
-    // reservation to name — the very first guest is still being filled in.
+    // A room has to name who it is for, but only once there is somebody left to
+    // name — the very first guest is still being filled in, everyone else is a
+    // shared member or already holds a room of their own.
     final bool guestsMissing =
-        widget.guests.isNotEmpty && _assignedGuestKeys.isEmpty;
+        _selectableGuests().isNotEmpty && _assignedGuestKeys.isEmpty;
 
     if (dateMissing ||
         hotelMissing ||
@@ -860,12 +876,10 @@ String selectedByPaymnet = 'NA';
   /// one by one or several at a time. Each ticked guest gets the room booked
   /// against their BM number.
   Widget _guestAssignment() {
-    // Guests already in another room are along for the ride but can't be
-    // picked, so "Select all" and its label only ever count the rest.
+    // Shared members and guests already in another room are along for the ride
+    // but can't be picked, so "Select all" and its label only count the rest.
     final locked = _guestsInOtherRooms();
-    final selectable = widget.guests
-        .where((guest) => !locked.contains(_guestKey(guest)))
-        .toList();
+    final selectable = _selectableGuests();
     final allSelected = selectable.isNotEmpty &&
         selectable
             .every((guest) => _assignedGuestKeys.contains(_guestKey(guest)));
@@ -922,14 +936,18 @@ String selectedByPaymnet = 'NA';
             ],
           ),
           const SizedBox(height: 4),
-          ...widget.guests.map((guest) =>
-              _guestAssignmentRow(guest, locked.contains(_guestKey(guest)))),
+          ...widget.guests.map((guest) => _guestAssignmentRow(
+                guest,
+                locked.contains(_guestKey(guest)),
+              )),
           if (selectable.isEmpty)
-            const Padding(
-              padding: EdgeInsets.only(top: 4),
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
               child: Text(
-                "Every guest already has a room",
-                style: TextStyle(fontSize: 13, color: Colors.grey),
+                _assignableGuests.isEmpty
+                    ? "Shared members share the room of the guest whose package they are on"
+                    : "Every guest already has a room",
+                style: const TextStyle(fontSize: 13, color: Colors.grey),
               ),
             ),
           if (_guestAssignError)
@@ -946,9 +964,13 @@ String selectedByPaymnet = 'NA';
   }
 
   /// One guest. [locked] means they already have a room, so the row is greyed
-  /// out and says so instead of offering the tick again.
+  /// out and says so instead of offering the tick again. A shared member is
+  /// shown the same way — they sleep in the room of the guest whose package
+  /// they are on, so they are named here but never assigned one.
   Widget _guestAssignmentRow(AccompanyingMember guest, bool locked) {
     final key = _guestKey(guest);
+    final shared = guest.sharedPackage;
+    final disabled = shared || locked;
     final selected = _assignedGuestKeys.contains(key);
     final label = [
       if (guest.mid.trim().isNotEmpty) guest.mid.trim(),
@@ -956,7 +978,7 @@ String selectedByPaymnet = 'NA';
     ].join(" — ");
 
     return InkWell(
-      onTap: locked
+      onTap: disabled
           ? null
           : () {
               setState(() {
@@ -976,10 +998,10 @@ String selectedByPaymnet = 'NA';
             SizedBox(
               width: 32,
               child: Checkbox(
-                value: selected,
+                value: selected && !shared,
                 visualDensity: VisualDensity.compact,
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                onChanged: locked
+                onChanged: disabled
                     ? null
                     : (checked) {
                         setState(() {
@@ -1000,12 +1022,38 @@ String selectedByPaymnet = 'NA';
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: locked ? Colors.grey : null,
+                  color: disabled ? Colors.grey : null,
                 ),
               ),
             ),
             const SizedBox(width: 8),
-            if (locked) ...[
+            if (shared) ...[
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.people_alt_outlined,
+                        size: 13, color: Colors.orange.shade800),
+                    const SizedBox(width: 4),
+                    Text(
+                      "Shared",
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.orange.shade800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (locked) ...[
               Icon(Icons.check_circle_outline,
                   size: 16, color: Colors.grey.shade500),
               const SizedBox(width: 4),

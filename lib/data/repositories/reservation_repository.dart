@@ -415,6 +415,10 @@ Future<Map<String, dynamic>> _buildReservationBodyBallys(
                 'HasFamilyMembers': false,
                 'PackageAmount': packageAmountToInt(reservation.packageAmount),
                 'CurrencyType': currency,
+                // Legacy rows carry no per-guest tick, so an absent amount
+                // stands in for it — the same convention the parser reads back.
+                'IsSharedAmount':
+                    (reservation.packageAmount?.trim() ?? '').isEmpty,
               }
             ],
       'room_details': roomDetails,

@@ -32,7 +32,9 @@ class LastThreeMonthsRepository {
     // code, so "My Data" is scoped by that instead of the sales code.
     final scopeCode =
         await StorageUtil.getDataScopeCode(isMyDataMode: isMyDataMode);
-    final showsEverything = !isMyDataMode && await StorageUtil.getMarketingP();
+    // Overall mode is only ever reached by users entitled to it — the app mode
+    // is pinned per user in AppModeSettingsNotifier — so it shows every row.
+    final showsEverything = !isMyDataMode;
     final deviceId = await DeviceId.get();
     final spName = await StorageUtil.getStoredProcedureName();
 

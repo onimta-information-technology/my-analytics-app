@@ -32,6 +32,7 @@ class AppModeSettings {
 class AppModeSettingsNotifier extends StateNotifier<AppModeSettings> {
   String? _currentSalesCode;
   bool _hasMarketingPermission = false;
+  bool _hasOwnMarketingGroup = false;
 
   AppModeSettingsNotifier() : super(AppModeSettings(appMode: AppMode.myData));
 
@@ -44,13 +45,25 @@ class AppModeSettingsNotifier extends StateNotifier<AppModeSettings> {
     }
 
     _hasMarketingPermission = await StorageUtil.getMarketingP();
+    _hasOwnMarketingGroup = await StorageUtil.hasOwnMarketingGroup();
 
     // Check if this is the first login for this user
     final isFirstLogin =
         prefs.getBool('isFirstLogin_$_currentSalesCode') ?? true;
     final savedAppModeIndex = prefs.getInt('appMode_$_currentSalesCode');
 
-    if (_hasMarketingPermission && isFirstLogin) {
+    if (!_hasOwnMarketingGroup) {
+      // Marketing_Code 0 — the user is in no marketing group, so "my data"
+      // would come back empty. Pin them to overall data and ignore any saved
+      // preference. Applies whether or not MArketing_P is set.
+      state = AppModeSettings(appMode: AppMode.overallData, isFirstLogin: false);
+
+      await prefs.setInt(
+        'appMode_$_currentSalesCode',
+        AppMode.overallData.index,
+      );
+      await prefs.setBool('isFirstLogin_$_currentSalesCode', false);
+    } else if (_hasMarketingPermission && isFirstLogin) {
       // Marketing-permission user logging in for the first time - overallData
       state = AppModeSettings(
         appMode: AppMode.overallData,
@@ -63,8 +76,10 @@ class AppModeSettingsNotifier extends StateNotifier<AppModeSettings> {
         AppMode.overallData.index,
       );
       await prefs.setBool('isFirstLogin_$_currentSalesCode', false);
-    } else if (savedAppModeIndex != null) {
-      // User has saved preferences
+    } else if (_hasMarketingPermission && savedAppModeIndex != null) {
+      // Only users with the switch get to keep a saved preference — without
+      // MArketing_P a stale overallData index would contradict the locked
+      // "Show My Data" box in Settings.
       state = AppModeSettings(
         appMode: AppMode.values[savedAppModeIndex],
         isFirstLogin: false,
@@ -100,7 +115,13 @@ class AppModeSettingsNotifier extends StateNotifier<AppModeSettings> {
   }
 
   bool canShowOverallData() {
-    return _hasMarketingPermission;
+    return _hasMarketingPermission || !_hasOwnMarketingGroup;
+  }
+
+  /// Both modes are offered only to a marketing user who is also in a group.
+  /// Without one there is nothing to switch between — see [_loadSettings].
+  bool canToggleAppMode() {
+    return _hasMarketingPermission && _hasOwnMarketingGroup;
   }
 
   String? get currentSalesCode => _currentSalesCode;

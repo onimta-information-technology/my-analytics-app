@@ -21,6 +21,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBindingObserver {
   bool _canShowOverallData = false;
+  bool _isOverallDataOnly = false;
   final _biometricService = BiometricService();
 
   bool _isBiometricAvailable = false;
@@ -213,11 +214,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
     if (salesCode != null) {
       ref.read(appmodeSettingsProvider.notifier).setSalesCode(salesCode);
     }
-    // Only MArketing_P users may switch between their own and overall data.
-    final canShowOverallData = await StorageUtil.getMarketingP();
+    // Marketing_Code 0 means no marketing group, so overall data is the only
+    // mode that makes sense — no switch. Otherwise only MArketing_P users may
+    // switch between their own and overall data.
+    final hasMarketingPermission = await StorageUtil.getMarketingP();
+    final hasOwnMarketingGroup = await StorageUtil.hasOwnMarketingGroup();
     if (!mounted) return;
     setState(() {
-      _canShowOverallData = canShowOverallData;
+      _canShowOverallData = hasMarketingPermission && hasOwnMarketingGroup;
+      _isOverallDataOnly = !hasOwnMarketingGroup;
     });
   }
 
@@ -492,20 +497,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
                   const Text('App Mode',
                       style: TextStyle(fontSize: 16.0)),
                   const SizedBox(height: 20),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 12, horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: Constants.kSecondaryColor,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text('Show My Data',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500)),
-                  ),
+                  // Marketing_Code 0 puts the user in no group, so overall
+                  // data is the only mode they can be in.
+                  _buildFixedAppModeBox(_isOverallDataOnly
+                      ? 'Show Overall Data'
+                      : 'Show My Data'),
                   const SizedBox(height: 30),
                 ],
 
@@ -757,6 +753,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
             selectedMode == mode ? Colors.white : Colors.black,
       ),
       child: Text(name),
+    );
+  }
+
+  // Shown to users who have only one mode available — there is nothing to
+  // switch between, so the current mode is stated rather than offered.
+  Widget _buildFixedAppModeBox(String name) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Constants.kSecondaryColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(name,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+              color: Colors.white, fontWeight: FontWeight.w500)),
     );
   }
 }

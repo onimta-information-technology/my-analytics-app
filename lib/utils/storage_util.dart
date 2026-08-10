@@ -113,6 +113,14 @@ class StorageUtil {
     return prefs.getBool('marketingP') ?? false;
   }
 
+  /// Whether the user belongs to a marketing group at all. Marketing_Code 0
+  /// means they don't, so there is no "my data" for them to look at — those
+  /// users see overall data instead, whatever MArketing_P says.
+  static Future<bool> hasOwnMarketingGroup() async {
+    final code = await getMarketingCode();
+    return code != null && code != '0';
+  }
+
   /// The code to send as @Text1 on data-scoping reports (marketing performance,
   /// last three months, guests 9009-9011, birthdays 9004).
   ///
@@ -123,6 +131,7 @@ class StorageUtil {
     final salesCode = await getSalesCode();
     if (!isMyDataMode) return salesCode;
     if (!await getMarketingP()) return salesCode;
+    if (!await hasOwnMarketingGroup()) return salesCode;
     return await getMarketingCode() ?? salesCode;
   }
 

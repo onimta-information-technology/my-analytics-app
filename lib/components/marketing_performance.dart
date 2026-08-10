@@ -26,6 +26,12 @@ class _MarketingPerformanceWidgetState
   String? userName;
   bool _refreshEnabled = false;
 
+  // Client-side search over the currently displayed rows (SM name for the
+  // Performance/Result views, group name for the Target view). Filtering is
+  // purely local — no extra API calls.
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
   // Captured in initState so dispose() never touches `ref` (illegal in
   // Riverpod once the element is disposed — it throws and corrupts the
   // element-tree teardown).
@@ -151,12 +157,26 @@ class _MarketingPerformanceWidgetState
     // Determine current data
     final bool isTargetView =
         marketingState.viewType == MarketingViewType.target;
-    final List<dynamic> currentData =
+    final List<dynamic> allData =
         marketingState.viewType == MarketingViewType.performance
             ? marketingState.currentPerformanceData
             : marketingState.viewType == MarketingViewType.result
                 ? marketingState.currentResultData
                 : []; // target view — list built separately
+
+    // Apply the search filter (SM name). Everything below — totals, bars,
+    // sorting — works off the filtered list so the card stays consistent.
+    final String query = _searchQuery.trim().toLowerCase();
+    final List<dynamic> currentData = query.isEmpty
+        ? allData
+        : allData.where((item) {
+            final String name = item is MarketingPerformance
+                ? item.smName
+                : item is MarketingResult
+                    ? item.smName
+                    : '';
+            return name.toLowerCase().contains(query);
+          }).toList();
 
     final bool tabsEnabled = _tabsEnabled && !marketingState.isLoading;
     final dataWithPercentages = _calculatePercentages(currentData);
@@ -208,9 +228,20 @@ class _MarketingPerformanceWidgetState
 
     final sortedData = [...positiveData, ...negativeData];
 
-    // Target summary data (sorted by achievement desc)
-    final targetSummary = [...marketingState.currentTargetSummary]
-      ..sort((a, b) => b.achievement.compareTo(a.achievement));
+    // Target summary data (filtered by group name, sorted by achievement desc)
+    final allTargetSummary = marketingState.currentTargetSummary;
+    final targetSummary = [
+      ...query.isEmpty
+          ? allTargetSummary
+          : allTargetSummary
+              .where((t) => t.gName.toLowerCase().contains(query))
+    ]..sort((a, b) => b.achievement.compareTo(a.achievement));
+
+    // Show the search box whenever the current view actually has rows to
+    // filter (or the user has typed something that filtered them all out).
+    final bool hasRowsToSearch = isTargetView
+        ? allTargetSummary.isNotEmpty
+        : allData.isNotEmpty;
 
     return Card(
       elevation: 2,
@@ -356,6 +387,15 @@ class _MarketingPerformanceWidgetState
               const SizedBox(height: 16),
             ],
 
+            // ── Search ──
+            if (!marketingState.isLoading && hasRowsToSearch) ...[
+              _buildSearchField(
+                hintText:
+                    isTargetView ? 'Search group name...' : 'Search SM name...',
+              ),
+              const SizedBox(height: 12),
+            ],
+
             // ── Content ──
             if (marketingState.isLoading)
               const Center(
@@ -376,12 +416,16 @@ class _MarketingPerformanceWidgetState
             else if (isTargetView) ...[
               // ── TARGET VIEW ──
               if (targetSummary.isEmpty)
-                const Center(
+                Center(
                   child: Padding(
-                    padding: EdgeInsets.all(20.0),
+                    padding: const EdgeInsets.all(20.0),
                     child: Text(
-                      "No target data available",
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                      query.isNotEmpty && allTargetSummary.isNotEmpty
+                          ? 'No groups match "$_searchQuery"'
+                          : "No target data available",
+                      style:
+                          const TextStyle(fontSize: 16, color: Colors.grey),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                 )
@@ -410,12 +454,16 @@ class _MarketingPerformanceWidgetState
             ] else ...[
               // ── PERFORMANCE / RESULT VIEW ──
               if (currentData.isEmpty)
-                const Center(
+                Center(
                   child: Padding(
-                    padding: EdgeInsets.all(20.0),
+                    padding: const EdgeInsets.all(20.0),
                     child: Text(
-                      "No data available",
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                      query.isNotEmpty && allData.isNotEmpty
+                          ? 'No SM matches "$_searchQuery"'
+                          : "No data available",
+                      style:
+                          const TextStyle(fontSize: 16, color: Colors.grey),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                 )
@@ -509,20 +557,22 @@ class _MarketingPerformanceWidgetState
                     ),
                   )
                 else
-                  // Target legend
-                  Row(
-                    children: [
-                      Container(
-                        width: 12,
-                        height: 12,
-                        decoration: const BoxDecoration(
-                          color: Colors.deepPurple,
-                          shape: BoxShape.circle,
-                        ),
+                  // Target legend — achievement % colour bands
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildAchievementLegend("<30%", _achievementColor(0)),
+                          const SizedBox(width: 12),
+                          _buildAchievementLegend("30-60%", _achievementColor(30)),
+                          const SizedBox(width: 12),
+                          _buildAchievementLegend("60-90%", _achievementColor(60)),
+                          const SizedBox(width: 12),
+                          _buildAchievementLegend("90%+", _achievementColor(90)),
+                        ],
                       ),
-                      const SizedBox(width: 4),
-                      const Text("Achievement %"),
-                    ],
+                    ),
                   ),
                 Card(
                   shape: RoundedRectangleBorder(
@@ -556,6 +606,57 @@ class _MarketingPerformanceWidgetState
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // ── Search field ─────────────────────────────────────────────────────────
+  // Filters the currently displayed rows locally as the user types.
+  // Resets the filter — called when the tab or view type changes so the
+  // user isn't left looking at an empty list filtered by a stale query.
+  void _clearSearch() {
+    if (_searchQuery.isEmpty && _searchController.text.isEmpty) return;
+    _searchController.clear();
+    setState(() => _searchQuery = '');
+  }
+
+  Widget _buildSearchField({required String hintText}) {
+    return TextField(
+      controller: _searchController,
+      onChanged: (value) => setState(() => _searchQuery = value),
+      textInputAction: TextInputAction.search,
+      style: const TextStyle(fontSize: 14),
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: TextStyle(fontSize: 14, color: Colors.grey[500]),
+        prefixIcon: const Icon(Icons.search, size: 20),
+        suffixIcon: _searchQuery.isEmpty
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.clear, size: 20),
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() => _searchQuery = '');
+                  FocusScope.of(context).unfocus();
+                },
+              ),
+        isDense: true,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        filled: true,
+        fillColor: Colors.grey[100],
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(25),
+          borderSide: BorderSide(color: Colors.grey[300]!),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(25),
+          borderSide: BorderSide(color: Colors.grey[300]!),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(25),
+          borderSide: const BorderSide(color: Colors.blue),
         ),
       ),
     );
@@ -613,6 +714,7 @@ Widget _buildViewTypeButton(
     onTap: () {
       final notifier = ref.read(marketingProvider.notifier);
       final state = ref.read(marketingProvider);
+      _clearSearch();
       notifier.setViewType(viewType);
 
       if (viewType == MarketingViewType.target) {
@@ -1053,12 +1155,41 @@ Widget _buildViewTypeButton(
               'Achievement',
               '${target.achievement.toStringAsFixed(2)}%',
               fontSettings,
-              valueColor: Colors.deepPurple,
+              valueColor: _achievementColor(target.achievement),
+              labelColor: _achievementColor(target.achievement),
             ),
           ],
         ),
       ),
     );
+  }
+
+  // ── Achievement % legend chip ────────────────────────────────────────────
+  Widget _buildAchievementLegend(String label, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(label),
+      ],
+    );
+  }
+
+  // ── Achievement % colour bands ───────────────────────────────────────────
+  // < 30 red · 30–60 yellow · 60–90 blue · >= 90 green
+  static Color _achievementColor(double achievement) {
+    if (achievement < 30) return Colors.red;
+    if (achievement < 60) return const Color(0xFFF9A825); // amber 800
+    if (achievement < 90) return Colors.blue;
+    return Colors.green;
   }
 
   // ── Helper row: label on the left, value on the right ───────────────────
@@ -1067,6 +1198,7 @@ Widget _buildViewTypeButton(
     String value,
     fontSettings, {
     Color? valueColor,
+    Color? labelColor,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
@@ -1077,7 +1209,9 @@ Widget _buildViewTypeButton(
             label,
             style: TextStyle(
               fontSize: fontSettings.fontSize,
-              color: const Color.fromARGB(255, 0, 0, 0),
+              fontWeight:
+                  labelColor != null ? FontWeight.w900 : FontWeight.normal,
+              color: labelColor ?? const Color.fromARGB(255, 0, 0, 0),
             ),
           ),
           Text(
@@ -1298,6 +1432,7 @@ String _formatWithThousands(double amount) {
   // }
 void _onTabSelected(int index) {
   final notifier = ref.read(marketingProvider.notifier);
+  _clearSearch();
   notifier.setSelectedTab(index);
 
   // Always reset to Performance when switching tabs.
@@ -1344,6 +1479,7 @@ void _onTabSelected(int index) {
 
   @override
   void dispose() {
+    _searchController.dispose();
     // Defer the state reset: mutating a StateNotifier synchronously inside
     // dispose() runs during finalizeTree/lockState and notifying listeners
     // there is illegal. Use the captured notifier (NOT `ref`) on a microtask.

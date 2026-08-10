@@ -14,14 +14,14 @@ class SettingsPopupMenu extends ConsumerWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-           ListTile(
-            leading: Icon(Icons.web, color: Colors.grey[700]),
-            title: const Text('Academic'),
-            onTap: () {
-              context.push('/academic');
-              Navigator.pop(context);
-            },
-          ),
+          //  ListTile(
+          //   leading: Icon(Icons.web, color: Colors.grey[700]),
+          //   title: const Text('Academic'),
+          //   onTap: () {
+          //     context.push('/academic');
+          //     Navigator.pop(context);
+          //   },
+          // ),
           ListTile(
             leading: Icon(Icons.settings, color: Colors.grey[700]),
             title: const Text('Settings'),

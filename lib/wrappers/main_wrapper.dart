@@ -20,6 +20,7 @@ class _MainScreenState extends State<MainWrapper> {
     '/home',
     '/menu',
     '/menu/chats',
+    '/academic',
     '/settings',
   ];
 
@@ -27,7 +28,7 @@ class _MainScreenState extends State<MainWrapper> {
     setState(() {
       _selectedIndex = index;
     });
-    if (index == 3) {
+    if (index == 4) {
       showModalBottomSheet(
         context: context,
         builder: (BuildContext context) {
@@ -49,6 +50,9 @@ class _MainScreenState extends State<MainWrapper> {
       bottomNavigationBar: isChatScreen
           ? null
           : BottomNavigationBar(
+              // 5 items with labels visible on every tab, selected or not.
+             type: BottomNavigationBarType.fixed,
+              selectedFontSize: 12.0,
               currentIndex: _selectedIndex,
               onTap: _onItemTapped,
               items: const [
@@ -63,6 +67,10 @@ class _MainScreenState extends State<MainWrapper> {
                 BottomNavigationBarItem(
                   icon: Icon(Icons.chat, size: 30.0),
                   label: 'Chat',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.school, size: 30.0),
+                  label: 'Academic',
                 ),
                 BottomNavigationBarItem(
                   icon: Icon(Icons.settings, size: 30.0),

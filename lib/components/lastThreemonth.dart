@@ -38,6 +38,11 @@ class _LastThreeMonthsGuestCardState
   // Riverpod once the element is disposed).
   LastThreeMonthsNotifier? _lastThreeMonthsNotifier;
 
+  // Client-side search over the loaded SM rows — purely local, no extra
+  // API calls. Mirrors the search on MarketingPerformanceWidget.
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
   // Max height for the SM list when this widget is embedded (not full
   // screen). Beyond this, the list scrolls internally instead of
   // expanding the card indefinitely. Mirrors
@@ -54,6 +59,7 @@ class _LastThreeMonthsGuestCardState
 
   @override
   void dispose() {
+    _searchController.dispose();
     // Defer the state reset: mutating a StateNotifier synchronously inside
     // dispose() runs during finalizeTree/lockState and notifying listeners
     // there is illegal. Use the captured notifier (NOT `ref`) on a microtask.
@@ -150,28 +156,41 @@ class _LastThreeMonthsGuestCardState
 
     _handleAppModeChange(currentAppMode, lastThreeMonthsState.hasLoadedOnce);
 
+    // Apply the search filter (SM name). Everything below — totals, bars,
+    // sorting — works off the filtered list so the card stays consistent.
+    final String query = _searchQuery.trim().toLowerCase();
+    final allPerformance = lastThreeMonthsState.performanceData;
+    final performanceData = query.isEmpty
+        ? allPerformance
+        : allPerformance
+            .where((p) => p.smName.toLowerCase().contains(query))
+            .toList();
+
     // New/old guest totals come straight from the API (N_Reg / O_Reg
     // summed across the SM rows).
-    final totalNewReg = lastThreeMonthsState.performanceData
-        .fold<int>(0, (sum, p) => sum + p.newReg);
-    final totalOldReg = lastThreeMonthsState.performanceData
-        .fold<int>(0, (sum, p) => sum + p.oldReg);
+    final totalNewReg =
+        performanceData.fold<int>(0, (sum, p) => sum + p.newReg);
+    final totalOldReg =
+        performanceData.fold<int>(0, (sum, p) => sum + p.oldReg);
     final totalGuestCount = totalNewReg + totalOldReg;
 
     // Package guests are counted from the detail rows (PKG_Status == 'Y').
     // Group distinct memIds per SM so a guest with multiple rows isn't
-    // double-counted, then the overall total is the sum of the per-SM sets.
+    // double-counted, then the overall total is the sum of the per-SM sets
+    // for the SMs currently visible.
     final packageMembersBySm = <String, Set<String>>{};
     for (final d in lastThreeMonthsState.detailedData) {
       if (d.hasPackage) {
         packageMembersBySm.putIfAbsent(d.sm, () => <String>{}).add(d.memId);
       }
     }
-    final packageGuestCount = packageMembersBySm.values
-        .fold<int>(0, (sum, members) => sum + members.length);
+    final visibleSmCodes = performanceData.map((p) => p.sm).toSet();
+    final packageGuestCount = packageMembersBySm.entries
+        .where((e) => visibleSmCodes.contains(e.key))
+        .fold<int>(0, (sum, e) => sum + e.value.length);
 
     final dataWithPercentages = _calculatePercentages(
-      lastThreeMonthsState.performanceData,
+      performanceData,
       packageMembersBySm,
     );
 
@@ -325,7 +344,7 @@ class _LastThreeMonthsGuestCardState
                   ),
                 ),
               )
-            else if (lastThreeMonthsState.performanceData.isEmpty)
+            else if (allPerformance.isEmpty)
               const Center(
                 child: Padding(
                   padding: EdgeInsets.all(20.0),
@@ -335,15 +354,31 @@ class _LastThreeMonthsGuestCardState
                   ),
                 ),
               )
-            else
-              _wrapScrollable(
-                Column(
-                  children: sortedData
-                      .map((itemWithPercentage) =>
-                          _buildPerformanceItem(itemWithPercentage))
-                      .toList(),
+            else ...[
+              _buildSearchField(),
+              const SizedBox(height: 12),
+              if (performanceData.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Text(
+                      'No SM matches "$_searchQuery"',
+                      style:
+                          const TextStyle(fontSize: 16, color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                )
+              else
+                _wrapScrollable(
+                  Column(
+                    children: sortedData
+                        .map((itemWithPercentage) =>
+                            _buildPerformanceItem(itemWithPercentage))
+                        .toList(),
+                  ),
                 ),
-              ),
+            ],
 
             const SizedBox(height: 16),
 
@@ -393,6 +428,49 @@ class _LastThreeMonthsGuestCardState
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // ── Search field ─────────────────────────────────────────────────────────
+  // Filters the loaded SM rows locally as the user types.
+  Widget _buildSearchField() {
+    return TextField(
+      controller: _searchController,
+      onChanged: (value) => setState(() => _searchQuery = value),
+      textInputAction: TextInputAction.search,
+      style: const TextStyle(fontSize: 14),
+      decoration: InputDecoration(
+        hintText: 'Search SM name...',
+        hintStyle: TextStyle(fontSize: 14, color: Colors.grey[500]),
+        prefixIcon: const Icon(Icons.search, size: 20),
+        suffixIcon: _searchQuery.isEmpty
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.clear, size: 20),
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() => _searchQuery = '');
+                  FocusScope.of(context).unfocus();
+                },
+              ),
+        isDense: true,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        filled: true,
+        fillColor: Colors.grey[100],
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(25),
+          borderSide: BorderSide(color: Colors.grey[300]!),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(25),
+          borderSide: BorderSide(color: Colors.grey[300]!),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(25),
+          borderSide: const BorderSide(color: Colors.blue),
         ),
       ),
     );

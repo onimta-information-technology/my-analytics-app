@@ -360,7 +360,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           bodyMedium: TextStyle(fontFamily: 'ABCArizonaFlare'),
         ),
         bottomNavigationBarTheme: BottomNavigationBarThemeData(
-          backgroundColor: customGoldColor,
+          backgroundColor: Colors.white,
           elevation: 20.0,
           selectedItemColor: Colors.black26,
           unselectedItemColor: Colors.black54,

@@ -93,14 +93,22 @@ class _SalesPersonsScreenState extends ConsumerState<SalesPersonsScreen> with Co
                               ),
                             ),
                             const SizedBox(width: 10),
-                            CircleAvatar(
-                              radius: 18,
-                              backgroundColor: const Color.fromARGB(
-                                255,
-                                152,
-                                98,
-                                6,
-                              ).withAlpha(90),
+                            Container(
+                              constraints: const BoxConstraints(minWidth: 36),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: const Color.fromARGB(
+                                  255,
+                                  152,
+                                  98,
+                                  6,
+                                ).withAlpha(90),
+                                borderRadius: BorderRadius.circular(6.0),
+                              ),
                               child: Text(
                                 entry.value[0].mid == ''
                                     ? '0'

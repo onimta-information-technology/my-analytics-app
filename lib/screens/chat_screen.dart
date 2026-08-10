@@ -2,6 +2,7 @@ import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/components/notification_banner.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
+import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/guest_booking_provider.dart';
 import 'package:ballys_reservation_app/screens/chatDetail_screen.dart';
 import 'package:ballys_reservation_app/utils/badge_sync_helper.dart';
@@ -17,15 +18,15 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 
 List<ChatContact> _filteredUsers = [];
 
-class ChatScreen extends StatefulWidget {
+class ChatScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic>? notificationData;
   const ChatScreen({super.key, this.notificationData});
 
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen>
+class _ChatScreenState extends ConsumerState<ChatScreen>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver,ConnectivityMixin {
   late TabController _tabController;
   List<ChatContact> _contacts = [];
@@ -319,17 +320,29 @@ if (message.data['msg_type'] == '35') {
   }
 
   void _showDeleteConfirmation(ChatContact contact) {
+    final fontSettings = ref.read(fontSettingsProvider);
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Delete Chat'),
+          title: Text(
+            'Delete Chat',
+            style: TextStyle(
+              fontSize: fontSettings.fontSize + 2,
+              fontWeight: fontSettings.fontWeight,
+            ),
+          ),
           content: Text(
             'Are you sure you want to delete the chat with ${contact.name}?',
+            style: TextStyle(fontSize: fontSettings.fontSize - 2),
           ),
           actions: <Widget>[
             TextButton(
-              child: const Text('Cancel'),
+              child: Text(
+                'Cancel',
+                style: TextStyle(fontSize: fontSettings.fontSize - 2),
+              ),
               onPressed: () {
                 Navigator.of(context).pop();
                 setState(() {
@@ -338,7 +351,13 @@ if (message.data['msg_type'] == '35') {
               },
             ),
             TextButton(
-              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+              child: Text(
+                'Delete',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontSize: fontSettings.fontSize - 2,
+                ),
+              ),
               onPressed: () async {
                 final navigator = Navigator.of(context);
                 final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -634,7 +653,7 @@ if (message.data['msg_type'] == '35') {
     _saveChats();
   }
 
-  Widget _buildContactCard(ChatContact contact) {
+  Widget _buildContactCard(ChatContact contact, FontSettings fontSettings) {
     final bool hasLastMessage =
         contact.lastMessage.isNotEmpty &&
         contact.lastMessage != 'No messages yet';
@@ -705,9 +724,9 @@ if (message.data['msg_type'] == '35') {
                 radius: 25,
                 child: Text(
                   contact.initials,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 18,
+                    fontSize: fontSettings.fontSize,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -730,7 +749,10 @@ if (message.data['msg_type'] == '35') {
           ),
           title: Text(
             contact.name,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              fontSize: fontSettings.fontSize,
+              fontWeight: fontSettings.fontWeight,
+            ),
           ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -740,7 +762,7 @@ if (message.data['msg_type'] == '35') {
                   contact.lastMessage,
                   style: TextStyle(
                     color: Colors.grey[600],
-                    fontSize: 14,
+                    fontSize: fontSettings.fontSize - 2,
                     fontWeight: contact.unreadCount > 0
                         ? FontWeight.w500
                         : FontWeight.normal,
@@ -751,12 +773,18 @@ if (message.data['msg_type'] == '35') {
                 if (contact.lastMessageSender != null)
                   Text(
                     'by ${contact.lastMessageSenderName}',
-                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                    style: TextStyle(
+                      color: Colors.grey[500],
+                      fontSize: fontSettings.fontSize - 4,
+                    ),
                   ),
               ] else
                 Text(
                   'No messages yet',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: fontSettings.fontSize - 2,
+                  ),
                 ),
             ],
           ),
@@ -786,7 +814,10 @@ if (message.data['msg_type'] == '35') {
                   children: [
                     Text(
                       contact.time,
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: fontSettings.fontSize - 4,
+                      ),
                     ),
                     if (contact.unreadCount > 0)
                       Container(
@@ -798,9 +829,9 @@ if (message.data['msg_type'] == '35') {
                         ),
                         child: Text(
                           '${contact.unreadCount}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: Colors.white,
-                            fontSize: 12,
+                            fontSize: fontSettings.fontSize - 4,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -814,15 +845,18 @@ if (message.data['msg_type'] == '35') {
     );
   }
 
-  Widget _buildChatList(int tabIndex) {
+  Widget _buildChatList(int tabIndex, FontSettings fontSettings) {
     if (_isLoading) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(color: Colors.green),
-            SizedBox(height: 16),
-            Text('Loading chats...'),
+            const CircularProgressIndicator(color: Colors.green),
+            const SizedBox(height: 16),
+            Text(
+              'Loading chats...',
+              style: TextStyle(fontSize: fontSettings.fontSize - 2),
+            ),
           ],
         ),
       );
@@ -837,14 +871,23 @@ if (message.data['msg_type'] == '35') {
             const SizedBox(height: 16),
             Text(
               _errorMessage!,
-              style: const TextStyle(fontSize: 16, color: Colors.red),
+              style: TextStyle(
+                fontSize: fontSettings.fontSize,
+                color: Colors.red,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _fetchChatsFromApi,
               style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-              child: const Text('Retry', style: TextStyle(color: Colors.white)),
+              child: Text(
+                'Retry',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: fontSettings.fontSize - 2,
+                ),
+              ),
             ),
           ],
         ),
@@ -864,14 +907,20 @@ if (message.data['msg_type'] == '35') {
               tabIndex == 0
                   ? "No chats found"
                   : "No ${['all', 'unread', 'groups', 'favorites'][tabIndex]} chats",
-              style: const TextStyle(fontSize: 16, color: Colors.black54),
+              style: TextStyle(
+                fontSize: fontSettings.fontSize,
+                color: Colors.black54,
+              ),
             ),
             const SizedBox(height: 8),
             TextButton(
               onPressed: _fetchChatsFromApi,
-              child: const Text(
+              child: Text(
                 "Refresh chats",
-                style: TextStyle(color: Colors.green),
+                style: TextStyle(
+                  color: Colors.green,
+                  fontSize: fontSettings.fontSize - 2,
+                ),
               ),
             ),
           ],
@@ -892,7 +941,7 @@ if (message.data['msg_type'] == '35') {
         child: ListView.builder(
           itemCount: contacts.length,
           itemBuilder: (context, index) {
-            return _buildContactCard(contacts[index]);
+            return _buildContactCard(contacts[index], fontSettings);
           },
         ),
       ),
@@ -901,6 +950,8 @@ if (message.data['msg_type'] == '35') {
 
   @override
   Widget build(BuildContext context) {
+    final fontSettings = ref.watch(fontSettingsProvider);
+
     return GestureDetector(
       onTap: () {
         FocusScope.of(context).unfocus();
@@ -911,7 +962,13 @@ if (message.data['msg_type'] == '35') {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Text(_selectedContactId != null ? "Select action" : "Chats"),
-              Text("Chats"),
+              Text(
+                "Chats",
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize + 2,
+                  fontWeight: fontSettings.fontWeight,
+                ),
+              ),
               // Text(
               //   _selectedContactId != null
               //       ? "1 selected"
@@ -973,8 +1030,12 @@ if (message.data['msg_type'] == '35') {
                     padding: const EdgeInsets.all(8.0),
                     child: TextField(
                       onChanged: _filterContacts,
+                      style: TextStyle(fontSize: fontSettings.fontSize - 2),
                       decoration: InputDecoration(
                         hintText: "Search chats...",
+                        hintStyle: TextStyle(
+                          fontSize: fontSettings.fontSize - 2,
+                        ),
                         prefixIcon: const Icon(Icons.search),
                         filled: true,
                         fillColor: Colors.grey.shade200,
@@ -991,6 +1052,13 @@ if (message.data['msg_type'] == '35') {
                     indicatorColor: Colors.green,
                     labelColor: Colors.green,
                     unselectedLabelColor: Colors.black54,
+                    labelStyle: TextStyle(
+                      fontSize: fontSettings.fontSize - 4,
+                      fontWeight: fontSettings.fontWeight,
+                    ),
+                    unselectedLabelStyle: TextStyle(
+                      fontSize: fontSettings.fontSize - 4,
+                    ),
                     tabs: const [
                       Tab(text: "All"),
                       Tab(text: "Unread"),
@@ -1010,10 +1078,10 @@ if (message.data['msg_type'] == '35') {
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  _buildChatList(0),
-                  _buildChatList(1),
-                  _buildChatList(2),
-                  _buildChatList(3),
+                  _buildChatList(0, fontSettings),
+                  _buildChatList(1, fontSettings),
+                  _buildChatList(2, fontSettings),
+                  _buildChatList(3, fontSettings),
                 ],
               ),
             ),
@@ -1027,7 +1095,10 @@ if (message.data['msg_type'] == '35') {
                   color: Colors.orange.withOpacity(0.9),
                   child: Text(
                     'Warning: ${_errorMessage!}',
-                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: fontSettings.fontSize - 4,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -1062,8 +1133,14 @@ if (message.data['msg_type'] == '35') {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   TextField(
+                                    style: TextStyle(
+                                      fontSize: fontSettings.fontSize - 2,
+                                    ),
                                     decoration: InputDecoration(
                                       hintText: "Search contacts...",
+                                      hintStyle: TextStyle(
+                                        fontSize: fontSettings.fontSize - 2,
+                                      ),
                                       prefixIcon: const Icon(Icons.search),
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
@@ -1098,19 +1175,23 @@ if (message.data['msg_type'] == '35') {
                                     },
                                   ),
                                   const SizedBox(height: 16),
-                                  const Text(
+                                  Text(
                                     "Start New Chat",
                                     style: TextStyle(
-                                      fontSize: 18,
+                                      fontSize: fontSettings.fontSize + 2,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                   const SizedBox(height: 16),
                                   Expanded(
                                     child: _allUsers.isEmpty
-                                        ? const Center(
+                                        ? Center(
                                             child: Text(
                                               'No contacts available',
+                                              style: TextStyle(
+                                                fontSize:
+                                                    fontSettings.fontSize - 2,
+                                              ),
                                             ),
                                           )
                                         : ListView.builder(
@@ -1124,12 +1205,23 @@ if (message.data['msg_type'] == '35') {
                                                       contact.avatarColor,
                                                   child: Text(
                                                     contact.initials,
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                       color: Colors.white,
+                                                      fontSize: fontSettings
+                                                              .fontSize -
+                                                          4,
                                                     ),
                                                   ),
                                                 ),
-                                                title: Text(contact.name),
+                                                title: Text(
+                                                  contact.name,
+                                                  style: TextStyle(
+                                                    fontSize:
+                                                        fontSettings.fontSize,
+                                                    fontWeight:
+                                                        fontSettings.fontWeight,
+                                                  ),
+                                                ),
                                                 subtitle: Row(
   children: [
     Container(
@@ -1147,7 +1239,7 @@ if (message.data['msg_type'] == '35') {
       contact.isOnline ? "Online" : "Offline",
       style: TextStyle(
         color: contact.isOnline ? Colors.green[700] : Colors.grey,
-        fontSize: 13,
+        fontSize: fontSettings.fontSize - 4,
       ),
     ),
   ],
@@ -1330,7 +1422,12 @@ if (message.data['msg_type'] == '35') {
                                   ),
                                   ElevatedButton(
                                     onPressed: () => Navigator.pop(context),
-                                    child: const Text("Close"),
+                                    child: Text(
+                                      "Close",
+                                      style: TextStyle(
+                                        fontSize: fontSettings.fontSize - 2,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),

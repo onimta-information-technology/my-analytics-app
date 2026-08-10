@@ -5,17 +5,19 @@ import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/models/chat_message.dart';
+import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/utils/current_chat_state.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/download_helper.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:intl/intl.dart';
 
-class IndividualChatScreen extends StatefulWidget {
+class IndividualChatScreen extends ConsumerStatefulWidget {
   final ChatContact contact;
   final Function(String)? onMessageSent;
 
@@ -26,10 +28,11 @@ class IndividualChatScreen extends StatefulWidget {
   });
 
   @override
-  State<IndividualChatScreen> createState() => _IndividualChatScreenState();
+  ConsumerState<IndividualChatScreen> createState() =>
+      _IndividualChatScreenState();
 }
 
-class _IndividualChatScreenState extends State<IndividualChatScreen>
+class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
@@ -474,6 +477,12 @@ Future<void> _markMessagesAsRead() async {
   }
 
   void _onAttachFilePressed() async {
+    final fontSettings = ref.read(fontSettingsProvider);
+    final optionStyle = TextStyle(
+      fontSize: fontSettings.fontSize - 2,
+      fontWeight: fontSettings.fontWeight,
+    );
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -484,7 +493,7 @@ Future<void> _markMessagesAsRead() async {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_library, color: Colors.blue),
-              title: const Text('Gallery'),
+              title: Text('Gallery', style: optionStyle),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickImagesFromGallery();
@@ -495,7 +504,7 @@ Future<void> _markMessagesAsRead() async {
                 Icons.insert_drive_file,
                 color: Colors.orange,
               ),
-              title: const Text('Document'),
+              title: Text('Document', style: optionStyle),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickDocuments();
@@ -503,7 +512,7 @@ Future<void> _markMessagesAsRead() async {
             ),
             ListTile(
               leading: const Icon(Icons.cancel, color: Colors.red),
-              title: const Text('Cancel'),
+              title: Text('Cancel', style: optionStyle),
               onTap: () => Navigator.pop(ctx),
             ),
           ],
@@ -573,6 +582,7 @@ Future<void> _markMessagesAsRead() async {
     final selectedMsgs =
         _messages.where((m) => selectedIds.contains(m.id)).toList();
     final allMine = selectedMsgs.every((m) => m.isMe);
+    final fontSettings = ref.read(fontSettingsProvider);
 
     showModalBottomSheet(
       context: context,
@@ -592,9 +602,9 @@ Future<void> _markMessagesAsRead() async {
                   const SizedBox(width: 10),
                   Text(
                     '${selectedIds.length} message${selectedIds.length > 1 ? 's' : ''} selected',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                      fontSize: fontSettings.fontSize,
                     ),
                   ),
                 ],
@@ -607,14 +617,18 @@ Future<void> _markMessagesAsRead() async {
               ListTile(
                 leading:
                     const Icon(Icons.delete_forever, color: Colors.red),
-                title: const Text(
+                title: Text(
                   'Delete for Everyone',
                   style: TextStyle(
                     color: Colors.red,
                     fontWeight: FontWeight.w600,
+                    fontSize: fontSettings.fontSize - 2,
                   ),
                 ),
-                subtitle: const Text('Remove for all participants'),
+                subtitle: Text(
+                  'Remove for all participants',
+                  style: TextStyle(fontSize: fontSettings.fontSize - 4),
+                ),
                 onTap: () async {
                   Navigator.pop(ctx);
                   await _performDelete(
@@ -629,11 +643,17 @@ Future<void> _markMessagesAsRead() async {
             ListTile(
               leading:
                   const Icon(Icons.delete_outline, color: Colors.orange),
-              title: const Text(
+              title: Text(
                 'Delete for Me',
-                style: TextStyle(fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: fontSettings.fontSize - 2,
+                ),
               ),
-              subtitle: const Text('Remove only from your view'),
+              subtitle: Text(
+                'Remove only from your view',
+                style: TextStyle(fontSize: fontSettings.fontSize - 4),
+              ),
               onTap: () async {
                 Navigator.pop(ctx);
                 await _performDelete(
@@ -647,7 +667,10 @@ Future<void> _markMessagesAsRead() async {
             // ── Cancel ──
             ListTile(
               leading: const Icon(Icons.cancel, color: Colors.grey),
-              title: const Text('Cancel'),
+              title: Text(
+                'Cancel',
+                style: TextStyle(fontSize: fontSettings.fontSize - 2),
+              ),
               onTap: () => Navigator.pop(ctx),
             ),
           ],
@@ -781,6 +804,7 @@ Future<void> _markMessagesAsRead() async {
     List<AttachmentItem> items,
     bool isMe,
     String messageId,
+    FontSettings fontSettings,
   ) {
     const double gridSize = 220.0;
     const double gap = 3.0;
@@ -858,9 +882,9 @@ Future<void> _markMessagesAsRead() async {
               child: Center(
                 child: Text(
                   '+$extraCount',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 26,
+                    fontSize: fontSettings.fontSize + 8,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -995,7 +1019,10 @@ Future<void> _markMessagesAsRead() async {
 
   // ─── Single attachment ──────────────────────────────────────────────────────
 
-  Widget _buildSingleAttachment(ChatMessage message) {
+  Widget _buildSingleAttachment(
+    ChatMessage message,
+    FontSettings fontSettings,
+  ) {
     if (message.fileType == 'image') {
       final item = AttachmentItem(
         url: message.attachmentUrl,
@@ -1003,7 +1030,7 @@ Future<void> _markMessagesAsRead() async {
         fileName: message.fileName,
         mimeType: message.attachmentType,
       );
-      return _buildImageGrid([item], message.isMe, message.id);
+      return _buildImageGrid([item], message.isMe, message.id, fontSettings);
     }
 
     final name = message.fileName ?? message.text;
@@ -1039,7 +1066,7 @@ Future<void> _markMessagesAsRead() async {
                 name,
                 style: TextStyle(
                   color: message.isMe ? Colors.white : Colors.black87,
-                  fontSize: 14,
+                  fontSize: fontSettings.fontSize - 2,
                 ),
               ),
             ),
@@ -1057,7 +1084,7 @@ Future<void> _markMessagesAsRead() async {
 
   // ─── Message bubble ─────────────────────────────────────────────────────────
 
-  Widget _buildMessage(ChatMessage message) {
+  Widget _buildMessage(ChatMessage message, FontSettings fontSettings) {
     final isSelected = _selectedMessageIds.contains(message.id);
     final hasGrouped = message.hasGroupedAttachments;
     final showText =
@@ -1111,7 +1138,10 @@ Future<void> _markMessagesAsRead() async {
                       radius: 15,
                       child: Text(
                         widget.contact.initials,
-                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: fontSettings.fontSize - 4,
+                        ),
                       ),
                     ),
                     if (widget.contact.isOnline)
@@ -1162,9 +1192,10 @@ Future<void> _markMessagesAsRead() async {
                           message.groupedAttachments,
                           message.isMe,
                           message.id,
+                          fontSettings,
                         ),
                       ] else if (message.fileType != null) ...[
-                        _buildSingleAttachment(message),
+                        _buildSingleAttachment(message, fontSettings),
                       ],
 
                       if (hasGrouped || message.fileType != null)
@@ -1182,7 +1213,8 @@ Future<void> _markMessagesAsRead() async {
                               color: message.isMe
                                   ? Colors.white
                                   : Colors.black87,
-                              fontSize: 16,
+                              fontSize: fontSettings.fontSize,
+                              fontWeight: fontSettings.fontWeight,
                             ),
                           ),
                         ),
@@ -1205,7 +1237,7 @@ Future<void> _markMessagesAsRead() async {
                                 color: message.isMe
                                     ? Colors.white70
                                     : Colors.grey[600],
-                                fontSize: 12,
+                                fontSize: fontSettings.fontSize - 4,
                               ),
                             ),
                             if (message.isMe) ...[
@@ -1236,7 +1268,7 @@ Future<void> _markMessagesAsRead() async {
 
   // ─── Date separator ─────────────────────────────────────────────────────────
 
-  Widget _buildDateSeparator(DateTime date) {
+  Widget _buildDateSeparator(DateTime date, FontSettings fontSettings) {
     return Center(
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 12),
@@ -1248,9 +1280,9 @@ Future<void> _markMessagesAsRead() async {
         ),
         child: Text(
           _formatDateSeparator(date),
-          style: const TextStyle(
-            color: Color.fromARGB(255, 2, 2, 2),
-            fontSize: 12,
+          style: TextStyle(
+            color: const Color.fromARGB(255, 2, 2, 2),
+            fontSize: fontSettings.fontSize - 4,
             fontWeight: FontWeight.w900,
           ),
         ),
@@ -1263,6 +1295,8 @@ Future<void> _markMessagesAsRead() async {
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final fontSettings = ref.watch(fontSettingsProvider);
+
     return WillPopScope(
       onWillPop: () async {
         if (_isSelectionMode) {
@@ -1282,7 +1316,10 @@ Future<void> _markMessagesAsRead() async {
                 ),
                 title: Text(
                   '${_selectedMessageIds.length} selected',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: fontSettings.fontSize + 2,
+                  ),
                 ),
                 actions: [
                   IconButton(
@@ -1318,9 +1355,9 @@ Future<void> _markMessagesAsRead() async {
                           radius: 18,
                           child: Text(
                             widget.contact.initials,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: Colors.white,
-                              fontSize: 14,
+                              fontSize: fontSettings.fontSize - 4,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -1351,8 +1388,8 @@ Future<void> _markMessagesAsRead() async {
                         children: [
                           Text(
                             widget.contact.name,
-                            style: const TextStyle(
-                              fontSize: 16,
+                            style: TextStyle(
+                              fontSize: fontSettings.fontSize,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -1360,8 +1397,8 @@ Future<void> _markMessagesAsRead() async {
                             widget.contact.isOnline
                                 ? 'Online'
                                 : 'Last seen recently',
-                            style: const TextStyle(
-                              fontSize: 12,
+                            style: TextStyle(
+                              fontSize: fontSettings.fontSize - 4,
                               fontWeight: FontWeight.normal,
                             ),
                           ),
@@ -1396,9 +1433,9 @@ Future<void> _markMessagesAsRead() async {
                     vertical: 6,
                   ),
                   color: Colors.green.shade50,
-                  child: const Row(
+                  child: Row(
                     children: [
-                      SizedBox(
+                      const SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(
@@ -1406,11 +1443,13 @@ Future<void> _markMessagesAsRead() async {
                           color: Colors.green,
                         ),
                       ),
-                      SizedBox(width: 10),
+                      const SizedBox(width: 10),
                       Text(
                         'Uploading file(s)...',
-                        style:
-                            TextStyle(fontSize: 13, color: Colors.green),
+                        style: TextStyle(
+                          fontSize: fontSettings.fontSize - 4,
+                          color: Colors.green,
+                        ),
                       ),
                     ],
                   ),
@@ -1419,12 +1458,12 @@ Future<void> _markMessagesAsRead() async {
                 child: Container(
                   color: const Color.fromARGB(255, 245, 245, 230),
                   child: _messages.isEmpty
-                      ? const Center(
+                      ? Center(
                           child: Text(
                             'No messages yet',
                             style: TextStyle(
                               color: Colors.grey,
-                              fontSize: 16,
+                              fontSize: fontSettings.fontSize,
                             ),
                           ),
                         )
@@ -1440,8 +1479,11 @@ Future<void> _markMessagesAsRead() async {
                             return Column(
                               children: [
                                 if (_shouldShowDateSeparator(ri))
-                                  _buildDateSeparator(msg.timestamp),
-                                _buildMessage(msg),
+                                  _buildDateSeparator(
+                                    msg.timestamp,
+                                    fontSettings,
+                                  ),
+                                _buildMessage(msg, fontSettings),
                               ],
                             );
                           },
@@ -1477,8 +1519,12 @@ Future<void> _markMessagesAsRead() async {
                         child: TextField(
                           controller: _messageController,
                           focusNode: _messageFocusNode,
+                          style: TextStyle(fontSize: fontSettings.fontSize),
                           decoration: InputDecoration(
                             hintText: 'Type a message',
+                            hintStyle: TextStyle(
+                              fontSize: fontSettings.fontSize,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(25),
                               borderSide: BorderSide.none,
@@ -1548,9 +1594,9 @@ Future<void> _markMessagesAsRead() async {
                       Expanded(
                         child: Text(
                           '${_selectedMessageIds.length} message${_selectedMessageIds.length > 1 ? 's' : ''} selected',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w600,
-                            fontSize: 15,
+                            fontSize: fontSettings.fontSize - 3,
                           ),
                         ),
                       ),
@@ -1560,9 +1606,12 @@ Future<void> _markMessagesAsRead() async {
                           Icons.select_all,
                           color: Colors.green,
                         ),
-                        label: const Text(
+                        label: Text(
                           'All',
-                          style: TextStyle(color: Colors.green),
+                          style: TextStyle(
+                            color: Colors.green,
+                            fontSize: fontSettings.fontSize - 3,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -1576,7 +1625,12 @@ Future<void> _markMessagesAsRead() async {
                         ),
                         onPressed: _deleteSelectedMessages,
                         icon: const Icon(Icons.delete, size: 18),
-                        label: const Text('Delete'),
+                        label: Text(
+                          'Delete',
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize - 3,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -1591,17 +1645,17 @@ Future<void> _markMessagesAsRead() async {
 
 // ─── Full-screen gallery viewer ────────────────────────────────────────────────
 
-class _GalleryView extends StatefulWidget {
+class _GalleryView extends ConsumerStatefulWidget {
   final List<AttachmentItem> items;
   final int initialIndex;
 
   const _GalleryView({required this.items, required this.initialIndex});
 
   @override
-  State<_GalleryView> createState() => _GalleryViewState();
+  ConsumerState<_GalleryView> createState() => _GalleryViewState();
 }
 
-class _GalleryViewState extends State<_GalleryView> {
+class _GalleryViewState extends ConsumerState<_GalleryView> {
   late final PageController _pageController;
   late int _currentIndex;
 
@@ -1620,12 +1674,20 @@ class _GalleryViewState extends State<_GalleryView> {
 
   @override
   Widget build(BuildContext context) {
+    final fontSettings = ref.watch(fontSettingsProvider);
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        title: Text('${_currentIndex + 1} / ${widget.items.length}'),
+        title: Text(
+          '${_currentIndex + 1} / ${widget.items.length}',
+          style: TextStyle(
+            fontSize: fontSettings.fontSize,
+            fontWeight: fontSettings.fontWeight,
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.download),

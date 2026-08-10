@@ -363,12 +363,28 @@ print(smsGatewayUrl);
         .replaceAll('xxxxx', formattedPhone)
         .replaceAll('yyyyy', Uri.encodeComponent(message));
 print(fullUrl);
-    final response = await http.get(Uri.parse(fullUrl));
+    final response = await http
+        .get(Uri.parse(fullUrl))
+        .timeout(const Duration(seconds: 10));
     return response.statusCode == 200;
   } catch (e) {
     return false;
   }
 }
+
+  // Fires SMS and WhatsApp at the same time so the loader isn't held open by
+  // the slower channel after the OTP has already reached the phone.
+  Future<bool> _dispatchOTP(String otp) async {
+    final authRepo = ref.read(authRepositoryProvider);
+
+    final results = await Future.wait([
+      _sendOTPSMS(widget.phoneNumber, otp),
+      authRepo.sendOtpWhatsApp(widget.phoneNumber, otp),
+    ]);
+
+    // The user only needs the code to arrive on one channel.
+    return results.any((sent) => sent);
+  }
 
   Future<void> _sendInitialOTP() async {
     setState(() {
@@ -377,23 +393,26 @@ print(fullUrl);
 
     try {
       _actualOTP = _generateOTP();
-      bool sent = await _sendOTPSMS(widget.phoneNumber, _actualOTP!);
+      final sent = await _dispatchOTP(_actualOTP!);
 
- final authRepo = ref.read(authRepositoryProvider); // adjust to your actual provider name
-bool whatsappSent = await authRepo.sendOtpWhatsApp(widget.phoneNumber, _actualOTP!);
-      if (!sent || !whatsappSent) {
-        _showErrorMessage('Failed to send OTP. Please try again.');
-      } else {
+      if (!mounted) return;
+      if (sent) {
         _showSuccessMessage(
           'OTP sent to ${_formatPhoneNumber(widget.phoneNumber)}',
         );
+      } else {
+        _showErrorMessage('Failed to send OTP. Please try again.');
       }
     } catch (e) {
-      _showErrorMessage('Failed to send OTP. Please try again.');
+      if (mounted) {
+        _showErrorMessage('Failed to send OTP. Please try again.');
+      }
     } finally {
-      setState(() {
-        _isSendingOTP = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isSendingOTP = false;
+        });
+      }
     }
   }
 
@@ -841,11 +860,10 @@ bool whatsappSent = await authRepo.sendOtpWhatsApp(widget.phoneNumber, _actualOT
 
     try {
       _actualOTP = _generateOTP();
+      final sent = await _dispatchOTP(_actualOTP!);
 
-      bool sent = await _sendOTPSMS(widget.phoneNumber, _actualOTP!);
- final authRepo = ref.read(authRepositoryProvider); // adjust to your actual provider name
-bool whatsappSent = await authRepo.sendOtpWhatsApp(widget.phoneNumber, _actualOTP!);
-      if (sent || whatsappSent) {
+      if (!mounted) return;
+      if (sent) {
         _startResendTimer();
         _clearOTPFields();
         _showSuccessMessage('New OTP has been sent');
@@ -853,11 +871,15 @@ bool whatsappSent = await authRepo.sendOtpWhatsApp(widget.phoneNumber, _actualOT
         _showErrorMessage('Failed to resend OTP');
       }
     } catch (e) {
-      _showErrorMessage('Failed to resend OTP');
+      if (mounted) {
+        _showErrorMessage('Failed to resend OTP');
+      }
     } finally {
-      setState(() {
-        _isSendingOTP = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isSendingOTP = false;
+        });
+      }
     }
   }
 

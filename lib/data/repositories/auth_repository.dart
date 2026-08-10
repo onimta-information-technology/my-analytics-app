@@ -275,15 +275,15 @@ Future<bool> sendOtpWhatsApp(String mobileNumber, String otp) async {
 const String url =
         'https://api.ballyscolombo.com/api/Ballys/CRM/send-whatsapp';
 
-     await http.post(
+     final response = await http.post(
       Uri.parse(url),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         "Mobile_No": mobileNumber,
         "OTP": otp,
       }),
-    );
-    return true;
+    ).timeout(const Duration(seconds: 10));
+    return response.statusCode >= 200 && response.statusCode < 300;
   } catch (e) {
     print('WhatsApp OTP send error: $e');
     return false;

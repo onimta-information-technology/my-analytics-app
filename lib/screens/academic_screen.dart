@@ -1,17 +1,19 @@
+import 'package:ballys_reservation_app/providers/academic_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:ballys_reservation_app/utils/storage_util.dart';
 
-class AcademicScreen extends StatefulWidget {
+class AcademicScreen extends ConsumerStatefulWidget {
   const AcademicScreen({super.key});
 
   @override
-  State<AcademicScreen> createState() => _AcademicScreenState();
+  ConsumerState<AcademicScreen> createState() => _AcademicScreenState();
 }
 
-class _AcademicScreenState extends State<AcademicScreen> {
+class _AcademicScreenState extends ConsumerState<AcademicScreen> {
   late final WebViewController _controller;
   bool _isLoading = true;
+  bool _hasError = false;
 
   @override
   void initState() {
@@ -28,14 +30,32 @@ class _AcademicScreenState extends State<AcademicScreen> {
   }
 
   Future<void> _loadAcademicUrl() async {
-    final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
-    print("hello $apiUrl");
-    
-    final isBellagio = apiUrl.contains('bty.world');
-    final url = isBellagio
-        ? 'https://bellagiocolombo.com/'
-        : 'https://www.ballyscolombo.com/';
-    await _controller.loadRequest(Uri.parse(url));
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+    });
+
+    try {
+      final url = await ref.read(academicRepositoryProvider).getAcademicUrl();
+
+      if (!mounted) return;
+
+      if (url == null) {
+        setState(() {
+          _isLoading = false;
+          _hasError = true;
+        });
+        return;
+      }
+
+      await _controller.loadRequest(Uri.parse(url));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+      });
+    }
   }
 
   @override
@@ -44,7 +64,21 @@ class _AcademicScreenState extends State<AcademicScreen> {
       appBar: AppBar(title: const Text('Academic')),
       body: Stack(
         children: [
-          WebViewWidget(controller: _controller),
+          if (!_hasError) WebViewWidget(controller: _controller),
+          if (_hasError)
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Unable to load the academic page.'),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: _loadAcademicUrl,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
           if (_isLoading) const Center(child: CircularProgressIndicator()),
         ],
       ),

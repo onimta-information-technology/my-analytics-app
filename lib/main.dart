@@ -34,8 +34,25 @@ Color customGoldColor = const Color(0xFFDAB066);
 // Global navigator key for navigation from anywhere
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
+/// Dumps the full push payload so unknown notification types can be identified.
+/// Filter the terminal with: flutter logs | grep PUSH
+void _logPushMessage(String source, RemoteMessage message) {
+  print('=========== PUSH [$source] ===========');
+  print('PUSH messageId : ${message.messageId}');
+  print('PUSH msg_type  : ${message.data['msg_type']}');
+  print('PUSH title     : ${message.data['title'] ?? message.notification?.title}');
+  print('PUSH body      : ${message.data['body'] ?? message.notification?.body}');
+  print('PUSH data keys : ${message.data.keys.toList()}');
+  message.data.forEach((key, value) {
+    print('PUSH   data[$key] = $value');
+  });
+  print('======================================');
+}
+
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
+
+  _logPushMessage('background', message);
 
   // Keep non-chat notifications in local history so the home screen bell shows
   // them the next time the app is opened.
@@ -203,6 +220,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     });
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      _logPushMessage('foreground', message);
       _recordNotification(message);
 
       if (message.data['msg_type'] == '35') {
@@ -217,6 +235,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     // Handle notification tap when app is in background
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      _logPushMessage('opened-app', message);
       _recordNotification(message);
       BadgeSyncHelper.syncBadgeWithServer();
       _handleNotificationTap(message);
@@ -227,6 +246,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       RemoteMessage? message,
     ) {
       if (message != null) {
+        _logPushMessage('initial-message', message);
         _recordNotification(message);
         BadgeSyncHelper.syncBadgeWithServer();
         _handleNotificationTap(message);

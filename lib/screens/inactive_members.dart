@@ -45,6 +45,10 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
 
   int _requestId = 0;
 
+  /// The filter is part of the screen (no dialog). It occupies the body until a
+  /// filter is applied, after which the search bar and the list take over.
+  bool _isFilterPanelOpen = true;
+
   /// The filter values the currently displayed data was fetched with. Null
   /// until the first fetch, so nothing is claimed before a filter is applied.
   String? _appliedDateOption;
@@ -105,6 +109,7 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
     final requestId = ++_requestId;
     setState(() {
       _isLoading = true;
+      _isFilterPanelOpen = false;
     });
     final appMode = ref.read(appmodeSettingsProvider).appMode;
     final salesCode = await StorageUtil.getSalesCode();
@@ -299,22 +304,60 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
           children: [
             Column(
               children: [
+                if (_isFilterPanelOpen)
+                  _buildFilterPanel()
+                else ...[
                 Padding(
-                  padding: const EdgeInsets.all(8.0),
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
                   child: TextField(
                     controller: _searchController,
                     onChanged: _onSearchChanged,
+                    textInputAction: TextInputAction.search,
                     decoration: InputDecoration(
                       hintText: _showingGroups
                           ? 'Search marketing group'
-                          : 'Search',
+                          : 'Search name or member ID',
+                      hintStyle: TextStyle(color: Colors.grey[500]),
                       prefixIcon: const Icon(Icons.search),
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.filter_list),
-                        onPressed: () => _showFilterDialog(context),
+                      suffixIcon: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_searchController.text.isNotEmpty)
+                            IconButton(
+                              tooltip: 'Clear',
+                              icon: const Icon(Icons.close, size: 20),
+                              onPressed: () {
+                                _searchController.clear();
+                                _onSearchChanged('');
+                              },
+                            ),
+                          IconButton(
+                            tooltip: 'Change filter',
+                            icon: const Icon(
+                              Icons.tune,
+                              color: Constants.kPrimaryColor,
+                            ),
+                            onPressed: _openFilterPanel,
+                          ),
+                        ],
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey.withOpacity(0.08),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(28.0),
+                        borderSide: BorderSide(
+                          color: Colors.grey.withOpacity(0.3),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(28.0),
+                        borderSide: const BorderSide(
+                          color: Constants.kPrimaryColor,
+                        ),
                       ),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.0),
+                        borderRadius: BorderRadius.circular(28.0),
                       ),
                     ),
                   ),
@@ -323,7 +366,10 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
                 if (_showingGroups)
                   Expanded(
                     child: groups.isEmpty
-                        ? const Center(child: Text("No marketing groups available"))
+                        ? _buildEmptyState(
+                            'No marketing groups found',
+                            'Try a shorter period or a lower buy in.',
+                          )
                         : Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: ListView.builder(
@@ -336,8 +382,9 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
                 else
                 Expanded(
                   child: inactiveMembers.isEmpty
-                      ? const Center(
-                          child: Text("No inactive members available"),
+                      ? _buildEmptyState(
+                          'No inactive members found',
+                          'Try a shorter period or a lower buy in.',
                         )
                       : Padding(
                           padding: const EdgeInsets.all(8.0),
@@ -485,6 +532,7 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
                           ),
                         ),
                 ),
+                ],
               ],
             ),
             if (_isLoading)
@@ -502,7 +550,7 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
                   ),
                 ),
               ),
-            const Watermark(),
+            //const Watermark(),
           ],
         ),
       ),
@@ -519,41 +567,119 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
     final dateLabel = _dateOptionLabels[_appliedDateOption] ?? '-';
     final buyInLabel = _buyInOptionLabels[_appliedBuyInOption] ?? '-';
 
+    final count = _showingGroups ? groups.length : inactiveMembers.length;
+    final countLabel = _showingGroups
+        ? '$count ${count == 1 ? 'group' : 'groups'}'
+        : '$count ${count == 1 ? 'member' : 'members'}';
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(12, 2, 12, 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.filter_list, size: 16, color: Colors.grey),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                _buildFilterChip('Date: $dateLabel'),
-                _buildFilterChip('Buy In: $buyInLabel'),
-                // if (_selectedGroup != null)
-                //   _buildFilterChip('Group: ${_selectedGroup!.gName}'),
-              ],
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    _buildFilterChip(Icons.event_busy, dateLabel),
+                    _buildFilterChip(
+                      Icons.account_balance_wallet_outlined,
+                      buyInLabel,
+                    ),
+                  ],
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _openFilterPanel,
+                style: TextButton.styleFrom(
+                  foregroundColor: Constants.kPrimaryColor,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  visualDensity: VisualDensity.compact,
+                ),
+                icon: const Icon(Icons.edit, size: 16),
+                label: const Text('Change'),
+              ),
+            ],
           ),
+          if (!_isLoading)
+            Padding(
+              padding: const EdgeInsets.only(left: 2, top: 2),
+              child: Text(
+                countLabel,
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildFilterChip(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Constants.kSecondaryColor.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Constants.kSecondaryColor.withOpacity(0.4)),
+  /// Friendly placeholder with a way out, instead of a bare line of text.
+  Widget _buildEmptyState(String title, String hint) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.person_search, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              hint,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: _openFilterPanel,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Constants.kPrimaryColor,
+                side: const BorderSide(color: Constants.kPrimaryColor),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+              ),
+              icon: const Icon(Icons.tune, size: 18),
+              label: const Text('Change filter'),
+            ),
+          ],
+        ),
       ),
-      child: Text(
-        label,
-        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+    );
+  }
+
+  Widget _buildFilterChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Constants.kPrimaryColor.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Constants.kPrimaryColor.withOpacity(0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: Constants.kPrimaryColor),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+        ],
       ),
     );
   }
@@ -626,174 +752,277 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
     );
   }
 
-  void _showFilterDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              insetPadding: const EdgeInsets.symmetric(
-                horizontal: 20.0,
-                vertical: 24.0,
-              ),
-              title: const Text('Filter'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    // mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            const Text(
-                              'Date (Months)',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            RadioListTile(
-                              title: const Text('1'),
-                              value: '1',
-                              groupValue: selectedDateOption,
-                              onChanged: (value) {
-                                setState(() {
-                                  selectedDateOption = value!;
-                                });
-                              },
-                            ),
-                            RadioListTile(
-                              title: const Text('03'),
-                              value: '2',
-                              groupValue: selectedDateOption,
-                              onChanged: (value) {
-                                setState(() {
-                                  selectedDateOption = value!;
-                                });
-                              },
-                            ),
-                            RadioListTile(
-                              title: const Text('06'),
-                              value: '3',
-                              groupValue: selectedDateOption,
-                              onChanged: (value) {
-                                setState(() {
-                                  selectedDateOption = value!;
-                                });
-                              },
-                            ),
-                            RadioListTile(
-                              title: const Text('12'),
-                              value: '4',
-                              groupValue: selectedDateOption,
-                              onChanged: (value) {
-                                setState(() {
-                                  selectedDateOption = value!;
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            const Text(
-                              'Buy In',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            RadioListTile(
-                              title: const Text('1M'),
-                              value: '1',
-                              groupValue: selectedBuyInOption,
-                              onChanged: (value) {
-                                setState(() {
-                                  selectedBuyInOption = value!;
-                                });
-                              },
-                            ),
-                            RadioListTile(
-                              title: const Text('2.5M'),
-                              value: '2',
-                              groupValue: selectedBuyInOption,
-                              onChanged: (value) {
-                                setState(() {
-                                  selectedBuyInOption = value!;
-                                });
-                              },
-                            ),
-                            RadioListTile(
-                              title: const Text('5M'),
-                              value: '3',
-                              groupValue: selectedBuyInOption,
-                              onChanged: (value) {
-                                setState(() {
-                                  selectedBuyInOption = value!;
-                                });
-                              },
-                            ),
-                            RadioListTile(
-                              title: const Text('10M'),
-                              value: '4',
-                              groupValue: selectedBuyInOption,
-                              onChanged: (value) {
-                                setState(() {
-                                  selectedBuyInOption = value!;
-                                });
-                              },
-                            ),
-                            RadioListTile(
-                              title: const Text('20M'),
-                              value: '5',
-                              groupValue: selectedBuyInOption,
-                              onChanged: (value) {
-                                setState(() {
-                                  selectedBuyInOption = value!;
-                                });
-                              },
-                            ),
-                            RadioListTile(
-                              title: const Text('100M'),
-                              value: '6',
-                              groupValue: selectedBuyInOption,
-                              onChanged: (value) {
-                                setState(() {
-                                  selectedBuyInOption = value!;
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+  /// Re-opens the in-page filter, seeded with the values the list was fetched
+  /// with so a cancel can put them back.
+  void _openFilterPanel() {
+    FocusScope.of(context).unfocus();
+    setState(() {
+      selectedDateOption = _appliedDateOption ?? selectedDateOption;
+      selectedBuyInOption = _appliedBuyInOption ?? selectedBuyInOption;
+      _isFilterPanelOpen = true;
+    });
+  }
+
+  /// The filter rendered inside the screen instead of a dialog. It fills the
+  /// body until the user taps 'Show Members', which hands over to the search
+  /// bar and the result list.
+  Widget _buildFilterPanel() {
+    final hasAppliedFilter = _appliedDateOption != null;
+    final dateLabel = _dateOptionLabels[selectedDateOption] ?? '-';
+    final buyInLabel = _buyInOptionLabels[selectedBuyInOption] ?? '-';
+
+    return Expanded(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Row(
+            //   children: [
+                // Container(
+                //   padding: const EdgeInsets.all(10),
+                //   decoration: BoxDecoration(
+                //     color: Constants.kPrimaryColor.withOpacity(0.15),
+                //     borderRadius: BorderRadius.circular(12),
+                //   ),
+                //   child: const Icon(
+                //     Icons.tune,
+                //     color: Constants.kPrimaryColor,
+                //   ),
+                // ),
+                // const SizedBox(width: 12),
+                // Expanded(
+                //   child: Column(
+                //     crossAxisAlignment: CrossAxisAlignment.start,
+                //     children: [
+                //       const Text(
+                //         'Choose your filter',
+                //         style: TextStyle(
+                //           fontSize: 18,
+                //           fontWeight: FontWeight.bold,
+                //         ),
+                //       ),
+                //       const SizedBox(height: 2),
+                //       Text(
+                //         'Pick how long members have been away and their buy in level.',
+                //         style: TextStyle(
+                //           fontSize: 13,
+                //           color: Colors.grey[600],
+                //         ),
+                //       ),
+                //     ],
+                //   ),
+                // ),
+            //   ],
+            // ),
+            //const SizedBox(height: 20),
+            _buildFilterSection(
+              icon: Icons.event_busy,
+              title: 'Not visited for',
+              options: _dateOptionLabels,
+              selectedValue: selectedDateOption,
+              onChanged: (value) => setState(() => selectedDateOption = value),
+            ),
+            const SizedBox(height: 16),
+            _buildFilterSection(
+              icon: Icons.account_balance_wallet_outlined,
+              title: 'Buy in',
+              options: _buyInOptionLabels,
+              selectedValue: selectedBuyInOption,
+              onChanged: (value) => setState(() => selectedBuyInOption = value),
+            ),
+            const SizedBox(height: 20),
+            // Container(
+            //   padding: const EdgeInsets.all(12),
+            //   decoration: BoxDecoration(
+            //     color: Colors.grey.withOpacity(0.12),
+            //     borderRadius: BorderRadius.circular(12),
+            //   ),
+            //   child: Row(
+            //     children: [
+            //       Icon(Icons.info_outline, size: 18, color: Colors.grey[700]),
+            //       const SizedBox(width: 8),
+            //       Expanded(
+            //         child: Text(
+            //           'Showing members inactive for $dateLabel with $buyInLabel buy in.',
+            //           style: TextStyle(
+            //             fontSize: 13,
+            //             color: Colors.grey[800],
+            //           ),
+            //         ),
+            //       ),
+            //     ],
+            //   ),
+            // ),
+            // const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: _applyFilter,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Constants.kPrimaryColor,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ],
+                ),
+                icon: const Icon(Icons.search),
+                label: const Text(
+                  'Show Members',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-              actions: [
-                TextButton(
+            ),
+            if (hasAppliedFilter) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: TextButton(
                   onPressed: () {
                     setState(() {
-                      selectedDateOption = "1";
-                      selectedBuyInOption = "1";
+                      selectedDateOption = _appliedDateOption!;
+                      selectedBuyInOption = _appliedBuyInOption!;
+                      _isFilterPanelOpen = false;
                     });
-                    Navigator.of(context).pop();
                   },
                   child: const Text('Cancel'),
                 ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    _applyFilter();
-                  },
-                  child: const Text('Apply Filter'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// One titled group of radio options in the in-page filter.
+  Widget _buildFilterSection({
+    required IconData icon,
+    required String title,
+    required Map<String, String> options,
+    required String selectedValue,
+    required ValueChanged<String> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.withOpacity(0.25)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: Colors.grey[700]),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
                 ),
-              ],
-            );
-          },
-        );
-      },
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // RadioGroup owns the selection, so each Radio only declares its value.
+          RadioGroup<String>(
+            groupValue: selectedValue,
+            onChanged: (value) => onChanged(value!),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // Two per row so a six-option list stays compact.
+                final itemWidth = (constraints.maxWidth - 8) / 2;
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final entry in options.entries)
+                      SizedBox(
+                        width: itemWidth,
+                        child: _buildRadioOption(
+                          value: entry.key,
+                          label: entry.value,
+                          isSelected: entry.key == selectedValue,
+                          onTap: () => onChanged(entry.key),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// A radio button with its label, in a tappable row so the whole option is a
+  /// touch target rather than just the small dot.
+  Widget _buildRadioOption({
+    required String value,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.only(right: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? Constants.kPrimaryColor.withOpacity(0.10)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected
+                  ? Constants.kPrimaryColor
+                  : Colors.grey.withOpacity(0.30),
+            ),
+          ),
+          child: Row(
+            children: [
+              Radio<String>(
+                value: value,
+                activeColor: Constants.kPrimaryColor,
+                visualDensity: VisualDensity.compact,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    color: isSelected
+                        ? Constants.kPrimaryColor
+                        : Colors.black87,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -93,7 +93,9 @@ class NotificationService {
       String title =
           message.data['title'] ?? message.notification?.title ?? 'New Message';
       String body = message.data['body'] ?? message.notification?.body ?? '';
+      print('PUSH branch -> msg_type=${message.data['msg_type']}');
       if (message.data['msg_type'] == '35') {
+        print('PUSH branch -> GUEST BOOKING (35)');
         int notificationId = DateTime.now().millisecondsSinceEpoch.remainder(
           100000,
         );
@@ -156,6 +158,11 @@ class NotificationService {
         'senderName': chatDetails?['senderName']?.toString() ?? '',
         'hostName': chatDetails?['hostName']?.toString() ?? '',
       };
+
+      print(
+        'PUSH branch -> CHAT fallback (chatId=$notificationChatId) '
+        '— any unknown msg_type lands here',
+      );
 
       String? imageUrl = message.data['image_url'];
       int notificationId = DateTime.now().millisecondsSinceEpoch.remainder(

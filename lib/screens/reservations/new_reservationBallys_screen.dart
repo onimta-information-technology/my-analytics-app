@@ -605,7 +605,45 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
     return summary;
   }
 
+  /// Hotels and air tickets are always booked *for* someone, so at least one
+  /// guest — a card already added, or the member sitting in the form — has to
+  /// exist before either selector is allowed to open. Without this the sheets
+  /// come up with an empty guest list and nothing can be assigned.
+  bool _requireGuestBeforeSelection({required bool forAirTickets}) {
+    if (_reservationGuestSummary().isNotEmpty) {
+      setState(() {
+        if (forAirTickets) {
+          _airTicketError = null;
+        } else {
+          _hotelError = null;
+        }
+      });
+      return true;
+    }
+
+    final message = forAirTickets
+        ? "Please add a guest before selecting air tickets"
+        : "Please add a guest before selecting hotels & rooms";
+
+    setState(() {
+      if (forAirTickets) {
+        _airTicketError = message;
+      } else {
+        _hotelError = message;
+      }
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return false;
+  }
+
   void _openHotelAndRoomSelectorBottomSheet(BuildContext context) {
+    if (!_requireGuestBeforeSelection(forAirTickets: false)) return;
     FocusScope.of(context).requestFocus(FocusNode());
     showModalBottomSheet(
       context: context,
@@ -628,6 +666,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
   }
 
   void _openAirTicketsSelectorScreen(BuildContext context) {
+    if (!_requireGuestBeforeSelection(forAirTickets: true)) return;
     FocusScope.of(context).requestFocus(FocusNode());
     context.push(
       "/reservationMain/reservations/new-reservation-ballys/air-tickets-selection",

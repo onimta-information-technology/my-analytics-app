@@ -354,89 +354,28 @@ Future<Map<String, dynamic>> _buildReservationBodyBallys(
     required String status,
     required String remarks,
   }) async {
-    final salesCode = await StorageUtil.getSalesCode();
+  
     final userName = await StorageUtil.getUserName();
     final deviceId = await DeviceId.get();
 
-    final guests = reservation.guests;
-
-    // Older payloads carry no per-guest breakdown; fall back to the
-    // reservation-level rooms / flights tagged with the primary BM number.
-    final roomDetails = guests.isNotEmpty
-        ? [for (final g in guests) ...g.toRoomDetailsJson()]
-        : reservation.hotelDescip
-            .map((h) => {...h.toJson(), 'BMNumber': reservation.mid})
-            .toList();
-
-    final airTicketDetails = guests.isNotEmpty
-        ? [for (final g in guests) ...g.toAirTicketDetailsJson()]
-        : reservation.airticketDescrip
-            .map((f) => {...f.toJson(), 'BMNumber': reservation.mid})
-            .toList();
-
-    final currency = (reservation.currencyType?.trim().isNotEmpty ?? false)
-        ? reservation.currencyType!.trim()
-        : packageAmountCurrency(reservation.packageAmount);
-
     // The new-reservation payload mirrors the FIRST guest at the top level, so
     // do the same here; reservation-level fields only stand in for legacy rows
-    // that carry no per-guest breakdown.
-    final firstGuest = guests.isNotEmpty ? guests.first : null;
+ 
 
     final requestBody = {
       'master_id': reservation.reservNo,
-      'bm_number': firstGuest?.mid ?? reservation.mid,
-      'guest_name': firstGuest?.guestName ?? reservation.mName,
-      'arrival_date':
-          (firstGuest?.arrivalDate ?? reservation.arrDate).toIso8601String(),
-      'departure_date':
-          (firstGuest?.departureDate ?? reservation.depDate).toIso8601String(),
-      'has_air_ticket_reservation': firstGuest != null
-          ? firstGuest.airTicketRequisition == 'Yes'
-          : reservation.airticketReservationStatus == '1',
-      'remarks': remarks,
-      // Package amount is per guest and travels inside `guests` — every member
-      // is billed their own package, so there is no reservation-level amount.
-      'sales_code': salesCode,
-      'user_name': userName,
-      'device_id': deviceId,
-      'selected_marketing_person': '',
       'reservation_status': status,
-      // toGuestsJson flattens each guest plus the members sharing their
-      // package, which is the same shape the insert endpoint was given.
-      'guests': guests.isNotEmpty
-          ? [for (final g in guests) ...g.toGuestsJson()]
-          : [
-              {
-                'BMNumber': reservation.mid,
-                'GuestName': reservation.mName,
-                'ArrivalDate': reservation.arrDate.toIso8601String(),
-                'DepartureDate': reservation.depDate.toIso8601String(),
-                'HasFamilyMembers': false,
-                'PackageAmount': packageAmountToInt(reservation.packageAmount),
-                'CurrencyType': currency,
-                // Legacy rows carry no per-guest tick, so an absent amount
-                // stands in for it — the same convention the parser reads back.
-                'IsSharedAmount':
-                    (reservation.packageAmount?.trim() ?? '').isEmpty,
-              }
-            ],
-      'room_details': roomDetails,
-      'air_ticket_details': airTicketDetails,
-      'passport_images': reservation.passportImages
-          .map((p) => {
-                'GuestBMNumber': p.guestBmNumber,
-                'FileName': p.fileName,
-                'IsPdf': p.isPdf,
-                'Base64Data': p.base64Data,
-              })
-          .toList(),
+      'user_name': userName,
+          'remark': remarks,
+      'device_id': deviceId,
+  
+
     };
 
-    debugPrintRequestBody(requestBody);
+    print(requestBody);
 
     final response =
-        await apiService.post('Reservation_InsertReservation', requestBody);
+        await apiService.post('Reservation_UpdateReservationStatus', requestBody);
     print('Ballys reservation status update ($status) response: $response');
 
     return response['Status'] as bool? ?? false;

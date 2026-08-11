@@ -2276,7 +2276,11 @@ class _ReservationViewScreenBallysState
                         fontSettings.fontSize,
                         fontSettings.fontWeight,
                       ),
-                    if (selectedReservation.requestStatus != 'Checked' &&
+                    // Only a genuinely rejected reservation gets the rejected
+                    // card. An approved one can still carry stale rejected*
+                    // audit fields from the API, and showing them here made the
+                    // Approved tab look like a rejection.
+                    if (selectedReservation.requestStatus == 'Rejected' &&
                         _hasStageData(
                           selectedReservation.rejectedStatus,
                           selectedReservation.rejectedBy,

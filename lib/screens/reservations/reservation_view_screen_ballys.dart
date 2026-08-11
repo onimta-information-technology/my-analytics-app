@@ -849,10 +849,12 @@ class _ReservationViewScreenBallysState
   // back out here and the member's card names whose package it is.
   //
   // Each card carries only that person's own details — name, BM number, package
-  // amount and whether family members travel with them. The rooms, air tickets
-  // and dates they were booked against are shown once, further down the screen.
+  // amount, whether family members travel with them, and their own passport
+  // images (matched on `GuestBMNumber`). The rooms, air tickets and dates they
+  // were booked against are shown once, further down the screen.
   Widget _buildGuestsSection(
     List<GuestReservationEntryBallys> guests,
+    List<ReservationPassportImageBallys> passportImages,
     FontSettings fontSettings, {
     DateTime? reservationArrival,
     DateTime? reservationDeparture,
@@ -867,7 +869,17 @@ class _ReservationViewScreenBallysState
       String? stay,
       // Whose package this person is on — null for a guest on their own.
       String? sharesWith,
+      // This person's own passports, empty when they uploaded none.
+      List<ReservationPassportImageBallys> passports,
     })>[];
+
+    // A person's passports are the ones tagged with their BM number. A blank
+    // BM number would otherwise sweep up every untagged image, so it matches
+    // nothing and those fall through to the unmatched section instead.
+    List<ReservationPassportImageBallys> passportsFor(String mid) {
+      if (mid.trim().isEmpty) return const [];
+      return passportImages.where((p) => p.guestBmNumber == mid).toList();
+    }
 
     for (final guest in guests) {
       // Members travel on the owner's dates, so both carry the same stay.
@@ -891,6 +903,7 @@ class _ReservationViewScreenBallysState
         hasFamilyMembers: guest.hasFamilyMembers,
         stay: stay,
         sharesWith: null,
+        passports: passportsFor(guest.mid),
       ));
 
       for (final member in guest.accompanyingMembers) {
@@ -904,6 +917,7 @@ class _ReservationViewScreenBallysState
           hasFamilyMembers: member.hasFamilyMembers,
           stay: stay,
           sharesWith: owner,
+          passports: passportsFor(member.mid),
         ));
       }
     }
@@ -1023,6 +1037,22 @@ class _ReservationViewScreenBallysState
                       ),
                     ),
                   ],
+                  // This person's own passports, so whose passport is whose
+                  // needs no separate label.
+                  if (card.passports.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      card.passports.length == 1
+                          ? "Passport"
+                          : "Passports (${card.passports.length})",
+                      style: TextStyle(
+                        fontSize: fontSettings.fontSize,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    _buildPassportThumbnails(card.passports, fontSettings),
+                  ],
                 ],
               ),
             ),
@@ -1033,11 +1063,12 @@ class _ReservationViewScreenBallysState
     );
   }
 
-  // ── Passports section ──────────────────────────────────────────────────
+  // ── Unmatched passports ────────────────────────────────────────────────
   //
-  // Sits below the guest cards rather than inside them. Images are grouped by
-  // the guest they belong to (`GuestBMNumber`), so a reservation with several
-  // guests still shows whose passport is whose.
+  // A passport belongs on its owner's guest card, matched on `GuestBMNumber`.
+  // Anything tagged with a BM number that matches nobody on the reservation —
+  // or with no BM number at all — has no card to sit on, so it lands here
+  // rather than being silently dropped.
   Widget _buildPassportsSection(
     List<GuestReservationEntryBallys> guests,
     List<ReservationPassportImageBallys> passportImages,
@@ -1045,79 +1076,40 @@ class _ReservationViewScreenBallysState
   ) {
     if (passportImages.isEmpty) return const SizedBox.shrink();
 
-    // Guests first, in reservation order — members sharing a package included,
-    // since each carries a passport of its own under its own BM number.
-    // Anything tagged with a BM number that matches nobody still gets shown
-    // rather than silently dropped.
-    final groups = <({String label, List<ReservationPassportImageBallys> images})>[];
-    final claimed = <ReservationPassportImageBallys>{};
-
-    final owners = <({String mid, String name})>[
+    // Members sharing a package included, since each carries a passport of its
+    // own under its own BM number.
+    final mids = <String>{
       for (final guest in guests) ...[
-        (mid: guest.mid, name: guest.guestName),
-        for (final member in guest.accompanyingMembers)
-          (mid: member.mid, name: member.guestName),
+        guest.mid,
+        for (final member in guest.accompanyingMembers) member.mid,
       ],
-    ];
+    }..removeWhere((mid) => mid.trim().isEmpty);
 
-    for (final owner in owners) {
-      final images =
-          passportImages.where((p) => p.guestBmNumber == owner.mid).toList();
-      if (images.isEmpty) continue;
-      claimed.addAll(images);
-      final name = owner.name.trim();
-      groups.add((
-        label: name.isEmpty ? owner.mid : '${owner.mid} - $name',
-        images: images,
-      ));
-    }
-
-    final orphans =
-        passportImages.where((p) => !claimed.contains(p)).toList();
-    if (orphans.isNotEmpty) {
-      groups.add((label: 'Other', images: orphans));
-    }
+    final orphans = passportImages
+        .where((p) => !mids.contains(p.guestBmNumber))
+        .toList();
+    if (orphans.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          passportImages.length == 1
-              ? "Passport"
-              : "Passports (${passportImages.length})",
+          orphans.length == 1 ? "Passport" : "Passports (${orphans.length})",
           style: TextStyle(
             fontSize: fontSettings.fontSize,
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 6.0),
-        ...groups.map(
-          (group) => Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Text(
-                //   group.label,
-                //   style: TextStyle(
-                //     fontSize: fontSettings.fontSize,
-                //     fontWeight: fontSettings.fontWeight,
-                //   ),
-                // ),
-                const SizedBox(height: 6),
-                _buildPassportThumbnails(group.images, fontSettings),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 4.0),
+        _buildPassportThumbnails(orphans, fontSettings),
+        const SizedBox(height: 10.0),
       ],
     );
   }
 
   /// Renders passport images as tappable thumbnails and PDFs as labelled
-  /// chips. Returns an empty widget when there are none. The heading and the
-  /// owning-guest label come from [_buildPassportsSection].
+  /// chips. Returns an empty widget when there are none. The heading comes
+  /// from the guest card, or from [_buildPassportsSection] for unmatched ones.
   Widget _buildPassportThumbnails(
     List<ReservationPassportImageBallys> images,
     FontSettings fontSettings,
@@ -1814,15 +1806,17 @@ class _ReservationViewScreenBallysState
                   ),
                   const SizedBox(height: 10.0),
 
-                  // ── All guests on this reservation ───────────────────
+                  // ── All guests on this reservation, each with their own
+                  //    passports on the card ───────────────────────────
                   _buildGuestsSection(
                     selectedReservation?.guests ?? const [],
+                    selectedReservation?.passportImages ?? const [],
                     fontSettings,
                     reservationArrival: selectedReservation?.arrDate,
                     reservationDeparture: selectedReservation?.depDate,
                   ),
 
-                  // ── Passports, grouped by guest ──────────────────────
+                  // ── Passports belonging to nobody on the reservation ──
                   _buildPassportsSection(
                     selectedReservation?.guests ?? const [],
                     selectedReservation?.passportImages ?? const [],

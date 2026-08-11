@@ -637,7 +637,7 @@ class _TripCardState extends State<_TripCard> {
                         ),
                         TransportViewScreen._infoRow(
                           Icons.phone,
-                          'Contact',
+                          'Guest Mobile',
                           base.contactNumber,
                           Colors.green,
                           fontSettings,

@@ -775,7 +775,13 @@ class _ReservationViewScreenBallysState
 
   String getGuestAndTicketCounts(List<FlightBookingBallys> flights) {
     final totalGuests = flights.fold<int>(0, (sum, f) => sum + f.guestCount);
-    final totalTickets = flights.length;
+    // A ticket is a seat, not a flight row: one booking can mix classes
+    // (Economy x2 + Business x1 = 3 tickets), so the count is the seats across
+    // every class. Rows saved without a class breakdown still count as one.
+    final totalTickets = flights.fold<int>(
+      0,
+      (sum, f) => sum + (f.totalTicketCount > 0 ? f.totalTicketCount : 1),
+    );
 
     String txt =
         totalGuests == 1 ? "$totalGuests GUEST" : "$totalGuests GUESTS";

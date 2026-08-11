@@ -249,9 +249,6 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   DateTime? _h_arrivalDate;
   DateTime? _h_departureDate;
 
-  /// See [_a_arrDateKey] — same reason, for the hotel tab's dates.
-  Key _h_arrivalDateKey = UniqueKey();
-  Key _h_departureDateKey = UniqueKey();
   String _h_eciLco = 'NA';
 
   Map<String, dynamic>? _selectedHotel;
@@ -308,12 +305,6 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   DateTime? _a_arrDate;
   DateTime? _a_depDate;
 
-  /// Rebuilt on reset so the date fields drop their old FormFieldState along
-  /// with the controller text — clearing the controller alone leaves the
-  /// previous value on screen, the same reason the airport and class pickers
-  /// carry keys.
-  Key _a_arrDateKey = UniqueKey();
-  Key _a_depDateKey = UniqueKey();
   static const String _defaultToAirportCode = 'CMB';
 
   Airport? _a_fromAirport;
@@ -358,6 +349,14 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   bool _isBellagio = false;
 
   // ── Air ticket — passport bio data page uploads (NEW) ──────────────────────
+  /// Bio pages by guest, keyed the same way the assignment ticks are. One
+  /// uploader per ticked guest, so a page is filed against the member it belongs
+  /// to instead of landing on whoever owns the form — the same arrangement the
+  /// new reservation screen's air ticket selector uses.
+  final Map<String, List<PassportFileBallys>> _a_passportsByGuest = {};
+
+  /// Pages picked while there was still nobody to name — they go out under the
+  /// member the ticket was entered for.
   List<PassportFileBallys> _a_passportFiles = [];
   Key _a_passportUploadKey = UniqueKey();
 
@@ -722,8 +721,6 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     _h_departureCtrl.clear();
     _h_arrivalDate = null;
     _h_departureDate = null;
-    _h_arrivalDateKey = UniqueKey();
-    _h_departureDateKey = UniqueKey();
     _h_eciLco = 'NA';
     _selectedHotel = null;
     _selectedHotelName = null;
@@ -826,15 +823,15 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       _h_noOfChildren.text = '0';
       _h_mealPlan.clear();
       _h_paymentBy.text = _isBellagio ? 'N/A' : 'NA';
-      _h_remarks.clear();
+      // Remarks are NOT cleared: the API takes one remark for the whole
+      // reservation, and the field sits below this button — wiping it here is
+      // what sent `"remarks": ""` whenever it was typed after banking a hotel.
       _h_marketingPerson.clear();
       _h_approvedBy.clear();
       _h_arrivalCtrl.clear();
       _h_departureCtrl.clear();
       _h_arrivalDate = null;
       _h_departureDate = null;
-      _h_arrivalDateKey = UniqueKey();
-      _h_departureDateKey = UniqueKey();
       _h_eciLco = 'NA';
       _selectedHotel = null;
       _selectedHotelName = null;
@@ -958,7 +955,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       'goldRouteType': _a_goldRouteType,
       'mealRemark': _a_mealRemarkCtrl.text.trim(),
       'hamoueContactPerson': _a_hamoueContactPerson ?? '',
-      'passportFiles': _a_passportFiles.map((f) => f.fileName).join(', '),
+      'passportFiles': _allAirPassports().map((f) => f.fileName).join(', '),
       // typed fields used when building API body
       'fromAirportData': _a_fromAirport,
       'toAirportData': _a_toAirport,
@@ -975,10 +972,24 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       'depDateObj': _a_depDate,
       // Every class with its seat count, which is what goes out on save.
       'ticketClasses': List<AirTicketClassCount>.from(_a_ticketClasses),
-      'passportFileObjects': List<PassportFileBallys>.from(_a_passportFiles),
+      // Each page still naming the guest it was picked for.
+      'passportFileObjects': _allAirPassports(),
       // Who the ticket is booked for, ticked on the assignment card.
       'assignedGuests': _selectedAirGuests(),
     };
+  }
+
+  /// Every bio page picked for the ticket on screen, in the order the guests
+  /// appear on the reservation, each still naming its owner. Guests dropped from
+  /// the reservation take their passports with them, so only the live buckets go
+  /// out — plus whatever named nobody to begin with.
+  List<PassportFileBallys> _allAirPassports() {
+    final files = <PassportFileBallys>[];
+    for (final guest in _airAssignableGuests) {
+      files.addAll(_a_passportsByGuest[_guestKey(guest)] ?? const []);
+    }
+    files.addAll(_a_passportFiles);
+    return files;
   }
 
   /// A full sector, which is what "Add Another Air Ticket" requires before it
@@ -1043,8 +1054,10 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       _a_ticketClasses.isNotEmpty ||
       _a_arrDate != null ||
       _a_depDate != null ||
-      _a_passportFiles.isNotEmpty ||
-      _a_remarksCtrl.text.trim().isNotEmpty;
+      _allAirPassports().isNotEmpty;
+  // Remarks are deliberately not counted: they belong to the reservation, not
+  // to a ticket, and survive banking — counting them would turn a blank form
+  // with a leftover remark into a phantom ticket.
 
   /// Clears the ticket half of the air form, leaving the guest identity and
   /// package amount in place for the next ticket.
@@ -1059,11 +1072,12 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     _a_airlineKey = UniqueKey();
     _a_arrCtrl.clear();
     _a_depCtrl.clear();
-    _a_remarksCtrl.clear();
+    // Remarks are NOT cleared here: the API takes one remark for the whole
+    // reservation and the field sits below "Add Another Air Ticket", so wiping
+    // it on bank is what sent `"remarks": ""`. _clearAllAirForm clears it once
+    // the reservation is actually saved.
     _a_arrDate = null;
     _a_depDate = null;
-    _a_arrDateKey = UniqueKey();
-    _a_depDateKey = UniqueKey();
     _a_fromAirport = null;
     _a_toAirport =
         ref.read(airportsProvider.notifier).findByCode(_defaultToAirportCode);
@@ -1088,6 +1102,9 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     _a_mealRemarkCtrl.clear();
     _a_hamoueContactPerson = null;
     _a_passportFiles = [];
+    // The banked ticket took its guests' pages with it, so the next ticket
+    // starts with empty uploaders.
+    _a_passportsByGuest.clear();
     _a_passportUploadKey = UniqueKey();
   }
 
@@ -2439,9 +2456,13 @@ Remarks              : ${m['remarks']}''';
       for (final f in files) {
         try {
           final bytes = File(f.path).readAsBytesSync();
+          // A page picked under a named guest goes out under that member; one
+          // picked before anybody was ticked falls back to the member the
+          // ticket was entered for. Same rule as
+          // PassportImageBallys.toJsonWithGuest().
+          final owner = f.guestBmNumber.trim();
           images.add({
-            // Keyed the way PassportImageBallys.toJsonWithGuest() sends it.
-            'GuestBMNumber': memberId,
+            'GuestBMNumber': owner.isNotEmpty ? owner : memberId,
             'FileName': f.fileName,
             'IsPdf': f.isPdf,
             'Base64Data': base64Encode(bytes),
@@ -2473,6 +2494,8 @@ Remarks              : ${m['remarks']}''';
       _sharedPackageShared = false;
       // _sharedReservationNo.clear();
       _resetAirTicketFields();
+      // The reservation is saved, so its remark goes with it.
+      _a_remarksCtrl.clear();
       _a_assignedGuestKeys.clear();
       _a_guestAssignError = false;
       // An emptied form starts over at the guest again.
@@ -2808,8 +2831,13 @@ final phoneNumber = await StorageUtil.getMobileNumber();
       }));
     }
 
-    // Pull the first non-empty remark from a member's hotel entries.
+    // The reservation's remark. The field on screen wins — it is where the user
+    // last typed and it is never wiped by "Add Another Hotel" — falling back to
+    // the first non-empty remark banked with a hotel, which is where a remark
+    // typed before an older build's reset ended up.
     String remarksForMember(Map<String, dynamic> m) {
+      final live = _h_remarks.text.trim();
+      if (live.isNotEmpty) return live;
       final hotels = (m['hotels'] as List<_HotelEntry>?) ?? [];
       for (final h in hotels) {
         if (h.remarks.trim().isNotEmpty) return h.remarks.trim();
@@ -3045,7 +3073,12 @@ final phoneNumber = await StorageUtil.getMobileNumber();
       'arrival_date': primaryArrival?.toIso8601String(),
       'departure_date': primaryDeparture?.toIso8601String(),
       'has_air_ticket_reservation': true,
-      'remarks': firstTicket['remarks'] ?? '',
+      // The field on screen wins — it is where the user last typed and it is
+      // never wiped by "Add Another Air Ticket" — falling back to the remark
+      // banked with the first ticket.
+      'remarks': _a_remarksCtrl.text.trim().isNotEmpty
+          ? _a_remarksCtrl.text.trim()
+          : (firstTicket['remarks'] ?? ''),
       'selected_marketing_person': '',
       "reservation_status":"Pending",
       'sales_code': salesCode,
@@ -3297,11 +3330,15 @@ Widget _dateField(
   Color accent,
   VoidCallback onTap, {
   VoidCallback? onClear,
-  Key? fieldKey,
 }) {
   final hasValue = ctrl.text.trim().isNotEmpty;
   return TextFormField(
-    key: fieldKey,
+    // The field's identity follows the value it shows. These are read-only
+    // tap-to-pick fields, so keying on the text costs nothing and means a reset
+    // can never leave the previous date on screen — clearing the controller
+    // alone does, which is why every reset path used to have to remember to
+    // bump a UniqueKey of its own. Missing one was the bug.
+    key: ValueKey('$label|${ctrl.text}'),
     controller: ctrl,
     readOnly: true,
     style: kInputTextStyle,
@@ -4993,7 +5030,6 @@ class _HotelForm extends StatelessWidget {
                     !state._h_departureDate!.isAfter(d)) {
                   state._h_departureDate = null;
                   state._h_departureCtrl.clear();
-                  state._h_departureDateKey = UniqueKey();
                 }
                 // ignore: invalid_use_of_protected_member
                 (context as Element).markNeedsBuild();
@@ -5004,12 +5040,9 @@ class _HotelForm extends StatelessWidget {
             onClear: () => state.setState(() {
               state._h_arrivalDate = null;
               state._h_arrivalCtrl.clear();
-              state._h_arrivalDateKey = UniqueKey();
               state._h_departureDate = null;
               state._h_departureCtrl.clear();
-              state._h_departureDateKey = UniqueKey();
             }),
-            fieldKey: state._h_arrivalDateKey,
           ),
           const SizedBox(height: 12),
           _dateField(
@@ -5036,9 +5069,7 @@ class _HotelForm extends StatelessWidget {
             onClear: () => state.setState(() {
               state._h_departureDate = null;
               state._h_departureCtrl.clear();
-              state._h_departureDateKey = UniqueKey();
             }),
-            fieldKey: state._h_departureDateKey,
           ),
             const SizedBox(height: 12),
           _rowPair(
@@ -5703,7 +5734,6 @@ class _AirForm extends StatelessWidget {
                     !state._a_depDate!.isAfter(d)) {
                   state._a_depDate = null;
                   state._a_depCtrl.clear();
-                  state._a_depDateKey = UniqueKey();
                 }
                 // ignore: invalid_use_of_protected_member
                 (context as Element).markNeedsBuild();
@@ -5714,12 +5744,9 @@ class _AirForm extends StatelessWidget {
             onClear: () => state.setState(() {
               state._a_arrDate = null;
               state._a_arrCtrl.clear();
-              state._a_arrDateKey = UniqueKey();
               state._a_depDate = null;
               state._a_depCtrl.clear();
-              state._a_depDateKey = UniqueKey();
             }),
-            fieldKey: state._a_arrDateKey,
           ),
           const SizedBox(height: 12),
           _dateField(
@@ -5746,9 +5773,7 @@ class _AirForm extends StatelessWidget {
             onClear: () => state.setState(() {
               state._a_depDate = null;
               state._a_depCtrl.clear();
-              state._a_depDateKey = UniqueKey();
             }),
-            fieldKey: state._a_depDateKey,
           ),
           const SizedBox(height: 12),
           _LabeledCard(
@@ -6128,7 +6153,7 @@ class _AirForm extends StatelessWidget {
             const SizedBox(height: 16),
           ],
 
-          // ── Passport bio data page upload (NEW) ──────────────────────────────
+          // ── Passport bio data page upload ────────────────────────────────────
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -6136,12 +6161,7 @@ class _AirForm extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: Colors.grey.shade300),
             ),
-            child: PassportUploadWidgetBallys(
-              key: state._a_passportUploadKey,
-              initialFiles: state._a_passportFiles,
-              onFilesChanged: (files) =>
-                  state.setState(() => state._a_passportFiles = files),
-            ),
+            child: _passportSection(accent),
           ),
           const SizedBox(height: 16),
 
@@ -6183,6 +6203,89 @@ class _AirForm extends StatelessWidget {
           ),
           const SizedBox(height: 20),
         ],
+      ),
+    );
+  }
+
+  /// The bio pages for this ticket's guests: one uploader per ticked guest, so a
+  /// passport is filed against the member it belongs to instead of landing on
+  /// the guest that owns the form. Banking the ticket clears the ticks, which
+  /// clears the uploaders — re-ticking a guest brings their pages back.
+  Widget _passportSection(Color accent) {
+    final guests = state._airAssignableGuests;
+
+    // Nobody to name yet, so the page goes to whoever ends up owning the
+    // ticket.
+    if (guests.isEmpty) {
+      return PassportUploadWidgetBallys(
+        key: state._a_passportUploadKey,
+        initialFiles: state._a_passportFiles,
+        onFilesChanged: (files) =>
+            state.setState(() => state._a_passportFiles = List.from(files)),
+      );
+    }
+
+    final selected = guests
+        .where((g) => state._a_assignedGuestKeys.contains(state._guestKey(g)))
+        .toList();
+
+    if (selected.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.badge_outlined, size: 18, color: accent),
+              const SizedBox(width: 6),
+              const Text(
+                'Passport Bio Data Page',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Select a guest above to upload their passport bio page.',
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < selected.length; i++) ...[
+          if (i > 0) const SizedBox(height: 16),
+          _guestPassportUploader(selected[i]),
+        ],
+      ],
+    );
+  }
+
+  /// One guest's uploader, headed with their name so it is plain whose bio page
+  /// is being picked. Every file it produces is stamped with that guest's BM
+  /// number, which is what goes out as `GuestBMNumber`.
+  Widget _guestPassportUploader(AccompanyingMember guest) {
+    final key = state._guestKey(guest);
+    final label = [
+      if (guest.guestName.trim().isNotEmpty) guest.guestName.trim(),
+      if (guest.mid.trim().isNotEmpty) guest.mid.trim(),
+    ].join(' — ');
+
+    return PassportUploadWidgetBallys(
+      // Keyed by guest so switching who the ticket is for rebuilds the uploader
+      // with that guest's own files rather than keeping the last guest's on
+      // screen.
+      key: ValueKey('passport-$key'),
+      title: label.isNotEmpty
+          ? 'Passport Bio Data Page — $label'
+          : 'Passport Bio Data Page',
+      guestBmNumber: guest.mid.trim(),
+      guestName: guest.guestName.trim(),
+      initialFiles: state._a_passportsByGuest[key] ?? const [],
+      onFilesChanged: (files) => state.setState(
+        () => state._a_passportsByGuest[key] = List.from(files),
       ),
     );
   }

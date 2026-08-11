@@ -261,25 +261,11 @@ class ChatContact {
   if (dateTime == null) return 'Unknown';
 
   final now = DateTime.now();
-  
-  // The API sends times marked as UTC but they're actually in local timezone
-  // So we parse them as UTC but then treat them as local
-  DateTime messageTime;
-  if (dateTime.isUtc) {
-    // Convert from UTC to local by treating the UTC values as local values
-    messageTime = DateTime(
-      dateTime.year,
-      dateTime.month,
-      dateTime.day,
-      dateTime.hour,
-      dateTime.minute,
-      dateTime.second,
-      dateTime.millisecond,
-    );
-  } else {
-    messageTime = dateTime;
-  }
-  
+
+  // The API sends an explicit UTC offset (e.g. +05:30), which DateTime.parse
+  // already resolves, so just move it onto the device timezone.
+  final messageTime = dateTime.toLocal();
+
   final difference = now.difference(messageTime);
 
   // Handle negative differences or very recent messages

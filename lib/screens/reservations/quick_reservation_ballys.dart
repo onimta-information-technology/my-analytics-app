@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:ballys_reservation_app/components/package_amount_field_ballys.dart';
@@ -9,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:ballys_reservation_app/components/air_ticket_class_count_selector.dart';
@@ -19,9 +17,7 @@ import 'package:ballys_reservation_app/components/air_ticket_class_count_selecto
 import 'package:ballys_reservation_app/components/bottom_sheets/member_search-new_sheet.dart';
 import 'package:ballys_reservation_app/components/guest_deatils_view_spGift.dart';
 import 'package:ballys_reservation_app/components/location_search_field.dart';
-import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
-import 'package:ballys_reservation_app/data/repositories/airport_repository.dart';
-import 'package:ballys_reservation_app/data/services/api_service.dart';
+import 'package:ballys_reservation_app/data/repositories/quick_reservation_repository.dart';
 import 'package:ballys_reservation_app/models/airport_search_response.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart';
@@ -32,16 +28,14 @@ import 'package:ballys_reservation_app/models/reservation/airline_response.dart'
 import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_sector_entry.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_response.dart';
+import 'package:ballys_reservation_app/models/reservation/quick_hotel_entry.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/hotel_catalog_provider.dart';
 import 'package:ballys_reservation_app/providers/airports_provider.dart';
+import 'package:ballys_reservation_app/providers/quick_reservation_provider_ballys.dart';
 // import 'package:ballys_reservation_app/providers/new_reservation_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
-import 'package:ballys_reservation_app/data/repositories/contact_person_repository.dart';
-import 'package:ballys_reservation_app/utils/device_id.dart';
-import 'package:ballys_reservation_app/utils/amount_util.dart';
-import 'package:ballys_reservation_app/utils/storage_util.dart';
 
 enum _Section { airTicket, hotel, transport }
 
@@ -70,109 +64,6 @@ const TextStyle kInputTextStyle = TextStyle(
   fontWeight: FontWeight.w600,
   color: Colors.black,
 );
-
-// ─── Model: one hotel booking inside a guest member ──────────────────────────
-class _HotelEntry {
-  String hotel;
-  double? hotelId;
-  String arrival;
-  String departure;
-  DateTime? arrivalDate;
-  DateTime? departureDate;
-  String noOfRooms;
-  String noOfPax;
-  /// Children sharing the room. Counted separately from [noOfPax], which stays
-  /// the adult count.
-  String noOfChildren;
-  String roomType;
-  int? roomTypeId;
-  String roomCategory;
-  int? roomCategoryId;
-
-  /// Grading of the room category, e.g. "(Standard)".
-  String hotelCategory;
-  String eciLco;
-  String mealPlan;
-  String paymentBy;
-  String remarks;
-  String marketingPerson;
-  String approvedBy;
-
-  /// The guests this room is booked for, ticked on the assignment card. A room
-  /// can go to one guest or to several, so it travels with the room rather than
-  /// being implied by whoever was in the form when it was added.
-  List<AssignedGuest> assignedGuests;
-
-  _HotelEntry({
-    this.hotel = '',
-    this.hotelId,
-    this.arrival = '',
-    this.departure = '',
-    this.arrivalDate,
-    this.departureDate,
-    this.noOfRooms = '1',
-    this.noOfPax = '1',
-    this.noOfChildren = '0',
-    this.roomType = '',
-    this.roomTypeId,
-    this.roomCategory = '',
-    this.roomCategoryId,
-    this.hotelCategory = '',
-    this.eciLco = 'NA',
-    this.mealPlan = '',
-    this.paymentBy = 'NA',
-    this.remarks = '',
-    this.marketingPerson = '',
-    this.approvedBy = '',
-    this.assignedGuests = const [],
-  });
-
-  Map<String, dynamic> toMap() => {
-        'hotel': hotel,
-        'arrival': arrival,
-        'departure': departure,
-        'noOfRooms': noOfRooms,
-        'noOfPax': noOfPax,
-        'noOfChildren': noOfChildren,
-        'roomType': roomType,
-        'roomCategory': roomCategory,
-        'hotelCategory': hotelCategory,
-        'eciLco': eciLco,
-        'mealPlan': mealPlan,
-        'paymentBy': paymentBy,
-        'remarks': remarks,
-        'marketingPerson': marketingPerson,
-        'approvedBy': approvedBy,
-      };
-
-  Map<String, dynamic> toApiJson() {
-    final arrDt = arrivalDate;
-    final depDt = departureDate;
-    final nights =
-        (arrDt != null && depDt != null) ? depDt.difference(arrDt).inDays : 0;
-    return {
-      'hotel': hotelId,
-      'hotel_name': hotel,
-      'room_category': roomCategoryId,
-      'room_category_name': roomCategory,
-      'room_type': roomTypeId,
-      'room_type_name': roomType,
-      'guest_count': int.tryParse(noOfPax) ?? 1,
-      'children_count': int.tryParse(noOfChildren) ?? 0,
-      'room_count': int.tryParse(noOfRooms) ?? 1,
-      'no_of_nights': nights,
-      'arrival_date': arrDt?.toIso8601String(),
-      'departure_date': depDt?.toIso8601String(),
-      'selected_cost': 0.0,
-      'cost_index': 0,
-      'ec_lco_facility': eciLco,
-      'payment_by': paymentBy,
-      // Everyone the room is booked for, named inside the row itself — the same
-      // shape HotelDescipBallys.toJson() sends.
-      'assigned_guests': assignedGuests.map((g) => g.toJson()).toList(),
-    };
-  }
-}
 
 class QuickReservationBallysScreen extends ConsumerStatefulWidget {
   const QuickReservationBallysScreen({super.key});
@@ -206,11 +97,27 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   int _hotelStep = 0;
   int _airStep = 0;
 
-  bool _isLoading = false;
+  /// Reference data, location rules and the in-flight flag all live on
+  /// [quickReservationBallysProvider]; the widget keeps only its controllers.
+  ///
+  /// Captured in [initState] rather than read through `ref` at each use: these
+  /// are routinely touched after an await, by which point the screen may be
+  /// gone and `ref` unusable. Lowering the overlay has to land even then — the
+  /// provider outlives the screen, so a flag left raised would greet the next
+  /// visit with a stuck overlay.
+  late final QuickReservationBallysNotifier _quickNotifier;
 
-  bool _isNumericOnlyLocation = false;
-  List<String> _prefixes = ["BM", "BL", "BN"];
-  String _selectedPrefix = "BM";
+  /// The current provider state. [build] watches the provider, so a rebuild is
+  /// already queued whenever this would return something new.
+  QuickReservationBallysState get _quick => _quickNotifier.current;
+
+  bool get _isLoading => _quick.isBusy;
+
+  void _setBusy(bool busy) => _quickNotifier.setBusy(busy);
+
+  bool get _isNumericOnlyLocation => _quick.isNumericOnlyLocation;
+  List<String> get _prefixes => _quick.prefixes;
+  String get _selectedPrefix => _quick.selectedPrefix;
 
   final _sharedMemberId = TextEditingController();
   final _sharedMidNumber = TextEditingController();
@@ -231,7 +138,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   bool _sharedHasFamilyMembers = false;
 
   // ── HOTEL members list ──────────────────────────────────────────────────────
-  // Each member now has a 'hotels' list (List<_HotelEntry>) plus identity fields.
+  // Each member now has a 'hotels' list (List<QuickHotelEntry>) plus identity fields.
   List<Map<String, dynamic>> _hotelMembers = [];
 
   // Current hotel form fields (one hotel being edited at a time per guest)
@@ -267,7 +174,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   Key _roomTypeDropdownKey = UniqueKey();
 
   // Pending hotels for the current guest (before the guest is fully "added")
-  List<_HotelEntry> _pendingHotels = [];
+  List<QuickHotelEntry> _pendingHotels = [];
 
   // ── AIR members list ────────────────────────────────────────────────────────
   List<Map<String, dynamic>> _airMembers = [];
@@ -294,8 +201,8 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
 
   // Airlines — picked by name from the master list (API 90156)
   AirlineResponse? _a_selectedAirline;
-  List<AirlineResponse> _a_airlines = [];
-  bool _a_airlinesLoading = false;
+  List<AirlineResponse> get _a_airlines => _quick.airlines;
+  bool get _a_airlinesLoading => _quick.airlinesLoading;
   Key _a_airlineKey = UniqueKey();
 
   final _a_arrCtrl = TextEditingController();
@@ -342,11 +249,11 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   final _a_mealRemarkCtrl = TextEditingController();
 
   // ── Air ticket — Hamoue contact person dropdown ───────────────────────────
-  List<String> _hamoueContactPersons = [];
+  List<String> get _hamoueContactPersons => _quick.contactPersons;
   String? _a_hamoueContactPerson;
 
   /// Bellagio (bty.world) hides the Hamoue contact person dropdown.
-  bool _isBellagio = false;
+  bool get _isBellagio => _quick.isBellagio;
 
   // ── Air ticket — passport bio data page uploads (NEW) ──────────────────────
   /// Bio pages by guest, keyed the same way the assignment ticks are. One
@@ -491,11 +398,18 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   @override
   void initState() {
     super.initState();
-    _loadHotels();
-    _loadAirports();
-    _loadLocationPrefix();
-    _loadContactPersons();
-    _loadAirlines();
+    _quickNotifier = ref.read(quickReservationBallysProvider.notifier);
+    // Deferred past the first frame: these loaders write provider state, and
+    // [loadAirlines] does so before its first await — a provider modified while
+    // the tree is still building throws, which left the airline list empty.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _loadHotels();
+      _loadAirports();
+      _loadLocationPrefix();
+      _loadContactPersons();
+      _loadAirlines();
+    });
   }
 
   @override
@@ -546,42 +460,14 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     super.dispose();
   }
 
-  Future<void> _loadLocationPrefix() async {
-    final location = await StorageUtil.getCurrentLocation();
-    if (location == null) return;
-    final code = location.code.split('_').first;
-    final isNumeric = code == "BELLAGIO";
-    if (isNumeric == _isNumericOnlyLocation) return;
-    setState(() {
-      _isNumericOnlyLocation = isNumeric;
-      _prefixes = isNumeric ? [] : ["BM", "BL", "BN"];
-      _selectedPrefix = isNumeric ? "" : "BM";
-    });
-  }
+  Future<void> _loadLocationPrefix() =>
+      _quickNotifier.loadLocationPrefix();
 
   void _updateMemberIdFields(String fullMemberId) {
     if (fullMemberId.isEmpty) return;
-    if (_isNumericOnlyLocation) {
-      setState(() {
-        _sharedMidNumber.text = fullMemberId;
-        _sharedMemberId.text = fullMemberId;
-      });
-      return;
-    }
-    String prefix = 'BM';
-    String numberPart = fullMemberId;
-    if (fullMemberId.startsWith('BM')) {
-      prefix = 'BM';
-      numberPart = fullMemberId.substring(2);
-    } else if (fullMemberId.startsWith('BL')) {
-      prefix = 'BL';
-      numberPart = fullMemberId.substring(2);
-    } else if (fullMemberId.startsWith('BN')) {
-      prefix = 'BN';
-      numberPart = fullMemberId.substring(2);
-    }
+    final (prefix, numberPart) = _quickNotifier.splitMemberId(fullMemberId);
+    if (!_isNumericOnlyLocation) _quickNotifier.selectPrefix(prefix);
     setState(() {
-      _selectedPrefix = prefix;
       _sharedMidNumber.text = numberPart;
       _sharedMemberId.text = fullMemberId;
     });
@@ -622,23 +508,14 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   }
 
   Future<void> _loadContactPersons() async {
-    try {
-      final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
-      if (mounted) {
-        setState(() {
-          _isBellagio = apiUrl.contains('bty.world');
-          // Bellagio uses "N/A" as the payment default instead of "NA".
-          if (_isBellagio &&
-              (_h_paymentBy.text.isEmpty || _h_paymentBy.text == 'NA')) {
-            _h_paymentBy.text = 'N/A';
-          }
-        });
-      }
-
-      final repo = ContactPersonRepository(ApiService(const FlutterSecureStorage()));
-      final persons = await repo.getContactPersons();
-      if (mounted) setState(() => _hamoueContactPersons = persons);
-    } catch (_) {}
+    await _quickNotifier.loadContactPersons();
+    if (!mounted) return;
+    // Bellagio uses "N/A" as the payment default instead of "NA". The flag is
+    // the provider's; only the controller it seeds belongs to the widget.
+    if (_isBellagio &&
+        (_h_paymentBy.text.isEmpty || _h_paymentBy.text == 'NA')) {
+      setState(() => _h_paymentBy.text = 'N/A');
+    }
   }
 
   void _loadRoomCategories(double hotelId) {
@@ -674,26 +551,12 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
 
   // ── Load airlines from API 90156 ───────────────────────────────────────────
   /// The list is the same whatever route is picked, so it is fetched once.
+  /// Only the dropdown's rebuild key is the widget's — the list itself and its
+  /// loading flag come off the provider.
   Future<void> _loadAirlines() async {
-    setState(() => _a_airlinesLoading = true);
-
-    try {
-      final repo = AirportRepository(ApiService(const FlutterSecureStorage()));
-      final airlines = await repo.getAirlines();
-      if (!mounted) return;
-      setState(() {
-        _a_airlines = airlines;
-        _a_airlinesLoading = false;
-        _a_airlineKey = UniqueKey();
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _a_airlines = [];
-        _a_airlinesLoading = false;
-        _a_airlineKey = UniqueKey();
-      });
-    }
+    await _quickNotifier.loadAirlines();
+    if (!mounted) return;
+    setState(() => _a_airlineKey = UniqueKey());
   }
 
   // ── Shared helpers ──────────────────────────────────────────────────────────
@@ -759,9 +622,9 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     );
   }
 
-  // ── Capture current hotel fields → _HotelEntry ──────────────────────────────
-  _HotelEntry _captureCurrentHotelEntry() {
-    return _HotelEntry(
+  // ── Capture current hotel fields → QuickHotelEntry ──────────────────────────────
+  QuickHotelEntry _captureCurrentHotelEntry() {
+    return QuickHotelEntry(
       hotel: _selectedHotelName ?? '',
       hotelId: _selectedHotelId,
       arrival: _h_arrivalCtrl.text,
@@ -1238,18 +1101,6 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
 
   // ── Extra guests sharing the transport request ──────────────────────────────
 
-  /// Splits "BM1234" into its dropdown prefix and number, mirroring
-  /// [_updateMemberIdFields] but without touching the main form fields.
-  (String, String) _splitMemberId(String fullMemberId) {
-    if (_isNumericOnlyLocation) return ('', fullMemberId);
-    for (final prefix in const ['BM', 'BL', 'BN']) {
-      if (fullMemberId.startsWith(prefix)) {
-        return (prefix, fullMemberId.substring(prefix.length));
-      }
-    }
-    return ('BM', fullMemberId);
-  }
-
   void _addExtraMember(List<_ExtraMember> rows) {
     FocusScope.of(context).unfocus();
     setState(() {
@@ -1650,17 +1501,13 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
           searchIid: iid,
           onSearch: (newTerm, newIid) async {
             if (newTerm.length < 3) return;
-            try {
-              final repo =
-                  GuestRepository(ApiService(const FlutterSecureStorage()));
-              final r = await repo.searchGuest(newIid, newTerm);
-              if (!mounted) return;
-              Navigator.of(ctx).pop();
-              showSheet(r);
-            } catch (_) {}
+            final r = await _quickNotifier.searchGuest(newIid, newTerm);
+            if (!mounted) return;
+            Navigator.of(ctx).pop();
+            showSheet(r);
           },
           onGuestSelected: (guest) {
-            final (prefix, number) = _splitMemberId(guest.mid);
+            final (prefix, number) = _quickNotifier.splitMemberId(guest.mid);
             setState(() {
               row.prefix = prefix;
               row.midNumberController.text = number;
@@ -1676,17 +1523,11 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       return;
     }
 
-    setState(() => _isLoading = true);
-    try {
-      final repo = GuestRepository(ApiService(const FlutterSecureStorage()));
-      final guests = await repo.searchGuest(iid, term);
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      showSheet(guests);
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-    }
+    _setBusy(true);
+    final guests = await _quickNotifier.searchGuest(iid, term);
+    _setBusy(false);
+    if (!mounted) return;
+    showSheet(guests);
   }
 
   // ── Guest search ─────────────────────────────────────────────────────────────
@@ -1694,20 +1535,16 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     required int iid,
     required VoidCallback onCardVisible,
   }) async {
-    final repo = GuestRepository(ApiService(const FlutterSecureStorage()));
     final term = iid == 8002 ? _sharedMemberId.text : _sharedGuestName.text;
     if (term.length < 3) {
       _showSearchSheet([], term, iid, onCardVisible);
       return;
     }
-    setState(() => _isLoading = true);
-    try {
-      final guests = await repo.searchGuest(iid, term);
-      setState(() => _isLoading = false);
-      _showSearchSheet(guests, term, iid, onCardVisible);
-    } catch (_) {
-      setState(() => _isLoading = false);
-    }
+    _setBusy(true);
+    final guests = await _quickNotifier.searchGuest(iid, term);
+    _setBusy(false);
+    if (!mounted) return;
+    _showSearchSheet(guests, term, iid, onCardVisible);
   }
 
   Future<void> _fetchAndSetGuest({
@@ -1715,33 +1552,34 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     required String name,
     required VoidCallback onReady,
   }) async {
-    try {
-      final repo = GuestRepository(ApiService(const FlutterSecureStorage()));
-      final guests = await repo.searchGuest(9021, mid);
-      if (!mounted) return;
-      if (guests.isNotEmpty) {
-        final g = guests.first;
-        ref.read(selectedGuestProvider.notifier).setSelectedGuest(
-              Guest(
-                mid: g.mid ?? mid,
-                memberName: g.mName ?? name,
-                country: '',
-                lastVisitDate: g.lvd?.toString() ?? '',
-                age: 0,
-                gRating: g.gRating ?? '',
-                mGroup: '',
-                gName: g.gName ?? '',
-                memImage2: g.memImage2,
-              ),
-            );
-      } else {
-        _setGuest(mid: mid, name: name);
-      }
-    } catch (_) {
-      if (!mounted) return;
-      _setGuest(mid: mid, name: name);
-    }
+    final guest = await _quickNotifier.fetchGuestDetails(mid);
+    if (!mounted) return;
+    _publishGuest(guest, mid: mid, name: name);
     onReady();
+  }
+
+  /// Puts the picked member on [selectedGuestProvider] — the full record when
+  /// the lookup found one, otherwise just the ID and name the caller already
+  /// had, so the profile screen always has something to open with.
+  void _publishGuest(GuestSearchResponse? g,
+      {required String mid, required String name}) {
+    if (g == null) {
+      _setGuest(mid: mid, name: name);
+      return;
+    }
+    ref.read(selectedGuestProvider.notifier).setSelectedGuest(
+          Guest(
+            mid: g.mid,
+            memberName: g.mName,
+            country: '',
+            lastVisitDate: g.lvd?.toString() ?? '',
+            age: 0,
+            gRating: g.gRating ?? '',
+            mGroup: '',
+            gName: g.gName ?? '',
+            memImage2: g.memImage2,
+          ),
+        );
   }
 
   void _showSearchSheet(
@@ -1762,13 +1600,10 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
         searchIid: iid,
         onSearch: (newTerm, newIid) async {
           if (newTerm.length < 3) return;
-          try {
-            final repo =
-                GuestRepository(ApiService(const FlutterSecureStorage()));
-            final r = await repo.searchGuest(newIid, newTerm);
-            Navigator.of(ctx).pop();
-            _showSearchSheet(r, newTerm, newIid, onCardVisible);
-          } catch (_) {}
+          final r = await _quickNotifier.searchGuest(newIid, newTerm);
+          if (!mounted) return;
+          Navigator.of(ctx).pop();
+          _showSearchSheet(r, newTerm, newIid, onCardVisible);
         },
         // Taken straight from the sheet rather than through a provider: the
         // sheet publishes its pick on newReservationProvider, which this
@@ -1809,33 +1644,10 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       if (mounted) context.push('/home/profile');
       return;
     }
-    setState(() => _isLoading = true);
-    try {
-      final repo = GuestRepository(ApiService(const FlutterSecureStorage()));
-      final guests = await repo.searchGuest(9021, mid);
-      setState(() => _isLoading = false);
-      if (guests.isNotEmpty) {
-        final g = guests.first;
-        ref.read(selectedGuestProvider.notifier).setSelectedGuest(
-              Guest(
-                mid: g.mid ?? mid,
-                memberName: g.mName ?? name,
-                country: '',
-                lastVisitDate: g.lvd?.toString() ?? '',
-                age: 0,
-                gRating: g.gRating ?? '',
-                mGroup: '',
-                gName: g.gName ?? '',
-                memImage2: g.memImage2,
-              ),
-            );
-      } else {
-        _setGuest(mid: mid, name: name);
-      }
-    } catch (_) {
-      setState(() => _isLoading = false);
-      _setGuest(mid: mid, name: name);
-    }
+    _setBusy(true);
+    final guest = await _quickNotifier.fetchGuestDetails(mid);
+    _setBusy(false);
+    _publishGuest(guest, mid: mid, name: name);
     if (mounted) context.push('/home/profile');
   }
 
@@ -2049,7 +1861,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   }
 
   // ── Message builders — HOTEL ─────────────────────────────────────────────────
-  String _singleHotelEntryText(_HotelEntry h, {int? hotelIndex}) {
+  String _singleHotelEntryText(QuickHotelEntry h, {int? hotelIndex}) {
     final prefix =
         hotelIndex != null ? '  [Hotel ${hotelIndex + 1}]\n' : '';
     return '''${prefix}  Name of the Hotel    : ${h.hotel}
@@ -2067,7 +1879,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   }
 
   String _singleHotelMemberText(Map<String, dynamic> m) {
-    final hotels = (m['hotels'] as List<_HotelEntry>?) ?? [];
+    final hotels = (m['hotels'] as List<QuickHotelEntry>?) ?? [];
     final buf = StringBuffer();
     buf.writeln('*HOTEL RESERVATION REQUEST*');
     buf.writeln('Name of the Guest    : ${m['guestName']}');
@@ -2123,7 +1935,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
 
   String _buildHotelText() {
     // Build a "current" member snapshot from the form
-    final currentHotels = List<_HotelEntry>.from(_pendingHotels);
+    final currentHotels = List<QuickHotelEntry>.from(_pendingHotels);
     if (_selectedHotelName != null && _selectedHotelName!.isNotEmpty) {
       currentHotels.add(_captureCurrentHotelEntry());
     }
@@ -2271,7 +2083,8 @@ Remarks              : ${m['remarks']}''';
       ..writeln('No of Vehicles     : ${vehicles.length}')
       ..writeln('Contact Number     : ${m['contactNumber']}')
       ..write('Airport Pickup     : ${m['airportPickup'] ?? 'No'}');
-    final extras = _extraMembersOf(m);
+    final extras =
+        (m['extraMembers'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
     for (int i = 0; i < extras.length; i++) {
       final e = extras[i];
       buf
@@ -2348,129 +2161,6 @@ Remarks              : ${m['remarks']}''';
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
-  }
-
-  Map<String, dynamic> _airMemberToTicketDetail(Map<String, dynamic> m) {
-    final fromAirport = m['fromAirportData'] as Airport?;
-    final toAirport = m['toAirportData'] as Airport?;
-    final returnFrom = m['returnFromData'] as Airport?;
-    final returnTo = m['returnToData'] as Airport?;
-    final arrDate = m['arrDateObj'] as DateTime?;
-    final depDate = m['depDateObj'] as DateTime?;
-    final seats = int.tryParse(m['noOfSeats'] as String? ?? '1') ?? 1;
-    final children = int.tryParse(m['noOfChildren'] as String? ?? '0') ?? 0;
-    final infants = int.tryParse(m['noOfInfants'] as String? ?? '0') ?? 0;
-    final ticketClasses = (m['ticketClasses'] as List<AirTicketClassCount>?) ??
-        const <AirTicketClassCount>[];
-    final assigned =
-        (m['assignedGuests'] as List<AssignedGuest>?) ?? const <AssignedGuest>[];
-    return {
-      'guest_count': seats,
-      'children_count': children,
-      'infant_count': infants,
-      // Every class on the ticket with its own seat count, replacing the single
-      // `air_ticket_class` / `air_ticket_class_name` pair — the same shape
-      // FlightBookingBallys.toJson() sends.
-      'air_ticket_classes': ticketClasses.map((c) => c.toJson()).toList(),
-      'air_line': m['airline'],
-      'air_line_code': m['airlineCode'],
-      'iata_code': m['iataCode'],
-      'contact_person': m['hamoueContactPerson'],
-      'visa': (m['visa'] as String?) == 'Yes',
-      'meal': (m['meal'] as String?) == 'Yes',
-      'extra_leg_room_seat': (m['extraLegroomSeat'] as String?) == 'Yes',
-      'gold_route': (m['goldRoute'] as String?) == 'Yes',
-      'is_round_trip': m['isRoundTrip'] as bool? ?? false,
-      'silk_route': (m['skipRouteFacility'] as String?) == 'Yes' ? 1 : 0,
-      // Follow-ups ride along only when their option is Yes, matching
-      // FlightBookingBallys.toJson().
-      'silk_route_type': (m['skipRouteFacility'] as String?) == 'Yes'
-          ? (m['silkRouteType'] as String? ?? '')
-          : '',
-      'gold_route_type': (m['goldRoute'] as String?) == 'Yes'
-          ? (m['goldRouteType'] as String? ?? '')
-          : '',
-      'meal_remark': (m['meal'] as String?) == 'Yes'
-          ? (m['mealRemark'] as String? ?? '')
-          : '',
-      'airport_transportation': (m['airportTransport'] as String?) == 'Yes' ? 1 : 0,
-      'arrival_date': arrDate?.toIso8601String(),
-      'departure_date': depDate?.toIso8601String(),
-      // Air ticket costs are no longer captured on this screen.
-      'selected_cost': 0.0,
-      'DF_AirportCode': fromAirport?.airportCode,
-      'DF_CityName': fromAirport?.cityName,
-      'DF_AirportName': fromAirport?.airportName,
-      'DF_Country': fromAirport?.country,
-      'DT_AirportCode': toAirport?.airportCode,
-      'DT_CityName': toAirport?.cityName,
-      'DT_AirportName': toAirport?.airportName,
-      'DT_Country': toAirport?.country,
-      'RF_AirportCode': returnFrom?.airportCode,
-      'RF_CityName': returnFrom?.cityName,
-      'RF_AirportName': returnFrom?.airportName,
-      'RF_Country': returnFrom?.country,
-      'RT_AirportCode': returnTo?.airportCode,
-      'RT_CityName': returnTo?.cityName,
-      'RT_AirportName': returnTo?.airportName,
-      'RT_Country': returnTo?.country,
-      // Transit stops for guests with no direct flight, in travel order. The
-      // DF_/DT_ and RF_/RT_ fields above stay the leg endpoints. Matches
-      // FlightBookingBallys.toJson().
-      'is_multi_sector': m['isMultiSector'] as bool? ?? false,
-      'departure_sectors': _sectorsToJson(m['departureSectorData']),
-      'return_sectors': _sectorsToJson(m['returnSectorData']),
-      // Everyone the ticket was ticked for, named inside the row itself rather
-      // than by a BM number on it — the same shape the new reservation screen
-      // sends. A ticket saved without a tick — only possible when there is
-      // nobody to tick — falls back to the member it was entered under.
-      'assigned_guests': assigned.isNotEmpty
-          ? assigned.map((g) => g.toJson()).toList()
-          : [
-              {
-                'BMNumber': m['memberId'],
-                'GuestName': m['guestName'] ?? '',
-              },
-            ],
-    };
-  }
-
-  /// Transit stops in the shape `FlightBookingBallys` sends them, each with the
-  /// day it is flown — `AirportInfo.toSectorJson()` is the same writer the new
-  /// reservation screen goes through, so a route saved from either screen reads
-  /// back identically.
-  List<Map<String, dynamic>> _sectorsToJson(dynamic sectors) {
-    if (sectors is! List) return const [];
-    return sectors
-        .whereType<AirportInfo>()
-        .map((sector) => sector.toSectorJson())
-        .toList();
-  }
-
-  List<Map<String, dynamic>> _buildPassportImages(
-      List<Map<String, dynamic>> members) {
-    final images = <Map<String, dynamic>>[];
-    for (final m in members) {
-      final memberId = m['memberId'] as String? ?? '';
-      final files = m['passportFileObjects'] as List<PassportFileBallys>? ?? [];
-      for (final f in files) {
-        try {
-          final bytes = File(f.path).readAsBytesSync();
-          // A page picked under a named guest goes out under that member; one
-          // picked before anybody was ticked falls back to the member the
-          // ticket was entered for. Same rule as
-          // PassportImageBallys.toJsonWithGuest().
-          final owner = f.guestBmNumber.trim();
-          images.add({
-            'GuestBMNumber': owner.isNotEmpty ? owner : memberId,
-            'FileName': f.fileName,
-            'IsPdf': f.isPdf,
-            'Base64Data': base64Encode(bytes),
-          });
-        } catch (_) {}
-      }
-    }
-    return images;
   }
 
   void _clearAllHotelForm() {
@@ -2623,139 +2313,45 @@ Remarks              : ${m['remarks']}''';
       return;
     }
 
-    final transportDetails =
-        allMembers.map((m) => _transportMemberToDetail(m)).toList();
+    final result = await _quickNotifier.saveTransportReservation(
+      members: allMembers,
+      log: _logLong,
+    );
+    _handleSaveResult(
+      result,
+      onSuccess: _clearAllTransportForm,
+      successFallback: 'Transport reservation saved successfully',
+    );
+  }
 
-    final guests = allMembers
-        .map((m) => {
-              'MID': m['memberId'],
-              'GuestName': m['guestName'],
-              'PickupDate': _pickupIso(m),
-              'ContactNumber': m['contactNumber'],
-            })
-        .toList();
-
-    final primary = allMembers.first;
-    final salesCode = await StorageUtil.getSalesCode();
-    final userName = await StorageUtil.getUserName();
-    final deviceId = await DeviceId.get();
-    final masterId = DateTime.now().millisecondsSinceEpoch.toString();
-final phoneNumber = await StorageUtil.getMobileNumber();
-    final body = <String, dynamic>{
-      'master_id': masterId,
-      'MID': primary['memberId'],
-      'guest_name': primary['guestName'],
-      'pickup_date': _pickupIso(primary),
-      'contact_number': phoneNumber,
-      // 'package_amount': packageAmountToInt(primary['packageAmount'] as String?),
-      // 'currency_type':
-      //     packageAmountCurrency(primary['packageAmount'] as String?),
-      'reservation_status': 'Requested',
-      'sales_code': salesCode,
-      'user_name': userName,
-      'device_id': deviceId,
-      'transport_details': transportDetails,
-      // 'passport_images': _buildPassportImages(allMembers),
-      // 'guests': guests,
-    };
-
-    setState(() => _isLoading = true);
-    try {
-      _logLong('Saving transport reservation', body);
-      final apiService = ApiService(const FlutterSecureStorage());
-      final response = await apiService.post('Transport_Insert', body);
-      _logLong('Transport reservation response', response);
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      final status = response['Status'] as bool? ?? false;
-      if (status) {
-        _clearAllTransportForm();
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Row(children: [
-            const Icon(Icons.check_circle, color: Colors.white, size: 18),
-            const SizedBox(width: 8),
-            Expanded(
-                child: Text(response['Message'] as String? ??
-                    'Transport reservation saved successfully')),
-          ]),
-          backgroundColor: Colors.green.shade700,
-          duration: const Duration(seconds: 3),
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ));
-      } else {
-        _showSaveErrorSnack(response['Message'] as String? ??
-            'Failed to save transport reservation');
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      _showSaveErrorSnack(e.toString());
+  /// Shared tail of the three saves: clear the tab and confirm, or say why not.
+  void _handleSaveResult(
+    QuickReservationResult result, {
+    required VoidCallback onSuccess,
+    required String successFallback,
+  }) {
+    if (!mounted) return;
+    if (!result.success) {
+      _showSaveErrorSnack(result.message ?? successFallback);
+      return;
     }
-  }
-
-  /// Pickup date and time combined into a single ISO timestamp.
-  String? _pickupIso(Map<String, dynamic> m) {
-    final date = m['pickupDateObj'] as DateTime?;
-    if (date == null) return null;
-    final time = m['pickupTimeObj'] as TimeOfDay?;
-    return DateTime(
-      date.year,
-      date.month,
-      date.day,
-      time?.hour ?? 0,
-      time?.minute ?? 0,
-    ).toIso8601String();
-  }
-
-  /// The extra guests captured alongside a transport member, typed for use.
-  List<Map<String, dynamic>> _extraMembersOf(Map<String, dynamic> m) =>
-      (m['extraMembers'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
-
-  Map<String, dynamic> _transportMemberToDetail(Map<String, dynamic> m) {
-    final vehicles = (m['vehicleDetails'] as List?)?.cast<Map>() ?? const [];
-    return {
-      'MID': m['memberId'],
-      'guest_name': m['guestName'],
-      // 'package_amount': packageAmountToInt(m['packageAmount'] as String?),
-      // 'currency_type': packageAmountCurrency(m['packageAmount'] as String?),
-      // Guests sharing this request: same pickup, vehicles and dates, each
-      // carrying their own package amount.
-      'accompanying_members': _extraMembersOf(m)
-          .map((e) => {
-                'MID': e['memberId'],
-                'guest_name': e['guestName'],
-                // 'package_amount':
-                //     packageAmountToInt(e['packageAmount'] as String?),
-                // 'currency_type':
-                //     packageAmountCurrency(e['packageAmount'] as String?),
-              })
-          .toList(),
-      'pickup_date': _pickupIso(m),
-      'pickup_time': m['pickupTime'],
-      'hire_type': m['hireType'],
-      'pickup_location': m['pickupLocation'],
-      'pickup_place_id': m['pickupPlaceId'],
-      'drop_location': m['dropLocation'],
-      'drop_place_id': m['dropPlaceId'],
-      'no_of_vehicles': vehicles.length,
-      'vehicle_details': vehicles
-          .map((v) => {
-                'car_type': v['carType'],
-                'no_of_passengers':
-                    int.tryParse(v['noOfPassengers'] as String? ?? '1') ?? 1,
-              })
-          .toList(),
-      'contact_number': m['contactNumber'],
-      // 'silk_route': (m['silkRoute'] as String?) == 'Yes' ? 1 : 0,
-      'airport_pickup': (m['airportPickup'] as String?) == 'Yes' ? 1 : 0,
-    };
+    onSuccess();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Row(children: [
+        const Icon(Icons.check_circle, color: Colors.white, size: 18),
+        const SizedBox(width: 8),
+        Expanded(child: Text(result.message ?? successFallback)),
+      ]),
+      backgroundColor: Colors.green.shade700,
+      duration: const Duration(seconds: 3),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    ));
   }
 
   Future<void> _saveHotelSection() async {
     // Collect current form's hotel entries
-    final currentHotels = List<_HotelEntry>.from(_pendingHotels);
+    final currentHotels = List<QuickHotelEntry>.from(_pendingHotels);
     if (_selectedHotelName != null && _selectedHotelName!.isNotEmpty) {
       currentHotels.add(_captureCurrentHotelEntry());
     }
@@ -2807,143 +2403,18 @@ final phoneNumber = await StorageUtil.getMobileNumber();
       return;
     }
 
-    // Flatten all hotel entries from all members into room_details. Each room
-    // is sent once and names the guests it was ticked for inside its own
-    // `assigned_guests`, so the row itself carries no BM number — the same
-    // shape the new reservation screen sends. A room saved without a tick —
-    // only possible when there is nobody to tick — falls back to the member it
-    // was entered under, so every row still names somebody.
-    final roomDetails = <Map<String, dynamic>>[];
-    for (final m in allMembers) {
-      final hotels = (m['hotels'] as List<_HotelEntry>?) ?? [];
-      roomDetails.addAll(hotels.map((h) {
-        final row = h.toApiJson();
-        if (h.assignedGuests.isNotEmpty) return row;
-        return {
-          ...row,
-          'assigned_guests': [
-            {
-              'BMNumber': m['memberId'],
-              'GuestName': m['guestName'],
-            },
-          ],
-        };
-      }));
-    }
-
-    // The reservation's remark. The field on screen wins — it is where the user
-    // last typed and it is never wiped by "Add Another Hotel" — falling back to
-    // the first non-empty remark banked with a hotel, which is where a remark
-    // typed before an older build's reset ended up.
-    String remarksForMember(Map<String, dynamic> m) {
-      final live = _h_remarks.text.trim();
-      if (live.isNotEmpty) return live;
-      final hotels = (m['hotels'] as List<_HotelEntry>?) ?? [];
-      for (final h in hotels) {
-        if (h.remarks.trim().isNotEmpty) return h.remarks.trim();
-      }
-      return '';
-    }
-
-    // Every member is billed their own package, so the amount travels per
-    // guest inside `guests` rather than on the reservation.
-    final guests = allMembers.map((m) {
-      final hotels = (m['hotels'] as List<_HotelEntry>?) ?? [];
-      final first = hotels.isNotEmpty ? hotels.first : null;
-      final amount = m['packageAmount'] as String?;
-      return {
-        'BMNumber': m['memberId'],
-        'GuestName': m['guestName'],
-        'ArrivalDate': first?.arrivalDate?.toIso8601String(),
-        'DepartureDate': first?.departureDate?.toIso8601String(),
-        'HasFamilyMembers': _sharedHasFamilyMembers,
-        'PackageAmount': packageAmountToInt(amount),
-        'CurrencyType': packageAmountCurrency(amount),
-        'IsSharedAmount': m['sharedPackage'] as bool? ?? false,
-      };
-    }).toList();
-
-    final primary = allMembers.first;
-    final primaryHotels = (primary['hotels'] as List<_HotelEntry>?) ?? [];
-    final firstHotel = primaryHotels.isNotEmpty ? primaryHotels.first : null;
-
-    // Extra guests share the form guest's rooms and dates, so they add a
-    // `guests` entry each — with their own package — and no room of their own.
-    // `PrimaryBMNumber` / `IsSharedPackage` name the guest they hang off, which
-    // is what marks them as that guest's members on the way back.
-    for (final e in _captureExtraMembers(_h_extraMembers)) {
-      final amount = e['packageAmount'] as String?;
-      guests.add({
-        'BMNumber': e['memberId'],
-        'GuestName': e['guestName'],
-        'PrimaryBMNumber': primary['memberId'],
-        'IsSharedPackage': true,
-        'ArrivalDate': firstHotel?.arrivalDate?.toIso8601String(),
-        'DepartureDate': firstHotel?.departureDate?.toIso8601String(),
-        'HasFamilyMembers': e['hasFamilyMembers'] as bool? ?? false,
-        'PackageAmount': packageAmountToInt(amount),
-        'CurrencyType': packageAmountCurrency(amount),
-        'IsSharedAmount': e['sharedPackage'] as bool? ?? false,
-      });
-    }
-
-    final salesCode = await StorageUtil.getSalesCode();
-    final userName = await StorageUtil.getUserName();
-    final deviceId = await DeviceId.get();
-    final masterId = DateTime.now().millisecondsSinceEpoch.toString();
-    final body = <String, dynamic>{
-       'master_id': masterId,
-      'bm_number': primary['memberId'],
-      'guest_name': primary['guestName'],
-      'arrival_date': firstHotel?.arrivalDate?.toIso8601String(),
-      'departure_date': firstHotel?.departureDate?.toIso8601String(),
-      'has_air_ticket_reservation': false,
-      'remarks': remarksForMember(primary),
-      'selected_marketing_person': '',
-      "reservation_status":"Pending",
-      'sales_code': salesCode,
-      'user_name': userName,
-      'device_id': deviceId,
-      'room_details': roomDetails,
-      'air_ticket_details': [],
-      'guests': guests,
-      'passport_images': [],
-    };
-    setState(() => _isLoading = true);
-    try {
-      _logLong('Saving hotel reservation', body);
-      final apiService = ApiService(const FlutterSecureStorage());
-      final response =
-          await apiService.post('Reservation_InsertReservation', body);
-      _logLong('Hotel reservation response', response);
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      final status = response['Status'] as bool? ?? false;
-      if (status) {
-        _clearAllHotelForm();
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Row(children: [
-            const Icon(Icons.check_circle, color: Colors.white, size: 18),
-            const SizedBox(width: 8),
-            Expanded(
-                child: Text(response['Message'] as String? ??
-                    'Reservation saved successfully')),
-          ]),
-          backgroundColor: Colors.green.shade700,
-          duration: const Duration(seconds: 3),
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ));
-      } else {
-        _showSaveErrorSnack(
-            response['Message'] as String? ?? 'Failed to save reservation');
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      _showSaveErrorSnack(e.toString());
-    }
+    final result = await _quickNotifier.saveHotelReservation(
+      members: allMembers,
+      extraMembers: _captureExtraMembers(_h_extraMembers),
+      liveRemarks: _h_remarks.text,
+      hasFamilyMembers: _sharedHasFamilyMembers,
+      log: _logLong,
+    );
+    _handleSaveResult(
+      result,
+      onSuccess: _clearAllHotelForm,
+      successFallback: 'Reservation saved successfully',
+    );
   }
 
   Future<void> _saveAirSection() async {
@@ -2994,141 +2465,35 @@ final phoneNumber = await StorageUtil.getMobileNumber();
     }
 
     // Every ticket for this guest: the ones banked with "Add Another Air
-    // Ticket" plus the one still on screen, each tagged with the guest's member
-    // ID. A blank form after banking contributes nothing.
-    final primaryMemberId = allMembers.first['memberId'];
-    final primaryGuestName = allMembers.first['guestName'];
-    final ticketSources = <Map<String, dynamic>>[
+    // Ticket" plus the one still on screen. A blank form after banking
+    // contributes nothing. The repository tags each with the primary member.
+    final tickets = <Map<String, dynamic>>[
       ..._pendingAirTickets,
       if (_pendingAirTickets.isEmpty || _hasCurrentAirTicket)
         _captureCurrentAirTicket(),
-    ]
-        .map((t) => {
-              ...t,
-              'memberId': primaryMemberId,
-              // Carried through so each ticket can name the guest it is booked
-              // for inside its own `assigned_guests`.
-              'guestName': primaryGuestName,
-            })
-        .toList();
+    ];
 
-    final airTicketDetails =
-        ticketSources.map((t) => _airMemberToTicketDetail(t)).toList();
-
-    // The reservation's dates come from the first ticket, which is not always
-    // the one on screen — after banking every ticket the form is blank.
-    final firstTicket = ticketSources.first;
-    final primaryArrival = firstTicket['arrDateObj'] as DateTime?;
-    final primaryDeparture = firstTicket['depDateObj'] as DateTime?;
-
-    // Every member is billed their own package, so the amount travels per
-    // guest inside `guests` rather than on the reservation.
-    final guests = allMembers.map((m) {
-      final amount = m['packageAmount'] as String?;
-      return {
-        'BMNumber': m['memberId'],
-        'GuestName': m['guestName'],
-        'ArrivalDate': primaryArrival?.toIso8601String(),
-        'DepartureDate': primaryDeparture?.toIso8601String(),
-        'HasFamilyMembers': _sharedHasFamilyMembers,
-        'PackageAmount': packageAmountToInt(amount),
-        'CurrencyType': packageAmountCurrency(amount),
-        'IsSharedAmount': m['sharedPackage'] as bool? ?? false,
-      };
-    }).toList();
-
-    // Extra guests share the form guest's tickets and dates, so they add a
-    // `guests` entry each — with their own package — and no ticket of their own.
-    // `PrimaryBMNumber` / `IsSharedPackage` name the guest they hang off, which
-    // is what marks them as that guest's members on the way back.
-    for (final e in _captureExtraMembers(_a_extraMembers)) {
-      final amount = e['packageAmount'] as String?;
-      guests.add({
-        'BMNumber': e['memberId'],
-        'GuestName': e['guestName'],
-        'PrimaryBMNumber': primaryMemberId,
-        'IsSharedPackage': true,
-        'ArrivalDate': primaryArrival?.toIso8601String(),
-        'DepartureDate': primaryDeparture?.toIso8601String(),
-        'HasFamilyMembers': e['hasFamilyMembers'] as bool? ?? false,
-        'PackageAmount': packageAmountToInt(amount),
-        'CurrencyType': packageAmountCurrency(amount),
-        'IsSharedAmount': e['sharedPackage'] as bool? ?? false,
-      });
-    }
-
-    // Passports are uploaded against whichever ticket was on screen at the
-    // time, so every ticket contributes — not just the one left in the form.
-    final passportImages = _buildPassportImages(ticketSources);
-
-    final primary = allMembers.first;
-    final salesCode = await StorageUtil.getSalesCode();
-    final userName = await StorageUtil.getUserName();
-    final deviceId = await DeviceId.get();
-    final masterId = DateTime.now().millisecondsSinceEpoch.toString();
-    final body = <String, dynamic>{
-      'master_id': masterId,
-      'bm_number': primary['memberId'],
-      'guest_name': primary['guestName'],
-      'arrival_date': primaryArrival?.toIso8601String(),
-      'departure_date': primaryDeparture?.toIso8601String(),
-      'has_air_ticket_reservation': true,
-      // The field on screen wins — it is where the user last typed and it is
-      // never wiped by "Add Another Air Ticket" — falling back to the remark
-      // banked with the first ticket.
-      'remarks': _a_remarksCtrl.text.trim().isNotEmpty
-          ? _a_remarksCtrl.text.trim()
-          : (firstTicket['remarks'] ?? ''),
-      'selected_marketing_person': '',
-      "reservation_status":"Pending",
-      'sales_code': salesCode,
-      'user_name': userName,
-      'device_id': deviceId,
-      'room_details': [],
-      'air_ticket_details': airTicketDetails,
-      'guests': guests,
-      'passport_images': passportImages,
-    };
-    setState(() => _isLoading = true);
-    try {
-      _logLong('Saving air ticket reservation', body);
-      final apiService = ApiService(const FlutterSecureStorage());
-      final response =
-          await apiService.post('Reservation_InsertReservation', body);
-      _logLong('Air ticket reservation response', response);
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      final status = response['Status'] as bool? ?? false;
-      if (status) {
-        _clearAllAirForm();
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Row(children: [
-            const Icon(Icons.check_circle, color: Colors.white, size: 18),
-            const SizedBox(width: 8),
-            Expanded(
-                child: Text(response['Message'] as String? ??
-                    'Reservation saved successfully')),
-          ]),
-          backgroundColor: Colors.green.shade700,
-          duration: const Duration(seconds: 3),
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ));
-      } else {
-        _showSaveErrorSnack(
-            response['Message'] as String? ?? 'Failed to save reservation');
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      _showSaveErrorSnack(e.toString());
-    }
+    final result = await _quickNotifier.saveAirReservation(
+      members: allMembers,
+      tickets: tickets,
+      extraMembers: _captureExtraMembers(_a_extraMembers),
+      liveRemarks: _a_remarksCtrl.text,
+      hasFamilyMembers: _sharedHasFamilyMembers,
+      log: _logLong,
+    );
+    _handleSaveResult(
+      result,
+      onSuccess: _clearAllAirForm,
+      successFallback: 'Reservation saved successfully',
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     ref.watch(fontSettingsProvider);
+    // Reference data, the location's prefix rules and the in-flight flag: this
+    // is what makes the getters above rebuild the tree when the notifier moves.
+    ref.watch(quickReservationBallysProvider);
     return Stack(
       children: [
         Scaffold(
@@ -4777,11 +4142,13 @@ class _HotelForm extends StatelessWidget {
             isNumericOnly: state._isNumericOnlyLocation,
             prefixes: state._prefixes,
             selectedPrefix: state._selectedPrefix,
-            onPrefixChanged: (v) => state.setState(() {
-              state._selectedPrefix = v;
-              state._sharedMemberId.text =
-                  '$v${state._sharedMidNumber.text}';
-            }),
+            onPrefixChanged: (v) {
+              state._quickNotifier.selectPrefix(v);
+              state.setState(() {
+                state._sharedMemberId.text =
+                    '$v${state._sharedMidNumber.text}';
+              });
+            },
           ),
           const SizedBox(height: 12),
           if (state._sharedGuestCardVisible &&
@@ -5491,11 +4858,13 @@ class _AirForm extends StatelessWidget {
             isNumericOnly: state._isNumericOnlyLocation,
             prefixes: state._prefixes,
             selectedPrefix: state._selectedPrefix,
-            onPrefixChanged: (v) => state.setState(() {
-              state._selectedPrefix = v;
-              state._sharedMemberId.text =
-                  '$v${state._sharedMidNumber.text}';
-            }),
+            onPrefixChanged: (v) {
+              state._quickNotifier.selectPrefix(v);
+              state.setState(() {
+                state._sharedMemberId.text =
+                    '$v${state._sharedMidNumber.text}';
+              });
+            },
           ),
           const SizedBox(height: 12),
           if (state._sharedGuestCardVisible &&
@@ -6338,10 +5707,13 @@ class _TransportForm extends StatelessWidget {
             isNumericOnly: state._isNumericOnlyLocation,
             prefixes: state._prefixes,
             selectedPrefix: state._selectedPrefix,
-            onPrefixChanged: (v) => state.setState(() {
-              state._selectedPrefix = v;
-              state._sharedMemberId.text = '$v${state._sharedMidNumber.text}';
-            }),
+            onPrefixChanged: (v) {
+              state._quickNotifier.selectPrefix(v);
+              state.setState(() {
+                state._sharedMemberId.text =
+                    '$v${state._sharedMidNumber.text}';
+              });
+            },
             memberIdValidator: (value) {
               if (value == null || value.trim().isEmpty) {
                 return 'Membership No is required';

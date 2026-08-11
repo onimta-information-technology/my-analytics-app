@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:ballys_reservation_app/components/package_amount_field_ballys.dart';
+import 'package:ballys_reservation_app/components/passport_upload_widget_ballys.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,8 +12,8 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:country_picker/country_picker.dart';
-import 'package:ballys_reservation_app/components/air_ticket_class_selector.dart';
-import 'package:ballys_reservation_app/components/passport_upload_widget.dart';
+import 'package:ballys_reservation_app/components/air_ticket_class_count_selector.dart';
+// import 'package:ballys_reservation_app/components/passport_upload_widget.dart';
 // import 'package:ballys_reservation_app/components/package_amount_field.dart';
 
 import 'package:ballys_reservation_app/components/bottom_sheets/member_search-new_sheet.dart';
@@ -23,9 +24,14 @@ import 'package:ballys_reservation_app/data/repositories/airport_repository.dart
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/airport_search_response.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
+import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart';
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
+import 'package:ballys_reservation_app/models/reservation/assigned_guest.dart';
+import 'package:ballys_reservation_app/models/reservation/air_ticket_class_count.dart';
 import 'package:ballys_reservation_app/models/reservation/airline_response.dart';
+import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_sector_entry.dart';
+import 'package:ballys_reservation_app/models/reservation/hotel_response.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/hotel_catalog_provider.dart';
 import 'package:ballys_reservation_app/providers/airports_provider.dart';
@@ -92,6 +98,11 @@ class _HotelEntry {
   String marketingPerson;
   String approvedBy;
 
+  /// The guests this room is booked for, ticked on the assignment card. A room
+  /// can go to one guest or to several, so it travels with the room rather than
+  /// being implied by whoever was in the form when it was added.
+  List<AssignedGuest> assignedGuests;
+
   _HotelEntry({
     this.hotel = '',
     this.hotelId,
@@ -113,6 +124,7 @@ class _HotelEntry {
     this.remarks = '',
     this.marketingPerson = '',
     this.approvedBy = '',
+    this.assignedGuests = const [],
   });
 
   Map<String, dynamic> toMap() => {
@@ -155,6 +167,9 @@ class _HotelEntry {
       'cost_index': 0,
       'ec_lco_facility': eciLco,
       'payment_by': paymentBy,
+      // Everyone the room is booked for, named inside the row itself — the same
+      // shape HotelDescipBallys.toJson() sends.
+      'assigned_guests': assignedGuests.map((g) => g.toJson()).toList(),
     };
   }
 }
@@ -174,6 +189,23 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   final _airFormKey = GlobalKey<FormState>();
   final _transportFormKey = GlobalKey<FormState>();
 
+  /// The Hotel and Air Ticket tabs are two-step forms — who the reservation is
+  /// for, then what is being booked — so the guest half gets its own [Form].
+  /// "Next" can then check just the guest without the booking fields, which are
+  /// still blank at that point, complaining first.
+  ///
+  /// Both halves stay in the widget tree (see the [IndexedStack] in
+  /// [_HotelForm] / [_AirForm]) rather than being swapped out, so a save from
+  /// the booking step still validates the guest step — and can send the user
+  /// back to it when something there is wrong.
+  final _hotelGuestFormKey = GlobalKey<FormState>();
+  final _airGuestFormKey = GlobalKey<FormState>();
+
+  /// Which step of the Hotel / Air Ticket tab is on screen: 0 guest, 1 booking.
+  /// Transport is a single form and has no step of its own.
+  int _hotelStep = 0;
+  int _airStep = 0;
+
   bool _isLoading = false;
 
   bool _isNumericOnlyLocation = false;
@@ -184,6 +216,12 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   final _sharedMidNumber = TextEditingController();
   final _sharedGuestName = TextEditingController();
   final _sharedPackageAmount = TextEditingController();
+
+  /// The "Shared" tick beside the guest's package amount: they are on a shared
+  /// package rather than one of their own. Recorded in its own right — a shared
+  /// guest may still carry an amount — and travels as `IsSharedAmount`, the
+  /// same way the new reservation screen sends it.
+  bool _sharedPackageShared = false;
   // final _sharedReservationNo = TextEditingController();
   bool _sharedGuestCardVisible = false;
 
@@ -247,7 +285,14 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   // counted separately, matching the new reservation screen's air ticket tab.
   final _a_noOfChildren = TextEditingController(text: '0');
   final _a_noOfInfants = TextEditingController(text: '0');
-  Map<String, dynamic>? _a_selectedClass;
+  /// Every cabin class on the ticket with its own seat count. A ticket can mix
+  /// them — Economy x2 plus Business x1 is one ticket — so this is a list rather
+  /// than a single pick, matching the new reservation screen.
+  List<AirTicketClassCount> _a_ticketClasses = [];
+
+  /// Set when a save or "Add Another Air Ticket" was attempted with no class
+  /// picked, so the selector can say so.
+  bool _a_classError = false;
   Key _a_classKey = UniqueKey();
 
   // Airlines — picked by name from the master list (API 90156)
@@ -313,7 +358,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   bool _isBellagio = false;
 
   // ── Air ticket — passport bio data page uploads (NEW) ──────────────────────
-  List<PassportFile> _a_passportFiles = [];
+  List<PassportFileBallys> _a_passportFiles = [];
   Key _a_passportUploadKey = UniqueKey();
 
   // ── TRANSPORT members list ─────────────────────────────────────────────────
@@ -353,6 +398,18 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   /// package.
   final List<_ExtraMember> _h_extraMembers = [];
   final List<_ExtraMember> _a_extraMembers = [];
+
+  /// The guests the hotel / air ticket currently in the form is booked for, by
+  /// [_guestKey]. A room or ticket can go to one guest or to several, so this is
+  /// a set of ticks rather than a single pick — the same assignment the new
+  /// reservation screen's selector sheets collect.
+  final Set<String> _h_assignedGuestKeys = {};
+  final Set<String> _a_assignedGuestKeys = {};
+
+  /// Set when a save or "Add Another…" was attempted with nobody ticked, so the
+  /// assignment card can say what is missing.
+  bool _h_guestAssignError = false;
+  bool _a_guestAssignError = false;
 
   /// Keeps `_t_carTypes` and `_t_passengerCtrls` in sync with the "No of
   /// Vehicles" stepper so there is exactly one Car Type + Passengers pair
@@ -413,7 +470,11 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   static const _airColor = Color(0xFF0277BD);
   static const _transportColor = Color(0xFF2E7D32);
 
+  // Both steps of a tab are in the tree at once, so each needs a controller of
+  // its own — one controller cannot drive two live scroll views.
+  final _hotelGuestScrollCtrl = ScrollController();
   final _hotelScrollCtrl = ScrollController();
+  final _airGuestScrollCtrl = ScrollController();
   final _airScrollCtrl = ScrollController();
   final _transportScrollCtrl = ScrollController();
 
@@ -478,7 +539,9 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     for (final row in [..._t_extraMembers, ..._h_extraMembers, ..._a_extraMembers]) {
       row.dispose();
     }
+    _hotelGuestScrollCtrl.dispose();
     _hotelScrollCtrl.dispose();
+    _airGuestScrollCtrl.dispose();
     _airScrollCtrl.dispose();
     _transportScrollCtrl.dispose();
     super.dispose();
@@ -645,6 +708,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
 
   void _resetHotelFields() {
     _sharedPackageAmount.clear();
+    _sharedPackageShared = false;
     // _sharedReservationNo.clear();
     _h_noOfRooms.text = '1';
     _h_noOfPax.text = '1';
@@ -676,6 +740,8 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     _roomCategoryDropdownKey = UniqueKey();
     _roomTypeDropdownKey = UniqueKey();
     _pendingHotels = [];
+    _h_assignedGuestKeys.clear();
+    _h_guestAssignError = false;
   }
 
   void _showHotelAddedSnack() {
@@ -719,6 +785,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       remarks: _h_remarks.text,
       marketingPerson: _h_marketingPerson.text,
       approvedBy: _h_approvedBy.text,
+      assignedGuests: _selectedHotelGuests(),
     );
   }
 
@@ -743,8 +810,16 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       );
       return;
     }
+    // The hotel about to be banked has to name who it is for, or it can never
+    // be told apart from the next one on save.
+    if (!_requireHotelGuestAssignment()) return;
     setState(() {
       _pendingHotels.add(_captureCurrentHotelEntry());
+      // The banked hotel took its guests with it; the next one starts unticked
+      // so those guests come up locked rather than silently double-booked.
+      _h_assignedGuestKeys.clear();
+      _h_guestAssignError = false;
+      _preselectSoleHotelGuest();
       // Reset only the hotel-details fields, keep guest identity
       _h_noOfRooms.text = '1';
       _h_noOfPax.text = '1';
@@ -784,6 +859,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       'guestName': _sharedGuestName.text,
       'memberId': _sharedMemberId.text,
       'packageAmount': _sharedPackageAmount.text,
+      'sharedPackage': _sharedPackageShared,
       'hasFamilyMembers': _sharedHasFamilyMembers,
       // 'reservationNo': _sharedReservationNo.text,
       ..._captureCurrentAirTicket(),
@@ -793,25 +869,43 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   /// Just the ticket half of the air form — everything that belongs to a single
   /// flight rather than to the guest. Kept separate so "Add Another Air Ticket"
   /// can bank one ticket and reset those fields while the guest stays put.
-  /// The stops the user actually picked, in the order the rows are shown.
-  List<Airport> _pickedSectorAirports(List<FlightSectorEntry> sectors) => sectors
+  ///
+  /// The stops the user actually picked, in the order the rows are shown, each
+  /// carrying the day it is flown. Copied out of the live [FlightSectorEntry]
+  /// rows so a banked ticket keeps the route it was banked with when the form
+  /// is edited for the next one.
+  List<AirportInfo> _pickedSectorInfos(List<FlightSectorEntry> sectors) => sectors
       .where((sector) => sector.airport != null)
-      .map((sector) => sector.airport!)
+      .map((sector) => AirportInfo(
+            airportCode: sector.airport!.airportCode ?? '',
+            cityName: sector.airport!.cityName ?? '',
+            airportName: sector.airport!.airportName ?? '',
+            country: sector.airport!.country ?? '',
+            sectorDate: sector.date,
+          ))
       .toList();
 
   /// One leg written out with its transit stops, e.g.
-  /// "Colombo (CMB) → Dubai (DXB) → London (LHR)" — the same "City (CODE)"
-  /// shape the other airport display strings use.
+  /// "Colombo (CMB) → Dubai (DXB) [12 Mar] → London (LHR)" — the same
+  /// "City (CODE)" shape the other airport display strings use, with each
+  /// stop's travel day beside it.
   String _airRouteText(
       Airport? from, List<FlightSectorEntry> sectors, Airport? to) {
-    String name(Airport? a) => a == null
+    String endpoint(Airport? a) => a == null
         ? ''
         : '${a.cityName ?? ''} (${a.airportCode ?? ''})';
-    final stops = _a_isMultiSector ? _pickedSectorAirports(sectors) : <Airport>[];
-    final parts = [from, ...stops, to]
-        .map(name)
-        .where((part) => part.isNotEmpty)
-        .toList();
+    String stopName(AirportInfo s) {
+      final base = '${s.cityName} (${s.airportCode})';
+      return s.sectorDate == null ? base : '$base [${_fmt(s.sectorDate!)}]';
+    }
+
+    final stops =
+        _a_isMultiSector ? _pickedSectorInfos(sectors) : <AirportInfo>[];
+    final parts = [
+      endpoint(from),
+      ...stops.map(stopName),
+      endpoint(to),
+    ].where((part) => part.trim().isNotEmpty && part != ' ()').toList();
     return parts.length < 2 ? '' : parts.join(' → ');
   }
 
@@ -845,7 +939,9 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       'noOfSeats': _a_noOfSeats.text,
       'noOfChildren': _a_noOfChildren.text,
       'noOfInfants': _a_noOfInfants.text,
-      'class': _a_selectedClass?['type'] ?? '',
+      // "Economy x2, Business x1" — every class on the ticket on one line, for
+      // the copy text and the banked-ticket chips.
+      'class': AirTicketClassCount.summary(_a_ticketClasses),
       'airline': _a_selectedAirline?.airlineName ?? '',
       'airlineCode': _a_selectedAirline?.airlineCode ?? '',
       'iataCode': _a_selectedAirline?.iataCode ?? '',
@@ -868,16 +964,20 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       'toAirportData': _a_toAirport,
       'returnFromData': _a_returnFromAirport,
       'returnToData': _a_returnToAirport,
-      'departureSectorData':
-          _a_isMultiSector ? _pickedSectorAirports(_a_departureSectors) : <Airport>[],
+      'departureSectorData': _a_isMultiSector
+          ? _pickedSectorInfos(_a_departureSectors)
+          : <AirportInfo>[],
       // Return stops describe nothing without a return leg.
       'returnSectorData': _a_isMultiSector && _a_isRoundTrip
-          ? _pickedSectorAirports(_a_returnSectors)
-          : <Airport>[],
+          ? _pickedSectorInfos(_a_returnSectors)
+          : <AirportInfo>[],
       'arrDateObj': _a_arrDate,
       'depDateObj': _a_depDate,
-      'classId': _a_selectedClass?['id'],
-      'passportFileObjects': List<PassportFile>.from(_a_passportFiles),
+      // Every class with its seat count, which is what goes out on save.
+      'ticketClasses': List<AirTicketClassCount>.from(_a_ticketClasses),
+      'passportFileObjects': List<PassportFileBallys>.from(_a_passportFiles),
+      // Who the ticket is booked for, ticked on the assignment card.
+      'assignedGuests': _selectedAirGuests(),
     };
   }
 
@@ -886,21 +986,49 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   bool get _hasCompleteAirSector =>
       _a_fromAirport != null && _a_toAirport != null;
 
+  /// Picks the day a single transit stop is flown. Unlike the ticket's arrival
+  /// and departure dates this writes straight onto the stop, so there is no
+  /// controller to keep in step.
+  ///
+  /// The ticket's arrival date is the default starting point — a stop is flown
+  /// on the way, so it is the day the journey begins that it hangs off.
+  Future<void> _pickSectorDate(FlightSectorEntry sector, int stopNumber) async {
+    final picked = await _pickDate(
+      context,
+      label: 'Select Stop $stopNumber Date',
+      initial: sector.date ?? _a_arrDate,
+    );
+    if (picked == null) return;
+    setState(() => sector.date = picked);
+  }
+
   /// Multi Sector is on but the stops don't describe a route yet — a row with
-  /// no airport, or every row deleted.
+  /// no airport, a row with no travel day, or every row deleted.
   bool get _hasIncompleteAirStops {
     if (!_a_isMultiSector) return false;
     if (_a_departureSectors.isEmpty && _a_returnSectors.isEmpty) return true;
-    return _a_departureSectors.any((sector) => sector.airport == null) ||
+    return _hasUndatedAirStops ||
+        _a_departureSectors.any((sector) => sector.airport == null) ||
         (_a_isRoundTrip &&
             _a_returnSectors.any((sector) => sector.airport == null));
   }
 
+  /// A stop with an airport but no day. The route is flown over several days, so
+  /// without it the stops are just a list of airports in no particular order.
+  bool get _hasUndatedAirStops =>
+      _a_departureSectors.any((sector) => sector.date == null) ||
+      (_a_isRoundTrip && _a_returnSectors.any((sector) => sector.date == null));
+
   /// The matching complaint for [_hasIncompleteAirStops].
-  String get _incompleteAirStopsMessage =>
-      _a_departureSectors.isEmpty && _a_returnSectors.isEmpty
-          ? 'Please add at least one stop, or turn Multi Sector off'
-          : 'Please select an airport for every stop';
+  String get _incompleteAirStopsMessage {
+    if (_a_departureSectors.isEmpty && _a_returnSectors.isEmpty) {
+      return 'Please add at least one stop, or turn Multi Sector off';
+    }
+    final missingAirport = _a_departureSectors.any((s) => s.airport == null) ||
+        (_a_isRoundTrip && _a_returnSectors.any((s) => s.airport == null));
+    if (missingAirport) return 'Please select an airport for every stop';
+    return 'Please select a date for every stop';
+  }
 
   /// Whether the ticket on screen is worth submitting. After "Add Another Air
   /// Ticket" the form is blank on purpose and must not become an empty ticket,
@@ -912,7 +1040,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   bool get _hasCurrentAirTicket =>
       _a_fromAirport != null ||
       _a_selectedAirline != null ||
-      _a_selectedClass != null ||
+      _a_ticketClasses.isNotEmpty ||
       _a_arrDate != null ||
       _a_depDate != null ||
       _a_passportFiles.isNotEmpty ||
@@ -924,7 +1052,8 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     _a_noOfSeats.text = '1';
     _a_noOfChildren.text = '0';
     _a_noOfInfants.text = '0';
-    _a_selectedClass = null;
+    _a_ticketClasses = [];
+    _a_classError = false;
     _a_classKey = UniqueKey();
     _a_selectedAirline = null;
     _a_airlineKey = UniqueKey();
@@ -987,9 +1116,18 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       );
       return;
     }
+    // The ticket about to be banked has to name who it is for and what class
+    // they fly, or it can never be told apart from the next one on save.
+    if (!_requireAirGuestAssignment()) return;
+    if (!_requireAirTicketClass()) return;
     setState(() {
       _pendingAirTickets.add(_captureCurrentAirTicket());
+      // The banked ticket took its guests with it; the next one starts unticked
+      // so those guests come up locked rather than silently double-booked.
+      _a_assignedGuestKeys.clear();
+      _a_guestAssignError = false;
       _resetAirTicketFields();
+      _preselectSoleAirGuest();
     });
     _showAirTicketAddedSnack();
   }
@@ -1170,13 +1308,302 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       out.add({
         'memberId': mid,
         'guestName': name,
-        'packageAmount':
-            row.sharedPackage ? '' : row.packageAmountController.text.trim(),
+        // A shared member may still carry an amount of their own, so the tick
+        // no longer wipes it — `sharedPackage` records the tick in its own
+        // right, the way the new reservation screen sends `IsSharedAmount`.
+        'packageAmount': row.packageAmountController.text.trim(),
         'sharedPackage': row.sharedPackage,
         'hasFamilyMembers': row.hasFamilyMembers,
       });
     }
     return out;
+  }
+
+  // ── Guest assignment ────────────────────────────────────────────────────────
+  // A hotel or an air ticket is always booked *for* someone. Rather than
+  // assuming it belongs to whoever is in the form, the booking step lists
+  // everyone on the reservation and the room / ticket is ticked against them —
+  // the same assignment the new reservation screen's selector sheets collect.
+
+  /// Identifies a guest across rebuilds. BM number alone is not enough — a
+  /// member typed in but not yet searched can still be sitting there nameless.
+  String _guestKey(AccompanyingMember guest) =>
+      "${guest.mid.trim()}|${guest.guestName.trim()}";
+
+  /// Whether [assigned] is [guest] — by BM number where there is one, by name
+  /// for a member typed in but never searched.
+  bool _namesGuest(AssignedGuest assigned, AccompanyingMember guest) {
+    final mid = assigned.mid.trim();
+    return (mid.isNotEmpty && mid == guest.mid.trim()) ||
+        (mid.isEmpty && assigned.guestName.trim() == guest.guestName.trim());
+  }
+
+  /// Everyone on this reservation: the guest from step ① plus every "Add More
+  /// Guest" row on the tab. This is the list the assignment ticks against.
+  List<AccompanyingMember> _reservationGuests(List<_ExtraMember> rows) {
+    final guests = <AccompanyingMember>[];
+
+    final mid = _sharedMemberId.text.trim();
+    final name = _sharedGuestName.text.trim();
+    if (mid.isNotEmpty || name.isNotEmpty) {
+      guests.add(AccompanyingMember(
+        mid: mid,
+        guestName: name,
+        hasFamilyMembers: _sharedHasFamilyMembers,
+        packageAmount: _sharedPackageAmount.text.trim(),
+        sharedPackage: _sharedPackageShared,
+      ));
+    }
+
+    for (final row in _captureExtraMembers(rows)) {
+      guests.add(AccompanyingMember(
+        mid: row['memberId'] as String? ?? '',
+        guestName: row['guestName'] as String? ?? '',
+        hasFamilyMembers: row['hasFamilyMembers'] as bool? ?? false,
+        packageAmount: row['packageAmount'] as String? ?? '',
+        sharedPackage: row['sharedPackage'] as bool? ?? false,
+      ));
+    }
+
+    return guests;
+  }
+
+  /// Guests a room can actually be booked for: a member with "Shared" ticked is
+  /// on somebody else's package and sleeps in that guest's room, so they are
+  /// listed on the assignment but never get a room of their own. Air tickets
+  /// have no such rule — a shared member still flies on their own seat.
+  List<AccompanyingMember> get _hotelAssignableGuests =>
+      _reservationGuests(_h_extraMembers)
+          .where((guest) => !guest.sharedPackage)
+          .toList();
+
+  List<AccompanyingMember> get _airAssignableGuests =>
+      _reservationGuests(_a_extraMembers);
+
+  /// Guests who already hold one of the hotels banked with "Add Another Hotel".
+  /// They are shown greyed out rather than offered again — a guest sleeps in one
+  /// room.
+  Set<String> _guestsInPendingHotels() {
+    final taken = <String>{};
+    for (final hotel in _pendingHotels) {
+      for (final guest in _hotelAssignableGuests) {
+        if (hotel.assignedGuests.any((a) => _namesGuest(a, guest))) {
+          taken.add(_guestKey(guest));
+        }
+      }
+    }
+    return taken;
+  }
+
+  /// The air tab's counterpart of [_guestsInPendingHotels] — a guest takes one
+  /// ticket.
+  Set<String> _guestsOnPendingAirTickets() {
+    final taken = <String>{};
+    for (final ticket in _pendingAirTickets) {
+      final assigned =
+          (ticket['assignedGuests'] as List<AssignedGuest>?) ?? const [];
+      for (final guest in _airAssignableGuests) {
+        if (assigned.any((a) => _namesGuest(a, guest))) {
+          taken.add(_guestKey(guest));
+        }
+      }
+    }
+    return taken;
+  }
+
+  /// The guests still tickable for the booking in the form.
+  List<AccompanyingMember> _selectableHotelGuests() {
+    final locked = _guestsInPendingHotels();
+    return _hotelAssignableGuests
+        .where((guest) => !locked.contains(_guestKey(guest)))
+        .toList();
+  }
+
+  List<AccompanyingMember> _selectableAirGuests() {
+    final locked = _guestsOnPendingAirTickets();
+    return _airAssignableGuests
+        .where((guest) => !locked.contains(_guestKey(guest)))
+        .toList();
+  }
+
+  /// The ticked guests as they travel on the booking, in reservation order.
+  List<AssignedGuest> _selectedHotelGuests() => _hotelAssignableGuests
+      .where((guest) => _h_assignedGuestKeys.contains(_guestKey(guest)))
+      .map((guest) =>
+          AssignedGuest(mid: guest.mid.trim(), guestName: guest.guestName.trim()))
+      .toList();
+
+  List<AssignedGuest> _selectedAirGuests() => _airAssignableGuests
+      .where((guest) => _a_assignedGuestKeys.contains(_guestKey(guest)))
+      .map((guest) =>
+          AssignedGuest(mid: guest.mid.trim(), guestName: guest.guestName.trim()))
+      .toList();
+
+  /// Drops ticks for guests who are no longer on the reservation. Going back to
+  /// step ① to rename a member or delete a row changes their key, and a tick
+  /// left behind would assign the booking to somebody who isn't there.
+  void _dropUnknownAssignedGuests(
+    Set<String> keys,
+    List<AccompanyingMember> guests,
+  ) {
+    final live = guests.map(_guestKey).toSet();
+    keys.removeWhere((key) => !live.contains(key));
+  }
+
+  /// A single guest on the reservation is the only one a room / ticket can be
+  /// for, so it starts ticked rather than making every add a two-step job —
+  /// unless that guest already holds one.
+  void _preselectSoleHotelGuest() {
+    if (_h_assignedGuestKeys.isNotEmpty) return;
+    final selectable = _selectableHotelGuests();
+    if (selectable.length != 1) return;
+    _h_assignedGuestKeys.add(_guestKey(selectable.first));
+    _syncRoomCountToGuests();
+  }
+
+  void _preselectSoleAirGuest() {
+    if (_a_assignedGuestKeys.isNotEmpty) return;
+    final selectable = _selectableAirGuests();
+    if (selectable.length != 1) return;
+    _a_assignedGuestKeys.add(_guestKey(selectable.first));
+    _trimTicketClassesToLimit();
+    _syncSeatCountToGuests();
+  }
+
+  /// Rooms are counted per ticked guest: one room each. Never below one — a room
+  /// is a room even before anybody is ticked.
+  bool get _roomCountLocked => _h_assignedGuestKeys.isNotEmpty;
+
+  void _syncRoomCountToGuests() {
+    if (!_roomCountLocked) return;
+    final rooms = _h_assignedGuestKeys.length;
+    _h_noOfRooms.text = (rooms < 1 ? 1 : rooms).toString();
+  }
+
+  /// Whether any guest this ticket is booked for brings family along. Without
+  /// family there is nobody on the ticket but the guests themselves, so the head
+  /// counts are the ticked guests and the counters are read-only.
+  bool get _airTicketHasFamily => _airAssignableGuests
+      .where((guest) => _a_assignedGuestKeys.contains(_guestKey(guest)))
+      .any((guest) => guest.hasFamilyMembers);
+
+  bool get _seatCountLocked =>
+      _a_assignedGuestKeys.isNotEmpty && !_airTicketHasFamily;
+
+  void _syncSeatCountToGuests() {
+    if (!_seatCountLocked) return;
+    _a_noOfSeats.text = _a_assignedGuestKeys.length.toString();
+    _a_noOfChildren.text = '0';
+    _a_noOfInfants.text = '0';
+  }
+
+  /// Seats this ticket may hold across all classes: one per ticked guest, so a
+  /// lone guest gets a single class and a single seat. Null is no ceiling —
+  /// what a guest who brings family needs, since the family flying with them is
+  /// counted on the ticket, not here.
+  int? get _maxTicketSeats {
+    if (_airTicketHasFamily) return null;
+    final assigned = _a_assignedGuestKeys.length;
+    return assigned == 0 ? null : assigned;
+  }
+
+  /// Unticking a guest can leave more seats on the ticket than the rest of them
+  /// can hold, so the classes are pared back to fit — counts first, then whole
+  /// classes off the end.
+  void _trimTicketClassesToLimit() {
+    final maxSeats = _maxTicketSeats;
+    if (maxSeats == null) return;
+    final trimmed = <AirTicketClassCount>[];
+    var used = 0;
+    for (final item in _a_ticketClasses) {
+      final remaining = maxSeats - used;
+      if (remaining < 1) break;
+      final entry =
+          item.count > remaining ? item.copyWith(count: remaining) : item;
+      trimmed.add(entry);
+      used += entry.count;
+    }
+    // Within the ceiling this is the same list it started as.
+    _a_ticketClasses = trimmed;
+  }
+
+  /// Ticks or unticks one guest for the hotel in the form.
+  void _toggleHotelGuest(String key, bool selected) {
+    setState(() {
+      if (selected) {
+        _h_assignedGuestKeys.add(key);
+      } else {
+        _h_assignedGuestKeys.remove(key);
+      }
+      _h_guestAssignError = false;
+      _syncRoomCountToGuests();
+    });
+  }
+
+  void _toggleAirGuest(String key, bool selected) {
+    setState(() {
+      if (selected) {
+        _a_assignedGuestKeys.add(key);
+      } else {
+        _a_assignedGuestKeys.remove(key);
+      }
+      _a_guestAssignError = false;
+      _trimTicketClassesToLimit();
+      _syncSeatCountToGuests();
+    });
+  }
+
+  /// "Select all" / "Clear" on the assignment card.
+  void _setAllHotelGuests(bool selectAll) {
+    setState(() {
+      _h_assignedGuestKeys.clear();
+      if (selectAll) {
+        _h_assignedGuestKeys
+            .addAll(_selectableHotelGuests().map(_guestKey));
+      }
+      _h_guestAssignError = false;
+      _syncRoomCountToGuests();
+    });
+  }
+
+  void _setAllAirGuests(bool selectAll) {
+    setState(() {
+      _a_assignedGuestKeys.clear();
+      if (selectAll) {
+        _a_assignedGuestKeys.addAll(_selectableAirGuests().map(_guestKey));
+      }
+      _a_guestAssignError = false;
+      _trimTicketClassesToLimit();
+      _syncSeatCountToGuests();
+    });
+  }
+
+  /// Complains when a booking is about to be banked or saved with nobody ticked
+  /// — a room or ticket for no one cannot be assigned on the way out.
+  bool _requireHotelGuestAssignment() {
+    if (_h_assignedGuestKeys.isNotEmpty) return true;
+    // Nothing to tick at all is a different problem, reported elsewhere.
+    if (_selectableHotelGuests().isEmpty) return true;
+    setState(() => _h_guestAssignError = true);
+    _showSaveErrorSnack('Please select at least one guest for this hotel');
+    return false;
+  }
+
+  bool _requireAirGuestAssignment() {
+    if (_a_assignedGuestKeys.isNotEmpty) return true;
+    if (_selectableAirGuests().isEmpty) return true;
+    setState(() => _a_guestAssignError = true);
+    _showSaveErrorSnack('Please select at least one guest for this air ticket');
+    return false;
+  }
+
+  /// A ticket with no cabin class picked cannot be booked, so both banking and
+  /// saving stop for it — the same check the new reservation screen makes.
+  bool _requireAirTicketClass() {
+    if (_a_ticketClasses.isNotEmpty) return true;
+    setState(() => _a_classError = true);
+    _showSaveErrorSnack('Please select at least one class for this air ticket');
+    return false;
   }
 
   /// Member search for an extra-member row. Unlike the main fields these do not
@@ -1629,7 +2056,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     buf.writeln('Name of the Guest    : ${m['guestName']}');
     buf.writeln('Membership No        : ${m['memberId']}');
     buf.writeln('Reservation No       : ${m['reservationNo'] ?? ''}');
-    buf.writeln('Package Amount       : ${m['packageAmount']}');
+    buf.writeln('Package Amount       : ${_packageAmountText(m)}');
     buf.writeln(
         'Family Members       : ${(m['hasFamilyMembers'] as bool? ?? false) ? 'Yes' : 'No'}');
     if (hotels.isEmpty) {
@@ -1647,15 +2074,22 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     return buf.toString();
   }
 
+  /// How a member's package reads in a copied message. A shared package is
+  /// called out as such — and still names the amount, since a shared member can
+  /// be billed one of their own.
+  String _packageAmountText(Map<String, dynamic> m) {
+    final amount = (m['packageAmount'] as String? ?? '').trim();
+    if (!(m['sharedPackage'] as bool? ?? false)) return amount;
+    return amount.isEmpty ? 'Shared' : 'Shared ($amount)';
+  }
+
   /// Appends the "Add More Guest" rows to a copied message. They share the
   /// booking above, so only who they are and their package is worth repeating.
   void _appendExtraMembersText(StringBuffer buf, List<_ExtraMember> rows) {
     final extras = _captureExtraMembers(rows);
     for (int i = 0; i < extras.length; i++) {
       final e = extras[i];
-      final amount = (e['sharedPackage'] as bool? ?? false)
-          ? 'Shared'
-          : e['packageAmount'];
+      final amount = _packageAmountText(e);
       buf
         ..write('\n*Guest ${i + 2}*')
         ..write('\nMembership No      : ${e['memberId']}')
@@ -1680,6 +2114,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       'guestName': _sharedGuestName.text,
       'memberId': _sharedMemberId.text,
       'packageAmount': _sharedPackageAmount.text,
+      'sharedPackage': _sharedPackageShared,
       'hasFamilyMembers': _sharedHasFamilyMembers,
       // 'reservationNo': _sharedReservationNo.text,
       'hotels': currentHotels,
@@ -1727,7 +2162,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
 BM                       : ${m['memberId']}
 Guest Name        : ${m['guestName']}
 Reservation No    : ${m['reservationNo'] ?? ''}
-Package Amount : ${m['packageAmount']}
+Package Amount : ${_packageAmountText(m)}
 Family Members : ${(m['hasFamilyMembers'] as bool? ?? false) ? 'Yes' : 'No'}
 Sector                  : $sector
 Arr Date              : ${m['arrDate']}
@@ -1762,6 +2197,7 @@ Remarks              : ${m['remarks']}''';
             'guestName': current['guestName'],
             'memberId': current['memberId'],
             'packageAmount': current['packageAmount'],
+            'sharedPackage': current['sharedPackage'],
             'hasFamilyMembers': current['hasFamilyMembers'],
             ...t,
           }),
@@ -1904,12 +2340,21 @@ Remarks              : ${m['remarks']}''';
     final returnTo = m['returnToData'] as Airport?;
     final arrDate = m['arrDateObj'] as DateTime?;
     final depDate = m['depDateObj'] as DateTime?;
+    final seats = int.tryParse(m['noOfSeats'] as String? ?? '1') ?? 1;
+    final children = int.tryParse(m['noOfChildren'] as String? ?? '0') ?? 0;
+    final infants = int.tryParse(m['noOfInfants'] as String? ?? '0') ?? 0;
+    final ticketClasses = (m['ticketClasses'] as List<AirTicketClassCount>?) ??
+        const <AirTicketClassCount>[];
+    final assigned =
+        (m['assignedGuests'] as List<AssignedGuest>?) ?? const <AssignedGuest>[];
     return {
-      'guest_count': int.tryParse(m['noOfSeats'] as String? ?? '1') ?? 1,
-      'children_count': int.tryParse(m['noOfChildren'] as String? ?? '0') ?? 0,
-      'infant_count': int.tryParse(m['noOfInfants'] as String? ?? '0') ?? 0,
-      'air_ticket_class': m['classId'],
-      'air_ticket_class_name': m['class'],
+      'guest_count': seats,
+      'children_count': children,
+      'infant_count': infants,
+      // Every class on the ticket with its own seat count, replacing the single
+      // `air_ticket_class` / `air_ticket_class_name` pair — the same shape
+      // FlightBookingBallys.toJson() sends.
+      'air_ticket_classes': ticketClasses.map((c) => c.toJson()).toList(),
       'air_line': m['airline'],
       'air_line_code': m['airlineCode'],
       'iata_code': m['iataCode'],
@@ -1936,7 +2381,6 @@ Remarks              : ${m['remarks']}''';
       'departure_date': depDate?.toIso8601String(),
       // Air ticket costs are no longer captured on this screen.
       'selected_cost': 0.0,
-      'BMNumber': m['memberId'],
       'DF_AirportCode': fromAirport?.airportCode,
       'DF_CityName': fromAirport?.cityName,
       'DF_AirportName': fromAirport?.airportName,
@@ -1959,20 +2403,31 @@ Remarks              : ${m['remarks']}''';
       'is_multi_sector': m['isMultiSector'] as bool? ?? false,
       'departure_sectors': _sectorsToJson(m['departureSectorData']),
       'return_sectors': _sectorsToJson(m['returnSectorData']),
+      // Everyone the ticket was ticked for, named inside the row itself rather
+      // than by a BM number on it — the same shape the new reservation screen
+      // sends. A ticket saved without a tick — only possible when there is
+      // nobody to tick — falls back to the member it was entered under.
+      'assigned_guests': assigned.isNotEmpty
+          ? assigned.map((g) => g.toJson()).toList()
+          : [
+              {
+                'BMNumber': m['memberId'],
+                'GuestName': m['guestName'] ?? '',
+              },
+            ],
     };
   }
 
-  /// Transit stops in the shape `FlightBookingBallys` sends them.
+  /// Transit stops in the shape `FlightBookingBallys` sends them, each with the
+  /// day it is flown — `AirportInfo.toSectorJson()` is the same writer the new
+  /// reservation screen goes through, so a route saved from either screen reads
+  /// back identically.
   List<Map<String, dynamic>> _sectorsToJson(dynamic sectors) {
     if (sectors is! List) return const [];
-    return sectors.whereType<Airport>().map((airport) {
-      return {
-        'AirportCode': airport.airportCode ?? '',
-        'CityName': airport.cityName ?? '',
-        'AirportName': airport.airportName ?? '',
-        'Country': airport.country ?? '',
-      };
-    }).toList();
+    return sectors
+        .whereType<AirportInfo>()
+        .map((sector) => sector.toSectorJson())
+        .toList();
   }
 
   List<Map<String, dynamic>> _buildPassportImages(
@@ -1980,12 +2435,13 @@ Remarks              : ${m['remarks']}''';
     final images = <Map<String, dynamic>>[];
     for (final m in members) {
       final memberId = m['memberId'] as String? ?? '';
-      final files = m['passportFileObjects'] as List<PassportFile>? ?? [];
+      final files = m['passportFileObjects'] as List<PassportFileBallys>? ?? [];
       for (final f in files) {
         try {
           final bytes = File(f.path).readAsBytesSync();
           images.add({
-            'mid': memberId,
+            // Keyed the way PassportImageBallys.toJsonWithGuest() sends it.
+            'GuestBMNumber': memberId,
             'FileName': f.fileName,
             'IsPdf': f.isPdf,
             'Base64Data': base64Encode(bytes),
@@ -2002,6 +2458,8 @@ Remarks              : ${m['remarks']}''';
       _clearExtraMembers(_h_extraMembers);
       _resetSharedGuest();
       _resetHotelFields();
+      // An emptied form starts over at the guest again.
+      _hotelStep = 0;
     });
   }
 
@@ -2012,8 +2470,61 @@ Remarks              : ${m['remarks']}''';
       _clearExtraMembers(_a_extraMembers);
       _resetSharedGuest();
       _sharedPackageAmount.clear();
+      _sharedPackageShared = false;
       // _sharedReservationNo.clear();
       _resetAirTicketFields();
+      _a_assignedGuestKeys.clear();
+      _a_guestAssignError = false;
+      // An emptied form starts over at the guest again.
+      _airStep = 0;
+    });
+  }
+
+  /// Moves the Hotel tab on to its booking step, but only once the guest half
+  /// holds a member worth booking for — the booking fields all hang off that
+  /// guest, so letting a blank one through just defers the complaint.
+  void _goToHotelBookingStep() {
+    FocusScope.of(context).unfocus();
+    if (!(_hotelGuestFormKey.currentState?.validate() ?? true)) return;
+    if (!_validateExtraMembers(
+      _h_extraMembers,
+      primaryMid: _sharedMemberId.text.trim(),
+    )) {
+      return;
+    }
+    setState(() {
+      // The guest list is only settled now, so the assignment is seeded here
+      // rather than at build time.
+      _dropUnknownAssignedGuests(_h_assignedGuestKeys, _hotelAssignableGuests);
+      _preselectSoleHotelGuest();
+      _hotelStep = 1;
+    });
+  }
+
+  /// The Air Ticket tab's counterpart of [_goToHotelBookingStep].
+  void _goToAirBookingStep() {
+    FocusScope.of(context).unfocus();
+    if (!(_airGuestFormKey.currentState?.validate() ?? true)) return;
+    if (!_validateExtraMembers(
+      _a_extraMembers,
+      primaryMid: _sharedMemberId.text.trim(),
+    )) {
+      return;
+    }
+    setState(() {
+      _dropUnknownAssignedGuests(_a_assignedGuestKeys, _airAssignableGuests);
+      _preselectSoleAirGuest();
+      _airStep = 1;
+    });
+  }
+
+  /// Back to the guest step. Nothing is validated on the way back — the point
+  /// of going back is usually to fix what the complaint was about.
+  void _goToGuestStep() {
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _hotelStep = 0;
+      _airStep = 0;
     });
   }
 
@@ -2229,15 +2740,29 @@ final phoneNumber = await StorageUtil.getMobileNumber();
         _sharedMemberId.text.trim().isNotEmpty;
 
     // Only validate the on-screen form when it still holds a member that will
-    // be submitted — after "Apply & Add" it is cleared on purpose.
-    if ((hasCurrentGuest || currentHotels.isNotEmpty) &&
-        !(_hotelFormKey.currentState?.validate() ?? true)) {
-      return;
+    // be submitted — after "Apply & Add" it is cleared on purpose. The guest
+    // half is checked first and, when it is the one at fault, the tab goes back
+    // to it so the error is somewhere the user can actually see it.
+    if (hasCurrentGuest || currentHotels.isNotEmpty) {
+      if (!(_hotelGuestFormKey.currentState?.validate() ?? true)) {
+        setState(() => _hotelStep = 0);
+        return;
+      }
+      if (!(_hotelFormKey.currentState?.validate() ?? true)) return;
     }
 
     if (!_validateExtraMembers(
         _h_extraMembers,
         primaryMid: _sharedMemberId.text.trim())) {
+      setState(() => _hotelStep = 0);
+      return;
+    }
+
+    // The hotel still on screen goes out as its own room, so it has to name who
+    // it is for just like the banked ones did.
+    if (_selectedHotelName != null &&
+        _selectedHotelName!.isNotEmpty &&
+        !_requireHotelGuestAssignment()) {
       return;
     }
 
@@ -2248,6 +2773,7 @@ final phoneNumber = await StorageUtil.getMobileNumber();
           'guestName': _sharedGuestName.text,
           'memberId': _sharedMemberId.text,
           'packageAmount': _sharedPackageAmount.text,
+          'sharedPackage': _sharedPackageShared,
           // 'reservationNo': _sharedReservationNo.text,
           'hotels': currentHotels,
         },
@@ -2258,14 +2784,28 @@ final phoneNumber = await StorageUtil.getMobileNumber();
       return;
     }
 
-    // Flatten all hotel entries from all members into room_details
+    // Flatten all hotel entries from all members into room_details. Each room
+    // is sent once and names the guests it was ticked for inside its own
+    // `assigned_guests`, so the row itself carries no BM number — the same
+    // shape the new reservation screen sends. A room saved without a tick —
+    // only possible when there is nobody to tick — falls back to the member it
+    // was entered under, so every row still names somebody.
     final roomDetails = <Map<String, dynamic>>[];
     for (final m in allMembers) {
       final hotels = (m['hotels'] as List<_HotelEntry>?) ?? [];
-      roomDetails.addAll(hotels.map((h) => {
-            ...h.toApiJson(),
-            'BMNumber': m['memberId'],
-          }));
+      roomDetails.addAll(hotels.map((h) {
+        final row = h.toApiJson();
+        if (h.assignedGuests.isNotEmpty) return row;
+        return {
+          ...row,
+          'assigned_guests': [
+            {
+              'BMNumber': m['memberId'],
+              'GuestName': m['guestName'],
+            },
+          ],
+        };
+      }));
     }
 
     // Pull the first non-empty remark from a member's hotel entries.
@@ -2291,6 +2831,7 @@ final phoneNumber = await StorageUtil.getMobileNumber();
         'HasFamilyMembers': _sharedHasFamilyMembers,
         'PackageAmount': packageAmountToInt(amount),
         'CurrencyType': packageAmountCurrency(amount),
+        'IsSharedAmount': m['sharedPackage'] as bool? ?? false,
       };
     }).toList();
 
@@ -2300,16 +2841,21 @@ final phoneNumber = await StorageUtil.getMobileNumber();
 
     // Extra guests share the form guest's rooms and dates, so they add a
     // `guests` entry each — with their own package — and no room of their own.
+    // `PrimaryBMNumber` / `IsSharedPackage` name the guest they hang off, which
+    // is what marks them as that guest's members on the way back.
     for (final e in _captureExtraMembers(_h_extraMembers)) {
       final amount = e['packageAmount'] as String?;
       guests.add({
         'BMNumber': e['memberId'],
         'GuestName': e['guestName'],
+        'PrimaryBMNumber': primary['memberId'],
+        'IsSharedPackage': true,
         'ArrivalDate': firstHotel?.arrivalDate?.toIso8601String(),
         'DepartureDate': firstHotel?.departureDate?.toIso8601String(),
         'HasFamilyMembers': e['hasFamilyMembers'] as bool? ?? false,
         'PackageAmount': packageAmountToInt(amount),
         'CurrencyType': packageAmountCurrency(amount),
+        'IsSharedAmount': e['sharedPackage'] as bool? ?? false,
       });
     }
 
@@ -2377,14 +2923,21 @@ final phoneNumber = await StorageUtil.getMobileNumber();
         _sharedMemberId.text.trim().isNotEmpty;
 
     // Only validate the on-screen form when it still holds a member that will
-    // be submitted — after "Apply & Add" it is cleared on purpose.
-    if (hasCurrentGuest && !(_airFormKey.currentState?.validate() ?? true)) {
-      return;
+    // be submitted — after "Apply & Add" it is cleared on purpose. The guest
+    // half is checked first and, when it is the one at fault, the tab goes back
+    // to it so the error is somewhere the user can actually see it.
+    if (hasCurrentGuest) {
+      if (!(_airGuestFormKey.currentState?.validate() ?? true)) {
+        setState(() => _airStep = 0);
+        return;
+      }
+      if (!(_airFormKey.currentState?.validate() ?? true)) return;
     }
 
     if (!_validateExtraMembers(
         _a_extraMembers,
         primaryMid: _sharedMemberId.text.trim())) {
+      setState(() => _airStep = 0);
       return;
     }
 
@@ -2393,6 +2946,13 @@ final phoneNumber = await StorageUtil.getMobileNumber();
     if (_hasIncompleteAirStops) {
       _showSaveErrorSnack(_incompleteAirStopsMessage);
       return;
+    }
+
+    // The ticket still on screen goes out as its own row, so it has to name who
+    // it is for and what class they fly, just like the banked ones did.
+    if (_pendingAirTickets.isEmpty || _hasCurrentAirTicket) {
+      if (!_requireAirGuestAssignment()) return;
+      if (!_requireAirTicketClass()) return;
     }
 
     final allMembers = <Map<String, dynamic>>[
@@ -2409,11 +2969,20 @@ final phoneNumber = await StorageUtil.getMobileNumber();
     // Ticket" plus the one still on screen, each tagged with the guest's member
     // ID. A blank form after banking contributes nothing.
     final primaryMemberId = allMembers.first['memberId'];
+    final primaryGuestName = allMembers.first['guestName'];
     final ticketSources = <Map<String, dynamic>>[
       ..._pendingAirTickets,
       if (_pendingAirTickets.isEmpty || _hasCurrentAirTicket)
         _captureCurrentAirTicket(),
-    ].map((t) => {...t, 'memberId': primaryMemberId}).toList();
+    ]
+        .map((t) => {
+              ...t,
+              'memberId': primaryMemberId,
+              // Carried through so each ticket can name the guest it is booked
+              // for inside its own `assigned_guests`.
+              'guestName': primaryGuestName,
+            })
+        .toList();
 
     final airTicketDetails =
         ticketSources.map((t) => _airMemberToTicketDetail(t)).toList();
@@ -2436,21 +3005,27 @@ final phoneNumber = await StorageUtil.getMobileNumber();
         'HasFamilyMembers': _sharedHasFamilyMembers,
         'PackageAmount': packageAmountToInt(amount),
         'CurrencyType': packageAmountCurrency(amount),
+        'IsSharedAmount': m['sharedPackage'] as bool? ?? false,
       };
     }).toList();
 
     // Extra guests share the form guest's tickets and dates, so they add a
     // `guests` entry each — with their own package — and no ticket of their own.
+    // `PrimaryBMNumber` / `IsSharedPackage` name the guest they hang off, which
+    // is what marks them as that guest's members on the way back.
     for (final e in _captureExtraMembers(_a_extraMembers)) {
       final amount = e['packageAmount'] as String?;
       guests.add({
         'BMNumber': e['memberId'],
         'GuestName': e['guestName'],
+        'PrimaryBMNumber': primaryMemberId,
+        'IsSharedPackage': true,
         'ArrivalDate': primaryArrival?.toIso8601String(),
         'DepartureDate': primaryDeparture?.toIso8601String(),
         'HasFamilyMembers': e['hasFamilyMembers'] as bool? ?? false,
         'PackageAmount': packageAmountToInt(amount),
         'CurrencyType': packageAmountCurrency(amount),
+        'IsSharedAmount': e['sharedPackage'] as bool? ?? false,
       });
     }
 
@@ -3137,6 +3712,9 @@ Widget _extraMemberCard(
               key: ValueKey(row),
               controller: row.packageAmountController,
               noPackage: row.sharedPackage,
+              // A shared member can still be billed an amount of their own, so
+              // ticking Shared records that and leaves the picker usable.
+              allowAmountWhenShared: true,
               onNoPackageChanged: (value) =>
                   state.setState(() => row.sharedPackage = value),
               textStyle: kInputTextStyle,
@@ -3215,6 +3793,384 @@ Widget _confirmReservationButton({
       label: const Text(
         'Confirm Reservation',
         style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600),
+      ),
+    ),
+  );
+}
+
+/// The two-step progress bar at the top of the Hotel and Air Ticket tabs:
+/// ① Guest → ② the booking itself.
+///
+/// The Guest pill is tappable from step 2 so a member can be corrected without
+/// losing the booking below it. The second pill is not — stepping forward goes
+/// through "Next", which is what validates the guest.
+Widget _stepIndicator({
+  required Color accent,
+  required int step,
+  required String bookingLabel,
+  required IconData bookingIcon,
+  required VoidCallback onGuestTap,
+}) {
+  Widget pill({
+    required int index,
+    required String label,
+    required IconData icon,
+    VoidCallback? onTap,
+  }) {
+    final active = step == index;
+    final done = step > index;
+    final filled = active || done;
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: active ? accent.withOpacity(0.12) : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: filled ? accent : Colors.transparent,
+                  border: Border.all(
+                    color: filled ? accent : Colors.grey.shade400,
+                    width: 1.6,
+                  ),
+                ),
+                child: Icon(
+                  done ? Icons.check_rounded : icon,
+                  size: 15,
+                  color: filled ? Colors.white : Colors.grey.shade500,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: filled ? accent : Colors.grey.shade600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  return Container(
+    color: Colors.white,
+    padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+    child: Row(
+      children: [
+        pill(
+          index: 0,
+          label: 'Guest',
+          icon: Icons.person_rounded,
+          onTap: step == 0 ? null : onGuestTap,
+        ),
+        Container(
+          width: 22,
+          height: 2,
+          color: step > 0 ? accent : Colors.grey.shade300,
+        ),
+        pill(index: 1, label: bookingLabel, icon: bookingIcon),
+      ],
+    ),
+  );
+}
+
+/// Names the guest the booking step is filling in for — they were picked a step
+/// back and are otherwise off screen. Tapping it returns to the guest step.
+Widget _stepGuestBanner({
+  required Color accent,
+  required String memberId,
+  required String guestName,
+  required int extraGuests,
+  required VoidCallback onTap,
+}) {
+  final id = memberId.trim();
+  final name = guestName.trim();
+  final title = [
+    if (id.isNotEmpty) id,
+    if (name.isNotEmpty) name,
+  ].join('  •  ');
+
+  return GestureDetector(
+    onTap: onTap,
+    behavior: HitTestBehavior.opaque,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        color: accent.withOpacity(0.07),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: accent.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.person_rounded, color: accent, size: 19),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title.isEmpty ? 'No guest selected' : title,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: title.isEmpty ? Colors.grey.shade600 : Colors.black,
+                  ),
+                ),
+                if (extraGuests > 0)
+                  Text(
+                    extraGuests == 1
+                        ? '+1 more guest on this package'
+                        : '+$extraGuests more guests on this package',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                  ),
+              ],
+            ),
+          ),
+          Icon(Icons.edit_rounded, color: accent, size: 17),
+        ],
+      ),
+    ),
+  );
+}
+
+/// Who the booking in the form is for: every guest on the reservation, ticked
+/// one by one or several at a time. Mirrors the assignment card on the new
+/// reservation screen's hotel and air ticket selectors.
+///
+/// [locked] guests already hold a booking of their own — a guest sleeps in one
+/// room and flies on one ticket — so they are greyed out rather than offered
+/// again.
+Widget _guestAssignmentCard({
+  required Color accent,
+  required String title,
+  required String emptyMessage,
+  required String errorMessage,
+  required List<AccompanyingMember> guests,
+  required Set<String> selectedKeys,
+  required Set<String> lockedKeys,
+  required String Function(AccompanyingMember) keyOf,
+  required void Function(String key, bool selected) onToggle,
+  required void Function(bool selectAll) onSelectAll,
+  required bool showError,
+  required String lockedLabel,
+}) {
+  final selectable =
+      guests.where((g) => !lockedKeys.contains(keyOf(g))).toList();
+  final allSelected = selectable.isNotEmpty &&
+      selectable.every((g) => selectedKeys.contains(keyOf(g)));
+
+  Widget row(AccompanyingMember guest) {
+    final key = keyOf(guest);
+    final locked = lockedKeys.contains(key);
+    final selected = selectedKeys.contains(key);
+    final label = [
+      if (guest.mid.trim().isNotEmpty) guest.mid.trim(),
+      if (guest.guestName.trim().isNotEmpty) guest.guestName.trim(),
+    ].join('  —  ');
+
+    return InkWell(
+      onTap: locked ? null : () => onToggle(key, !selected),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 1),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 32,
+              child: Checkbox(
+                value: selected,
+                activeColor: accent,
+                visualDensity: VisualDensity.compact,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                onChanged:
+                    locked ? null : (checked) => onToggle(key, checked == true),
+              ),
+            ),
+            Expanded(
+              child: Text(
+                label.isEmpty ? '(unnamed guest)' : label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: locked ? Colors.grey : Colors.black,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (locked) ...[
+              Icon(Icons.check_circle_outline,
+                  size: 16, color: Colors.grey.shade500),
+              const SizedBox(width: 4),
+              Text(
+                lockedLabel,
+                style: TextStyle(fontSize: 12.5, color: Colors.grey.shade600),
+              ),
+            ] else ...[
+              Icon(
+                guest.hasFamilyMembers
+                    ? Icons.family_restroom
+                    : Icons.person_outline,
+                size: 16,
+                color: guest.hasFamilyMembers
+                    ? Colors.green.shade700
+                    : Colors.grey.shade600,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                guest.hasFamilyMembers ? 'Family included' : 'No family',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: guest.hasFamilyMembers
+                      ? Colors.green.shade700
+                      : Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF7F8FA),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(
+        color: showError ? Colors.red : const Color(0xFFDADDE3),
+        width: showError ? 1.5 : 1,
+      ),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.group, size: 18, color: accent),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                '$title (${selectedKeys.length}/${selectable.length})',
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            if (selectable.length > 1)
+              TextButton(
+                onPressed: () => onSelectAll(!allSelected),
+                style: TextButton.styleFrom(
+                  foregroundColor: accent,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  allSelected ? 'Clear' : 'Select all',
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        ...guests.map(row),
+        if (guests.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              'Go back and add a guest first',
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+            ),
+          )
+        else if (selectable.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              emptyMessage,
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+            ),
+          ),
+        if (showError)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              errorMessage,
+              style: const TextStyle(fontSize: 13, color: Colors.red),
+            ),
+          ),
+      ],
+    ),
+  );
+}
+
+/// Full-width "Next" that closes the guest step.
+Widget _stepNextButton({
+  required Color accent,
+  required String label,
+  required VoidCallback onPressed,
+}) {
+  return SizedBox(
+    width: double.infinity,
+    child: ElevatedButton.icon(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: accent,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 0,
+      ),
+      icon: const Icon(Icons.arrow_forward_rounded, size: 20),
+      label: Text(
+        label,
+        style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600),
+      ),
+    ),
+  );
+}
+
+/// "Back to Guest" on the booking step.
+Widget _stepBackButton({
+  required Color accent,
+  required VoidCallback onPressed,
+}) {
+  return SizedBox(
+    width: double.infinity,
+    child: OutlinedButton.icon(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: accent,
+        side: BorderSide(color: accent, width: 1.6),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      icon: const Icon(Icons.arrow_back_rounded, size: 18),
+      label: const Text(
+        'Back to Guest',
+        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
       ),
     ),
   );
@@ -3375,6 +4331,22 @@ class _SectorEditor extends StatelessWidget {
                 ),
               ],
             ),
+            // The stop's own travel day, so a route spread over several days
+            // reads in order rather than as a bare list of airports.
+            Padding(
+              // Lines up with the airport field above, clear of the remove
+              // button's column.
+              padding: const EdgeInsets.only(top: 8, right: 46),
+              child: _SectorDateField(
+                accent: accent,
+                label: 'Stop ${i + 1} Date',
+                date: sectors[i].date,
+                onPick: () => state._pickSectorDate(sectors[i], i + 1),
+                onClear: sectors[i].date == null
+                    ? null
+                    : () => state.setState(() => sectors[i].date = null),
+              ),
+            ),
           ],
           const SizedBox(height: 4),
           Align(
@@ -3391,6 +4363,64 @@ class _SectorEditor extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// One transit stop's travel day. Reads "Select date" until a day is picked,
+/// which is what the save refuses to go out without.
+class _SectorDateField extends StatelessWidget {
+  final Color accent;
+  final String label;
+  final DateTime? date;
+  final VoidCallback onPick;
+
+  /// Null while there is no date to clear.
+  final VoidCallback? onClear;
+
+  const _SectorDateField({
+    required this.accent,
+    required this.label,
+    required this.date,
+    required this.onPick,
+    this.onClear,
+  });
+
+  String get _text => date == null
+      ? 'Select date'
+      : '${date!.year}-${date!.month.toString().padLeft(2, '0')}'
+          '-${date!.day.toString().padLeft(2, '0')}';
+
+  @override
+  Widget build(BuildContext context) {
+    final hasDate = date != null;
+    return InkWell(
+      onTap: onPick,
+      borderRadius: BorderRadius.circular(10),
+      child: InputDecorator(
+        decoration: _fieldDeco(
+          label,
+          icon: Icons.calendar_today_rounded,
+          accent: accent,
+        ).copyWith(
+          suffixIcon: hasDate
+              ? IconButton(
+                  tooltip: 'Clear date',
+                  icon: Icon(Icons.close_rounded,
+                      size: 18, color: Colors.grey.shade600),
+                  onPressed: onClear,
+                )
+              : null,
+        ),
+        child: Text(
+          _text,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: hasDate ? Colors.black : Colors.grey.shade600,
+          ),
+        ),
       ),
     );
   }
@@ -3651,17 +4681,39 @@ class _HotelForm extends StatelessWidget {
   Widget build(BuildContext context) {
     const accent = _QuickReservationBallysScreenState._hotelColor;
     final hotels = state.ref.watch(hotelCatalogHotelsProvider);
+    return Column(
+      children: [
+        _stepIndicator(
+          accent: accent,
+          step: state._hotelStep,
+          bookingLabel: 'Hotel',
+          bookingIcon: Icons.hotel_rounded,
+          onGuestTap: state._goToGuestStep,
+        ),
+        Expanded(
+          // Both steps stay in the tree so their fields keep their state — and
+          // stay validatable — while only the current one is on screen.
+          child: IndexedStack(
+            index: state._hotelStep,
+            sizing: StackFit.expand,
+            children: [
+              _guestStep(context, accent),
+              _bookingStep(context, accent, hotels),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Step ① — who the reservation is for.
+  Widget _guestStep(BuildContext context, Color accent) {
     return Form(
-      key: state._hotelFormKey,
+      key: state._hotelGuestFormKey,
       child: ListView(
-        controller: state._hotelScrollCtrl,
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
+        controller: state._hotelGuestScrollCtrl,
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
         children: [
-          // _sectionHeader(
-          //   'Hotel Reservation Request',
-          //   accent,
-          //   Icons.hotel_rounded,
-          // ),
           _guestIdentityRow(
             context: context,
             memberIdCtrl: state._sharedMemberId,
@@ -3709,6 +4761,12 @@ class _HotelForm extends StatelessWidget {
             ),
           PackageAmountFieldBallys(
             controller: state._sharedPackageAmount,
+            noPackage: state._sharedPackageShared,
+            // Shared only records that the package is shared — an amount can
+            // still be picked alongside it.
+            allowAmountWhenShared: true,
+            onNoPackageChanged: (v) =>
+                state.setState(() => state._sharedPackageShared = v),
             textStyle: kInputTextStyle,
             accent: accent,
             decoration: _fieldDeco(
@@ -3760,7 +4818,49 @@ class _HotelForm extends StatelessWidget {
             accent: accent,
             onPressed: () => state._addExtraMember(state._h_extraMembers),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
+          _stepNextButton(
+            accent: accent,
+            label: 'Next: Hotel Details',
+            onPressed: state._goToHotelBookingStep,
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  /// Step ② — what is being booked for the guest picked in step ①.
+  Widget _bookingStep(
+    BuildContext context,
+    Color accent,
+    List<HotelResponse> hotels,
+  ) {
+    return Form(
+      key: state._hotelFormKey,
+      child: ListView(
+        controller: state._hotelScrollCtrl,
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+        children: [
+          _bookingGuestBanner(accent),
+          const SizedBox(height: 14),
+
+          // ── Who this hotel is booked for ────────────────────────────────────
+          _guestAssignmentCard(
+            accent: accent,
+            title: 'Assign this hotel to',
+            emptyMessage: 'Every guest already has a hotel',
+            errorMessage: 'Select at least one guest for this hotel',
+            guests: state._hotelAssignableGuests,
+            selectedKeys: state._h_assignedGuestKeys,
+            lockedKeys: state._guestsInPendingHotels(),
+            keyOf: state._guestKey,
+            onToggle: state._toggleHotelGuest,
+            onSelectAll: state._setAllHotelGuests,
+            showError: state._h_guestAssignError,
+            lockedLabel: 'Already has a hotel',
+          ),
+          const SizedBox(height: 14),
 
           // ── Pending hotels list ─────────────────────────────────────────────
           if (state._pendingHotels.isNotEmpty) ...[
@@ -3947,6 +5047,10 @@ class _HotelForm extends StatelessWidget {
               label: 'No of Rooms',
               icon: Icons.door_back_door_outlined,
               accent: accent,
+              // One room per ticked guest, so the count is the assignment's to
+              // set once there is one.
+              locked: state._roomCountLocked,
+              lockedHint: 'One room per assigned guest',
             ),
             _StepperField(
               controller: state._h_noOfPax,
@@ -4264,6 +5368,8 @@ class _HotelForm extends StatelessWidget {
             onRemove: (i) =>
                 () => state.setState(() => state._hotelMembers.removeAt(i)),
           ),
+          _stepBackButton(accent: accent, onPressed: state._goToGuestStep),
+          const SizedBox(height: 10),
           _confirmReservationButton(
             accent: accent,
             onPressed: state._onSave,
@@ -4273,6 +5379,16 @@ class _HotelForm extends StatelessWidget {
       ),
     );
   }
+
+  /// Reminds the user which guest the rooms below are being booked for, since
+  /// their name is a step behind. Tapping it goes back to change them.
+  Widget _bookingGuestBanner(Color accent) => _stepGuestBanner(
+        accent: accent,
+        memberId: state._sharedMemberId.text,
+        guestName: state._sharedGuestName.text,
+        extraGuests: state._h_extraMembers.length,
+        onTap: state._goToGuestStep,
+      );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -4285,13 +5401,39 @@ class _AirForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const accent = _QuickReservationBallysScreenState._airColor;
+    return Column(
+      children: [
+        _stepIndicator(
+          accent: accent,
+          step: state._airStep,
+          bookingLabel: 'Air Ticket',
+          bookingIcon: Icons.flight_rounded,
+          onGuestTap: state._goToGuestStep,
+        ),
+        Expanded(
+          // Both steps stay in the tree so their fields keep their state — and
+          // stay validatable — while only the current one is on screen.
+          child: IndexedStack(
+            index: state._airStep,
+            sizing: StackFit.expand,
+            children: [
+              _guestStep(context, accent),
+              _bookingStep(context, accent),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Step ① — who the ticket is for.
+  Widget _guestStep(BuildContext context, Color accent) {
     return Form(
-      key: state._airFormKey,
+      key: state._airGuestFormKey,
       child: ListView(
-        controller: state._airScrollCtrl,
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
+        controller: state._airGuestScrollCtrl,
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
         children: [
-          // _sectionHeader('Air Ticket Request', accent, Icons.flight_rounded),
           _guestIdentityRow(
             context: context,
             memberIdCtrl: state._sharedMemberId,
@@ -4339,6 +5481,12 @@ class _AirForm extends StatelessWidget {
             ),
           PackageAmountFieldBallys(
             controller: state._sharedPackageAmount,
+            noPackage: state._sharedPackageShared,
+            // Shared only records that the package is shared — an amount can
+            // still be picked alongside it.
+            allowAmountWhenShared: true,
+            onNoPackageChanged: (v) =>
+                state.setState(() => state._sharedPackageShared = v),
             textStyle: kInputTextStyle,
             accent: accent,
             decoration: _fieldDeco(
@@ -4390,7 +5538,51 @@ class _AirForm extends StatelessWidget {
             accent: accent,
             onPressed: () => state._addExtraMember(state._a_extraMembers),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
+          _stepNextButton(
+            accent: accent,
+            label: 'Next: Air Ticket Details',
+            onPressed: state._goToAirBookingStep,
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  /// Step ② — the ticket being booked for the guest picked in step ①.
+  Widget _bookingStep(BuildContext context, Color accent) {
+    return Form(
+      key: state._airFormKey,
+      child: ListView(
+        controller: state._airScrollCtrl,
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+        children: [
+          _stepGuestBanner(
+            accent: accent,
+            memberId: state._sharedMemberId.text,
+            guestName: state._sharedGuestName.text,
+            extraGuests: state._a_extraMembers.length,
+            onTap: state._goToGuestStep,
+          ),
+          const SizedBox(height: 14),
+
+          // ── Who this ticket is booked for ───────────────────────────────────
+          _guestAssignmentCard(
+            accent: accent,
+            title: 'Assign this ticket to',
+            emptyMessage: 'Every guest already has a ticket',
+            errorMessage: 'Select at least one guest for this ticket',
+            guests: state._airAssignableGuests,
+            selectedKeys: state._a_assignedGuestKeys,
+            lockedKeys: state._guestsOnPendingAirTickets(),
+            keyOf: state._guestKey,
+            onToggle: state._toggleAirGuest,
+            onSelectAll: state._setAllAirGuests,
+            showError: state._a_guestAssignError,
+            lockedLabel: 'Already has a ticket',
+          ),
+          const SizedBox(height: 14),
 
           // ── Tickets already added for this guest ────────────────────────────
           if (state._pendingAirTickets.isNotEmpty) ...[
@@ -4749,11 +5941,17 @@ class _AirForm extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 12),
+          // Once the ticket is assigned to guests who bring no family there is
+          // nobody on it but the guests themselves — one seat each, no children,
+          // no infants — so the counters follow the ticks. A guest who brings
+          // family hands them back, since the family flies on this ticket too.
           _StepperField(
             controller: state._a_noOfSeats,
             label: 'No of Adults',
             icon: Icons.event_seat_outlined,
             accent: accent,
+            locked: state._seatCountLocked,
+            lockedHint: 'One seat per assigned guest',
           ),
           const SizedBox(height: 12),
           _rowPair(
@@ -4763,6 +5961,8 @@ class _AirForm extends StatelessWidget {
               icon: Icons.child_care_outlined,
               accent: accent,
               min: 0,
+              locked: state._seatCountLocked,
+              lockedHint: 'Tick a guest with family to add',
             ),
             _StepperField(
               controller: state._a_noOfInfants,
@@ -4770,14 +5970,23 @@ class _AirForm extends StatelessWidget {
               icon: Icons.child_friendly_outlined,
               accent: accent,
               min: 0,
+              locked: state._seatCountLocked,
+              lockedHint: 'Tick a guest with family to add',
             ),
           ),
           const SizedBox(height: 12),
-          AirTicketClassSelector(
+          // A ticket can mix cabin classes — Economy x2 plus Business x1 is one
+          // ticket, not two — so each class is ticked with its own seat count.
+          // The ceiling is one seat per assigned guest, dropped when a ticked
+          // guest brings family since their headcount isn't known here.
+          AirTicketClassCountSelector(
             key: state._a_classKey,
-            selectedClass: state._a_selectedClass,
-            onClassSelected: (selectedClass) => state.setState(() {
-              state._a_selectedClass = selectedClass;
+            selectedClasses: state._a_ticketClasses,
+            maxSeats: state._maxTicketSeats,
+            hasError: state._a_classError,
+            onChanged: (classes) => state.setState(() {
+              state._a_ticketClasses = classes;
+              if (classes.isNotEmpty) state._a_classError = false;
             }),
           ),
           const SizedBox(height: 12),
@@ -4927,7 +6136,7 @@ class _AirForm extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: Colors.grey.shade300),
             ),
-            child: PassportUploadWidget(
+            child: PassportUploadWidgetBallys(
               key: state._a_passportUploadKey,
               initialFiles: state._a_passportFiles,
               onFilesChanged: (files) =>
@@ -4966,6 +6175,8 @@ class _AirForm extends StatelessWidget {
             onRemove: (i) =>
                 () => state.setState(() => state._airMembers.removeAt(i)),
           ),
+          _stepBackButton(accent: accent, onPressed: state._goToGuestStep),
+          const SizedBox(height: 10),
           _confirmReservationButton(
             accent: accent,
             onPressed: state._onSave,
@@ -5688,6 +6899,12 @@ class _StepperField extends StatelessWidget {
   /// widget's own rebuild — lets a parent react (e.g. resize a list that
   /// should track the count).
   final VoidCallback? onChanged;
+
+  /// The count is somebody else's business — it follows the guests ticked on the
+  /// assignment card — so the buttons are dead and [lockedHint] says why.
+  final bool locked;
+  final String? lockedHint;
+
   const _StepperField({
     required this.controller,
     required this.label,
@@ -5696,6 +6913,8 @@ class _StepperField extends StatelessWidget {
     this.min = 1,
     this.max = 99,
     this.onChanged,
+    this.locked = false,
+    this.lockedHint,
   });
 
   int get _value => int.tryParse(controller.text) ?? min;
@@ -5744,7 +6963,7 @@ class _StepperField extends StatelessWidget {
                   _StepButton(
                     icon: Icons.remove,
                     accent: accent,
-                    enabled: _value > min,
+                    enabled: !locked && _value > min,
                     onTap: () => _change(-1, () => setState(() {})),
                   ),
                   Expanded(
@@ -5754,7 +6973,7 @@ class _StepperField extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w700,
-                          color: accent,
+                          color: locked ? Colors.grey.shade600 : accent,
                         ),
                       ),
                     ),
@@ -5762,11 +6981,22 @@ class _StepperField extends StatelessWidget {
                   _StepButton(
                     icon: Icons.add,
                     accent: accent,
-                    enabled: _value < max,
+                    enabled: !locked && _value < max,
                     onTap: () => _change(1, () => setState(() {})),
                   ),
                 ],
               ),
+              if (locked && (lockedHint?.isNotEmpty ?? false))
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    lockedHint!,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ),
             ],
           ),
         );

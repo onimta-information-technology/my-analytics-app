@@ -17,6 +17,11 @@ import 'package:file_picker/file_picker.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:intl/intl.dart';
 
+// Compression applied to camera/gallery images before upload, to keep chat
+// attachments small.
+const int _kImageQuality = 50;
+const double _kImageMaxDimension = 1280;
+
 class IndividualChatScreen extends ConsumerStatefulWidget {
   final ChatContact contact;
   final Function(String)? onMessageSent;
@@ -468,7 +473,9 @@ Future<void> _markMessagesAsRead() async {
     try {
       final XFile? photo = await _imagePicker.pickImage(
         source: ImageSource.camera,
-        imageQuality: 80,
+        imageQuality: _kImageQuality,
+        maxWidth: _kImageMaxDimension,
+        maxHeight: _kImageMaxDimension,
       );
       if (photo != null) await _uploadAndSendFiles([photo.path]);
     } catch (e) {
@@ -524,7 +531,9 @@ Future<void> _markMessagesAsRead() async {
   Future<void> _pickImagesFromGallery() async {
     try {
       final List<XFile> images = await _imagePicker.pickMultiImage(
-        imageQuality: 80,
+        imageQuality: _kImageQuality,
+        maxWidth: _kImageMaxDimension,
+        maxHeight: _kImageMaxDimension,
       );
       if (images.isNotEmpty) {
         await _uploadAndSendFiles(images.map((x) => x.path).toList());

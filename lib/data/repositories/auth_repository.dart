@@ -137,6 +137,69 @@ print("hellooo");
     }
   }
 
+  /// Iid 646 — asks the server whether this user's access is unrestricted.
+  ///
+  /// [code] is how the server identifies the user: AD001 is looked up by its
+  /// sales code, every other user by their marketing code (see
+  /// [StorageUtil.getAccessCheckCode]). A "True" ReturnSatetus means screens
+  /// that gate on the marketing group should let the user through.
+  Future<bool> fetchAccessStatus(String code, String userName) async {
+    try {
+      final deviceId = await DeviceId.get();
+      final spName = await StorageUtil.getStoredProcedureName();
+      final response = await apiService.post('CommonExecute', {
+        "HasReturnData": "T",
+        "Parameters": [
+          {
+            "Para_Data": 646,
+            "Para_Direction": "Input",
+            "Para_Lenth": 1,
+            "Para_Name": "@Iid",
+            "Para_Type": "int",
+          },
+          {
+            "Para_Data": code,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text1",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": userName,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text2",
+            "Para_Type": "varchar",
+          },
+          {
+            "Para_Data": deviceId,
+            "Para_Direction": "Input",
+            "Para_Lenth": 100,
+            "Para_Name": "@Text30",
+            "Para_Type": "varchar",
+          },
+        ],
+        "SpName": spName,
+        "con": "1",
+      });
+
+      print("Access status response: $response");
+
+      if (response['CommonResult'] != null &&
+          response['CommonResult']['Table'] is List &&
+          response['CommonResult']['Table'].isNotEmpty) {
+        final tableData = response['CommonResult']['Table'][0];
+        return tableData['ReturnSatetus'].toString().trim().toLowerCase() ==
+            'true';
+      }
+
+      return false;
+    } catch (e) {
+      print("Access status error: $e");
+      return false;
+    }
+  }
+
   // Add this method to auth_repository.dart
 
 // Future<bool> deleteAccount() async {

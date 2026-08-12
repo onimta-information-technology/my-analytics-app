@@ -47,6 +47,7 @@ bool _isNumericOnlyLocation = false;
   bool? _memProfSH;
   String? _userMarketingCode;
   String? _userSalesCode;
+  bool _accessStatus = false;
 
   @override
   void initState() {
@@ -59,11 +60,13 @@ bool _isNumericOnlyLocation = false;
     final memProfSH = await StorageUtil.getMemProfSH();
     final userMarketingCode = await StorageUtil.getMarketingCode();
     final userSalesCode = await StorageUtil.getSalesCode();
+    final accessStatus = await StorageUtil.getAccessStatus();
     if (mounted) {
       setState(() {
         _memProfSH = memProfSH;
         _userMarketingCode = userMarketingCode;
         _userSalesCode = userSalesCode;
+        _accessStatus = accessStatus;
       });
     }
   }
@@ -73,6 +76,12 @@ bool _isNumericOnlyLocation = false;
   // When memProfSH is false, only members in the logged-in user's
   // marketing group can be opened.
   bool _hasPermissionToViewMember(String? mGroup) {
+    // ReturnSatetus "True" from Iid 646 — access isn't limited to the user's
+    // own marketing group, so nothing here should be denied.
+    if (_accessStatus) {
+      return true;
+    }
+
     if (_userSalesCode == 'AD001') {
       return true;
     }

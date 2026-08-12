@@ -142,6 +142,31 @@ class StorageUtil {
     return await getMarketingCode() ?? salesCode;
   }
 
+  /// The code Iid 646 identifies the user by: AD001 is looked up by its sales
+  /// code, every other user by their marketing code.
+  static Future<String?> getAccessCheckCode() async {
+    final salesCode = await getSalesCode();
+    if (salesCode != null && salesCode.trim().toUpperCase() == 'AD001') {
+      return salesCode;
+    }
+    return await getMarketingCode() ?? salesCode;
+  }
+
+  /// ReturnSatetus from Iid 646, stored right after login. True means the
+  /// user's access is not restricted to their own marketing group, so screens
+  /// that gate on the marketing code must skip their Access Denied check.
+  ///
+  /// Written after [saveUserData] — that call clears SharedPreferences first.
+  static Future<void> saveAccessStatus(bool hasAccess) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('accessStatus', hasAccess);
+  }
+
+  static Future<bool> getAccessStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('accessStatus') ?? false;
+  }
+
   static Future<void> saveAppVersion(String version) async {
     await _storage.write(key: _keyAppVersion, value: version);
   }

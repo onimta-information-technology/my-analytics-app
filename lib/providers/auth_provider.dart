@@ -170,6 +170,10 @@ class AuthNotifier extends StateNotifier<AuthState?> {
           _pendingUser.marketingP,
         );
 
+        // Iid 646 decides whether this user's access is unrestricted. It has
+        // to run after saveUserData — that call clears SharedPreferences.
+        await _refreshAccessStatus();
+
         // Update state to fully authenticated
         state = AuthState(user: _pendingUser, isLoading: false);
         _pendingUser = null; // Clear pending data
@@ -185,6 +189,23 @@ class AuthNotifier extends StateNotifier<AuthState?> {
         error: 'Login completion failed',
       );
       _pendingUser = null;
+    }
+  }
+
+  /// Fetches ReturnSatetus (Iid 646) for the logged-in user and stores it so
+  /// the Access Denied checks across the app can read it without a round trip.
+  Future<void> _refreshAccessStatus() async {
+    try {
+      final code = await StorageUtil.getAccessCheckCode();
+      final userName = await StorageUtil.getUserName();
+      if (code == null || code.isEmpty || userName == null) {
+        await StorageUtil.saveAccessStatus(false);
+        return;
+      }
+      final hasAccess = await authRepository.fetchAccessStatus(code, userName);
+      await StorageUtil.saveAccessStatus(hasAccess);
+    } catch (e) {
+      await StorageUtil.saveAccessStatus(false);
     }
   }
 

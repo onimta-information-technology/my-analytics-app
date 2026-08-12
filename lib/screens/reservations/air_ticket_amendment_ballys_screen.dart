@@ -35,7 +35,7 @@ class _AirTicketAmendmentBallysScreenState
   // has nothing else in it.
   static const String _exchange = 'Exchange';
   static const String _voidCategory = 'Void';
-  static const String _routeCancellation = 'Route Cancellation';
+  static const String _routeCancellation = 'Cancellation';
 
   static const String _cabinUpgrade = 'Cabin Upgrade';
 
@@ -59,46 +59,88 @@ class _AirTicketAmendmentBallysScreenState
 
   // ── Guest selection ────────────────────────────────────────────────────
   //
-  // An amendment is raised against particular guests, not the whole booking, so
-  // the guests are picked first. Indexes into `reservation.guests` — see the
-  // header component for why not BM numbers.
-  final Set<int> _selectedGuestIndexes = <int>{};
+  // An amendment is raised against particular people, not the whole booking, so
+  // they are picked first. Every guest and every member sharing a guest's
+  // package is picked in their own right — see `AmendmentGuestRef` for why they
+  // are addressed by position rather than BM number.
+  final Set<AmendmentGuestRef> _selectedGuests = <AmendmentGuestRef>{};
 
   /// How many of the selected guests this amendment covers. Stepped by hand
   /// rather than derived, so it can be set to fewer than the guests ticked.
   int _guestCount = 0;
 
-  void _toggleGuest(int index) {
+  void _toggleGuest(AmendmentGuestRef ref) {
     setState(() {
-      if (!_selectedGuestIndexes.remove(index)) {
-        _selectedGuestIndexes.add(index);
+      if (!_selectedGuests.remove(ref)) {
+        _selectedGuests.add(ref);
       }
     });
   }
 
-  /// Guests ticked, and the tickets they hold between them. Each guest entry
-  /// carries its own `flights`, so a subset of guests is a subset of tickets.
-  ({int guests, int tickets}) _selectedCounts(ReservationBallys reservation) {
-    int guests = 0;
-    int tickets = 0;
-    for (final index in _selectedGuestIndexes) {
-      if (index < 0 || index >= reservation.guests.length) continue;
-      guests++;
-      tickets += reservation.guests[index].flights.length;
-    }
-    return (guests: guests, tickets: tickets);
+  /// The people ticked that the reservation still carries — a selection made
+  /// before a refresh could point past the end of the list.
+  Iterable<AmendmentGuestRef> _validSelection(ReservationBallys reservation) {
+    return _selectedGuests.where((ref) {
+      if (ref.guestIndex < 0 || ref.guestIndex >= reservation.guests.length) {
+        return false;
+      }
+      final memberIndex = ref.memberIndex;
+      if (memberIndex == null) return true;
+      final members = reservation.guests[ref.guestIndex].accompanyingMembers;
+      return memberIndex >= 0 && memberIndex < members.length;
+    });
   }
 
-  /// Tickets behind the ticked guests, shown as context under the stepper.
-  /// Older payloads carry the tickets only at reservation level and leave each
-  /// guest's `flights` empty, so fall back to the reservation's own list.
+  /// BM numbers of the people ticked, which is what a ticket names its
+  /// travellers by. Blank ones are dropped — they match nothing.
+  Set<String> _selectedMids(ReservationBallys reservation) {
+    final mids = <String>{};
+    for (final ref in _validSelection(reservation)) {
+      final guest = reservation.guests[ref.guestIndex];
+      final memberIndex = ref.memberIndex;
+      final mid = memberIndex == null
+          ? guest.mid
+          : guest.accompanyingMembers[memberIndex].mid;
+      if (mid.trim().isNotEmpty) mids.add(mid.trim());
+    }
+    return mids;
+  }
+
+  /// Tickets behind the ticked people, shown as context under the stepper.
+  ///
+  /// A ticket names who it is booked for in `assignedGuests`, which is what a
+  /// shared-package member is matched on — members hold no `flights` of their
+  /// own. Tickets saved before that assignment existed carry an empty list and
+  /// belong to the guest whose entry they sit in.
   int _selectedTickets(
     ReservationBallys reservation,
     List<FlightBookingBallys> reservationFlights,
   ) {
-    if (_selectedGuestIndexes.isEmpty) return 0;
-    final fromGuests = _selectedCounts(reservation).tickets;
-    return fromGuests > 0 ? fromGuests : reservationFlights.length;
+    final selection = _validSelection(reservation).toSet();
+    if (selection.isEmpty) return 0;
+
+    final mids = _selectedMids(reservation);
+    var tickets = 0;
+    var anyGuestFlights = false;
+
+    for (var i = 0; i < reservation.guests.length; i++) {
+      final ownerSelected = selection.contains(AmendmentGuestRef(i));
+      for (final flight in reservation.guests[i].flights) {
+        anyGuestFlights = true;
+        final assigned = flight.assignedGuests
+            .map((g) => g.mid.trim())
+            .where((mid) => mid.isNotEmpty)
+            .toSet();
+        if (assigned.isEmpty ? ownerSelected : assigned.any(mids.contains)) {
+          tickets++;
+        }
+      }
+    }
+
+    // Older payloads carry the tickets only at reservation level and leave
+    // every guest's `flights` empty, so fall back to the reservation's list.
+    if (!anyGuestFlights) return reservationFlights.length;
+    return tickets;
   }
 
   /// One square of the guest-count stepper. A null [onTap] greys it out — the
@@ -316,7 +358,7 @@ class _AirTicketAmendmentBallysScreenState
                         AmendmentGuestHeaderBallys(
                           reservation: reservation,
                           selectable: true,
-                          selectedGuestIndexes: _selectedGuestIndexes,
+                          selectedGuests: _selectedGuests,
                           onGuestToggled: _toggleGuest,
                         ),
                         const SizedBox(height: 10.0),
@@ -328,8 +370,7 @@ class _AirTicketAmendmentBallysScreenState
                         // covers is the user's call.
                         Builder(
                           builder: (context) {
-                            final counts = _selectedCounts(reservation);
-                            final available = counts.guests;
+                            final available = _validSelection(reservation).length;
                             final tickets =
                                 _selectedTickets(reservation, selectedFlights);
                             // A count left over from a wider selection would sit

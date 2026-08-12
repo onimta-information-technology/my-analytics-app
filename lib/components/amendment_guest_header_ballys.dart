@@ -7,6 +7,34 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+/// Points at one person on the reservation: a guest entry itself
+/// ([memberIndex] null), or one of the members sharing that guest's package.
+///
+/// Positions rather than BM numbers: a guest entry can come back with a blank
+/// `mid`, which would make several of them share one key.
+@immutable
+class AmendmentGuestRef {
+  const AmendmentGuestRef(this.guestIndex, [this.memberIndex]);
+
+  /// Position within `reservation.guests`.
+  final int guestIndex;
+
+  /// Position within that guest's `accompanyingMembers`, or null when the ref
+  /// is the guest itself.
+  final int? memberIndex;
+
+  bool get isMember => memberIndex != null;
+
+  @override
+  bool operator ==(Object other) =>
+      other is AmendmentGuestRef &&
+      other.guestIndex == guestIndex &&
+      other.memberIndex == memberIndex;
+
+  @override
+  int get hashCode => Object.hash(guestIndex, memberIndex);
+}
+
 /// Reservation + guest block shared by the two amendment screens
 /// (`HotelAmendmentBallysScreen` / `AirTicketAmendmentBallysScreen`).
 ///
@@ -20,7 +48,7 @@ class AmendmentGuestHeaderBallys extends ConsumerWidget {
     required this.reservation,
     this.isGuestLoading = false,
     this.selectable = false,
-    this.selectedGuestIndexes = const <int>{},
+    this.selectedGuests = const <AmendmentGuestRef>{},
     this.onGuestToggled,
   });
 
@@ -30,18 +58,18 @@ class AmendmentGuestHeaderBallys extends ConsumerWidget {
   /// can show its own spinner instead of an empty avatar.
   final bool isGuestLoading;
 
-  /// When true each guest card carries a checkbox, so an amendment can be
-  /// raised against a subset of the reservation's guests rather than all of it.
+  /// When true every person on the reservation — each guest and each member
+  /// sharing a guest's package — carries their own checkbox, so an amendment
+  /// can be raised against a subset of them rather than the whole booking.
   final bool selectable;
 
-  /// Positions within `reservation.guests` that are ticked. Indexes rather than
-  /// BM numbers: a guest entry can come back with a blank `mid`, which would
-  /// make several of them share one key.
-  final Set<int> selectedGuestIndexes;
+  /// The people ticked. See [AmendmentGuestRef] for why they are addressed by
+  /// position rather than BM number.
+  final Set<AmendmentGuestRef> selectedGuests;
 
-  /// Fired with the guest's index when its checkbox (or card) is tapped. The
+  /// Fired with the person's ref when their checkbox (or row) is tapped. The
   /// parent owns the selection, so it decides what a tap means.
-  final ValueChanged<int>? onGuestToggled;
+  final ValueChanged<AmendmentGuestRef>? onGuestToggled;
 
   /// A guest's package amount as it should be shown. Guests who carry no
   /// package of their own come back as a bare `0.00` with a blank currency —
@@ -84,121 +112,166 @@ class AmendmentGuestHeaderBallys extends ConsumerWidget {
     );
   }
 
+  /// One person's card — a guest, or a member sharing a guest's package. Both
+  /// read the same and sit at the same level, so every person on the
+  /// reservation is ticked in their own right rather than through the guest
+  /// they happen to hang off.
+  ///
+  /// [position] draws the numbered avatar used when nothing is selectable;
+  /// [sharedWith] names the guest whose package this person is on, shown only
+  /// for members. [extra] carries anything else that belongs under the card.
+  Widget _personCard({
+    required AmendmentGuestRef ref,
+    required String name,
+    required String mid,
+    required String packageLabel,
+    required bool hasFamilyMembers,
+    required FontSettings fontSettings,
+    int? position,
+    String? sharedWith,
+    List<Widget> extra = const [],
+  }) {
+    final isSelected = selectedGuests.contains(ref);
+
+    final card = Card(
+      // A ticked person lifts out of the grey so the chosen ones read at a
+      // glance without having to scan the checkboxes.
+      color: selectable && isSelected
+          ? const Color.fromARGB(255, 245, 233, 208)
+          : const Color.fromARGB(255, 228, 224, 224),
+      margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(4),
+        side: selectable && isSelected
+            ? const BorderSide(color: Constants.kPrimaryColor, width: 1.5)
+            : BorderSide.none,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                if (selectable)
+                  SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: Checkbox(
+                      value: isSelected,
+                      activeColor: Constants.kPrimaryColor,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      onChanged: onGuestToggled == null
+                          ? null
+                          : (_) => onGuestToggled!(ref),
+                    ),
+                  )
+                else if (position != null)
+                  CircleAvatar(
+                    radius: 14,
+                    backgroundColor: Colors.black,
+                    child: Text(
+                      "$position",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    name,
+                    style: TextStyle(
+                      fontSize: fontSettings.fontSize,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (mid.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                mid,
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize,
+                  fontWeight: fontSettings.fontWeight,
+                ),
+              ),
+            ],
+            const SizedBox(height: 2),
+            Text(
+              "Package: $packageLabel",
+              style: TextStyle(
+                fontSize: fontSettings.fontSize,
+                fontWeight: fontSettings.fontWeight,
+              ),
+            ),
+            // A member holds no rooms or tickets of their own — they travel on
+            // this guest's — so the card says whose package it is.
+            if (sharedWith != null) ...[
+              const SizedBox(height: 2),
+              Text(
+                "Same package as $sharedWith",
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize,
+                  fontWeight: fontSettings.fontWeight,
+                ),
+              ),
+            ],
+            const SizedBox(height: 2),
+            Text(
+              hasFamilyMembers
+                  ? "Family members: Included"
+                  : "Family members: Not included",
+              style: TextStyle(
+                fontSize: fontSettings.fontSize,
+                fontWeight: fontSettings.fontWeight,
+              ),
+            ),
+            ...extra,
+          ],
+        ),
+      ),
+    );
+
+    // Tapping anywhere on the card toggles it — the checkbox alone is a small
+    // target for a card this size.
+    if (!selectable || onGuestToggled == null) return card;
+    return InkWell(
+      onTap: () => onGuestToggled!(ref),
+      borderRadius: BorderRadius.circular(4),
+      child: card,
+    );
+  }
+
   Widget _buildGuestsSection(
     List<GuestReservationEntryBallys> guests,
     FontSettings fontSettings,
   ) {
     if (guests.isEmpty) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          guests.length == 1 ? "Guest" : "Guests (${guests.length})",
-          style: TextStyle(
-            fontSize: fontSettings.fontSize,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 6.0),
-        ...guests.asMap().entries.map((entry) {
-          final index = entry.key;
-          final guest = entry.value;
-          final packageLabel = _packageLabel(guest.packageAmount);
-          final isSelected = selectedGuestIndexes.contains(index);
+    final cards = <Widget>[];
+    for (var index = 0; index < guests.length; index++) {
+      final guest = guests[index];
 
-          final card = Card(
-            // A ticked guest lifts out of the grey so the chosen ones read at a
-            // glance without having to scan the checkboxes.
-            color: selectable && isSelected
-                ? const Color.fromARGB(255, 245, 233, 208)
-                : const Color.fromARGB(255, 228, 224, 224),
-            margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 4),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(4),
-              side: selectable && isSelected
-                  ? const BorderSide(color: Constants.kPrimaryColor, width: 1.5)
-                  : BorderSide.none,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      if (selectable)
-                        SizedBox(
-                          width: 28,
-                          height: 28,
-                          child: Checkbox(
-                            value: isSelected,
-                            activeColor: Constants.kPrimaryColor,
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
-                            onChanged: onGuestToggled == null
-                                ? null
-                                : (_) => onGuestToggled!(index),
-                          ),
-                        )
-                      else
-                        CircleAvatar(
-                          radius: 14,
-                          backgroundColor: Colors.black,
-                          child: Text(
-                            "${index + 1}",
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          guest.guestName.isNotEmpty
-                              ? guest.guestName
-                              : "Unnamed guest",
-                          style: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (guest.mid.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      guest.mid,
-                      style: TextStyle(
-                        fontSize: fontSettings.fontSize,
-                        fontWeight: fontSettings.fontWeight,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 2),
-                  Text(
-                    "Package: $packageLabel",
-                    style: TextStyle(
-                      fontSize: fontSettings.fontSize,
-                      fontWeight: fontSettings.fontWeight,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    guest.hasFamilyMembers
-                        ? "Family members: Included"
-                        : "Family members: Not included",
-                    style: TextStyle(
-                      fontSize: fontSettings.fontSize,
-                      fontWeight: fontSettings.fontWeight,
-                    ),
-                  ),
-                  // Members on this guest's package hold no rooms or tickets of
-                  // their own, so they only show up here.
-                  ...guest.accompanyingMembers.map(
+      cards.add(
+        _personCard(
+          ref: AmendmentGuestRef(index),
+          name: guest.guestName.isNotEmpty ? guest.guestName : "Unnamed guest",
+          mid: guest.mid,
+          packageLabel: _packageLabel(guest.packageAmount),
+          hasFamilyMembers: guest.hasFamilyMembers,
+          fontSettings: fontSettings,
+          position: index + 1,
+          // With no selection on, members stay summarised on the guest's own
+          // card; the cards below only exist while each person is pickable.
+          extra: selectable
+              ? const []
+              : guest.accompanyingMembers
+                  .map(
                     (m) => Padding(
                       padding: const EdgeInsets.only(top: 2),
                       child: Text(
@@ -211,21 +284,48 @@ class AmendmentGuestHeaderBallys extends ConsumerWidget {
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          );
+                  )
+                  .toList(),
+        ),
+      );
 
-          // Tapping anywhere on the card toggles it — the checkbox alone is a
-          // small target for a card this size.
-          if (!selectable || onGuestToggled == null) return card;
-          return InkWell(
-            onTap: () => onGuestToggled!(index),
-            borderRadius: BorderRadius.circular(4),
-            child: card,
-          );
-        }),
+      if (!selectable) continue;
+
+      // Each member sharing this guest's package gets a card of its own, right
+      // after the guest they belong to, so an amendment can be raised against
+      // one member without touching the rest of the package.
+      for (var m = 0; m < guest.accompanyingMembers.length; m++) {
+        final member = guest.accompanyingMembers[m];
+        cards.add(
+          _personCard(
+            ref: AmendmentGuestRef(index, m),
+            name: member.guestName.isNotEmpty
+                ? member.guestName
+                : "Unnamed member",
+            mid: member.mid,
+            packageLabel: _packageLabel(member.packageAmount),
+            hasFamilyMembers: member.hasFamilyMembers,
+            fontSettings: fontSettings,
+            sharedWith: guest.guestName.isNotEmpty
+                ? guest.guestName
+                : "guest ${index + 1}",
+          ),
+        );
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          cards.length == 1 ? "Guest" : "Guests (${cards.length})",
+          style: TextStyle(
+            fontSize: fontSettings.fontSize,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 6.0),
+        ...cards,
       ],
     );
   }

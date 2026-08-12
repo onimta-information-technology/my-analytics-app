@@ -285,17 +285,30 @@ class _HalfPieSectionState extends State<_HalfPieSection>
 
     if (widget.layout == ResponseLayout.admin) {
       if (gCode == 'MKT') {
+        // Drop the user's own group only when the pie carries a separate
+        // "My Data" slice (My Data mode) — otherwise it would be counted
+        // twice. In Overall Data mode the MKT slice covers every sales
+        // person, so the breakdown must list them all, the user included.
+        final hasMyDataSlice = widget.myDataCode != null &&
+            widget.groups.any((g) =>
+                g.gCode == widget.myDataCode || g.gName == 'My Data');
+        final excludedCode = hasMyDataSlice ? widget.myDataCode : null;
+
         final Map<String, List<Guest>> personMap = {};
         for (final sp in widget.salesPersonGroups) {
-          if (sp.gCode == widget.myDataCode) continue;
+          if (excludedCode != null && sp.gCode == excludedCode) continue;
           personMap[sp.gCode] =
               widget.marketingGuests.where((g) => g.mGroup == sp.gCode).toList();
         }
         final filteredOrder = widget.salesPersonGroups
-            .where((sp) => sp.gCode != widget.myDataCode)
+            .where((sp) => excludedCode == null || sp.gCode != excludedCode)
             .toList();
         showModalBottomSheet(
           context: context,
+          // Host on the root navigator: the shell Scaffold's body shrinks by
+          // the keyboard inset, which would clamp this sheet and snap it to
+          // the top of the screen the moment the search field gets focus.
+          useRootNavigator: true,
           isScrollControlled: true,
           backgroundColor: Colors.transparent,
           builder: (_) => _SalesPersonsSheet(
@@ -311,6 +324,10 @@ class _HalfPieSectionState extends State<_HalfPieSection>
       if (gCode == 'NON') {
         showModalBottomSheet(
           context: context,
+          // Host on the root navigator: the shell Scaffold's body shrinks by
+          // the keyboard inset, which would clamp this sheet and snap it to
+          // the top of the screen the moment the search field gets focus.
+          useRootNavigator: true,
           isScrollControlled: true,
           backgroundColor: Colors.transparent,
           builder: (_) => _SalesPersonsSheet(
@@ -327,6 +344,10 @@ class _HalfPieSectionState extends State<_HalfPieSection>
       if (gCode == widget.myDataCode || group.gName == 'My Data') {
         showModalBottomSheet(
           context: context,
+          // Host on the root navigator: the shell Scaffold's body shrinks by
+          // the keyboard inset, which would clamp this sheet and snap it to
+          // the top of the screen the moment the search field gets focus.
+          useRootNavigator: true,
           isScrollControlled: true,
           backgroundColor: Colors.transparent,
           builder: (_) => _MemberVisitsSheet(
@@ -346,6 +367,7 @@ class _HalfPieSectionState extends State<_HalfPieSection>
     if (gCode == 'NON') {
       showModalBottomSheet(
         context: context,
+        useRootNavigator: true,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
         builder: (_) => _SalesPersonsSheet(
@@ -362,6 +384,7 @@ class _HalfPieSectionState extends State<_HalfPieSection>
     if (gCode == 'OTHER') {
       showModalBottomSheet(
         context: context,
+        useRootNavigator: true,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
         builder: (_) => _SalesPersonsSheet(
@@ -377,6 +400,7 @@ class _HalfPieSectionState extends State<_HalfPieSection>
     if (gCode == widget.myDataCode || group.gName == 'My Data') {
       showModalBottomSheet(
         context: context,
+        useRootNavigator: true,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
         builder: (_) => _MemberVisitsSheet(
@@ -392,6 +416,7 @@ class _HalfPieSectionState extends State<_HalfPieSection>
         widget.marketingGuests.where((g) => g.mGroup == gCode).toList();
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _MemberVisitsSheet(
@@ -692,6 +717,7 @@ class _SalesPersonsSheetState extends State<_SalesPersonsSheet> with Connectivit
                         : () {
                             showModalBottomSheet(
                               context: context,
+                              useRootNavigator: true,
                               isScrollControlled: true,
                               backgroundColor: Colors.transparent,
                               builder: (_) => _MemberVisitsSheet(

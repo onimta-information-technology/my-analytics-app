@@ -35,6 +35,13 @@ const double _kBaselinePadding = 8;
 // A hovered slice paints 6px thicker, half of which spills past the outer edge.
 const double _kHoverExpand = 6;
 
+// Every bottom sheet this card opens is tagged with this route name, so opening
+// a member profile can pop the whole sheet stack — the country / sales-person
+// list included — instead of just the topmost sheet.
+const String _kVisitSheetRoute = 'visit-summary-sheet';
+const RouteSettings _kVisitSheetSettings =
+    RouteSettings(name: _kVisitSheetRoute);
+
 double _radiusFor(double width) =>
     min((width / 2) * _kRadiusFactor, _kMaxRadius);
 
@@ -311,6 +318,7 @@ class _HalfPieSectionState extends State<_HalfPieSection>
           useRootNavigator: true,
           isScrollControlled: true,
           backgroundColor: Colors.transparent,
+          routeSettings: _kVisitSheetSettings,
           builder: (_) => _SalesPersonsSheet(
             title: 'Marketing — $label',
             salesPersons: personMap,
@@ -330,6 +338,7 @@ class _HalfPieSectionState extends State<_HalfPieSection>
           useRootNavigator: true,
           isScrollControlled: true,
           backgroundColor: Colors.transparent,
+          routeSettings: _kVisitSheetSettings,
           builder: (_) => _SalesPersonsSheet(
             title: 'Non Marketing — $label',
             salesPersons: groupByCountry(widget.nonMarketingGuests),
@@ -350,6 +359,7 @@ class _HalfPieSectionState extends State<_HalfPieSection>
           useRootNavigator: true,
           isScrollControlled: true,
           backgroundColor: Colors.transparent,
+          routeSettings: _kVisitSheetSettings,
           builder: (_) => _MemberVisitsSheet(
             title: 'My Visits — $label',
             guests: widget.myDataGuests,
@@ -370,6 +380,7 @@ class _HalfPieSectionState extends State<_HalfPieSection>
         useRootNavigator: true,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
+        routeSettings: _kVisitSheetSettings,
         builder: (_) => _SalesPersonsSheet(
           title: 'Non Marketing — $label',
           salesPersons: groupByCountry(widget.nonMarketingGuests),
@@ -387,6 +398,7 @@ class _HalfPieSectionState extends State<_HalfPieSection>
         useRootNavigator: true,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
+        routeSettings: _kVisitSheetSettings,
         builder: (_) => _SalesPersonsSheet(
           title: 'Other Marketing — $label',
           salesPersons: groupByMGroup(widget.otherMarketingGuests),
@@ -403,6 +415,7 @@ class _HalfPieSectionState extends State<_HalfPieSection>
         useRootNavigator: true,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
+        routeSettings: _kVisitSheetSettings,
         builder: (_) => _MemberVisitsSheet(
           title: 'My Visits — $label',
           guests: widget.myDataGuests,
@@ -419,6 +432,7 @@ class _HalfPieSectionState extends State<_HalfPieSection>
       useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      routeSettings: _kVisitSheetSettings,
       builder: (_) => _MemberVisitsSheet(
         title: '${group.gName} — $label',
         guests: personGuests,
@@ -720,6 +734,7 @@ class _SalesPersonsSheetState extends State<_SalesPersonsSheet> with Connectivit
                               useRootNavigator: true,
                               isScrollControlled: true,
                               backgroundColor: Colors.transparent,
+                              routeSettings: _kVisitSheetSettings,
                               builder: (_) => _MemberVisitsSheet(
                                 title: widget.useKeyAsName
                                     ? row.displayName
@@ -1060,8 +1075,15 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> with Con
                           ref
                               .read(selectedGuestProvider.notifier)
                               .setSelectedGuest(guest);
-                          Navigator.of(context).pop();
-                          context.push('/home/profile');
+                          // Close this sheet *and* the list that opened it
+                          // (country / sales person) — popping only the top
+                          // one leaves that list sitting over the profile.
+                          final router = GoRouter.of(context);
+                          Navigator.of(context, rootNavigator: true).popUntil(
+                            (route) =>
+                                route.settings.name != _kVisitSheetRoute,
+                          );
+                          router.push('/home/profile');
                         },
                         child: Padding(
                           padding: const EdgeInsets.fromLTRB(14, 28, 14, 12),

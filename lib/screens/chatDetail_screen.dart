@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:ballys_reservation_app/components/badge_service.dart';
+import 'package:ballys_reservation_app/components/group_details_sheet.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/models/chat_message.dart';
@@ -26,10 +27,24 @@ class IndividualChatScreen extends ConsumerStatefulWidget {
   final ChatContact contact;
   final Function(String)? onMessageSent;
 
+  /// Group conversation mode. The group's id is carried in
+  /// [contact].chatUuid — the backend treats a groupId as a chatId, so
+  /// fetching, uploading and read receipts all work unchanged; only sending
+  /// and the sender labelling differ.
+  final bool isGroup;
+  final int groupMemberCount;
+
+  /// False for a member of an admin-only group: the composer is replaced by a
+  /// notice, since the backend would reject anything they typed.
+  final bool canSendMessages;
+
   const IndividualChatScreen({
     super.key,
     required this.contact,
     this.onMessageSent,
+    this.isGroup = false,
+    this.groupMemberCount = 0,
+    this.canSendMessages = true,
   });
 
   @override
@@ -49,6 +64,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
 
   List<ChatMessage> _messages = [];
   String? _currentUserName;
+  String? _currentUserUuid;
   bool _isLoadingMessages = false;
   bool _isUploading = false;
 
@@ -141,8 +157,23 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
   Future<void> _getCurrentUserName() async {
     try {
       final userName = await StorageUtil.getUserName();
-      setState(() => _currentUserName = userName);
+      final deviceId = await DeviceId.get();
+      if (!mounted) return;
+      setState(() {
+        _currentUserName = userName;
+        _currentUserUuid = deviceId;
+      });
     } catch (_) {}
+  }
+
+  void _openGroupInfo() {
+    showGroupDetailsSheet(
+      context: context,
+      groupId: widget.contact.chatUuid,
+      avatarColor: widget.contact.avatarColor,
+      fontSettings: ref.read(fontSettingsProvider),
+      currentUserUuid: _currentUserUuid,
+    );
   }
 
   // ─── Fetch messages ─────────────────────────────────────────────────────────
@@ -197,6 +228,24 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
               return m.apiMessageId == null &&
                   !grouped.any((g) => g.id == m.id);
             }).toList();
+
+            // Group sends do not always hand back the new messageId, so an
+            // optimistic bubble can stay id-less. Drop it once the server
+            // echoes the same text back, otherwise it shows up twice.
+            if (widget.isGroup) {
+              pendingLocal.removeWhere(
+                (m) =>
+                    m.isMe &&
+                    m.text.isNotEmpty &&
+                    grouped.any(
+                      (g) =>
+                          g.isMe &&
+                          g.text == m.text &&
+                          g.timestamp.difference(m.timestamp).abs() <
+                              const Duration(minutes: 2),
+                    ),
+              );
+            }
 
             final merged = [...grouped, ...pendingLocal]
               ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
@@ -293,14 +342,19 @@ Future<void> _markMessagesAsRead() async {
     if (widget.onMessageSent != null) widget.onMessageSent!(text);
 
     try {
-      final response = await FirebaseApiService.sendMessage(
-        recipientUuid: widget.contact.userUuid,
-        message: text,
-        title: _currentUserName ?? '',
-        body: text,
-        chatId: widget.contact.chatUuid,
-        recipientAppType: widget.contact.appType,
-      );
+      final response = widget.isGroup
+          ? await FirebaseApiService.sendGroupMessage(
+              groupId: widget.contact.chatUuid,
+              text: text,
+            )
+          : await FirebaseApiService.sendMessage(
+              recipientUuid: widget.contact.userUuid,
+              message: text,
+              title: _currentUserName ?? '',
+              body: text,
+              chatId: widget.contact.chatUuid,
+              recipientAppType: widget.contact.appType,
+            );
       if (response['success'] == true) {
         final rd = response['data'];
         if (rd != null && rd['success'] == true && rd['data'] != null) {
@@ -314,6 +368,24 @@ Future<void> _markMessagesAsRead() async {
               );
             }
           });
+        }
+        // The group endpoint answers with the created message at the top
+        // level, so pick the ids up from there when they are not nested.
+        if (widget.isGroup && rd is Map && rd['messageId'] != null) {
+          setState(() {
+            final idx = _messages.indexWhere((m) => m.id == localId);
+            if (idx != -1) {
+              _messages[idx] = _messages[idx].copyWith(
+                apiMessageId: rd['messageId']?.toString(),
+                apiChatId: widget.contact.chatUuid,
+                isRead: false,
+              );
+            }
+          });
+        }
+        if (widget.isGroup) {
+          // Pull the server copy so the message carries its real id.
+          _fetchMessagesFromApi(silent: true);
         }
       } else {
         _showErrorSnack('Failed to send message. Please try again.');
@@ -1103,6 +1175,11 @@ Future<void> _markMessagesAsRead() async {
         !hasGrouped;
     final isImageBubble =
         hasGrouped ? message.isImageGroup : message.fileType == 'image';
+    final senderLabel = (message.senderName?.trim().isNotEmpty ?? false)
+        ? message.senderName!.trim()
+        : 'Unknown';
+    // Name above the bubble, so a group conversation shows who is talking.
+    final showSenderName = widget.isGroup && !message.isMe;
 
     return GestureDetector(
       onLongPress: () => _toggleSelection(message.id),
@@ -1143,17 +1220,23 @@ Future<void> _markMessagesAsRead() async {
                 Stack(
                   children: [
                     CircleAvatar(
-                      backgroundColor: widget.contact.avatarColor,
+                      // In a group every incoming bubble can be a different
+                      // person, so derive the avatar from that sender.
+                      backgroundColor: widget.isGroup
+                          ? ChatContact.generateColorFromName(senderLabel)
+                          : widget.contact.avatarColor,
                       radius: 15,
                       child: Text(
-                        widget.contact.initials,
+                        widget.isGroup
+                            ? ChatContact.generateInitials(senderLabel)
+                            : widget.contact.initials,
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: fontSettings.fontSize - 4,
                         ),
                       ),
                     ),
-                    if (widget.contact.isOnline)
+                    if (!widget.isGroup && widget.contact.isOnline)
                       Positioned(
                         bottom: 0,
                         right: 0,
@@ -1195,6 +1278,26 @@ Future<void> _markMessagesAsRead() async {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // Sender (groups only)
+                      if (showSenderName)
+                        Padding(
+                          padding: EdgeInsets.only(
+                            bottom: 2,
+                            left: isImageBubble ? 8 : 0,
+                            top: isImageBubble ? 4 : 0,
+                          ),
+                          child: Text(
+                            senderLabel,
+                            style: TextStyle(
+                              color: ChatContact.generateColorFromName(
+                                senderLabel,
+                              ),
+                              fontSize: fontSettings.fontSize - 4,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+
                       // Attachment
                       if (hasGrouped) ...[
                         _buildImageGrid(
@@ -1355,7 +1458,10 @@ Future<void> _markMessagesAsRead() async {
                     Navigator.pop(context);
                   },
                 ),
-                title: Row(
+                title: GestureDetector(
+                  onTap: widget.isGroup ? _openGroupInfo : null,
+                  behavior: HitTestBehavior.opaque,
+                  child: Row(
                   children: [
                     Stack(
                       children: [
@@ -1371,7 +1477,7 @@ Future<void> _markMessagesAsRead() async {
                             ),
                           ),
                         ),
-                        if (widget.contact.isOnline)
+                        if (!widget.isGroup && widget.contact.isOnline)
                           Positioned(
                             bottom: 0,
                             right: 0,
@@ -1403,9 +1509,13 @@ Future<void> _markMessagesAsRead() async {
                             ),
                           ),
                           Text(
-                            widget.contact.isOnline
-                                ? 'Online'
-                                : 'Last seen recently',
+                            widget.isGroup
+                                ? (widget.groupMemberCount > 0
+                                      ? '${widget.groupMemberCount} member${widget.groupMemberCount == 1 ? '' : 's'}'
+                                      : 'Tap for group info')
+                                : (widget.contact.isOnline
+                                      ? 'Online'
+                                      : 'Last seen recently'),
                             style: TextStyle(
                               fontSize: fontSettings.fontSize - 4,
                               fontWeight: FontWeight.normal,
@@ -1415,8 +1525,15 @@ Future<void> _markMessagesAsRead() async {
                       ),
                     ),
                   ],
+                  ),
                 ),
                 actions: [
+                  if (widget.isGroup)
+                    IconButton(
+                      icon: const Icon(Icons.info_outline),
+                      tooltip: 'Group info',
+                      onPressed: _openGroupInfo,
+                    ),
                   IconButton(
                     icon: const Icon(Icons.refresh),
                     onPressed: () => _fetchMessagesFromApi(silent: false),
@@ -1499,8 +1616,35 @@ Future<void> _markMessagesAsRead() async {
                         ),
                 ),
               ),
+              // ── Read-only notice (admin-only group) ──
+              if (!_isSelectionMode && !widget.canSendMessages)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  color: Colors.grey[200],
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.lock_outline, size: 16, color: Colors.grey[600]),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          'Only admins can send messages in this group',
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: fontSettings.fontSize - 3,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
               // ── Input bar (hidden in selection mode) ──
-              if (!_isSelectionMode)
+              if (!_isSelectionMode && widget.canSendMessages)
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(

@@ -35,7 +35,14 @@ class FirebaseApiService {
     'fetchMessages': '/api/chats',
     'softDeleteMessage': '/api/chats',
     'uploadFiles': '/api/chats', // base; full path: /api/chats/{chatId}/upload/multiple
+    'createGroup': '/api/groups/create',
+    'fetchUserGroups': '/api/groups/user',
+    'groups': '/api/groups', // base; full path: /api/groups/{groupId}
   };
+
+  /// appType of this app, sent alongside every user id the chat backend needs
+  /// to disambiguate (the same user uuid can exist under another app).
+  static const int appType = 2;
 
   // ---------------------------------------------------------------------------
   // Auth helpers
@@ -335,6 +342,105 @@ class FirebaseApiService {
       return null;
     } catch (e) {
       return null;
+    }
+  }
+
+  /// Creates a group with the current user as creator/admin.
+  ///
+  /// [members] are the other participants — each entry needs the user's uuid
+  /// and the appType they belong to, since the same uuid can exist on another
+  /// app. Returns the new groupId, or null when the call fails.
+  static Future<String?> createGroup({
+    required String name,
+    required List<ChatContact> members,
+  }) async {
+    try {
+      final domain = await resolveDomain();
+      final deviceId = await DeviceId.get();
+      final url = '$domain${endpoints['createGroup']}';
+      final response = await postRequest(url, {
+        'name': name,
+        'avatarUrl': "",
+        'creatorId': deviceId,
+        'creatorAppType': appType,
+        'members': members
+            .map((m) => {'userUuid': m.userUuid, 'appType': m.appType})
+            .toList(),
+      });
+print('createGroup response: $response');
+      if (response['success'] == true) {
+        final data = response['data'];
+        if (data?['success'] == true || data?['groupId'] != null) {
+          return data?['groupId']?.toString();
+        }
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Groups the current user belongs to.
+  static Future<List<Map<String, dynamic>>> fetchUserGroups() async {
+    try {
+      final domain = await resolveDomain();
+      final deviceId = await DeviceId.get();
+      if (deviceId.isEmpty) {
+        throw Exception('deviceId not found in storage');
+      }
+      final url =
+          '$domain${endpoints['fetchUserGroups']}/$deviceId?appType=$appType';
+      final response = await getRequest(url);
+      if (response['success'] == true) {
+        final groups = response['data']?['groups'];
+        if (groups is List) {
+          return groups.whereType<Map<String, dynamic>>().toList();
+        }
+        return [];
+      }
+      throw Exception(response['error'] ?? 'Failed to fetch groups');
+    } catch (e) {
+      throw Exception('Failed to fetch groups: $e');
+    }
+  }
+
+  /// Sends a message to a group. Group messaging reuses the chat message
+  /// endpoint with the groupId standing in for the chatId.
+  static Future<Map<String, dynamic>> sendGroupMessage({
+    required String groupId,
+    required String text,
+  }) async {
+    try {
+      final domain = await resolveDomain();
+      final deviceId = await DeviceId.get();
+      final senderName =
+          await StorageUtil.getUserName() ?? await getName() ?? '';
+      final url = '$domain${endpoints['fetchMessages']}/$groupId/messages';
+      return await postRequest(url, {
+        'senderId': deviceId,
+        'senderAppType': appType,
+        'senderName': senderName,
+        'text': text,
+      });
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Full details for one group, including its member list and their roles.
+  static Future<Map<String, dynamic>> fetchGroupDetails(String groupId) async {
+    try {
+      final domain = await resolveDomain();
+      final url = '$domain${endpoints['groups']}/$groupId';
+      final response = await getRequest(url);
+      if (response['success'] == true) {
+        final group = response['data']?['group'];
+        if (group is Map<String, dynamic>) return group;
+        throw Exception('Group not found');
+      }
+      throw Exception(response['error'] ?? 'Failed to fetch group details');
+    } catch (e) {
+      throw Exception('Failed to fetch group details: $e');
     }
   }
 

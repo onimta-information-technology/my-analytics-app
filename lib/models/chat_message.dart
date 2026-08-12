@@ -66,6 +66,11 @@ class ChatMessage {
   final String? apiChatId;
   final bool? isRead;
 
+  // Who sent it. Only meaningful for group chats, where several different
+  // people appear on the incoming side.
+  final String? senderId;
+  final String? senderName;
+
   // Single-attachment fields (kept for backwards compat)
   final String? filePath;
   final String? fileType;
@@ -89,6 +94,8 @@ class ChatMessage {
     this.isRead,
     this.attachmentUrl,
     this.attachmentType,
+    this.senderId,
+    this.senderName,
     List<AttachmentItem>? groupedAttachments,
   }) : groupedAttachments = groupedAttachments ?? const [];
 
@@ -110,6 +117,8 @@ class ChatMessage {
     bool? isRead,
     String? attachmentUrl,
     String? attachmentType,
+    String? senderId,
+    String? senderName,
     List<AttachmentItem>? groupedAttachments,
   }) =>
       ChatMessage(
@@ -125,6 +134,8 @@ class ChatMessage {
         isRead: isRead ?? this.isRead,
         attachmentUrl: attachmentUrl ?? this.attachmentUrl,
         attachmentType: attachmentType ?? this.attachmentType,
+        senderId: senderId ?? this.senderId,
+        senderName: senderName ?? this.senderName,
         groupedAttachments: groupedAttachments ?? this.groupedAttachments,
       );
 
@@ -141,6 +152,8 @@ class ChatMessage {
         'isRead': isRead,
         'attachmentUrl': attachmentUrl,
         'attachmentType': attachmentType,
+        'senderId': senderId,
+        'senderName': senderName,
         'groupedAttachments':
             groupedAttachments.map((a) => a.toJson()).toList(),
       };
@@ -158,6 +171,8 @@ class ChatMessage {
         isRead: json['isRead'],
         attachmentUrl: json['attachmentUrl'],
         attachmentType: json['attachmentType'],
+        senderId: json['senderId'],
+        senderName: json['senderName'],
         groupedAttachments: (json['groupedAttachments'] as List<dynamic>?)
                 ?.map((e) => AttachmentItem.fromJson(e))
                 .toList() ??
@@ -198,6 +213,8 @@ class ChatMessage {
       attachmentType: attachmentType,
       fileType: fileType,
       fileName: fileName,
+      senderId: senderID.toString().isEmpty ? null : senderID.toString(),
+      senderName: json['senderName'] as String?,
     );
   }
 
@@ -253,6 +270,8 @@ class ChatMessage {
           apiMessageId: msg.apiMessageId,
           apiChatId: msg.apiChatId,
           isRead: msg.isRead,
+          senderId: msg.senderId,
+          senderName: msg.senderName,
           groupedAttachments: group,
         ));
         i = j;

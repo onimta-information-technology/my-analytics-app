@@ -79,13 +79,16 @@ class GuestRepository {
 
     print("getGuestData2 response: $response");
 
-    if (response['CommonResult'] != null &&
-        response['CommonResult']['Table'] is List &&
-        response['CommonResult']['Table'].isNotEmpty) {
+    // Table holds only the user's own guests, so it is empty on days they had
+    // none. Gating the whole parse on it would throw away Table2/3/4 (the
+    // OTHER / NON MARKETING breakdown) that the server still returned — the
+    // isNotEmpty check below decides whether there is anything worth showing.
+    if (response['CommonResult'] != null) {
       final commonResult = response['CommonResult'];
 
-      // ── Table (always present) ────────────────────────────────────────────
-      final tableData = commonResult['Table'] as List? ?? [];
+      // ── Table (own guests — empty when the user had none) ─────────────────
+      final tableData =
+          commonResult['Table'] is List ? commonResult['Table'] as List : [];
 
       // // 🔍 DEBUG: Print first Table item keys to check field name casing
       // if (tableData.isNotEmpty) {

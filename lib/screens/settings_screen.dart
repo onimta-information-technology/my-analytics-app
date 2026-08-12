@@ -214,15 +214,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
     if (salesCode != null) {
       ref.read(appmodeSettingsProvider.notifier).setSalesCode(salesCode);
     }
-    // Marketing_Code 0 means no marketing group, so overall data is the only
-    // mode that makes sense — no switch. Otherwise only MArketing_P users may
-    // switch between their own and overall data.
+    // Overall data belongs to the AD001 admin login only — every other sales
+    // code stays on its own numbers and never sees the switch.
+    // Within AD001: Marketing_Code 0 means no marketing group, so overall data
+    // is the only mode that makes sense — no switch. Otherwise MArketing_P
+    // unlocks switching between their own and overall data.
+    final isAdminSalesCode = await StorageUtil.isAdminSalesCode();
     final hasMarketingPermission = await StorageUtil.getMarketingP();
     final hasOwnMarketingGroup = await StorageUtil.hasOwnMarketingGroup();
     if (!mounted) return;
     setState(() {
-      _canShowOverallData = hasMarketingPermission && hasOwnMarketingGroup;
-      _isOverallDataOnly = !hasOwnMarketingGroup;
+      _canShowOverallData =
+          isAdminSalesCode && hasMarketingPermission && hasOwnMarketingGroup;
+      _isOverallDataOnly = isAdminSalesCode && !hasOwnMarketingGroup;
     });
   }
 

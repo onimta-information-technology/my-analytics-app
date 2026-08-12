@@ -105,6 +105,13 @@ class StorageUtil {
     return code;
   }
 
+  /// Sales code AD001 is the admin login. Overall data is theirs alone —
+  /// every other sales code is scoped to their own numbers.
+  static Future<bool> isAdminSalesCode() async {
+    final salesCode = await getSalesCode();
+    return salesCode != null && salesCode.trim().toUpperCase() == 'AD001';
+  }
+
   /// MArketing_P from the login response — the user manages a marketing group,
   /// so their own numbers live under the marketing code, not the sales code.
   /// This is what unlocks the My Data / Overall Data switch in Settings.

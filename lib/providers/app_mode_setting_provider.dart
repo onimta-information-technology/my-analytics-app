@@ -31,6 +31,7 @@ class AppModeSettings {
 
 class AppModeSettingsNotifier extends StateNotifier<AppModeSettings> {
   String? _currentSalesCode;
+  bool _isAdminSalesCode = false;
   bool _hasMarketingPermission = false;
   bool _hasOwnMarketingGroup = false;
 
@@ -44,6 +45,7 @@ class AppModeSettingsNotifier extends StateNotifier<AppModeSettings> {
       return;
     }
 
+    _isAdminSalesCode = await StorageUtil.isAdminSalesCode();
     _hasMarketingPermission = await StorageUtil.getMarketingP();
     _hasOwnMarketingGroup = await StorageUtil.hasOwnMarketingGroup();
 
@@ -52,7 +54,15 @@ class AppModeSettingsNotifier extends StateNotifier<AppModeSettings> {
         prefs.getBool('isFirstLogin_$_currentSalesCode') ?? true;
     final savedAppModeIndex = prefs.getInt('appMode_$_currentSalesCode');
 
-    if (!_hasOwnMarketingGroup) {
+    if (!_isAdminSalesCode) {
+      // Overall data is the AD001 admin login's alone. Everyone else stays on
+      // their own numbers — Settings shows them a locked "Show My Data" box, so
+      // any saved overallData index would contradict the UI. Overwrite it.
+      state = AppModeSettings(appMode: AppMode.myData, isFirstLogin: false);
+
+      await prefs.setInt('appMode_$_currentSalesCode', AppMode.myData.index);
+      await prefs.setBool('isFirstLogin_$_currentSalesCode', false);
+    } else if (!_hasOwnMarketingGroup) {
       // Marketing_Code 0 — the user is in no marketing group, so "my data"
       // would come back empty. Pin them to overall data and ignore any saved
       // preference. Applies whether or not MArketing_P is set.
@@ -114,14 +124,18 @@ class AppModeSettingsNotifier extends StateNotifier<AppModeSettings> {
     }
   }
 
+  /// Overall data is reserved for the AD001 admin login — see [_loadSettings].
   bool canShowOverallData() {
+    if (!_isAdminSalesCode) return false;
     return _hasMarketingPermission || !_hasOwnMarketingGroup;
   }
 
-  /// Both modes are offered only to a marketing user who is also in a group.
-  /// Without one there is nothing to switch between — see [_loadSettings].
+  /// Both modes are offered only to the admin login when it is a marketing
+  /// user in a group. Without one there is nothing to switch between.
   bool canToggleAppMode() {
-    return _hasMarketingPermission && _hasOwnMarketingGroup;
+    return _isAdminSalesCode &&
+        _hasMarketingPermission &&
+        _hasOwnMarketingGroup;
   }
 
   String? get currentSalesCode => _currentSalesCode;

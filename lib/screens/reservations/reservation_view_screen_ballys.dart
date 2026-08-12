@@ -762,6 +762,12 @@ class _ReservationViewScreenBallysState
       0,
       (sum, hotel) => sum + (hotel.guestCount ?? 0),
     );
+    // Children ride on their own count on every room, so they are summed and
+    // shown next to the guests (adults) instead of being folded into them.
+    final totalChildren = hotels.fold<int>(
+      0,
+      (sum, hotel) => sum + (hotel.childrenCount ?? 0),
+    );
     final totalRooms = hotels.fold<int>(
       0,
       (sum, hotel) => sum + (hotel.roomCount ?? 0),
@@ -769,12 +775,21 @@ class _ReservationViewScreenBallysState
 
     String txt =
         totalGuests == 1 ? "$totalGuests GUEST" : "$totalGuests GUESTS";
+    if (totalChildren > 0) {
+      txt += totalChildren == 1
+          ? ", $totalChildren CHILD"
+          : ", $totalChildren CHILDREN";
+    }
     txt += totalRooms == 1 ? ", $totalRooms ROOM" : ", $totalRooms ROOMS";
     return txt;
   }
 
   String getGuestAndTicketCounts(List<FlightBookingBallys> flights) {
     final totalGuests = flights.fold<int>(0, (sum, f) => sum + f.guestCount);
+    // guestCount is the adult count on a ticket; children travel on their own
+    // count, so they get their own figure next to it.
+    final totalChildren =
+        flights.fold<int>(0, (sum, f) => sum + f.childrenCount);
     // A ticket is a seat, not a flight row: one booking can mix classes
     // (Economy x2 + Business x1 = 3 tickets), so the count is the seats across
     // every class. Rows saved without a class breakdown still count as one.
@@ -785,6 +800,11 @@ class _ReservationViewScreenBallysState
 
     String txt =
         totalGuests == 1 ? "$totalGuests GUEST" : "$totalGuests GUESTS";
+    if (totalChildren > 0) {
+      txt += totalChildren == 1
+          ? ", $totalChildren CHILD"
+          : ", $totalChildren CHILDREN";
+    }
     txt += totalTickets == 1
         ? ", $totalTickets TICKET"
         : ", $totalTickets TICKETS";

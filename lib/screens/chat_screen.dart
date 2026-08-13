@@ -1089,6 +1089,8 @@ if (message.data['msg_type'] == '35') {
       avatarColor: group.avatarColor,
       fontSettings: fontSettings,
       currentUserUuid: _currentUserUuid,
+      // A rename or member change shows up in the list straight away.
+      onGroupChanged: _fetchGroups,
     );
   }
 

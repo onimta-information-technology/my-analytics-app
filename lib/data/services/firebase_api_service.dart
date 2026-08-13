@@ -427,6 +427,70 @@ print('createGroup response: $response');
     }
   }
 
+  /// Renames a group and/or flips admin-only messaging. Admins only — only the
+  /// fields passed here are sent, so the rest keep their current values.
+  static Future<Map<String, dynamic>> updateGroupSettings({
+    required String groupId,
+    String? name,
+    bool? adminOnlyMessaging,
+  }) async {
+    try {
+      final domain = await resolveDomain();
+      final deviceId = await DeviceId.get();
+      final url = '$domain${endpoints['groups']}/$groupId/settings';
+      return await patchRequest(url, {
+        'requesterId': deviceId,
+        'requesterAppType': appType,
+        if (name != null) 'name': name,
+        if (adminOnlyMessaging != null)
+          'adminOnlyMessaging': adminOnlyMessaging,
+      });
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Adds members to a group. Admins only. Users already in the group are
+  /// silently skipped by the backend.
+  static Future<Map<String, dynamic>> addGroupMembers({
+    required String groupId,
+    required List<Map<String, dynamic>> members,
+  }) async {
+    try {
+      final domain = await resolveDomain();
+      final deviceId = await DeviceId.get();
+      final url = '$domain${endpoints['groups']}/$groupId/members';
+      return await postRequest(url, {
+        'requesterId': deviceId,
+        'requesterAppType': appType,
+        'members': members,
+      });
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Removes someone else from a group. Admins only — leaving is a separate
+  /// endpoint and cannot be done through this one.
+  static Future<Map<String, dynamic>> removeGroupMember({
+    required String groupId,
+    required String userUuid,
+    required int memberAppType,
+  }) async {
+    try {
+      final domain = await resolveDomain();
+      final deviceId = await DeviceId.get();
+      final url =
+          '$domain${endpoints['groups']}/$groupId/members/$userUuid?appType=$memberAppType';
+      return await deleteRequestWithBody(url, {
+        'requesterId': deviceId,
+        'requesterAppType': appType,
+      });
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   /// Full details for one group, including its member list and their roles.
   static Future<Map<String, dynamic>> fetchGroupDetails(String groupId) async {
     try {

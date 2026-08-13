@@ -173,6 +173,14 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
       avatarColor: widget.contact.avatarColor,
       fontSettings: ref.read(fontSettingsProvider),
       currentUserUuid: _currentUserUuid,
+      // Left or deleted: this conversation no longer exists for us.
+      onGroupLeftOrDeleted: () {
+        if (!mounted) return;
+        _readStatusPollTimer?.cancel();
+        _foregroundMessageSubscription?.cancel();
+        CurrentChatState().clearCurrentChat();
+        Navigator.pop(context);
+      },
     );
   }
 

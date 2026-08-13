@@ -441,6 +441,7 @@ print('createGroup response: $response');
       return await patchRequest(url, {
         'requesterId': deviceId,
         'requesterAppType': appType,
+         'avatarUrl': "",
         if (name != null) 'name': name,
         if (adminOnlyMessaging != null)
           'adminOnlyMessaging': adminOnlyMessaging,
@@ -482,6 +483,75 @@ print('createGroup response: $response');
       final deviceId = await DeviceId.get();
       final url =
           '$domain${endpoints['groups']}/$groupId/members/$userUuid?appType=$memberAppType';
+      return await deleteRequestWithBody(url, {
+        'requesterId': deviceId,
+        'requesterAppType': appType,
+      });
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Promotes a member to admin. Admins only.
+  static Future<Map<String, dynamic>> promoteGroupAdmin({
+    required String groupId,
+    required String targetUserId,
+    required int targetAppType,
+  }) async {
+    try {
+      final domain = await resolveDomain();
+      final deviceId = await DeviceId.get();
+      final url = '$domain${endpoints['groups']}/$groupId/admins';
+      return await postRequest(url, {
+        'requesterId': deviceId,
+        'requesterAppType': appType,
+        'targetUserId': targetUserId,
+        'targetAppType': targetAppType,
+      });
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Demotes an admin back to member. Admins only, and the backend rejects
+  /// demoting the last remaining admin.
+  static Future<Map<String, dynamic>> demoteGroupAdmin({
+    required String groupId,
+    required String userUuid,
+    required int memberAppType,
+  }) async {
+    try {
+      final domain = await resolveDomain();
+      final deviceId = await DeviceId.get();
+      final url =
+          '$domain${endpoints['groups']}/$groupId/admins/$userUuid?appType=$memberAppType';
+      return await deleteRequestWithBody(url, {
+        'requesterId': deviceId,
+        'requesterAppType': appType,
+      });
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Leaves a group. Rejected for the sole admin while other members remain.
+  static Future<Map<String, dynamic>> leaveGroup(String groupId) async {
+    try {
+      final domain = await resolveDomain();
+      final deviceId = await DeviceId.get();
+      final url = '$domain${endpoints['groups']}/$groupId/leave';
+      return await postRequest(url, {'userId': deviceId, 'appType': appType});
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Deletes a group along with its messages and attachments. Creator only.
+  static Future<Map<String, dynamic>> deleteGroup(String groupId) async {
+    try {
+      final domain = await resolveDomain();
+      final deviceId = await DeviceId.get();
+      final url = '$domain${endpoints['groups']}/$groupId';
       return await deleteRequestWithBody(url, {
         'requesterId': deviceId,
         'requesterAppType': appType,

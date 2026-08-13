@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/models/chat_group.dart';
@@ -20,6 +22,7 @@ void showGroupDetailsSheet({
   required FontSettings fontSettings,
   String? currentUserUuid,
   VoidCallback? onGroupChanged,
+  VoidCallback? onGroupLeftOrDeleted,
 }) {
   showModalBottomSheet(
     context: context,
@@ -33,6 +36,7 @@ void showGroupDetailsSheet({
       fontSettings: fontSettings,
       currentUserUuid: currentUserUuid,
       onGroupChanged: onGroupChanged,
+      onGroupLeftOrDeleted: onGroupLeftOrDeleted,
     ),
   );
 }
@@ -44,12 +48,17 @@ class _GroupDetailsSheet extends StatefulWidget {
   final String? currentUserUuid;
   final VoidCallback? onGroupChanged;
 
+  /// Fired after leaving or deleting: the group is gone for this user, so a
+  /// caller showing its conversation should close it.
+  final VoidCallback? onGroupLeftOrDeleted;
+
   const _GroupDetailsSheet({
     required this.groupId,
     required this.avatarColor,
     required this.fontSettings,
     this.currentUserUuid,
     this.onGroupChanged,
+    this.onGroupLeftOrDeleted,
   });
 
   @override
@@ -87,6 +96,25 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
     );
   }
 
+  /// The rules the backend enforces (last admin, sole admin leaving, creator
+  /// only) come back as a 400 with an explanation — show that rather than a
+  /// generic failure, otherwise the user cannot tell what to do about it.
+  String _failureText(Map<String, dynamic> response, String fallback) {
+    final body = response['responseBody'];
+    if (body is String && body.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(body);
+        if (decoded is Map) {
+          final message = decoded['error'] ?? decoded['message'];
+          if (message is String && message.isNotEmpty) return message;
+        }
+      } catch (_) {
+        // Not JSON — fall through to the generic message.
+      }
+    }
+    return fallback;
+  }
+
   /// Runs one admin action, then reloads the sheet and tells the caller.
   Future<void> _runAction(
     Future<Map<String, dynamic>> Function() action, {
@@ -103,7 +131,7 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
       widget.onGroupChanged?.call();
       _reload();
     } else {
-      _snack(failureMessage, error: true);
+      _snack(_failureText(response, failureMessage), error: true);
     }
   }
 
@@ -209,6 +237,95 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
       successMessage: '${member.name} removed',
       failureMessage: 'Could not remove ${member.name}',
     );
+  }
+
+  Future<void> _setAdminRole(GroupMember member, {required bool promote}) async {
+    await _runAction(
+      () => promote
+          ? FirebaseApiService.promoteGroupAdmin(
+              groupId: widget.groupId,
+              targetUserId: member.userUuid,
+              targetAppType: member.appType,
+            )
+          : FirebaseApiService.demoteGroupAdmin(
+              groupId: widget.groupId,
+              userUuid: member.userUuid,
+              memberAppType: member.appType,
+            ),
+      successMessage: promote
+          ? '${member.name} is now an admin'
+          : '${member.name} is no longer an admin',
+      failureMessage: promote
+          ? 'Could not make ${member.name} an admin'
+          : 'Could not remove admin from ${member.name}',
+    );
+  }
+
+  /// Leave or delete: both end this user's access, so the sheet closes and the
+  /// caller is told the group is gone.
+  Future<void> _exitGroup({required bool delete}) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          delete ? 'Delete group' : 'Leave group',
+          style: TextStyle(fontSize: _fs.fontSize + 2),
+        ),
+        content: Text(
+          delete
+              ? 'This permanently deletes the group along with its messages and '
+                    'attachments, for everyone. This cannot be undone.'
+              : 'You will stop receiving messages from this group.',
+          style: TextStyle(fontSize: _fs.fontSize - 2),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text('Cancel', style: TextStyle(fontSize: _fs.fontSize - 2)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(
+              delete ? 'Delete' : 'Leave',
+              style: TextStyle(color: Colors.red, fontSize: _fs.fontSize - 2),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _busy = true);
+    final response = delete
+        ? await FirebaseApiService.deleteGroup(widget.groupId)
+        : await FirebaseApiService.leaveGroup(widget.groupId);
+    if (!mounted) return;
+    setState(() => _busy = false);
+
+    if (response['success'] == true) {
+      // Grab the messenger while this context is still mounted, close the
+      // sheet, and only then let the caller close whatever sits behind it.
+      final messenger = ScaffoldMessenger.of(context);
+      Navigator.pop(context);
+      widget.onGroupChanged?.call();
+      widget.onGroupLeftOrDeleted?.call();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(delete ? 'Group deleted' : 'You left the group'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } else {
+      _snack(
+        _failureText(
+          response,
+          delete ? 'Could not delete the group' : 'Could not leave the group',
+        ),
+        error: true,
+      );
+    }
   }
 
   Future<void> _addMembers(GroupDetails details) async {
@@ -335,6 +452,10 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
           final bool isAdmin =
               widget.currentUserUuid != null &&
               details.isAdmin(widget.currentUserUuid!);
+          // Only the creator may delete the group; everyone else leaves.
+          final bool isCreator =
+              widget.currentUserUuid != null &&
+              details.createdByUuid == widget.currentUserUuid;
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -517,16 +638,48 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
                                     ),
                                   ),
                                 if (canRemove)
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.person_remove_outlined,
-                                      size: 20,
-                                    ),
-                                    color: Colors.red,
-                                    tooltip: 'Remove from group',
-                                    onPressed: _busy
-                                        ? null
-                                        : () => _removeMember(member),
+                                  PopupMenuButton<String>(
+                                    enabled: !_busy,
+                                    icon: const Icon(Icons.more_vert, size: 20),
+                                    tooltip: 'Member actions',
+                                    onSelected: (value) {
+                                      switch (value) {
+                                        case 'promote':
+                                          _setAdminRole(member, promote: true);
+                                          break;
+                                        case 'demote':
+                                          _setAdminRole(member, promote: false);
+                                          break;
+                                        case 'remove':
+                                          _removeMember(member);
+                                          break;
+                                      }
+                                    },
+                                    itemBuilder: (context) => [
+                                      PopupMenuItem(
+                                        value: member.isAdmin
+                                            ? 'demote'
+                                            : 'promote',
+                                        child: Text(
+                                          member.isAdmin
+                                              ? 'Remove as admin'
+                                              : 'Make admin',
+                                          style: TextStyle(
+                                            fontSize: _fs.fontSize - 2,
+                                          ),
+                                        ),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'remove',
+                                        child: Text(
+                                          'Remove from group',
+                                          style: TextStyle(
+                                            color: Colors.red,
+                                            fontSize: _fs.fontSize - 2,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                               ],
                             ),
@@ -535,18 +688,56 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
                       ),
               ),
 
+              const Divider(height: 1),
               SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(
-                        'Close',
-                        style: TextStyle(fontSize: _fs.fontSize - 2),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text(
+                            'Close',
+                            style: TextStyle(fontSize: _fs.fontSize - 2),
+                          ),
+                        ),
                       ),
-                    ),
+                      // The creator deletes; everyone else leaves. Both are
+                      // destructive, so both sit behind a confirmation.
+                      if (isCreator)
+                        Expanded(
+                          child: TextButton.icon(
+                            onPressed: _busy
+                                ? null
+                                : () => _exitGroup(delete: true),
+                            icon: const Icon(Icons.delete_outline, size: 18),
+                            label: Text(
+                              'Delete group',
+                              style: TextStyle(fontSize: _fs.fontSize - 2),
+                            ),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.red,
+                            ),
+                          ),
+                        )
+                      else
+                        Expanded(
+                          child: TextButton.icon(
+                            onPressed: _busy
+                                ? null
+                                : () => _exitGroup(delete: false),
+                            icon: const Icon(Icons.logout, size: 18),
+                            label: Text(
+                              'Leave group',
+                              style: TextStyle(fontSize: _fs.fontSize - 2),
+                            ),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.red,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),

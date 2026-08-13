@@ -19,6 +19,7 @@ class MarketingDetailPage extends ConsumerStatefulWidget {
   final double winSpecificMember;
   final double? mDrop; // NEW: Optional MDrop
   final double? cashOut; // NEW: Optional CashOut
+  final MarketingViewType viewType; // NEW: which view tab opened this page
 
   const MarketingDetailPage({
     super.key,
@@ -28,6 +29,7 @@ class MarketingDetailPage extends ConsumerStatefulWidget {
     required this.winSpecificMember,
     this.mDrop,
     this.cashOut,
+    this.viewType = MarketingViewType.performance,
   });
 
   @override
@@ -132,6 +134,30 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> with 
         return "Last Month";
       default:
         return "Today";
+    }
+  }
+
+  // Label of the view tab (Performance / Result / Target) this page came from.
+  String _getViewTitle() {
+    switch (widget.viewType) {
+      case MarketingViewType.performance:
+        return "Performance";
+      case MarketingViewType.result:
+        return "Result";
+      case MarketingViewType.target:
+        return "Target";
+    }
+  }
+
+  // Same accent colours as the view type toggle on the marketing card.
+  Color _getViewColor() {
+    switch (widget.viewType) {
+      case MarketingViewType.performance:
+        return Colors.blue;
+      case MarketingViewType.result:
+        return Colors.blue;
+      case MarketingViewType.target:
+        return Colors.deepPurple;
     }
   }
 
@@ -275,7 +301,38 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> with 
     final fontSettings = ref.watch(fontSettingsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text('${_getTabTitle()} Marketing Details')),
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('${_getTabTitle()} Marketing Details'),
+            const SizedBox(height: 2),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: _getViewColor(),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '${_getViewTitle()} View',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: _getViewColor(),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
       body: Stack(
         children: [
           allMembers.isEmpty

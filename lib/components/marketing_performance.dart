@@ -1372,6 +1372,7 @@ String _formatWithThousands(double amount) {
           smName: smName,
           winSpecificMember: winLost,
           currentTabIndex: ref.read(marketingProvider).selectedTab,
+          viewType: MarketingViewType.performance,
         ),
       ),
     );
@@ -1387,6 +1388,7 @@ String _formatWithThousands(double amount) {
           smName: smName,
           winSpecificMember: winLost,
           currentTabIndex: ref.read(marketingProvider).selectedTab,
+          viewType: MarketingViewType.result,
           mDrop: mDrop,
           cashOut: cashOut,
         ),

@@ -18,12 +18,18 @@ class AirTicketClassCountSelector extends StatelessWidget {
   /// what family members need since their headcount is not known here.
   final int? maxSeats;
 
+  /// What the block is called. Defaults to the classes on the ticket being
+  /// booked; an amendment picking the classes a ticket moves up to says so
+  /// instead, since the ticket already has classes of its own.
+  final String label;
+
   const AirTicketClassCountSelector({
     super.key,
     required this.selectedClasses,
     required this.onChanged,
     this.hasError = false,
     this.maxSeats,
+    this.label = "Class",
   });
 
   /// The cabin classes on offer — the same list, in the same order and with the
@@ -90,7 +96,7 @@ class AirTicketClassCountSelector extends StatelessWidget {
       children: [
         InputDecorator(
           decoration: InputDecoration(
-            labelText: "Class",
+            labelText: label,
             floatingLabelBehavior: FloatingLabelBehavior.always,
             border:
                 OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),

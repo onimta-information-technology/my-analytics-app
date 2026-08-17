@@ -47,6 +47,7 @@ class AmendmentGuestHeaderBallys extends ConsumerWidget {
     super.key,
     required this.reservation,
     this.isGuestLoading = false,
+    this.showGuests = true,
     this.selectable = false,
     this.selectedGuests = const <AmendmentGuestRef>{},
     this.onGuestToggled,
@@ -57,6 +58,12 @@ class AmendmentGuestHeaderBallys extends ConsumerWidget {
   /// True while the member's profile card is still being fetched, so the card
   /// can show its own spinner instead of an empty avatar.
   final bool isGuestLoading;
+
+  /// Whether the reservation's guests are listed under the member card. Off on
+  /// screens that pick their guests somewhere else — the air ticket amendment
+  /// picks them per ticket, where the ticket says who it is booked for — so the
+  /// block is only the reservation's identity.
+  final bool showGuests;
 
   /// When true every person on the reservation — each guest and each member
   /// sharing a guest's package — carries their own checkbox, so an amendment
@@ -71,16 +78,31 @@ class AmendmentGuestHeaderBallys extends ConsumerWidget {
   /// parent owns the selection, so it decides what a tap means.
   final ValueChanged<AmendmentGuestRef>? onGuestToggled;
 
-  /// A guest's package amount as it should be shown. Guests who carry no
-  /// package of their own come back as a bare `0.00` with a blank currency —
-  /// they travel on another guest's package.
-  static String _packageLabel(String raw) {
+  /// A guest's package amount as it should be shown, matching
+  /// `ReservationViewScreenBallys` so the same person reads the same on the
+  /// view screen and on the amendment screens opened on top of it.
+  ///
+  /// Guests who carry no package of their own come back as a bare `0.00` with
+  /// a blank currency, which reads as travelling on someone else's package.
+  /// The amount arrives as `"<currency> <number>"` — the currency is kept as
+  /// it is and the number is shown whole, grouped in thousands: `IND 10,000`.
+  ///
+  /// [shared] is the person's own `IsSharedAmount` tick, which the payload
+  /// sends in its own right: an amount can be both real and shared with the
+  /// members on the package, so the tick is shown next to the amount rather
+  /// than replacing it.
+  static String _packageLabel(String raw, {bool shared = false}) {
     final amount = raw.trim();
     final numeric = amount.isEmpty
         ? null
         : double.tryParse(amount.replaceAll(RegExp(r'[^0-9.]'), ''));
+    // No package of their own — they travel on another guest's package.
     if (numeric == null || numeric == 0) return 'Shared';
-    return amount;
+
+    final currency = amount.replaceAll(RegExp(r'[0-9.,]'), '').trim();
+    final formatted = NumberFormat('#,##0').format(numeric);
+    final label = currency.isEmpty ? formatted : '$currency $formatted';
+    return shared ? '$label (Shared)' : label;
   }
 
   Widget _readOnlyField(
@@ -209,18 +231,6 @@ class AmendmentGuestHeaderBallys extends ConsumerWidget {
                 fontWeight: fontSettings.fontWeight,
               ),
             ),
-            // A member holds no rooms or tickets of their own — they travel on
-            // this guest's — so the card says whose package it is.
-            if (sharedWith != null) ...[
-              const SizedBox(height: 2),
-              Text(
-                "Same package as $sharedWith",
-                style: TextStyle(
-                  fontSize: fontSettings.fontSize,
-                  fontWeight: fontSettings.fontWeight,
-                ),
-              ),
-            ],
             const SizedBox(height: 2),
             Text(
               hasFamilyMembers
@@ -262,7 +272,10 @@ class AmendmentGuestHeaderBallys extends ConsumerWidget {
           ref: AmendmentGuestRef(index),
           name: guest.guestName.isNotEmpty ? guest.guestName : "Unnamed guest",
           mid: guest.mid,
-          packageLabel: _packageLabel(guest.packageAmount),
+          packageLabel: _packageLabel(
+            guest.packageAmount,
+            shared: guest.sharedPackage,
+          ),
           hasFamilyMembers: guest.hasFamilyMembers,
           fontSettings: fontSettings,
           position: index + 1,
@@ -276,7 +289,7 @@ class AmendmentGuestHeaderBallys extends ConsumerWidget {
                       padding: const EdgeInsets.only(top: 2),
                       child: Text(
                         "Same package: ${m.guestName} (${m.mid})"
-                        " · ${_packageLabel(m.packageAmount)}"
+                        " · ${_packageLabel(m.packageAmount, shared: m.sharedPackage)}"
                         "${m.hasFamilyMembers ? ' · Family members included' : ''}",
                         style: TextStyle(
                           fontSize: fontSettings.fontSize,
@@ -303,7 +316,10 @@ class AmendmentGuestHeaderBallys extends ConsumerWidget {
                 ? member.guestName
                 : "Unnamed member",
             mid: member.mid,
-            packageLabel: _packageLabel(member.packageAmount),
+            packageLabel: _packageLabel(
+              member.packageAmount,
+              shared: member.sharedPackage,
+            ),
             hasFamilyMembers: member.hasFamilyMembers,
             fontSettings: fontSettings,
             sharedWith: guest.guestName.isNotEmpty
@@ -356,7 +372,7 @@ class AmendmentGuestHeaderBallys extends ConsumerWidget {
         const SizedBox(height: 10.0),
 
         // ── All guests on this reservation ─────────────────────────────────
-        _buildGuestsSection(reservation.guests, fontSettings),
+        if (showGuests) _buildGuestsSection(reservation.guests, fontSettings),
         // const SizedBox(height: 10.0),
 
         // Row(

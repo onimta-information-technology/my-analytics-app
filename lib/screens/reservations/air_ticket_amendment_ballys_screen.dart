@@ -86,6 +86,15 @@ class _TicketAmendmentDraft {
   final TextEditingController reason = TextEditingController();
   final TextEditingController additionalRemark = TextEditingController();
 
+  /// How long the cancelled ticket stays good for and on what terms it can be
+  /// reissued. Cancel and open ticket only: the ticket is not refunded, it is
+  /// left open, so what it is still worth has to travel with the amendment.
+  final TextEditingController validityNote = TextEditingController();
+
+  /// How the money goes back. Cancel & refund ticket only — the ticket is
+  /// settled rather than left open, so the amendment has to say by what means.
+  String? refundMethod;
+
   bool get isCabinUpgrade =>
       category == _AirTicketAmendmentBallysScreenState._exchange &&
       type == _AirTicketAmendmentBallysScreenState._cabinUpgrade;
@@ -98,6 +107,19 @@ class _TicketAmendmentDraft {
       category == _AirTicketAmendmentBallysScreenState._exchange &&
       type == _AirTicketAmendmentBallysScreenState._routeChange;
 
+  /// Voiding a ticket needs no detail beyond why it is being voided, which is
+  /// the one thing every type carrying detail asks for anyway.
+  bool get isVoid =>
+      category == _AirTicketAmendmentBallysScreenState._voidCategory;
+
+  bool get isCancelAndOpen =>
+      category == _AirTicketAmendmentBallysScreenState._routeCancellation &&
+      type == _AirTicketAmendmentBallysScreenState._cancelAndOpen;
+
+  bool get isCancelAndRefund =>
+      category == _AirTicketAmendmentBallysScreenState._routeCancellation &&
+      type == _AirTicketAmendmentBallysScreenState._cancelAndRefund;
+
   /// Whether the outbound / return leg is one of the legs being moved.
   bool get changesDeparture =>
       routeLeg == _AirTicketAmendmentBallysScreenState._legDeparture ||
@@ -108,7 +130,13 @@ class _TicketAmendmentDraft {
       routeLeg == _AirTicketAmendmentBallysScreenState._legBoth;
 
   /// Whether the type picked asks for anything beyond itself.
-  bool get hasDetail => isCabinUpgrade || isDateChange || isRouteChange;
+  bool get hasDetail =>
+      isCabinUpgrade ||
+      isDateChange ||
+      isRouteChange ||
+      isVoid ||
+      isCancelAndOpen ||
+      isCancelAndRefund;
 
   /// A ticket counts as amended once someone is picked and the amendment is
   /// named — the detail below the type is asked for per type, not always.
@@ -131,11 +159,14 @@ class _TicketAmendmentDraft {
     returnSectors.clear();
     reason.clear();
     additionalRemark.clear();
+    validityNote.clear();
+    refundMethod = null;
   }
 
   void dispose() {
     reason.dispose();
     additionalRemark.dispose();
+    validityNote.dispose();
   }
 }
 
@@ -160,9 +191,9 @@ class _AirTicketAmendmentBallysScreenState
   // ── Amendment category / type ──────────────────────────────────────────
   //
   // The type on offer depends entirely on the category picked, so the two
-  // dropdowns are driven off one map rather than three parallel lists. Void
-  // carries a single type, which is why it still gets a type dropdown — it just
-  // has nothing else in it.
+  // dropdowns are driven off one map rather than three parallel lists. A
+  // category carrying a single type (Void) settles it on its own, so no type
+  // dropdown is shown for it — there would be nothing in it to pick.
   static const String _exchange = 'Exchange';
   static const String _voidCategory = 'Void';
   static const String _routeCancellation = 'Cancellation';
@@ -170,6 +201,15 @@ class _AirTicketAmendmentBallysScreenState
   static const String _cabinUpgrade = 'Cabin Upgrade';
   static const String _dateChange = 'Date Change';
   static const String _routeChange = 'Route Change';
+  static const String _cancelAndOpen = 'Cancel and open ticket';
+  static const String _cancelAndRefund = 'Cancel & refund ticket';
+
+  /// How a refunded ticket is settled. Cancel & refund ticket only.
+  static const List<String> _refundMethods = [
+    'Original Form of Payment',
+    'Credit Note',
+    'Bank Transfer',
+  ];
 
   /// Which legs a route change moves. A one-way ticket only ever offers the
   /// first — it has no return leg to move.
@@ -180,7 +220,7 @@ class _AirTicketAmendmentBallysScreenState
   static const Map<String, List<String>> _typesByCategory = {
     _exchange: [_cabinUpgrade, _dateChange, _routeChange],
     _voidCategory: ['Void'],
-    _routeCancellation: ['Cancel and open ticket', 'Cancel & refund ticket'],
+    _routeCancellation: [_cancelAndOpen, _cancelAndRefund],
   };
 
   static final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
@@ -755,6 +795,36 @@ class _AirTicketAmendmentBallysScreenState
     );
   }
 
+  // ── Void window ────────────────────────────────────────────────────────
+
+  /// How long after a reservation is made a ticket on it may still be voided.
+  static const Duration _voidWindow = Duration(hours: 24);
+
+  /// Whether Void is still on offer: a ticket may only be voided within a day
+  /// of the reservation being made, so the category is closed off once that
+  /// day is up rather than being taken and refused later.
+  ///
+  /// Measured from the reservation's own created date. A reservation that came
+  /// back without one falls back to its arrival date and then to now, which is
+  /// the model's doing — where that happens the window is read off whatever
+  /// stood in.
+  bool _canVoid(ReservationBallys reservation) {
+    return !DateTime.now().isAfter(reservation.insertDate.add(_voidWindow));
+  }
+
+  /// "made 3 days ago" — how long the reservation has been standing, for the
+  /// line saying why Void is closed.
+  static String _madeAgoLabel(DateTime insertDate) {
+    final elapsed = DateTime.now().difference(insertDate);
+    if (elapsed.inDays >= 1) {
+      final days = elapsed.inDays;
+      return days == 1 ? "1 day ago" : "$days days ago";
+    }
+    final hours = elapsed.inHours;
+    if (hours >= 1) return hours == 1 ? "1 hour ago" : "$hours hours ago";
+    return "just now";
+  }
+
   // ── Submitting ─────────────────────────────────────────────────────────
 
   /// The tickets in the amendment, in the order they are shown, paired with
@@ -770,7 +840,10 @@ class _AirTicketAmendmentBallysScreenState
   /// The first thing stopping the amendment from being sent, or null when
   /// there is nothing. One message at a time, naming the ticket it belongs to,
   /// so a long form does not answer with a wall of errors.
-  String? _firstProblem(List<_AmendableTicket> tickets) {
+  String? _firstProblem(
+    ReservationBallys reservation,
+    List<_AmendableTicket> tickets,
+  ) {
     final amended = _amendedTickets(tickets);
     if (amended.isEmpty) return "Tick at least one air ticket to amend.";
 
@@ -783,6 +856,17 @@ class _AirTicketAmendmentBallysScreenState
       }
       if (draft.category == null) return "$label: select the category.";
       if (draft.type == null) return "$label: select the type.";
+
+      // The window can run out while the form is open, so it is checked again
+      // here rather than trusted from when the category was picked.
+      if (draft.isVoid && !_canVoid(reservation)) {
+        return "$label: a ticket can only be voided within 24 hours of the "
+            "reservation being made.";
+      }
+
+      if (draft.isCancelAndRefund && draft.refundMethod == null) {
+        return "$label: select how the ticket is refunded.";
+      }
 
       if (draft.isCabinUpgrade && draft.newClasses.isEmpty) {
         return "$label: select the class it is upgraded to.";
@@ -874,6 +958,14 @@ class _AirTicketAmendmentBallysScreenState
         'additional_remark': draft.additionalRemark.text.trim(),
       };
 
+      if (draft.isCancelAndOpen) {
+        row['ticket_validity_note'] = draft.validityNote.text.trim();
+      }
+
+      if (draft.isCancelAndRefund) {
+        row['refund_method'] = draft.refundMethod;
+      }
+
       if (draft.isCabinUpgrade) {
         row['previous_classes'] =
             flight.ticketClasses.map((c) => c.toJson()).toList();
@@ -924,6 +1016,32 @@ class _AirTicketAmendmentBallysScreenState
     };
   }
 
+  /// What the reason field is called. The field is the same whichever type
+  /// asked for it; only the wording follows the type.
+  static String _reasonLabel(_TicketAmendmentDraft draft) {
+    if (draft.isCabinUpgrade) return "Reason for Upgrade";
+    if (draft.isDateChange) return "Reason for Date Change";
+    if (draft.isRouteChange) return "Reason for Route Change";
+    if (draft.isVoid) return "Reason for Void";
+    if (draft.isCancelAndOpen || draft.isCancelAndRefund) {
+      return "Reason for Cancellation";
+    }
+    return "Reason";
+  }
+
+  static String _reasonHint(_TicketAmendmentDraft draft) {
+    if (draft.isCabinUpgrade) return "Why is this ticket being upgraded?";
+    if (draft.isDateChange) {
+      return "Why are this ticket's dates being changed?";
+    }
+    if (draft.isRouteChange) return "Why is this ticket's route being changed?";
+    if (draft.isVoid) return "Why is this ticket being voided?";
+    if (draft.isCancelAndOpen || draft.isCancelAndRefund) {
+      return "Why is this ticket being cancelled?";
+    }
+    return "Why is this amendment being raised?";
+  }
+
   void _showMessage(String message, {bool isError = true}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -937,7 +1055,7 @@ class _AirTicketAmendmentBallysScreenState
     ReservationBallys reservation,
     List<_AmendableTicket> tickets,
   ) async {
-    final problem = _firstProblem(tickets);
+    final problem = _firstProblem(reservation, tickets);
     if (problem != null) {
       _showMessage(problem);
       return;
@@ -1465,6 +1583,7 @@ class _AirTicketAmendmentBallysScreenState
   /// for — the amendment is raised against guests, so they come first.
   Widget _amendmentFields(
     int index,
+    ReservationBallys reservation,
     _AmendableTicket ticket,
     _TicketAmendmentDraft draft,
     FontSettings fontSettings,
@@ -1481,6 +1600,7 @@ class _AirTicketAmendmentBallysScreenState
     }
 
     final types = _typesByCategory[draft.category] ?? const <String>[];
+    final canVoid = _canVoid(reservation);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1493,6 +1613,10 @@ class _AirTicketAmendmentBallysScreenState
         ),
         const SizedBox(height: 8),
         // ── Amendment category ───────────────────────────────────────────
+        //
+        // Void is only on offer for a day after the reservation is made, so
+        // outside that it is greyed out where it stands — hiding it would
+        // leave the rule unexplained.
         DropdownButtonFormField<String>(
           initialValue: draft.category,
           isExpanded: true,
@@ -1501,7 +1625,19 @@ class _AirTicketAmendmentBallysScreenState
             fontWeight: fontSettings.fontWeight,
             color: Colors.black,
           ),
-          decoration: _dropdownDeco("Amendment Category", fontSettings),
+          decoration:
+              _dropdownDeco("Amendment Category", fontSettings).copyWith(
+            helperText: canVoid
+                ? null
+                : "Void is closed — a ticket can only be voided within 24 "
+                    "hours of the reservation being made "
+                    "(made ${_madeAgoLabel(reservation.insertDate)})",
+            helperMaxLines: 3,
+            helperStyle: TextStyle(
+              fontSize: fontSettings.fontSize - 3,
+              color: Colors.grey.shade700,
+            ),
+          ),
           hint: Text(
             "Select category",
             style: TextStyle(
@@ -1509,17 +1645,30 @@ class _AirTicketAmendmentBallysScreenState
               fontWeight: fontSettings.fontWeight,
             ),
           ),
-          items: _typesByCategory.keys
-              .map((c) => DropdownMenuItem<String>(value: c, child: Text(c)))
-              .toList(),
+          items: _typesByCategory.keys.map((c) {
+            final enabled = c != _voidCategory || canVoid;
+            return DropdownMenuItem<String>(
+              value: c,
+              enabled: enabled,
+              child: Text(
+                c,
+                style: TextStyle(
+                  color: enabled ? Colors.black : Colors.grey,
+                ),
+              ),
+            );
+          }).toList(),
           onChanged: (value) => _onCategoryChanged(index, value),
         ),
 
         // ── Amendment type ───────────────────────────────────────────────
         //
         // Only appears once a category is picked, since its contents are the
-        // category's.
-        if (draft.category != null) ...[
+        // category's — and only while that category leaves something to
+        // choose. Void carries one type and has it filled in already, so a
+        // dropdown holding that single entry is left out rather than shown
+        // with nothing to do.
+        if (types.length > 1) ...[
           const SizedBox(height: 10.0),
           DropdownButtonFormField<String>(
             initialValue: draft.type,
@@ -1720,6 +1869,38 @@ class _AirTicketAmendmentBallysScreenState
             ),
         ],
 
+        // ── Refund detail ────────────────────────────────────────────────
+        //
+        // How the money goes back — only asked for on Cancellation → Cancel &
+        // refund ticket, which is the one type that settles the ticket rather
+        // than leaving it open.
+        if (draft.isCancelAndRefund) ...[
+          const SizedBox(height: 10.0),
+          DropdownButtonFormField<String>(
+            initialValue: draft.refundMethod,
+            isExpanded: true,
+            style: TextStyle(
+              fontSize: fontSettings.fontSize,
+              fontWeight: fontSettings.fontWeight,
+              color: Colors.black,
+            ),
+            decoration: _dropdownDeco("Refund Method", fontSettings),
+            hint: Text(
+              "Select refund method",
+              style: TextStyle(
+                fontSize: fontSettings.fontSize,
+                fontWeight: fontSettings.fontWeight,
+              ),
+            ),
+            items: _refundMethods
+                .map((m) =>
+                    DropdownMenuItem<String>(value: m, child: Text(m)))
+                .toList(),
+            onChanged: (value) =>
+                setState(() => draft.refundMethod = value),
+          ),
+        ],
+
         // ── Why, and anything else ───────────────────────────────────────
         //
         // Asked for by every type that carries detail, so the two fields are
@@ -1727,20 +1908,26 @@ class _AirTicketAmendmentBallysScreenState
         if (draft.hasDetail) ...[
           const SizedBox(height: 10.0),
           _textField(
-            label: draft.isCabinUpgrade
-                ? "Reason for Upgrade"
-                : draft.isDateChange
-                    ? "Reason for Date Change"
-                    : "Reason for Route Change",
+            label: _reasonLabel(draft),
             controller: draft.reason,
             fontSettings: fontSettings,
             maxLines: 3,
-            hint: draft.isCabinUpgrade
-                ? "Why is this ticket being upgraded?"
-                : draft.isDateChange
-                    ? "Why are this ticket's dates being changed?"
-                    : "Why is this ticket's route being changed?",
+            hint: _reasonHint(draft),
           ),
+          // What the cancelled ticket is still worth. Only Cancel and open
+          // ticket asks for it — the ticket stays alive, so its validity and
+          // the terms it can be reissued on travel with the amendment.
+          if (draft.isCancelAndOpen) ...[
+            const SizedBox(height: 10.0),
+            _textField(
+              label: "Ticket Validity / Reissue Note",
+              controller: draft.validityNote,
+              fontSettings: fontSettings,
+              maxLines: 3,
+              hint: "How long the ticket stays valid and on what terms it "
+                  "can be reissued",
+            ),
+          ],
           const SizedBox(height: 10.0),
           _textField(
             label: "Additional Remark",
@@ -1756,6 +1943,7 @@ class _AirTicketAmendmentBallysScreenState
 
   Widget _ticketCard(
     int index,
+    ReservationBallys reservation,
     _AmendableTicket ticket,
     FontSettings fontSettings,
   ) {
@@ -1807,7 +1995,7 @@ class _AirTicketAmendmentBallysScreenState
                   _guestPicker(index, ticket, draft, fontSettings),
                   if (ticket.guests.isNotEmpty) ...[
                     const SizedBox(height: 12),
-                    _amendmentFields(index, ticket, draft, fontSettings),
+                    _amendmentFields(index, reservation, ticket, draft, fontSettings),
                   ],
                 ],
               ),
@@ -1931,6 +2119,7 @@ class _AirTicketAmendmentBallysScreenState
                           ...tickets.asMap().entries.map(
                                 (entry) => _ticketCard(
                                   entry.key,
+                                  reservation,
                                   entry.value,
                                   fontSettings,
                                 ),

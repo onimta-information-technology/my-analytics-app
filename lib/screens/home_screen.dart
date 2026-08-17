@@ -47,6 +47,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   String? userName;
   bool _isLoadingData = false;
   String? locationLogo;
+  Timer? _eventTimer;
   @override
   bool get wantKeepAlive => true;
 @override
@@ -123,10 +124,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final now = DateTime.now();
     final currentEvent = ref.read(activeEventProvider);
 
-    if (currentEvent != null) return;
-
     EventType? eventToShow;
-    int displayDuration = 5;
+    int displayDuration = 4;
 
     if (now.month == 12) {
       eventToShow = EventType.christmas;
@@ -145,86 +144,95 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       displayDuration = 4;
     } else if (now.month == 2 && now.day == 14) {
       eventToShow = EventType.valentineDay;
-      displayDuration = 5;
+      displayDuration = 4;
     } else if (now.month == 2 && now.day == 17) {
       eventToShow = EventType.chineseNewYear;
-      displayDuration = 5;
+      displayDuration = 4;
     } else if (now.month == 3 && now.day == 4) {
       eventToShow = EventType.holi;
-      displayDuration = 5;
+      displayDuration = 4;
     } else if (now.month == 3 && now.day == 8) {
       eventToShow = EventType.happyWomen;
-      displayDuration = 5;
+      displayDuration = 4;
     } else if (now.month == 3 && now.day == 21) {
       eventToShow = EventType.ramadan;
-      displayDuration = 5;
+      displayDuration = 4;
     } else if (now.month == 4 && now.day == 5) {
       eventToShow = EventType.easter;
-      displayDuration = 5;
+      displayDuration = 4;
     } else if (now.month == 4 &&
         (now.day == 13 || now.day == 14 || now.day == 15)) {
       eventToShow = EventType.sinhalatamilNewYear;
-      displayDuration = 5;
+      displayDuration = 4;
     } else if (now.month == 4 && now.day == 22) {
       eventToShow = EventType.earthDay;
-      displayDuration = 5;
+      displayDuration = 4;
     } else if (now.month == 5 && now.day == 1) {
       eventToShow = EventType.labourDay;
-      displayDuration = 5;
+      displayDuration = 4;
     } else if (now.month == 5 && now.day == 11) {
       eventToShow = EventType.mothersDay;
-      displayDuration = 5;
+      displayDuration = 4;
     } else if (now.month == 5 && now.day == 26) {
       eventToShow = EventType.eidAlAdha;
-      displayDuration = 5;
+      displayDuration = 4;
     } else if (now.month == 6 && now.day == 5) {
       eventToShow = EventType.environmentDay;
-      displayDuration = 5;
+      displayDuration = 4;
     } else if (now.month == 6 && now.day == 15) {
       eventToShow = EventType.fathersDay;
-      displayDuration = 5;
+      displayDuration = 4;
     } else if (now.month == 7 && now.day == 30) {
       eventToShow = EventType.friendshipDay;
-      displayDuration = 5;
+      displayDuration = 4;
     } else if (now.month == 8 && now.day == 12) {
       eventToShow = EventType.youthDay;
-      displayDuration = 5;
+      displayDuration = 4;
     } else if (now.month == 8 && now.day == 14) {
       eventToShow = EventType.pakistanIndependenceDay;
-      displayDuration = 5;
+      displayDuration = 4;
     } else if (now.month == 8 && now.day == 15) {
       eventToShow = EventType.indianIndependenceDay;
-      displayDuration = 5;
+      displayDuration = 4;
     } else if (now.month == 8 && now.day == 28) {
       eventToShow = EventType.rakshaBandhan;
-      displayDuration = 5;
+      displayDuration = 4;
     } else if (now.month == 9 && now.day == 4) {
       eventToShow = EventType.janmashtamiEvent;
-      displayDuration = 5;
+      displayDuration = 4;
     } else if (now.month == 9 && now.day == 21) {
       eventToShow = EventType.peaceDay;
-      displayDuration = 5;
+      displayDuration = 4;
     } else if (now.month == 9 && now.day == 25) {
       eventToShow = EventType.autumnFestival;
-      displayDuration = 5;
+      displayDuration = 4;
     } else if (now.month == 9 && now.day == 27) {
       eventToShow = EventType.travellingBags;
-      displayDuration = 5;
+      displayDuration = 4;
     } else if (now.month == 10 && now.day == 31) {
       eventToShow = EventType.halloween;
-      displayDuration = 5;
+      displayDuration = 4;
     } else if (now.month == 11 && now.day == 8) {
       eventToShow = EventType.diwali;
-      displayDuration = 5;
+      displayDuration = 4;
     }
 
+    // The notifier is captured up-front: activeEventProvider is a root (non
+    // autoDispose) provider, so it outlives this widget. Dismissing through the
+    // captured notifier instead of `ref` means the overlay is still cleared when
+    // HomeScreen is disposed before the timer fires — otherwise the event stays
+    // stuck on screen for the rest of the app's life.
+    final notifier = ref.read(activeEventProvider.notifier);
+
     if (eventToShow != null) {
-      ref.read(activeEventProvider.notifier).state = eventToShow;
-      Future.delayed(Duration(seconds: displayDuration), () {
-        if (mounted) {
-          ref.read(activeEventProvider.notifier).state = null;
-        }
+      notifier.state = eventToShow;
+      _eventTimer?.cancel();
+      _eventTimer = Timer(Duration(seconds: displayDuration), () {
+        notifier.state = null;
       });
+    } else if (currentEvent != null) {
+      // Stale overlay left behind by a previous mount — nothing is due today.
+      notifier.state = null;
     }
   }
 

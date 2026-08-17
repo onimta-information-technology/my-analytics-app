@@ -381,28 +381,28 @@ class _LastThreeMonthsDetailPageState
         ButtonSegment(
           value: MemberTypeFilter.both,
           label: Text(
-            'All(${allMembers.length})',
+            'All-${allMembers.length}',
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
           ),
         ),
         ButtonSegment(
           value: MemberTypeFilter.newMembers,
           label: Text(
-            'New($newCount)',
+            'New-$newCount',
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
           ),
         ),
         ButtonSegment(
           value: MemberTypeFilter.oldMembers,
           label: Text(
-            'Old($oldCount)',
+            'Old-$oldCount',
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
           ),
         ),
         ButtonSegment(
           value: MemberTypeFilter.packageMembers,
           label: Text(
-            'Pkg($packageCount)',
+            'Pkg-$packageCount',
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
           ),
         ),

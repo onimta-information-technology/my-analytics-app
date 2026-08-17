@@ -706,29 +706,29 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> with 
         ButtonSegment(
           value: MemberTypeFilter.both,
           label: Text(
-            'All(${allMembers.length})',
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            'All-${allMembers.length}',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
         ButtonSegment(
           value: MemberTypeFilter.newMembers,
           label: Text(
-            'New($newCount)',
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            'New-$newCount',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
         ButtonSegment(
           value: MemberTypeFilter.oldMembers,
           label: Text(
-            'Old($oldCount)',
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            'Old-$oldCount',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
         ButtonSegment(
           value: MemberTypeFilter.packageMembers,
           label: Text(
-            'Pkg($packageCount)',
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            'Pkg-$packageCount',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
       ],

@@ -128,10 +128,19 @@ class MarketingRepository {
     int iid,
     AppMode appMode,
   ) async {
-    final actualSalesCode = await StorageUtil.getSalesCode();
+       final isMyDataMode = appMode == AppMode.myData;
+    // Marketing-permission users see their own numbers under their marketing
+    // code, so "My Data" is scoped by that instead of the sales code.
+    final scopeCode =
+        await StorageUtil.getDataScopeCode(isMyDataMode: isMyDataMode);
+    // Overall mode is only ever reached by users entitled to it — the app mode
+    // is pinned per user in AppModeSettingsNotifier — so it shows every row.
+  
+   // final actualSalesCode = await StorageUtil.getSalesCode();
     final deviceId = await DeviceId.get();
     final spName = await StorageUtil.getStoredProcedureName();
-
+       
+print('=== getTargetData IID=$scopeCode ===');
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -143,7 +152,7 @@ class MarketingRepository {
           "Para_Type": "int",
         },
         {
-          "Para_Data": actualSalesCode,
+          "Para_Data": scopeCode,
           "Para_Direction": "Input",
           "Para_Lenth": 100,
           "Para_Name": "@Text1",

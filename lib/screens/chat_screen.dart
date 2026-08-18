@@ -277,7 +277,7 @@ if (message.data['msg_type'] == '35') {
             ),
           )
           .then((_) {
-            _fetchChatsFromApi();
+            _refreshChatsAndGroups();
           });
     } else {
 
@@ -786,7 +786,10 @@ if (message.data['msg_type'] == '35') {
                 ),
               )
               .then((_) {
-                _fetchChatsFromApi();
+                // Both lists, not just chats: a message can have been
+                // forwarded from this conversation into a group, and the
+                // All/Unread tabs sort chats and groups together.
+                _refreshChatsAndGroups();
               });
         },
         onLongPress: () {
@@ -1125,7 +1128,8 @@ if (message.data['msg_type'] == '35') {
             ),
           ),
         )
-        .then((_) => _fetchGroups());
+        // Forwarding out of a group updates 1:1 chats too, so refresh both.
+        .then((_) => _refreshChatsAndGroups());
   }
 
   Widget _buildGroupList(FontSettings fontSettings) {
@@ -1806,7 +1810,7 @@ if (message.data['msg_type'] == '35') {
                                                       ),
                                                     );
 
-                                                    _fetchChatsFromApi();
+                                                    _refreshChatsAndGroups();
                                                   } catch (e) {
                                                     scaffoldMessenger
                                                         .hideCurrentSnackBar();

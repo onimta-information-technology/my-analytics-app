@@ -138,40 +138,17 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
   // ─── Admin actions ─────────────────────────────────────────────────────────
 
   Future<void> _renameGroup(String currentName) async {
-    final controller = TextEditingController(text: currentName);
-
+    // The controller lives inside the dialog widget: showDialog's future
+    // completes as soon as pop is called, while the dialog — and its
+    // TextField — stays mounted for the exit animation. Disposing it out here
+    // would pull the controller out from under a live TextField.
     final newName = await showDialog<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(
-          'Rename group',
-          style: TextStyle(fontSize: _fs.fontSize + 2),
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textCapitalization: TextCapitalization.words,
-          style: TextStyle(fontSize: _fs.fontSize - 2),
-          decoration: InputDecoration(
-            hintText: 'Group name',
-            hintStyle: TextStyle(fontSize: _fs.fontSize - 2),
-            border: const OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text('Cancel', style: TextStyle(fontSize: _fs.fontSize - 2)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
-            child: Text('Save', style: TextStyle(fontSize: _fs.fontSize - 2)),
-          ),
-        ],
+      builder: (dialogContext) => _RenameGroupDialog(
+        currentName: currentName,
+        fontSettings: _fs,
       ),
     );
-
-    controller.dispose();
 
     if (newName == null || newName.isEmpty || newName == currentName) return;
 
@@ -899,6 +876,67 @@ class _MemberPickerState extends State<_MemberPicker> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Rename prompt for a group. A widget of its own so the TextEditingController
+/// is disposed with the dialog's own state — after the route is gone — rather
+/// than the moment the caller's await returns.
+class _RenameGroupDialog extends StatefulWidget {
+  final String currentName;
+  final FontSettings fontSettings;
+
+  const _RenameGroupDialog({
+    required this.currentName,
+    required this.fontSettings,
+  });
+
+  @override
+  State<_RenameGroupDialog> createState() => _RenameGroupDialogState();
+}
+
+class _RenameGroupDialogState extends State<_RenameGroupDialog> {
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.currentName);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() => Navigator.pop(context, _controller.text.trim());
+
+  @override
+  Widget build(BuildContext context) {
+    final fs = widget.fontSettings;
+
+    return AlertDialog(
+      title: Text('Rename group', style: TextStyle(fontSize: fs.fontSize + 2)),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        textCapitalization: TextCapitalization.words,
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _submit(),
+        style: TextStyle(fontSize: fs.fontSize - 2),
+        decoration: InputDecoration(
+          hintText: 'Group name',
+          hintStyle: TextStyle(fontSize: fs.fontSize - 2),
+          border: const OutlineInputBorder(),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Cancel', style: TextStyle(fontSize: fs.fontSize - 2)),
+        ),
+        TextButton(
+          onPressed: _submit,
+          child: Text('Save', style: TextStyle(fontSize: fs.fontSize - 2)),
+        ),
+      ],
     );
   }
 }

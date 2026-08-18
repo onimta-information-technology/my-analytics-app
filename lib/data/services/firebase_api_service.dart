@@ -34,6 +34,7 @@ class FirebaseApiService {
     'markAsRead': '/api/chats',
     'fetchMessages': '/api/chats',
     'softDeleteMessage': '/api/chats',
+    'forwardMessage': '/api/chats', // base; full path: /api/chats/{chatId}/messages/{messageId}/forward
     'uploadFiles': '/api/chats', // base; full path: /api/chats/{chatId}/upload/multiple
     'createGroup': '/api/groups/create',
     'fetchUserGroups': '/api/groups/user',
@@ -406,9 +407,14 @@ print('createGroup response: $response');
 
   /// Sends a message to a group. Group messaging reuses the chat message
   /// endpoint with the groupId standing in for the chatId.
+  ///
+  /// [replyToMessageId] quotes an existing message — it must belong to this
+  /// same chat, or the backend answers 400. The server snapshots the quoted
+  /// text and sender name onto the new message, so nothing else is sent.
   static Future<Map<String, dynamic>> sendGroupMessage({
     required String groupId,
     required String text,
+    String? replyToMessageId,
   }) async {
     try {
       final domain = await resolveDomain();
@@ -416,11 +422,13 @@ print('createGroup response: $response');
       final senderName =
           await StorageUtil.getUserName() ?? await getName() ?? '';
       final url = '$domain${endpoints['fetchMessages']}/$groupId/messages';
+   
       return await postRequest(url, {
         'senderId': deviceId,
         'senderAppType': appType,
         'senderName': senderName,
         'text': text,
+        if (replyToMessageId != null) 'replyToMessageId': replyToMessageId,
       });
     } catch (e) {
       return {'success': false, 'error': e.toString()};
@@ -653,6 +661,7 @@ print('createGroup response: $response');
     required String body,
     required String chatId,
     int recipientAppType = 1,
+    String? replyToMessageId,
   }) async {
     try {
       print(
@@ -669,7 +678,7 @@ print('createGroup response: $response');
         "chatId": chatId,
         "senderAppType": 2,
         "recipientAppType": recipientAppType,
-
+        if (replyToMessageId != null) "replyToMessageId": replyToMessageId,
       });
       print('sendMessage response: $response');
       return response;
@@ -703,6 +712,42 @@ static Future<Map<String, dynamic>> softDeleteMessage(
     final deviceId = await DeviceId.get();
     final url = '$domain/api/chats/$chatId/messages/$messageId/soft-delete';
     return await patchRequest(url, {'userId': deviceId,'appType': 2});
+  } catch (e) {
+    return {'success': false, 'error': e.toString()};
+  }
+}
+
+/// Forwards one message into other chats/groups and/or straight to users.
+///
+/// [chatId]/[messageId] identify the message being forwarded. Targets are
+/// given as either (or both) of:
+///  * [targetChatIds] — chats or groups the user is already a participant of.
+///  * [targetUsers] — `{userUuid, appType}` pairs; the backend finds or
+///    creates the 1:1 chat with that person, so they need not be messaged
+///    before.
+///
+/// Best-effort per target: the response carries a `results` list where each
+/// entry reports its own success/error, so one rejected target (not a
+/// participant, admin-only group, forwarding back into the source chat) does
+/// not stop the rest.
+static Future<Map<String, dynamic>> forwardMessage({
+  required String chatId,
+  required String messageId,
+  List<String> targetChatIds = const [],
+  List<Map<String, dynamic>> targetUsers = const [],
+}) async {
+  try {
+    final domain = await resolveDomain();
+    final deviceId = await DeviceId.get();
+    final senderName = await StorageUtil.getUserName() ?? await getName() ?? '';
+    final url = '$domain/api/chats/$chatId/messages/$messageId/forward';
+    return await postRequest(url, {
+      'userId': deviceId,
+      'appType': appType,
+      'senderName': senderName,
+      if (targetChatIds.isNotEmpty) 'targetChatIds': targetChatIds,
+      if (targetUsers.isNotEmpty) 'targetUserIds': targetUsers,
+    });
   } catch (e) {
     return {'success': false, 'error': e.toString()};
   }

@@ -78,6 +78,19 @@ class ChatMessage {
   final String? attachmentUrl;
   final String? attachmentType;
 
+  // Forwarded: set by the backend on messages produced by
+  // POST /api/chats/:chatId/messages/:messageId/forward, so the bubble can
+  // show a "Forwarded" tag naming whoever sent the original.
+  final bool isForwarded;
+  final String? forwardedFromSenderName;
+
+  // Reply: set when this message quotes another one in the same chat. The
+  // text and sender name are a snapshot taken at send time, so the quoted
+  // preview survives the original being deleted.
+  final String? replyToMessageId;
+  final String? replyToText;
+  final String? replyToSenderName;
+
   // Multi-attachment: when non-empty, render as image grid
   final List<AttachmentItem> groupedAttachments;
 
@@ -96,6 +109,11 @@ class ChatMessage {
     this.attachmentType,
     this.senderId,
     this.senderName,
+    this.isForwarded = false,
+    this.forwardedFromSenderName,
+    this.replyToMessageId,
+    this.replyToText,
+    this.replyToSenderName,
     List<AttachmentItem>? groupedAttachments,
   }) : groupedAttachments = groupedAttachments ?? const [];
 
@@ -119,6 +137,11 @@ class ChatMessage {
     String? attachmentType,
     String? senderId,
     String? senderName,
+    bool? isForwarded,
+    String? forwardedFromSenderName,
+    String? replyToMessageId,
+    String? replyToText,
+    String? replyToSenderName,
     List<AttachmentItem>? groupedAttachments,
   }) =>
       ChatMessage(
@@ -136,6 +159,12 @@ class ChatMessage {
         attachmentType: attachmentType ?? this.attachmentType,
         senderId: senderId ?? this.senderId,
         senderName: senderName ?? this.senderName,
+        isForwarded: isForwarded ?? this.isForwarded,
+        forwardedFromSenderName:
+            forwardedFromSenderName ?? this.forwardedFromSenderName,
+        replyToMessageId: replyToMessageId ?? this.replyToMessageId,
+        replyToText: replyToText ?? this.replyToText,
+        replyToSenderName: replyToSenderName ?? this.replyToSenderName,
         groupedAttachments: groupedAttachments ?? this.groupedAttachments,
       );
 
@@ -154,6 +183,11 @@ class ChatMessage {
         'attachmentType': attachmentType,
         'senderId': senderId,
         'senderName': senderName,
+        'isForwarded': isForwarded,
+        'forwardedFromSenderName': forwardedFromSenderName,
+        'replyToMessageId': replyToMessageId,
+        'replyToText': replyToText,
+        'replyToSenderName': replyToSenderName,
         'groupedAttachments':
             groupedAttachments.map((a) => a.toJson()).toList(),
       };
@@ -173,6 +207,11 @@ class ChatMessage {
         attachmentType: json['attachmentType'],
         senderId: json['senderId'],
         senderName: json['senderName'],
+        isForwarded: json['isForwarded'] == true,
+        forwardedFromSenderName: json['forwardedFromSenderName'],
+        replyToMessageId: json['replyToMessageId'],
+        replyToText: json['replyToText'],
+        replyToSenderName: json['replyToSenderName'],
         groupedAttachments: (json['groupedAttachments'] as List<dynamic>?)
                 ?.map((e) => AttachmentItem.fromJson(e))
                 .toList() ??
@@ -215,6 +254,13 @@ class ChatMessage {
       fileName: fileName,
       senderId: senderID.toString().isEmpty ? null : senderID.toString(),
       senderName: json['senderName'] as String?,
+      // The backend sends these as 1/0 on some rows and true/false on others.
+      isForwarded: json['isForwarded'] == true || json['isForwarded'] == 1,
+      forwardedFromSenderName: json['forwardedFromSenderName'] as String?,
+      // Null on every message that is not a reply.
+      replyToMessageId: json['replyToMessageId'] as String?,
+      replyToText: json['replyToText'] as String?,
+      replyToSenderName: json['replyToSenderName'] as String?,
     );
   }
 
@@ -272,6 +318,11 @@ class ChatMessage {
           isRead: msg.isRead,
           senderId: msg.senderId,
           senderName: msg.senderName,
+          isForwarded: msg.isForwarded,
+          forwardedFromSenderName: msg.forwardedFromSenderName,
+          replyToMessageId: msg.replyToMessageId,
+          replyToText: msg.replyToText,
+          replyToSenderName: msg.replyToSenderName,
           groupedAttachments: group,
         ));
         i = j;

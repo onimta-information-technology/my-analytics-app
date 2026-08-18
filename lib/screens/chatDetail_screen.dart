@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:ballys_reservation_app/components/badge_service.dart';
+import 'package:ballys_reservation_app/components/forward_message_sheet.dart';
 import 'package:ballys_reservation_app/components/group_details_sheet.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
@@ -12,6 +13,7 @@ import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/download_helper.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
@@ -71,6 +73,9 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
   // ── Multi-select ──
   final Set<String> _selectedMessageIds = {};
   bool get _isSelectionMode => _selectedMessageIds.isNotEmpty;
+
+  /// Message the composer is currently quoting, or null for a plain send.
+  ChatMessage? _replyingTo;
 
   Timer? _readStatusPollTimer;
   StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
@@ -334,6 +339,9 @@ Future<void> _markMessagesAsRead() async {
 
     final localId = DateTime.now().millisecondsSinceEpoch.toString();
     final now = DateTime.now();
+    // Taken before the composer is cleared, so the optimistic bubble and the
+    // request agree on what is being quoted.
+    final replyTo = _replyingTo;
 
     setState(() {
       _messages.add(
@@ -343,8 +351,12 @@ Future<void> _markMessagesAsRead() async {
           isMe: true,
           timestamp: now,
           isRead: false,
+          replyToMessageId: replyTo?.apiMessageId,
+          replyToText: replyTo == null ? null : _quotedPreviewText(replyTo),
+          replyToSenderName: replyTo == null ? null : _senderLabel(replyTo),
         ),
       );
+      _replyingTo = null;
     });
     _messageController.clear();
     if (widget.onMessageSent != null) widget.onMessageSent!(text);
@@ -354,6 +366,7 @@ Future<void> _markMessagesAsRead() async {
           ? await FirebaseApiService.sendGroupMessage(
               groupId: widget.contact.chatUuid,
               text: text,
+              replyToMessageId: replyTo?.apiMessageId,
             )
           : await FirebaseApiService.sendMessage(
               recipientUuid: widget.contact.userUuid,
@@ -362,6 +375,7 @@ Future<void> _markMessagesAsRead() async {
               body: text,
               chatId: widget.contact.chatUuid,
               recipientAppType: widget.contact.appType,
+              replyToMessageId: replyTo?.apiMessageId,
             );
       if (response['success'] == true) {
         final rd = response['data'];
@@ -664,6 +678,375 @@ Future<void> _markMessagesAsRead() async {
     setState(() => _selectedMessageIds.clear());
   }
 
+  /// One button in the selection action bar. Compact by design — the bar
+  /// carries up to four of these plus the count.
+  Widget _selectionAction({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+    required FontSettings fontSettings,
+    bool destructive = false,
+  }) {
+    final labelStyle = TextStyle(fontSize: fontSettings.fontSize - 3);
+    final padding = const EdgeInsets.symmetric(horizontal: 10);
+
+    if (destructive) {
+      return ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.red,
+          foregroundColor: Colors.white,
+          padding: padding,
+          visualDensity: VisualDensity.compact,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+        onPressed: onPressed,
+        icon: Icon(icon, size: 18),
+        label: Text(label, style: labelStyle),
+      );
+    }
+
+    return TextButton.icon(
+      style: TextButton.styleFrom(
+        foregroundColor: Colors.green,
+        padding: padding,
+        visualDensity: VisualDensity.compact,
+      ),
+      onPressed: onPressed,
+      icon: Icon(icon, size: 18),
+      label: Text(label, style: labelStyle),
+    );
+  }
+
+  // ─── Reply ──────────────────────────────────────────────────────────────────
+
+  /// Who sent [msg], as shown on a quoted preview.
+  String _senderLabel(ChatMessage msg) {
+    if (msg.isMe) return 'You';
+    final name = msg.senderName?.trim();
+    if (name != null && name.isNotEmpty) return name;
+    return widget.contact.name;
+  }
+
+  /// One-line stand-in for a message inside a quote block.
+  ///
+  /// Attachment messages carry an upload placeholder as their text
+  /// ("📎 scaled_b7edf13a-….jpg"), which reads as noise in a quote — so
+  /// describe the attachment instead.
+  String _quotedPreviewText(ChatMessage msg) {
+    if (msg.hasGroupedAttachments) {
+      final count = msg.groupedAttachments.length;
+      if (msg.isImageGroup) return count > 1 ? '\$count photos' : 'Photo';
+      return count > 1 ? '\$count attachments' : 'Attachment';
+    }
+    if (msg.fileType == 'image') return 'Photo';
+    if (msg.fileType != null) return msg.fileName ?? 'Attachment';
+    return _quoteTextOrAttachmentLabel(msg.text);
+  }
+
+  /// Same tidy-up for a quote the server sent back: `replyToText` is a
+  /// snapshot of the original's text, so an attachment original arrives as the
+  /// "📎 filename" placeholder with no attachment metadata alongside it.
+  static const Set<String> _imageExtensions = {
+    'jpg',
+    'jpeg',
+    'png',
+    'gif',
+    'webp',
+  };
+
+  String _quoteTextOrAttachmentLabel(String? raw) {
+    final text = raw?.trim() ?? '';
+    if (!text.startsWith('📎')) return text.isEmpty ? 'Message' : text;
+
+    final fileName = text.substring('📎'.length).trim();
+    if (fileName.isEmpty) return 'Attachment';
+    return _imageExtensions.contains(fileName.split('.').last.toLowerCase())
+        ? 'Photo'
+        : fileName;
+  }
+
+  /// Only messages the server already knows about can be quoted — the backend
+  /// rejects a replyToMessageId it cannot find in this chat.
+  bool _canReplyTo(ChatMessage msg) => msg.apiMessageId != null;
+
+  void _startReply(ChatMessage msg) {
+    setState(() {
+      _replyingTo = msg;
+      _selectedMessageIds.clear();
+    });
+    _messageFocusNode.requestFocus();
+  }
+
+  void _cancelReply() {
+    setState(() => _replyingTo = null);
+  }
+
+  /// Reply from the selection bar. Quoting is one-to-one, so this is only
+  /// offered while exactly one message is selected.
+  void _replyToSelectedMessage() {
+    if (_selectedMessageIds.length != 1) return;
+    final id = _selectedMessageIds.first;
+    final index = _messages.indexWhere((m) => m.id == id);
+    if (index == -1) return;
+
+    final msg = _messages[index];
+    if (!_canReplyTo(msg)) {
+      _showErrorSnack('This message cannot be replied to yet.');
+      return;
+    }
+    _startReply(msg);
+  }
+
+  /// The composer's quoted-message banner.
+  Widget _buildReplyPreview(ChatMessage msg, FontSettings fontSettings) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+      color: Colors.grey[100],
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 36,
+            decoration: BoxDecoration(
+              color: Colors.green,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Replying to ${_senderLabel(msg)}',
+                  style: TextStyle(
+                    color: Colors.green[800],
+                    fontWeight: FontWeight.bold,
+                    fontSize: fontSettings.fontSize - 4,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _quotedPreviewText(msg),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.grey[700],
+                    fontSize: fontSettings.fontSize - 3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, color: Colors.grey),
+            tooltip: 'Cancel reply',
+            onPressed: _cancelReply,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The quoted snippet rendered inside a reply bubble.
+  Widget _buildQuotedMessage(ChatMessage message, FontSettings fontSettings) {
+    final onGreen = message.isMe;
+    final name = message.replyToSenderName?.trim();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: onGreen
+            ? Colors.white.withOpacity(0.2)
+            : Colors.black.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(8),
+        border: Border(
+          left: BorderSide(
+            color: onGreen ? Colors.white : Colors.green,
+            width: 3,
+          ),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            (name != null && name.isNotEmpty) ? name : 'Message',
+            style: TextStyle(
+              color: onGreen ? Colors.white : Colors.green[800],
+              fontWeight: FontWeight.bold,
+              fontSize: fontSettings.fontSize - 4,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            // The original may have been deleted since; the server keeps a
+            // snapshot of its text, so this stays readable either way.
+            _quoteTextOrAttachmentLabel(message.replyToText),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: onGreen ? Colors.white70 : Colors.grey[800],
+              fontSize: fontSettings.fontSize - 4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Forward selected ───────────────────────────────────────────────────────
+
+  /// Server-side message ids covered by [msg]. A grouped image bubble is
+  /// several server messages collapsed into one, so each attachment has to be
+  /// forwarded on its own.
+  List<String> _forwardableIds(ChatMessage msg) {
+    if (msg.hasGroupedAttachments) {
+      final ids = msg.groupedAttachments
+          .map((a) => a.messageId)
+          .whereType<String>()
+          .toList();
+      if (ids.isNotEmpty) return ids;
+    }
+    return msg.apiMessageId == null ? const [] : [msg.apiMessageId!];
+  }
+
+  Future<void> _forwardSelectedMessages() async {
+    final selectedIds = Set<String>.from(_selectedMessageIds);
+    // Oldest first, so a multi-message forward lands in the reading order.
+    final selectedMsgs =
+        _messages.where((m) => selectedIds.contains(m.id)).toList();
+
+    final sendable =
+        selectedMsgs.where((m) => _forwardableIds(m).isNotEmpty).toList();
+
+    if (sendable.isEmpty) {
+      _showErrorSnack('These messages cannot be forwarded yet.');
+      return;
+    }
+
+    final targets = await showForwardMessageSheet(
+      context: context,
+      fontSettings: ref.read(fontSettingsProvider),
+      messageCount: sendable.length,
+      excludeChatId: widget.contact.chatUuid,
+      excludeUserUuid: widget.isGroup ? null : widget.contact.userUuid,
+    );
+
+    if (targets == null || targets.isEmpty || !mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text('Forwarding to ${targets.length} '
+                'chat${targets.length > 1 ? 's' : ''}...'),
+          ],
+        ),
+        duration: const Duration(seconds: 30),
+        backgroundColor: Colors.grey[800],
+      ),
+    );
+
+    int delivered = 0;
+    int failed = 0;
+    String? firstError;
+
+    for (final msg in sendable) {
+      for (final messageId in _forwardableIds(msg)) {
+        final response = await FirebaseApiService.forwardMessage(
+          chatId: msg.apiChatId ?? widget.contact.chatUuid,
+          messageId: messageId,
+          targetChatIds: targets.chatIds,
+          targetUsers: targets.users,
+        );
+
+        if (response['success'] != true) {
+          failed += targets.length;
+          firstError ??= _forwardErrorText(response);
+          continue;
+        }
+
+        // Best-effort per target: the call can succeed while individual
+        // targets are rejected, so tally the per-target results.
+        final results = response['data']?['results'];
+        if (results is List) {
+          for (final result in results.whereType<Map>()) {
+            if (result['success'] == true) {
+              delivered++;
+            } else {
+              failed++;
+              final error = result['error'];
+              if (error is String && error.isNotEmpty) firstError ??= error;
+            }
+          }
+        } else {
+          delivered += targets.length;
+        }
+      }
+    }
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    setState(() => _selectedMessageIds.clear());
+
+    final String message;
+    if (delivered == 0) {
+      message = firstError ?? 'Could not forward the message.';
+    } else if (failed == 0) {
+      message = targets.length == 1
+          ? 'Forwarded to ${targets.names.first}'
+          : 'Forwarded to ${targets.length} chats';
+    } else {
+      message = 'Forwarded, but $failed did not go through'
+          '${firstError == null ? '' : ': $firstError'}';
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: delivered == 0
+            ? Colors.red
+            : (failed == 0 ? Colors.green[700] : Colors.orange[800]),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  /// The backend explains a rejected forward in the error body (not a
+  /// participant, admin-only group, same chat) — surface that rather than a
+  /// generic failure.
+  String _forwardErrorText(Map<String, dynamic> response) {
+    final body = response['responseBody'];
+    if (body is String && body.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(body);
+        if (decoded is Map) {
+          final message = decoded['error'] ?? decoded['message'];
+          if (message is String && message.isNotEmpty) return message;
+        }
+      } catch (_) {
+        // Not JSON — fall through to the generic message.
+      }
+    }
+    return 'Could not forward the message.';
+  }
+
   // ─── Delete selected ────────────────────────────────────────────────────────
 
   void _deleteSelectedMessages() {
@@ -820,6 +1203,11 @@ Future<void> _markMessagesAsRead() async {
     setState(() {
       _messages.removeWhere((m) => selectedIds.contains(m.id));
       _selectedMessageIds.clear();
+      // Quoting a message that has just been deleted would be rejected on
+      // send, so drop the pending reply with it.
+      if (_replyingTo != null && selectedIds.contains(_replyingTo!.id)) {
+        _replyingTo = null;
+      }
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1189,7 +1577,13 @@ Future<void> _markMessagesAsRead() async {
     // Name above the bubble, so a group conversation shows who is talking.
     final showSenderName = widget.isGroup && !message.isMe;
 
-    return GestureDetector(
+    // Swipe left-to-right to reply, the way every other chat app does it.
+    // Selection mode owns the horizontal gesture instead, and a message the
+    // server has not acknowledged yet cannot be quoted.
+    final canSwipeToReply =
+        !_isSelectionMode && widget.canSendMessages && _canReplyTo(message);
+
+    final bubble = GestureDetector(
       onLongPress: () => _toggleSelection(message.id),
       onTap: () {
         if (_isSelectionMode) _toggleSelection(message.id);
@@ -1306,6 +1700,60 @@ Future<void> _markMessagesAsRead() async {
                           ),
                         ),
 
+                      // Quoted message (reply)
+                      if (message.replyToMessageId != null)
+                        Padding(
+                          padding: EdgeInsets.only(
+                            left: isImageBubble ? 8 : 0,
+                            right: isImageBubble ? 8 : 0,
+                            top: isImageBubble ? 4 : 0,
+                          ),
+                          child: _buildQuotedMessage(message, fontSettings),
+                        ),
+
+                      // Forwarded tag — the backend marks messages created
+                      // by the forward endpoint, naming the original sender.
+                      if (message.isForwarded)
+                        Padding(
+                          padding: EdgeInsets.only(
+                            bottom: 4,
+                            left: isImageBubble ? 8 : 0,
+                            top: isImageBubble ? 4 : 0,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.forward,
+                                size: fontSettings.fontSize - 3,
+                                color: message.isMe
+                                    ? Colors.white70
+                                    : Colors.grey[700],
+                              ),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  (message.forwardedFromSenderName
+                                              ?.trim()
+                                              .isNotEmpty ??
+                                          false)
+                                      ? 'Forwarded from '
+                                          '${message.forwardedFromSenderName!.trim()}'
+                                      : 'Forwarded',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontStyle: FontStyle.italic,
+                                    fontSize: fontSettings.fontSize - 4,
+                                    color: message.isMe
+                                        ? Colors.white70
+                                        : Colors.grey[700],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
                       // Attachment
                       if (hasGrouped) ...[
                         _buildImageGrid(
@@ -1384,6 +1832,50 @@ Future<void> _markMessagesAsRead() async {
         ),
       ),
     );
+
+    return _wrapSwipeToReply(
+      message: message,
+      bubble: bubble,
+      enabled: canSwipeToReply,
+      fontSettings: fontSettings,
+    );
+  }
+
+  /// [bubble] wrapped in the swipe-to-reply gesture. Dismissible does the drag
+  /// and the spring-back; confirmDismiss always answers false, so the row is
+  /// never actually removed — the swipe is only a trigger.
+  Widget _wrapSwipeToReply({
+    required ChatMessage message,
+    required Widget bubble,
+    required bool enabled,
+    required FontSettings fontSettings,
+  }) {
+    if (!enabled) return bubble;
+
+    return Dismissible(
+      key: ValueKey('swipe-reply-${message.id}'),
+      direction: DismissDirection.startToEnd,
+      // Deliberately short: a reply swipe is a flick, not a drag across the
+      // screen, and the bubble springs back either way.
+      dismissThresholds: const {DismissDirection.startToEnd: 0.25},
+      confirmDismiss: (_) async {
+        HapticFeedback.lightImpact();
+        _startReply(message);
+        return false;
+      },
+      background: Padding(
+        padding: const EdgeInsets.only(left: 24),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Icon(
+            Icons.reply,
+            color: Colors.green[700],
+            size: fontSettings.fontSize + 6,
+          ),
+        ),
+      ),
+      child: bubble,
+    );
   }
 
   // ─── Date separator ─────────────────────────────────────────────────────────
@@ -1446,6 +1938,17 @@ Future<void> _markMessagesAsRead() async {
                     icon: const Icon(Icons.select_all),
                     tooltip: 'Select All',
                     onPressed: _selectAll,
+                  ),
+                  if (_selectedMessageIds.length == 1)
+                    IconButton(
+                      icon: const Icon(Icons.reply),
+                      tooltip: 'Reply',
+                      onPressed: _replyToSelectedMessage,
+                    ),
+                  IconButton(
+                    icon: const Icon(Icons.forward),
+                    tooltip: 'Forward',
+                    onPressed: _forwardSelectedMessages,
                   ),
                   IconButton(
                     icon: const Icon(Icons.delete),
@@ -1652,7 +2155,9 @@ Future<void> _markMessagesAsRead() async {
                 ),
 
               // ── Input bar (hidden in selection mode) ──
-              if (!_isSelectionMode && widget.canSendMessages)
+              if (!_isSelectionMode && widget.canSendMessages) ...[
+                if (_replyingTo != null)
+                  _buildReplyPreview(_replyingTo!, fontSettings),
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -1731,6 +2236,7 @@ Future<void> _markMessagesAsRead() async {
                     ],
                   ),
                 ),
+              ],
 
               // ── Selection action bar ──
               if (_isSelectionMode)
@@ -1750,48 +2256,53 @@ Future<void> _markMessagesAsRead() async {
                       ),
                     ],
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Expanded(
-                        child: Text(
-                          '${_selectedMessageIds.length} message${_selectedMessageIds.length > 1 ? 's' : ''} selected',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: fontSettings.fontSize - 3,
-                          ),
+                      Text(
+                        '${_selectedMessageIds.length} message'
+                        '${_selectedMessageIds.length > 1 ? 's' : ''} selected',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: fontSettings.fontSize - 3,
                         ),
                       ),
-                      TextButton.icon(
-                        onPressed: _selectAll,
-                        icon: const Icon(
-                          Icons.select_all,
-                          color: Colors.green,
-                        ),
-                        label: Text(
-                          'All',
-                          style: TextStyle(
-                            color: Colors.green,
-                            fontSize: fontSettings.fontSize - 3,
+                      const SizedBox(height: 6),
+                      // Wrapped rather than a Row: four actions at a large
+                      // font size do not fit one line on a narrow phone.
+                      Wrap(
+                        alignment: WrapAlignment.end,
+                        spacing: 4,
+                        runSpacing: 4,
+                        children: [
+                          _selectionAction(
+                            icon: Icons.select_all,
+                            label: 'All',
+                            onPressed: _selectAll,
+                            fontSettings: fontSettings,
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
+                          if (_selectedMessageIds.length == 1)
+                            _selectionAction(
+                              icon: Icons.reply,
+                              label: 'Reply',
+                              onPressed: _replyToSelectedMessage,
+                              fontSettings: fontSettings,
+                            ),
+                          _selectionAction(
+                            icon: Icons.forward,
+                            label: 'Forward',
+                            onPressed: _forwardSelectedMessages,
+                            fontSettings: fontSettings,
                           ),
-                        ),
-                        onPressed: _deleteSelectedMessages,
-                        icon: const Icon(Icons.delete, size: 18),
-                        label: Text(
-                          'Delete',
-                          style: TextStyle(
-                            fontSize: fontSettings.fontSize - 3,
+                          _selectionAction(
+                            icon: Icons.delete,
+                            label: 'Delete',
+                            onPressed: _deleteSelectedMessages,
+                            fontSettings: fontSettings,
+                            destructive: true,
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ),

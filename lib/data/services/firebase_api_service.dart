@@ -408,11 +408,14 @@ print('createGroup response: $response');
   /// Sends a message to a group. Group messaging reuses the chat message
   /// endpoint with the groupId standing in for the chatId.
   ///
+  /// [chatId] is a groupId for a group and a chatId for a 1:1 conversation —
+  /// the backend treats them the same, so this one call serves both.
+  ///
   /// [replyToMessageId] quotes an existing message — it must belong to this
   /// same chat, or the backend answers 400. The server snapshots the quoted
   /// text and sender name onto the new message, so nothing else is sent.
-  static Future<Map<String, dynamic>> sendGroupMessage({
-    required String groupId,
+  static Future<Map<String, dynamic>> sendChatMessage({
+    required String chatId,
     required String text,
     String? replyToMessageId,
   }) async {
@@ -421,8 +424,8 @@ print('createGroup response: $response');
       final deviceId = await DeviceId.get();
       final senderName =
           await StorageUtil.getUserName() ?? await getName() ?? '';
-      final url = '$domain${endpoints['fetchMessages']}/$groupId/messages';
-   
+      final url = '$domain${endpoints['fetchMessages']}/$chatId/messages';
+
       return await postRequest(url, {
         'senderId': deviceId,
         'senderAppType': appType,
@@ -661,14 +664,14 @@ print('createGroup response: $response');
     required String body,
     required String chatId,
     int recipientAppType = 1,
-    String? replyToMessageId,
   }) async {
     try {
       print(
-          'sendMessage called with recipientUuid: $recipientUuid, chatId: $chatId, message: $message ,recipientAppType: $recipientAppType');
+          'sendMessage called with recipientUuid: $recipientUuid,recipientUuid: $title, chatId: $chatId, message: $message ,recipientAppType: $recipientAppType');
       final domain = await resolveDomain();
       final deviceId = await DeviceId.get();
       final url = '$domain${endpoints['sendMessage']}';
+      print('sendMessage URL: $url');
       final response = await postRequest(url, {
         "senderUuid": deviceId,
         "recipientUuid": recipientUuid,
@@ -678,7 +681,6 @@ print('createGroup response: $response');
         "chatId": chatId,
         "senderAppType": 2,
         "recipientAppType": recipientAppType,
-        if (replyToMessageId != null) "replyToMessageId": replyToMessageId,
       });
       print('sendMessage response: $response');
       return response;
@@ -741,15 +743,32 @@ static Future<Map<String, dynamic>> forwardMessage({
     final deviceId = await DeviceId.get();
     final senderName = await StorageUtil.getUserName() ?? await getName() ?? '';
     final url = '$domain/api/chats/$chatId/messages/$messageId/forward';
-    return await postRequest(url, {
+    final body = {
       'userId': deviceId,
       'appType': appType,
       'senderName': senderName,
       if (targetChatIds.isNotEmpty) 'targetChatIds': targetChatIds,
       if (targetUsers.isNotEmpty) 'targetUserIds': targetUsers,
-    });
+    };
+    _logLong('forwardMessage ▶ POST $url');
+    _logLong('forwardMessage ▶ body: ${jsonEncode(body)}');
+
+    final result = await postRequest(url, body);
+
+    _logLong('forwardMessage ◀ response: ${jsonEncode(result)}');
+    return result;
   } catch (e) {
+    print('forwardMessage ✖ exception: $e');
     return {'success': false, 'error': e.toString()};
+  }
+}
+
+/// print() drops very long lines on some platforms, so long payloads are
+/// emitted in chunks that survive the terminal.
+static void _logLong(String message, {int chunkSize = 800}) {
+  for (var i = 0; i < message.length; i += chunkSize) {
+    final end = (i + chunkSize < message.length) ? i + chunkSize : message.length;
+    print(message.substring(i, end));
   }
 }
 

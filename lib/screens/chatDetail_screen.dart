@@ -242,23 +242,22 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                   !grouped.any((g) => g.id == m.id);
             }).toList();
 
-            // Group sends do not always hand back the new messageId, so an
-            // optimistic bubble can stay id-less. Drop it once the server
-            // echoes the same text back, otherwise it shows up twice.
-            if (widget.isGroup) {
-              pendingLocal.removeWhere(
-                (m) =>
-                    m.isMe &&
-                    m.text.isNotEmpty &&
-                    grouped.any(
-                      (g) =>
-                          g.isMe &&
-                          g.text == m.text &&
-                          g.timestamp.difference(m.timestamp).abs() <
-                              const Duration(minutes: 2),
-                    ),
-              );
-            }
+            // The chat endpoint does not always hand back the new messageId,
+            // so an optimistic bubble can stay id-less — for group sends and
+            // for 1:1 replies alike. Drop it once the server echoes the same
+            // text back, otherwise it shows up twice.
+            pendingLocal.removeWhere(
+              (m) =>
+                  m.isMe &&
+                  m.text.isNotEmpty &&
+                  grouped.any(
+                    (g) =>
+                        g.isMe &&
+                        g.text == m.text &&
+                        g.timestamp.difference(m.timestamp).abs() <
+                            const Duration(minutes: 2),
+                  ),
+            );
 
             final merged = [...grouped, ...pendingLocal]
               ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
@@ -343,6 +342,13 @@ Future<void> _markMessagesAsRead() async {
     // request agree on what is being quoted.
     final replyTo = _replyingTo;
 
+    // Groups always use POST /api/chats/:chatId/messages. A 1:1 message
+    // normally goes through send-message-with-notification instead (that is
+    // what pushes to the recipient), but that endpoint does not persist
+    // replyToMessageId — the quote came back null on the next fetch — so a
+    // 1:1 *reply* is sent on the chat endpoint, which does store it.
+    final viaChatEndpoint = widget.isGroup || replyTo != null;
+
     setState(() {
       _messages.add(
         ChatMessage(
@@ -362,9 +368,9 @@ Future<void> _markMessagesAsRead() async {
     if (widget.onMessageSent != null) widget.onMessageSent!(text);
 
     try {
-      final response = widget.isGroup
-          ? await FirebaseApiService.sendGroupMessage(
-              groupId: widget.contact.chatUuid,
+      final response = viaChatEndpoint
+          ? await FirebaseApiService.sendChatMessage(
+              chatId: widget.contact.chatUuid,
               text: text,
               replyToMessageId: replyTo?.apiMessageId,
             )
@@ -375,7 +381,6 @@ Future<void> _markMessagesAsRead() async {
               body: text,
               chatId: widget.contact.chatUuid,
               recipientAppType: widget.contact.appType,
-              replyToMessageId: replyTo?.apiMessageId,
             );
       if (response['success'] == true) {
         final rd = response['data'];
@@ -391,9 +396,9 @@ Future<void> _markMessagesAsRead() async {
             }
           });
         }
-        // The group endpoint answers with the created message at the top
+        // The chat endpoint answers with the created message at the top
         // level, so pick the ids up from there when they are not nested.
-        if (widget.isGroup && rd is Map && rd['messageId'] != null) {
+        if (viaChatEndpoint && rd is Map && rd['messageId'] != null) {
           setState(() {
             final idx = _messages.indexWhere((m) => m.id == localId);
             if (idx != -1) {
@@ -405,7 +410,7 @@ Future<void> _markMessagesAsRead() async {
             }
           });
         }
-        if (widget.isGroup) {
+        if (viaChatEndpoint) {
           // Pull the server copy so the message carries its real id.
           _fetchMessagesFromApi(silent: true);
         }

@@ -1917,17 +1917,17 @@ class _AirTicketAmendmentBallysScreenState
           // What the cancelled ticket is still worth. Only Cancel and open
           // ticket asks for it — the ticket stays alive, so its validity and
           // the terms it can be reissued on travel with the amendment.
-          if (draft.isCancelAndOpen) ...[
-            const SizedBox(height: 10.0),
-            _textField(
-              label: "Ticket Validity / Reissue Note",
-              controller: draft.validityNote,
-              fontSettings: fontSettings,
-              maxLines: 3,
-              hint: "How long the ticket stays valid and on what terms it "
-                  "can be reissued",
-            ),
-          ],
+          // if (draft.isCancelAndOpen) ...[
+          //   const SizedBox(height: 10.0),
+          //   _textField(
+          //     label: "Ticket Validity / Reissue Note",
+          //     controller: draft.validityNote,
+          //     fontSettings: fontSettings,
+          //     maxLines: 3,
+          //     hint: "How long the ticket stays valid and on what terms it "
+          //         "can be reissued",
+          //   ),
+          // ],
           const SizedBox(height: 10.0),
           _textField(
             label: "Additional Remark",

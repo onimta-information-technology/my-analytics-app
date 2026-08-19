@@ -1910,6 +1910,13 @@ const SizedBox(height: 16),
                                                         ),
                                                       ),
                                                       Text(
+                                                        "Children: ${hotel.childrenCount ?? 0}",
+                                                        style: const TextStyle(
+                                                          fontSize: 18,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                      Text(
                                                         "Rooms: ${hotel.roomCount}",
                                                         style: const TextStyle(
                                                           fontSize: 18,

@@ -2989,7 +2989,9 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
                                               ),
                                             ),
                                             const SizedBox(height: 8),
-                                            Row(
+                                            Wrap(
+                                              spacing: 20,
+                                              runSpacing: 4,
                                               children: [
                                                 Text(
                                                   "Guests: ${hotel.guestCount}",
@@ -3000,7 +3002,15 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
                                                         .fontWeight,
                                                   ),
                                                 ),
-                                                const SizedBox(width: 20),
+                                                Text(
+                                                  "Children: ${hotel.childrenCount ?? 0}",
+                                                  style: TextStyle(
+                                                    fontSize: fontSettings
+                                                        .fontSize,
+                                                    fontWeight: fontSettings
+                                                        .fontWeight,
+                                                  ),
+                                                ),
                                                 Text(
                                                   "Nights: ${hotel.noOfNights}",
                                                   style: TextStyle(
@@ -3010,7 +3020,6 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
                                                         .fontWeight,
                                                   ),
                                                 ),
-                                                const SizedBox(width: 20),
                                                 Text(
                                                   "Rooms: ${hotel.roomCount}",
                                                   style: TextStyle(

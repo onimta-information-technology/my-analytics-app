@@ -10,7 +10,6 @@ import 'package:ballys_reservation_app/providers/selectedReservationforBallys_pr
 import 'package:ballys_reservation_app/providers/selected_hotel_provider_ballys.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -43,19 +42,12 @@ class _RoomAmendmentDraft {
 
   // ── Dates ──────────────────────────────────────────────────────────────
   //
-  // Shared by the three categories that move a day: Date Change asks for both,
-  // Early Check-in for the arrival alone and Late Check-out for the departure
-  // alone. Null is "not picked yet", not "unchanged" — the days the room moves
-  // *from* are the room's own.
+  // Date Change only — it is the one category that moves the stay itself. Null
+  // is "not picked yet", not "unchanged": the days the room moves *from* are
+  // the room's own, and either day may be left alone.
 
   DateTime? newArrivalDate;
   DateTime? newDepartureDate;
-
-  /// The hour asked for, alongside the day. Early Check-in / Late Check-out
-  /// only: the room already holds its days, so what changes is the hour it is
-  /// taken up or given back.
-  TimeOfDay? checkInTime;
-  TimeOfDay? checkOutTime;
 
   // ── Hotel / category / room type ───────────────────────────────────────
   //
@@ -78,16 +70,15 @@ class _RoomAmendmentDraft {
   // ── Occupancy ──────────────────────────────────────────────────────────
   //
   // Left blank means "unchanged", so a room moving from 2 adults to 3 without
-  // touching its children only fills in the one field.
-  final TextEditingController adults = TextEditingController();
-  final TextEditingController children = TextEditingController();
-  final TextEditingController rooms = TextEditingController();
-
-  /// Why the amendment is being raised, and anything else worth saying. Asked
-  /// for by every category, so one pair of controllers serves them all — the
-  /// detail is cleared whenever the category changes.
-  final TextEditingController reason = TextEditingController();
-  final TextEditingController additionalRemark = TextEditingController();
+  // touching its children only fills in the one field. Occupancy asks for all
+  // three; a hotel change asks for the first two alongside the new room, since
+  // a room moving hotel is re-costed on who is in it.
+  /// Null is "not touched", which is what leaves a count as booked. Once a
+  /// count is stepped it holds the number asked for, even where that is back to
+  /// what the room already had.
+  int? adults;
+  int? children;
+  int? rooms;
 
   bool get isEarlyCheckIn =>
       category == _HotelAmendmentBallysScreenState._earlyCheckIn;
@@ -110,21 +101,26 @@ class _RoomAmendmentDraft {
       category == _HotelAmendmentBallysScreenState._occupancy;
 
   /// Whether the category picked has been filled in far enough to stand as an
-  /// amendment. Every category asks for at least one thing beyond itself —
-  /// naming the category alone never says what the room moves to.
+  /// amendment.
+  ///
+  /// Early Check-in and Late Check-out stand on the category alone: the room
+  /// already holds the days they apply to, so naming the category says the
+  /// whole amendment.
   bool get hasDetail {
-    if (isEarlyCheckIn) return newArrivalDate != null || checkInTime != null;
-    if (isLateCheckOut) return newDepartureDate != null || checkOutTime != null;
+    if (isEarlyCheckIn || isLateCheckOut) return true;
     if (isDateChange) {
       return newArrivalDate != null || newDepartureDate != null;
     }
     if (isExtras) return extras.text.trim().isNotEmpty;
     if (isHotelChange) return newHotelId != null;
-    if (isRoomCategory) return newRoomCategoryId != null;
+    if (isRoomCategory) {
+      return newRoomCategoryId != null || newRoomTypeId != null;
+    }
     if (isOccupancy) {
-      return adults.text.trim().isNotEmpty ||
-          children.text.trim().isNotEmpty ||
-          rooms.text.trim().isNotEmpty;
+      return adults != null ||
+          children != null ||
+          rooms != null ||
+          newRoomTypeId != null;
     }
     return false;
   }
@@ -134,14 +130,12 @@ class _RoomAmendmentDraft {
   bool get isComplete => guests.isNotEmpty && category != null && hasDetail;
 
   /// Drops the detail of whatever category was picked before. Every category's
-  /// detail goes, not just the one on screen: the fields are shared, so a
-  /// reason typed against an early check-in must not follow the room into a
-  /// date change.
+  /// detail goes, not just the one on screen: the fields are shared, so an
+  /// occupancy typed against one category must not follow the room into
+  /// another.
   void clearCategoryDetail() {
     newArrivalDate = null;
     newDepartureDate = null;
-    checkInTime = null;
-    checkOutTime = null;
     newHotelId = null;
     newHotelName = null;
     newRoomCategoryId = null;
@@ -149,20 +143,13 @@ class _RoomAmendmentDraft {
     newRoomTypeId = null;
     newRoomTypeName = null;
     extras.clear();
-    adults.clear();
-    children.clear();
-    rooms.clear();
-    reason.clear();
-    additionalRemark.clear();
+    adults = null;
+    children = null;
+    rooms = null;
   }
 
   void dispose() {
     extras.dispose();
-    adults.dispose();
-    children.dispose();
-    rooms.dispose();
-    reason.dispose();
-    additionalRemark.dispose();
   }
 }
 
@@ -248,6 +235,18 @@ class _HotelAmendmentBallysScreenState
         setState(() => _isLoadingCatalog = false);
       }
     } catch (_) {
+      if (mounted) setState(() => _isLoadingCatalog = false);
+    }
+  }
+
+  /// Fetches the catalog again after a dropped request, from the Retry the
+  /// hotel dropdowns offer when they have nothing to list.
+  Future<void> _reloadCatalog() async {
+    if (_isLoadingCatalog) return;
+    setState(() => _isLoadingCatalog = true);
+    try {
+      await ref.read(hotelCatalogProvider.notifier).refresh();
+    } finally {
       if (mounted) setState(() => _isLoadingCatalog = false);
     }
   }
@@ -381,12 +380,17 @@ class _HotelAmendmentBallysScreenState
   /// Moving to another hotel drops the category and room type picked against
   /// the one before it — categories are the hotel's own, so a category kept
   /// across the change would name a room the new hotel does not offer.
-  void _onNewHotelChanged(int roomIndex, double? hotelId, String? hotelName) {
+  void _onNewHotelChanged(int roomIndex, double? hotelId) {
     final draft = _draftFor(roomIndex);
     if (hotelId == draft.newHotelId) return;
+    final name = ref
+        .read(hotelCatalogProvider)
+        .where((e) => e.hotelId == hotelId)
+        .map((e) => e.hotelName)
+        .firstOrNull;
     setState(() {
       draft.newHotelId = hotelId;
-      draft.newHotelName = hotelName;
+      draft.newHotelName = name;
       draft.newRoomCategoryId = null;
       draft.newRoomCategoryName = null;
       draft.newRoomTypeId = null;
@@ -396,22 +400,33 @@ class _HotelAmendmentBallysScreenState
 
   /// Room types belong to a category, so changing the category drops the type
   /// underneath it for the same reason a hotel change drops the category.
-  void _onNewCategoryChanged(int roomIndex, Map<String, dynamic>? category) {
+  void _onNewCategoryChanged(
+    int roomIndex,
+    int? categoryId,
+    List<Map<String, dynamic>> categories,
+  ) {
     final draft = _draftFor(roomIndex);
-    final id = category?['CatCode'] as int?;
-    if (id == draft.newRoomCategoryId) return;
+    if (categoryId == draft.newRoomCategoryId) return;
+    final category = categories
+        .where((c) => c['CatCode'] == categoryId)
+        .firstOrNull;
     setState(() {
-      draft.newRoomCategoryId = id;
+      draft.newRoomCategoryId = categoryId;
       draft.newRoomCategoryName = category?['CatName'] as String?;
       draft.newRoomTypeId = null;
       draft.newRoomTypeName = null;
     });
   }
 
-  void _onNewRoomTypeChanged(int roomIndex, Map<String, dynamic>? roomType) {
+  void _onNewRoomTypeChanged(
+    int roomIndex,
+    int? roomTypeId,
+    List<Map<String, dynamic>> roomTypes,
+  ) {
     final draft = _draftFor(roomIndex);
+    final roomType = roomTypes.where((t) => t['ID'] == roomTypeId).firstOrNull;
     setState(() {
-      draft.newRoomTypeId = roomType?['ID'] as int?;
+      draft.newRoomTypeId = roomTypeId;
       draft.newRoomTypeName = roomType == null
           ? null
           : "${roomType['RoomType']} - ${roomType['MealPlan']}";
@@ -433,6 +448,67 @@ class _HotelAmendmentBallysScreenState
       contentPadding: const EdgeInsets.symmetric(
         horizontal: 12.0,
         vertical: 4.0,
+      ),
+    );
+  }
+
+  /// A dropdown that shows exactly what the draft holds.
+  ///
+  /// Deliberately a plain [DropdownButton] rather than a
+  /// [DropdownButtonFormField]: the form field keeps the pick in its own state
+  /// and only reports it through a callback, so the field could show a hotel
+  /// the draft never received — which is what left the category and room type
+  /// dropdowns saying "pick the hotel first" under a hotel that was plainly
+  /// picked. Here the value shown *is* the draft's, so the two cannot part.
+  ///
+  /// [enabled] is separate from `items`: a dropdown with nothing to offer stays
+  /// on screen and says what it is waiting for, rather than coming and going.
+  Widget _dropdownField<T>({
+    required String label,
+    required T? value,
+    required String hint,
+    required List<DropdownMenuItem<T>> items,
+    required ValueChanged<T?> onChanged,
+    required FontSettings fontSettings,
+    String? helperText,
+  }) {
+    final enabled = items.isNotEmpty;
+    // A value the list no longer carries would assert inside [DropdownButton].
+    // The lists are refilled from the catalog, which can be reloaded under a
+    // pick, so the field falls back to its hint rather than bringing the screen
+    // down.
+    final shown = items.any((item) => item.value == value) ? value : null;
+    return InputDecorator(
+      decoration: _dropdownDeco(label, fontSettings).copyWith(
+        floatingLabelBehavior: FloatingLabelBehavior.always,
+        helperText: helperText,
+        helperMaxLines: 3,
+        helperStyle: TextStyle(
+          fontSize: fontSettings.fontSize - 3,
+          color: Colors.grey.shade700,
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T>(
+          value: shown,
+          isExpanded: true,
+          isDense: true,
+          style: TextStyle(
+            fontSize: fontSettings.fontSize,
+            fontWeight: fontSettings.fontWeight,
+            color: Colors.black,
+          ),
+          hint: Text(
+            hint,
+            style: TextStyle(
+              fontSize: fontSettings.fontSize,
+              fontWeight: fontSettings.fontWeight,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          items: items,
+          onChanged: enabled ? onChanged : null,
+        ),
       ),
     );
   }
@@ -538,21 +614,6 @@ class _HotelAmendmentBallysScreenState
     );
   }
 
-  /// The hour asked for on an early check-in / late check-out. Opens on what is
-  /// already picked, or on the hotel's own standard hour, so the sheet starts
-  /// where the change is being measured from.
-  Future<void> _pickTime({
-    required TimeOfDay? current,
-    required TimeOfDay fallback,
-    required ValueChanged<TimeOfDay> onPicked,
-  }) async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: current ?? fallback,
-    );
-    if (picked != null) setState(() => onPicked(picked));
-  }
-
   /// "Currently: 2026-08-20" — the day the room holds now, for a field asking
   /// what it moves to.
   static String _currentlyLabel(DateTime? roomDate) {
@@ -596,63 +657,6 @@ class _HotelAmendmentBallysScreenState
     );
   }
 
-  /// The hour asked for, read the same way as the day beside it.
-  Widget _timeField({
-    required String label,
-    required TimeOfDay? value,
-    required FontSettings fontSettings,
-    required VoidCallback onTap,
-    String? helperText,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: InputDecorator(
-        decoration: _dropdownDeco(label, fontSettings).copyWith(
-          floatingLabelBehavior: FloatingLabelBehavior.always,
-          prefixIcon: const Icon(Icons.schedule, size: 18),
-          helperText: helperText,
-          helperMaxLines: 2,
-          helperStyle: TextStyle(
-            fontSize: fontSettings.fontSize - 3,
-            color: Colors.grey.shade700,
-          ),
-        ),
-        child: Text(
-          value == null ? "Select time" : value.format(context),
-          style: TextStyle(
-            fontSize: fontSettings.fontSize,
-            fontWeight: fontSettings.fontWeight,
-            color: value == null ? Colors.grey.shade600 : Colors.black,
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// A value the amendment reports rather than asks for, styled as the fields
-  /// around it so the block reads as one form.
-  Widget _readOnlyField({
-    required String label,
-    required String value,
-    required FontSettings fontSettings,
-  }) {
-    return InputDecorator(
-      decoration: _dropdownDeco(label, fontSettings).copyWith(
-        // Nothing to pick here, so it floats like a filled field rather than
-        // sitting empty waiting to be tapped.
-        floatingLabelBehavior: FloatingLabelBehavior.always,
-      ),
-      child: Text(
-        value.trim().isEmpty ? "—" : value,
-        style: TextStyle(
-          fontSize: fontSettings.fontSize,
-          fontWeight: fontSettings.fontWeight,
-          color: Colors.black,
-        ),
-      ),
-    );
-  }
-
   Widget _textField({
     required String label,
     required TextEditingController controller,
@@ -687,44 +691,79 @@ class _HotelAmendmentBallysScreenState
     );
   }
 
-  /// One of the occupancy counts. Left blank means unchanged, so what the room
-  /// holds now sits underneath rather than being pre-filled — a pre-filled
-  /// count would be re-sent as a change that was never asked for.
-  Widget _countField({
+  /// One of the occupancy counts, stepped up and down.
+  ///
+  /// [current] is what the room holds now and is what the counter opens on:
+  /// the amendment sends a count only once it has been stepped, so an untouched
+  /// counter reads as the booking rather than as a change. [minimum] is the
+  /// floor the room cannot go below — a room holds at least one of itself and
+  /// at least one adult, while children can go to none.
+  Widget _counterField({
     required String label,
-    required TextEditingController controller,
+    required int? value,
     required int? current,
+    required int minimum,
+    required ValueChanged<int> onChanged,
     required FontSettings fontSettings,
   }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: TextInputType.number,
-      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-      // The count feeds the card's "filled in" state, so the card follows it
-      // as it is typed rather than only once the field is left.
-      onChanged: (_) => setState(() {}),
-      style: TextStyle(
-        fontSize: fontSettings.fontSize,
-        fontWeight: fontSettings.fontWeight,
-      ),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(
-          fontSize: fontSettings.fontSize,
-          fontWeight: fontSettings.fontWeight,
+    final booked = current ?? minimum;
+    final shown = value ?? booked;
+    final changed = value != null && value != booked;
+
+    Widget button(IconData icon, int next, bool enabled) {
+      return GestureDetector(
+        onTap: enabled ? () => onChanged(next) : null,
+        child: Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: enabled ? Constants.kPrimaryColor : Colors.grey.shade400,
+            borderRadius: BorderRadius.circular(50),
+          ),
+          child: Icon(icon, color: Colors.white, size: 18),
         ),
-        helperText: "Currently: ${current ?? 0}",
+      );
+    }
+
+    return InputDecorator(
+      decoration: _dropdownDeco(label, fontSettings).copyWith(
+        floatingLabelBehavior: FloatingLabelBehavior.always,
+        // Says what the room was booked with, so a stepped count reads as a
+        // change rather than as the booking itself.
+        helperText: "Currently: $booked",
         helperStyle: TextStyle(
           fontSize: fontSettings.fontSize - 3,
           color: Colors.grey.shade700,
         ),
-        border: const OutlineInputBorder(),
-        filled: true,
-        fillColor: Colors.white,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 12.0,
-          vertical: 12.0,
+          vertical: 8.0,
         ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          button(Icons.remove, shown - 1, shown > minimum),
+          // Two counters share a row, so the number gives way to the buttons
+          // rather than overflowing when the font setting is turned up.
+          Expanded(
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  "$shown",
+                  style: TextStyle(
+                    fontSize: fontSettings.fontSize + 2,
+                    fontWeight: FontWeight.bold,
+                    // A count that has moved off the booking stands out, so
+                    // the amendment reads at a glance.
+                    color: changed ? Constants.kPrimaryColor : Colors.black,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          button(Icons.add, shown + 1, true),
+        ],
       ),
     );
   }
@@ -868,8 +907,12 @@ class _HotelAmendmentBallysScreenState
                   ),
                 ),
                 const SizedBox(height: 6),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
+                // Wrapped rather than a row: a fourth count runs past the
+                // card on a narrow screen, and the font size is the user's to
+                // set.
+                Wrap(
+                  spacing: 20,
+                  runSpacing: 4,
                   children: [
                     Text(
                       "Guests: ${hotel.guestCount ?? 0}",
@@ -878,7 +921,13 @@ class _HotelAmendmentBallysScreenState
                         fontWeight: fontSettings.fontWeight,
                       ),
                     ),
-                    const SizedBox(width: 20),
+                    Text(
+                      "Children: ${hotel.childrenCount ?? 0}",
+                      style: TextStyle(
+                        fontSize: fontSettings.fontSize,
+                        fontWeight: fontSettings.fontWeight,
+                      ),
+                    ),
                     Text(
                       "Nights: ${hotel.noOfNights ?? 0}",
                       style: TextStyle(
@@ -886,7 +935,6 @@ class _HotelAmendmentBallysScreenState
                         fontWeight: fontSettings.fontWeight,
                       ),
                     ),
-                    const SizedBox(width: 20),
                     Text(
                       "Rooms: ${hotel.roomCount ?? 0}",
                       style: TextStyle(
@@ -1070,8 +1118,25 @@ class _HotelAmendmentBallysScreenState
   /// The hotel the amendment's category and room type are read against: the one
   /// it is moving to on a Hotel Change, the one the room already holds
   /// otherwise.
+  ///
+  /// A booked room carries whatever id it was saved with, which need not be one
+  /// the catalog still keys its hotels by — the row can also come back without
+  /// the id at all. Either way the categories would be read against a hotel the
+  /// catalog does not hold and come back empty, leaving the category dropdown
+  /// with nothing to open. So the name it was booked under stands in.
   double? _catalogHotelFor(_RoomAmendmentDraft draft, HotelDescipBallys hotel) {
-    return draft.isHotelChange ? draft.newHotelId : _hotelIdOf(hotel);
+    if (draft.isHotelChange) return draft.newHotelId;
+
+    final catalog = ref.read(hotelCatalogProvider);
+    final id = _hotelIdOf(hotel);
+    if (id != null && catalog.any((e) => e.hotelId == id)) return id;
+
+    final name = (hotel.hotelName ?? '').trim().toLowerCase();
+    if (name.isEmpty) return null;
+    for (final entry in catalog) {
+      if (entry.hotelName.trim().toLowerCase() == name) return entry.hotelId;
+    }
+    return null;
   }
 
   /// The new hotel / category / room type block, shared by Hotel Change (which
@@ -1091,32 +1156,29 @@ class _HotelAmendmentBallysScreenState
     final categories = catalogHotelId == null
         ? const <Map<String, dynamic>>[]
         : notifier.categoriesFor(catalogHotelId);
-    final roomTypes =
-        (catalogHotelId == null || draft.newRoomCategoryId == null)
-        ? const <Map<String, dynamic>>[]
-        : notifier.roomTypesFor(catalogHotelId, draft.newRoomCategoryId!);
 
-    // What the category dropdown has to say for itself: on a hotel change it
-    // waits for the hotel and is then optional (a room can move hotels and keep
-    // the category it had); on a room category change it is the amendment
-    // itself, so it says nothing unless the room's hotel is missing from the
-    // catalog and there is nothing to list.
+    // What each dropdown has to say for itself. Both stand whether or not they
+    // have anything to offer yet: a dropdown that comes and goes reads as a
+    // missing field, so an empty one says what it is waiting for instead.
     final String? categoryHelper;
     if (draft.isHotelChange && draft.newHotelId == null) {
       categoryHelper =
           "Pick the new hotel first — categories are the hotel's own";
-    } else if (draft.isHotelChange) {
-      categoryHelper = "Leave blank to keep the current category";
     } else if (catalogHotelId == null) {
       categoryHelper =
           "This room's hotel is not in the catalog, so its categories cannot "
           "be listed.";
+    } else if (categories.isEmpty) {
+      categoryHelper = "This hotel carries no room categories in the catalog";
+    } else if (draft.isHotelChange) {
+      categoryHelper = "Leave blank to keep the current category";
     } else {
       categoryHelper = null;
     }
 
-    // The catalog has to land before any of these can be opened, so the block
-    // says so rather than showing three dropdowns with nothing in them.
+    // The catalog has to land before any of these can be opened. A fetch that
+    // dropped leaves nothing to pick from, so the block offers it again rather
+    // than sending the user back out of the amendment to try once more.
     if (catalog.isEmpty) {
       return [
         Row(
@@ -1133,8 +1195,7 @@ class _HotelAmendmentBallysScreenState
               child: Text(
                 _isLoadingCatalog
                     ? "Loading hotels…"
-                    : "Hotels could not be loaded. Go back and open the "
-                          "amendment again.",
+                    : "Hotels could not be loaded.",
                 style: TextStyle(
                   fontSize: fontSettings.fontSize,
                   fontWeight: fontSettings.fontWeight,
@@ -1144,6 +1205,12 @@ class _HotelAmendmentBallysScreenState
                 ),
               ),
             ),
+            if (!_isLoadingCatalog)
+              TextButton.icon(
+                onPressed: _reloadCatalog,
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text("Retry"),
+              ),
           ],
         ),
       ];
@@ -1151,28 +1218,11 @@ class _HotelAmendmentBallysScreenState
 
     return [
       if (draft.isHotelChange) ...[
-        _readOnlyField(
-          label: "Current Hotel",
-          value: hotel.hotelName ?? '',
+        _dropdownField<double>(
+          label: "New Hotel",
+          value: draft.newHotelId,
+          hint: "Select hotel",
           fontSettings: fontSettings,
-        ),
-        const SizedBox(height: 10.0),
-        DropdownButtonFormField<double>(
-          initialValue: draft.newHotelId,
-          isExpanded: true,
-          style: TextStyle(
-            fontSize: fontSettings.fontSize,
-            fontWeight: fontSettings.fontWeight,
-            color: Colors.black,
-          ),
-          decoration: _dropdownDeco("New Hotel", fontSettings),
-          hint: Text(
-            "Select hotel",
-            style: TextStyle(
-              fontSize: fontSettings.fontSize,
-              fontWeight: fontSettings.fontWeight,
-            ),
-          ),
           items: hotels
               .map(
                 (h) => DropdownMenuItem<double>(
@@ -1184,48 +1234,17 @@ class _HotelAmendmentBallysScreenState
                 ),
               )
               .toList(),
-          onChanged: (value) => _onNewHotelChanged(
-            index,
-            value,
-            hotels.firstWhere(
-                  (h) => h['Hotel_IID'] == value,
-                  orElse: () => const {'HotelName': ''},
-                )['HotelName']
-                as String?,
-          ),
+          onChanged: (value) => _onNewHotelChanged(index, value),
         ),
         const SizedBox(height: 10.0),
       ],
 
-      _readOnlyField(
-        label: "Current Room Category",
-        value: hotel.roomCategoryName ?? '',
+      _dropdownField<int>(
+        label: "New Room Category",
+        value: draft.newRoomCategoryId,
+        hint: "Select category",
+        helperText: categoryHelper,
         fontSettings: fontSettings,
-      ),
-      const SizedBox(height: 10.0),
-      DropdownButtonFormField<int>(
-        initialValue: draft.newRoomCategoryId,
-        isExpanded: true,
-        style: TextStyle(
-          fontSize: fontSettings.fontSize,
-          fontWeight: fontSettings.fontWeight,
-          color: Colors.black,
-        ),
-        decoration: _dropdownDeco("New Room Category", fontSettings).copyWith(
-          helperText: categoryHelper,
-          helperMaxLines: 2,
-          helperStyle: TextStyle(
-            fontSize: fontSettings.fontSize - 3,
-            color: Colors.grey.shade700,
-          ),
-        ),
-        hint: Text(
-          "Select category",
-          style: TextStyle(
-            fontSize: fontSettings.fontSize,
-            fontWeight: fontSettings.fontWeight,
-          ),
-        ),
         items: categories
             .map(
               (c) => DropdownMenuItem<int>(
@@ -1240,60 +1259,70 @@ class _HotelAmendmentBallysScreenState
               ),
             )
             .toList(),
-        onChanged: categories.isEmpty
-            ? null
-            : (value) => _onNewCategoryChanged(
-                index,
-                categories.firstWhere((c) => c['CatCode'] == value),
-              ),
+        onChanged: (value) => _onNewCategoryChanged(index, value, categories),
       ),
 
-      // The room type belongs to the category above it, so it only opens once
-      // that is picked — there is nothing to list against no category.
-      if (draft.newRoomCategoryId != null) ...[
-        const SizedBox(height: 10.0),
-        _readOnlyField(
-          label: "Current Room Type",
-          value: hotel.roomTypeName ?? '',
-          fontSettings: fontSettings,
-        ),
-        const SizedBox(height: 10.0),
-        DropdownButtonFormField<int>(
-          initialValue: draft.newRoomTypeId,
-          isExpanded: true,
-          style: TextStyle(
-            fontSize: fontSettings.fontSize,
-            fontWeight: fontSettings.fontWeight,
-            color: Colors.black,
-          ),
-          decoration: _dropdownDeco("New Room Type", fontSettings),
-          hint: Text(
-            "Select room type",
-            style: TextStyle(
-              fontSize: fontSettings.fontSize,
-              fontWeight: fontSettings.fontWeight,
-            ),
-          ),
-          items: roomTypes
-              .map(
-                (t) => DropdownMenuItem<int>(
-                  value: t['ID'] as int,
-                  child: Text(
-                    "${t['RoomType']} - ${t['MealPlan']}",
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              )
-              .toList(),
-          onChanged: roomTypes.isEmpty
-              ? null
-              : (value) => _onNewRoomTypeChanged(
-                  index,
-                  roomTypes.firstWhere((t) => t['ID'] == value),
-                ),
-        ),
-      ],
+      const SizedBox(height: 10.0),
+      _roomTypeField(index, draft, hotel, fontSettings),
     ];
+  }
+
+  /// The room type the room moves to.
+  ///
+  /// Read against the new category once one is picked and against the one the
+  /// room already holds until then, so a room type can be changed on its own —
+  /// which is what an occupancy change usually needs, a room taking one more
+  /// guest without moving category.
+  Widget _roomTypeField(
+    int index,
+    _RoomAmendmentDraft draft,
+    HotelDescipBallys hotel,
+    FontSettings fontSettings,
+  ) {
+    final notifier = ref.read(hotelCatalogProvider.notifier);
+    final catalogHotelId = _catalogHotelFor(draft, hotel);
+    final effectiveCategoryId = draft.newRoomCategoryId ?? hotel.roomCategoryId;
+    final roomTypes = (catalogHotelId == null || effectiveCategoryId == null)
+        ? const <Map<String, dynamic>>[]
+        : notifier.roomTypesFor(catalogHotelId, effectiveCategoryId);
+
+    final String? helper;
+    if (catalogHotelId == null) {
+      helper = draft.isHotelChange
+          ? "Pick the new hotel first"
+          : "This room's hotel is not in the catalog, so its room types "
+                "cannot be listed.";
+    } else if (roomTypes.isEmpty) {
+      // A hotel change leaves the room holding a category the new hotel need
+      // not carry, so there is nothing to list until a category is picked.
+      helper = draft.isHotelChange
+          ? "Pick a room category first"
+          : "No room types for this room's category";
+    } else if (draft.newRoomCategoryId == null) {
+      helper = "Room types of the category this room already holds";
+    } else {
+      helper = null;
+    }
+
+    return _dropdownField<int>(
+      label: "New Room Type",
+      value: draft.newRoomTypeId,
+      hint: "Select room type",
+      helperText: helper,
+      fontSettings: fontSettings,
+      items: roomTypes
+          .map(
+            (t) => DropdownMenuItem<int>(
+              value: t['ID'] as int,
+              child: Text(
+                "${t['RoomType']} - ${t['MealPlan']}",
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          )
+          .toList(),
+      onChanged: (value) => _onNewRoomTypeChanged(index, value, roomTypes),
+    );
   }
 
   /// The amendment itself, asked for once the room has someone to amend it for
@@ -1329,89 +1358,20 @@ class _HotelAmendmentBallysScreenState
         const SizedBox(height: 8),
 
         // ── Amendment category ───────────────────────────────────────────
-        DropdownButtonFormField<String>(
-          initialValue: draft.category,
-          isExpanded: true,
-          style: TextStyle(
-            fontSize: fontSettings.fontSize,
-            fontWeight: fontSettings.fontWeight,
-            color: Colors.black,
-          ),
-          decoration: _dropdownDeco("Amendment Category", fontSettings),
-          hint: Text(
-            "Select category",
-            style: TextStyle(
-              fontSize: fontSettings.fontSize,
-              fontWeight: fontSettings.fontWeight,
-            ),
-          ),
+        _dropdownField<String>(
+          label: "Amendment Category",
+          value: draft.category,
+          hint: "Select category",
+          fontSettings: fontSettings,
           items: _categories
               .map((c) => DropdownMenuItem<String>(value: c, child: Text(c)))
               .toList(),
           onChanged: (value) => _onCategoryChanged(index, value),
         ),
 
-        // ── Early check-in detail ────────────────────────────────────────
-        //
-        // The day the room is taken up and the hour it is wanted from. The day
-        // is asked for as well as the hour: an early check-in can be the hour
-        // before the standard one, or the night before altogether.
-        if (draft.isEarlyCheckIn) ...[
-          const SizedBox(height: 10.0),
-          _dateField(
-            label: "Check-in Date",
-            value: draft.newArrivalDate,
-            fontSettings: fontSettings,
-            helperText: _currentlyLabel(hotel.arrivalDate),
-            onTap: () => _pickDate(
-              title: "check-in date",
-              current: draft.newArrivalDate,
-              roomDate: hotel.arrivalDate,
-              onPicked: (picked) => draft.newArrivalDate = picked,
-            ),
-          ),
-          const SizedBox(height: 10.0),
-          _timeField(
-            label: "Check-in Time",
-            value: draft.checkInTime,
-            fontSettings: fontSettings,
-            helperText: "The hour the room is wanted from",
-            onTap: () => _pickTime(
-              current: draft.checkInTime,
-              fallback: const TimeOfDay(hour: 14, minute: 0),
-              onPicked: (picked) => draft.checkInTime = picked,
-            ),
-          ),
-        ],
-
-        // ── Late check-out detail ────────────────────────────────────────
-        if (draft.isLateCheckOut) ...[
-          const SizedBox(height: 10.0),
-          _dateField(
-            label: "Check-out Date",
-            value: draft.newDepartureDate,
-            fontSettings: fontSettings,
-            helperText: _currentlyLabel(hotel.departureDate),
-            onTap: () => _pickDate(
-              title: "check-out date",
-              current: draft.newDepartureDate,
-              roomDate: hotel.departureDate,
-              onPicked: (picked) => draft.newDepartureDate = picked,
-            ),
-          ),
-          const SizedBox(height: 10.0),
-          _timeField(
-            label: "Check-out Time",
-            value: draft.checkOutTime,
-            fontSettings: fontSettings,
-            helperText: "The hour the room is given back",
-            onTap: () => _pickTime(
-              current: draft.checkOutTime,
-              fallback: const TimeOfDay(hour: 12, minute: 0),
-              onPicked: (picked) => draft.checkOutTime = picked,
-            ),
-          ),
-        ],
+        // Early Check-in / Late Check-out ask for nothing of their own: the
+        // room keeps the days it holds, so the category is the whole
+        // amendment.
 
         // ── Date change detail ───────────────────────────────────────────
         //
@@ -1464,7 +1424,7 @@ class _HotelAmendmentBallysScreenState
             controller: draft.extras,
             fontSettings: fontSettings,
             maxLines: 3,
-            hint: "e.g. extra bed, airport transfer, late dinner",
+            hint: "e.g. Define how the total cost will be shared between Hamoos and the Guest.",
           ),
         ],
 
@@ -1472,69 +1432,334 @@ class _HotelAmendmentBallysScreenState
         if (draft.isHotelChange || draft.isRoomCategory) ...[
           const SizedBox(height: 10.0),
           ..._catalogFields(index, draft, hotel, fontSettings),
-        ],
-
-        // ── Occupancy detail ─────────────────────────────────────────────
-        //
-        // Each count stands on its own and blank means unchanged, so a room
-        // adding one adult fills in that field alone.
-        if (draft.isOccupancy) ...[
+          // A room moving hotel or category is re-costed on who is in it, so
+          // who the new room holds is asked for alongside it. An untouched
+          // counter leaves that count as booked — neither change need also
+          // move the occupancy.
           const SizedBox(height: 10.0),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: _countField(
-                  label: "Adults",
-                  controller: draft.adults,
+                child: _counterField(
+                  label: "Guests",
+                  value: draft.adults,
                   current: hotel.guestCount,
+                  minimum: 1,
                   fontSettings: fontSettings,
+                  onChanged: (value) => setState(() => draft.adults = value),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _countField(
+                child: _counterField(
                   label: "Children",
-                  controller: draft.children,
+                  value: draft.children,
                   current: hotel.childrenCount,
+                  minimum: 0,
                   fontSettings: fontSettings,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _countField(
-                  label: "Rooms",
-                  controller: draft.rooms,
-                  current: hotel.roomCount,
-                  fontSettings: fontSettings,
+                  onChanged: (value) => setState(() => draft.children = value),
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 10.0),
+          _counterField(
+            label: "Rooms",
+            value: draft.rooms,
+            current: hotel.roomCount,
+            minimum: 1,
+            fontSettings: fontSettings,
+            onChanged: (value) => setState(() => draft.rooms = value),
+          ),
         ],
 
-        // ── Why, and anything else ───────────────────────────────────────
+        // ── Occupancy detail ─────────────────────────────────────────────
         //
-        // Asked for by every category, once one is picked: an amendment is
-        // approved on why it was raised as much as on what it changes.
-        if (draft.category != null) ...[
+        // Each count stands on its own and an untouched one stays as booked, so
+        // a room adding one adult steps that counter alone.
+        if (draft.isOccupancy) ...[
+          // The room being counted is settled first — more guests can mean a
+          // different room type, read against the category the room already
+          // holds — and the counts follow underneath it.
           const SizedBox(height: 10.0),
-          _textField(
-            label: "Reason",
-            controller: draft.reason,
-            fontSettings: fontSettings,
-            maxLines: 3,
-            hint: "Why this amendment is being raised",
+          _roomTypeField(index, draft, hotel, fontSettings),
+          const SizedBox(height: 10.0),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _counterField(
+                  label: "Adults",
+                  value: draft.adults,
+                  current: hotel.guestCount,
+                  minimum: 1,
+                  fontSettings: fontSettings,
+                  onChanged: (value) => setState(() => draft.adults = value),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _counterField(
+                  label: "Children",
+                  value: draft.children,
+                  current: hotel.childrenCount,
+                  minimum: 0,
+                  fontSettings: fontSettings,
+                  onChanged: (value) => setState(() => draft.children = value),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 10.0),
-          _textField(
-            label: "Additional Remark",
-            controller: draft.additionalRemark,
+          _counterField(
+            label: "Rooms",
+            value: draft.rooms,
+            current: hotel.roomCount,
+            minimum: 1,
             fontSettings: fontSettings,
-            maxLines: 2,
+            onChanged: (value) => setState(() => draft.rooms = value),
           ),
         ],
       ],
+    );
+  }
+
+  // ── Submitting ─────────────────────────────────────────────────────────
+
+  /// The rooms in the amendment, in the order they are shown, paired with what
+  /// has been filled in against each.
+  List<MapEntry<int, _AmendableRoom>> _amendedRooms(
+    List<_AmendableRoom> rooms,
+  ) {
+    final picked = _selectedRooms.where((i) => i < rooms.length).toList()
+      ..sort();
+    return picked.map((i) => MapEntry(i, rooms[i])).toList();
+  }
+
+  /// The first thing stopping the amendment from being sent, or null when there
+  /// is nothing. One message at a time, naming the room it belongs to, so a
+  /// long form does not answer with a wall of errors.
+  String? _firstProblem(List<_AmendableRoom> rooms) {
+    final amended = _amendedRooms(rooms);
+    if (amended.isEmpty) return "Tick at least one room to amend.";
+
+    for (final entry in amended) {
+      final label = "Room ${entry.key + 1}";
+      final draft = _draftFor(entry.key);
+
+      if (draft.guests.isEmpty) {
+        return "$label: select the guests this amendment is for.";
+      }
+      if (draft.category == null) return "$label: select the category.";
+
+      if (draft.isDateChange &&
+          draft.newArrivalDate == null &&
+          draft.newDepartureDate == null) {
+        return "$label: pick the new arrival or departure date.";
+      }
+
+      if (draft.isExtras && draft.extras.text.trim().isEmpty) {
+        return "$label: say what extras the room needs.";
+      }
+
+      if (draft.isHotelChange && draft.newHotelId == null) {
+        return "$label: select the hotel it moves to.";
+      }
+
+      if (draft.isRoomCategory &&
+          draft.newRoomCategoryId == null &&
+          draft.newRoomTypeId == null) {
+        return "$label: select the new room category or room type.";
+      }
+
+      if (draft.isOccupancy && !draft.hasDetail) {
+        return "$label: change a count, or pick the new room type.";
+      }
+    }
+    return null;
+  }
+
+  /// The whole amendment as one payload: the reservation it belongs to, and a
+  /// row per room carrying who it is for and what changes.
+  ///
+  /// Each row holds only the detail its own category asked for, and states what
+  /// the room holds now beside what it moves to — the back office needs both
+  /// halves to record the change.
+  Map<String, dynamic> _buildPayload(
+    ReservationBallys reservation,
+    List<_AmendableRoom> rooms,
+  ) {
+    final entries = <Map<String, dynamic>>[];
+
+    for (final entry in _amendedRooms(rooms)) {
+      final room = entry.value;
+      final hotel = room.hotel;
+      final draft = _draftFor(entry.key);
+
+      final row = <String, dynamic>{
+        'room_no': entry.key + 1,
+        'hotel': hotel.hotel,
+        'hotel_name': hotel.hotelName,
+        'room_category': hotel.roomCategoryId,
+        'room_category_name': hotel.roomCategoryName,
+        'room_type': hotel.roomTypeId,
+        'room_type_name': hotel.roomTypeName,
+        'arrival_date': hotel.arrivalDate?.toIso8601String(),
+        'departure_date': hotel.departureDate?.toIso8601String(),
+        'guest_count': hotel.guestCount,
+        'children_count': hotel.childrenCount,
+        'room_count': hotel.roomCount,
+        'assigned_guests': draft.guests
+            .where((i) => i < room.guests.length)
+            .map((i) => room.guests[i].toJson())
+            .toList(),
+        'amendment_category': draft.category,
+      };
+
+      if (draft.isDateChange) {
+        row['new_arrival_date'] = draft.newArrivalDate?.toIso8601String();
+        row['new_departure_date'] = draft.newDepartureDate?.toIso8601String();
+      }
+
+      if (draft.isExtras) {
+        row['extras'] = draft.extras.text.trim();
+      }
+
+      if (draft.isHotelChange) {
+        row['new_hotel'] = draft.newHotelId;
+        row['new_hotel_name'] = draft.newHotelName;
+      }
+
+      // The room the amendment moves to, for every category that can name one.
+      // A blank half means that part is unchanged — an untouched counter sends
+      // nothing rather than re-sending what the room was booked with.
+      if (draft.isHotelChange || draft.isRoomCategory || draft.isOccupancy) {
+        row['new_room_category'] = draft.newRoomCategoryId;
+        row['new_room_category_name'] = draft.newRoomCategoryName;
+        row['new_room_type'] = draft.newRoomTypeId;
+        row['new_room_type_name'] = draft.newRoomTypeName;
+        row['new_guest_count'] = draft.adults;
+        row['new_children_count'] = draft.children;
+        row['new_room_count'] = draft.rooms;
+      }
+
+      entries.add(row);
+    }
+
+    return {
+      'master_id': reservation.idNo,
+      'reservation_no': reservation.reservNo,
+      'bm_number': reservation.mid,
+      'guest_name': reservation.mName,
+      'amendment_on': 'Hotel',
+      'rooms': entries,
+    };
+  }
+
+  void _showMessage(String message, {bool isError = true}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Constants.kPrimaryColor,
+      ),
+    );
+  }
+
+  Future<void> _onSubmit(
+    ReservationBallys reservation,
+    List<_AmendableRoom> rooms,
+  ) async {
+    final problem = _firstProblem(rooms);
+    if (problem != null) {
+      _showMessage(problem);
+      return;
+    }
+
+    final count = _amendedRooms(rooms).length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text("Submit Amendment"),
+        content: Text(
+          count == 1
+              ? "Raise this amendment for 1 room?"
+              : "Raise this amendment for $count rooms?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Constants.kPrimaryColor,
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
+            child: const Text("Submit"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final payload = _buildPayload(reservation, rooms);
+
+    // The endpoint that takes this does not exist yet, so the amendment is
+    // built and shown rather than sent — the same place the air ticket side
+    // stands. Everything it needs is in [payload]; posting it is all that is
+    // left to add here.
+    debugPrint("Hotel amendment payload: $payload");
+
+    _showMessage(
+      count == 1
+          ? "Amendment prepared for 1 room. It is not sent yet — the amendment "
+                "endpoint is still to be connected."
+          : "Amendment prepared for $count rooms. It is not sent yet — the "
+                "amendment endpoint is still to be connected.",
+      isError: false,
+    );
+  }
+
+  /// The button that raises the amendment. Greyed until a room is ticked, since
+  /// that is the least an amendment can be.
+  Widget _submitButton(
+    ReservationBallys reservation,
+    List<_AmendableRoom> rooms,
+    FontSettings fontSettings,
+  ) {
+    final count = _amendedRooms(rooms).length;
+
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: count == 0 ? null : () => _onSubmit(reservation, rooms),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Constants.kPrimaryColor,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: Colors.grey.shade300,
+          disabledForegroundColor: Colors.grey.shade600,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 0,
+        ),
+        child: Text(
+          count == 0
+              ? "Submit Amendment"
+              : count == 1
+              ? "Submit Amendment (1 Hotel)"
+              : "Submit Amendment ($count Hotels)",
+          style: TextStyle(
+            fontSize: fontSettings.fontSize,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
     );
   }
 
@@ -1684,6 +1909,11 @@ class _HotelAmendmentBallysScreenState
                             (entry) =>
                                 _roomCard(entry.key, entry.value, fontSettings),
                           ),
+                        const SizedBox(height: 20.0),
+
+                        // ── Submit ───────────────────────────────────────
+                        if (rooms.isNotEmpty)
+                          _submitButton(reservation, rooms, fontSettings),
                         const SizedBox(height: 24.0),
                       ],
                     ),

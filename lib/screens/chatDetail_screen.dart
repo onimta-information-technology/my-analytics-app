@@ -804,6 +804,67 @@ Future<void> _markMessagesAsRead() async {
     _startReply(msg);
   }
 
+  // ─── Copy ──────────────────────────────────────────────────────────────
+
+  /// Body text worth putting on the clipboard, or null when there is none.
+  ///
+  /// Attachment messages carry the upload placeholder as their text
+  /// ("📎 scaled_b7edf13a-….jpg"), which is noise on the clipboard — so
+  /// they contribute nothing and are skipped.
+  String? _copyableText(ChatMessage msg) {
+    if (msg.hasGroupedAttachments || msg.fileType != null) return null;
+    final text = msg.text.trim();
+    if (text.isEmpty || text.startsWith('📎')) return null;
+    return text;
+  }
+
+  /// Copies the selected messages to the clipboard. One message goes across as
+  /// its bare text; several are stamped with time and sender so the copied
+  /// block still reads as a conversation.
+  Future<void> _copySelectedMessages() async {
+    final selectedIds = Set<String>.from(_selectedMessageIds);
+    // _messages is oldest-first, so this keeps the reading order.
+    final copyable = <ChatMessage>[];
+    for (final msg in _messages) {
+      if (selectedIds.contains(msg.id) && _copyableText(msg) != null) {
+        copyable.add(msg);
+      }
+    }
+
+    if (copyable.isEmpty) {
+      _showErrorSnack('Nothing to copy — attachments cannot be copied.');
+      return;
+    }
+
+    final String payload;
+    if (copyable.length == 1) {
+      payload = _copyableText(copyable.first)!;
+    } else {
+      payload = copyable
+          .map((m) => '[${_formatTime(m.timestamp)}] ${_senderLabel(m)}: '
+              '${_copyableText(m)}')
+          .join('\n');
+    }
+
+    await Clipboard.setData(ClipboardData(text: payload));
+    if (!mounted) return;
+
+    setState(() => _selectedMessageIds.clear());
+
+    final skipped = selectedIds.length - copyable.length;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          copyable.length == 1
+              ? 'Message copied'
+              : '${copyable.length} messages copied',
+        ),
+        backgroundColor: skipped > 0 ? Colors.orange[800] : Colors.green[700],
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   /// The composer's quoted-message banner.
   Widget _buildReplyPreview(ChatMessage msg, FontSettings fontSettings) {
     return Container(
@@ -1951,6 +2012,11 @@ Future<void> _markMessagesAsRead() async {
                       onPressed: _replyToSelectedMessage,
                     ),
                   IconButton(
+                    icon: const Icon(Icons.copy),
+                    tooltip: 'Copy',
+                    onPressed: _copySelectedMessages,
+                  ),
+                  IconButton(
                     icon: const Icon(Icons.forward),
                     tooltip: 'Forward',
                     onPressed: _forwardSelectedMessages,
@@ -2274,7 +2340,7 @@ Future<void> _markMessagesAsRead() async {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      // Wrapped rather than a Row: four actions at a large
+                      // Wrapped rather than a Row: five actions at a large
                       // font size do not fit one line on a narrow phone.
                       Wrap(
                         alignment: WrapAlignment.end,
@@ -2294,6 +2360,12 @@ Future<void> _markMessagesAsRead() async {
                               onPressed: _replyToSelectedMessage,
                               fontSettings: fontSettings,
                             ),
+                          _selectionAction(
+                            icon: Icons.copy,
+                            label: 'Copy',
+                            onPressed: _copySelectedMessages,
+                            fontSettings: fontSettings,
+                          ),
                           _selectionAction(
                             icon: Icons.forward,
                             label: 'Forward',

@@ -837,7 +837,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _showRequiredSnack();
       return;
     }
-    if (!(_hotelFormKey.currentState?.validate() ?? true)) return;
+    if (!(_hotelFormKey.currentState?.validate() ?? false)) return;
     // Collect current hotel if hotel name is filled
     final hotels = List<_HotelEntry>.from(_pendingHotels);
     if (_selectedHotelName != null && _selectedHotelName!.isNotEmpty) {
@@ -866,7 +866,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _showRequiredSnack();
       return;
     }
-    if (!(_airFormKey.currentState?.validate() ?? true)) return;
+    if (!(_airFormKey.currentState?.validate() ?? false)) return;
     setState(() {
       _airMembers.add(_captureCurrentAirMember());
       _resetSharedGuest();
@@ -929,7 +929,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _showRequiredSnack();
       return;
     }
-    if (!(_hotelFormKey.currentState?.validate() ?? true)) return;
+    if (!(_hotelFormKey.currentState?.validate() ?? false)) return;
     final hotels = List<_HotelEntry>.from(_pendingHotels);
     if (_selectedHotelName != null && _selectedHotelName!.isNotEmpty) {
       hotels.add(_captureCurrentHotelEntry());
@@ -957,7 +957,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _showRequiredSnack();
       return;
     }
-    if (!(_airFormKey.currentState?.validate() ?? true)) return;
+    if (!(_airFormKey.currentState?.validate() ?? false)) return;
     setState(() {
       _airMembers.add(_captureCurrentAirMember());
       _resetSharedGuest();
@@ -1075,7 +1075,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _showRequiredSnack();
       return;
     }
-    if (!(_transportFormKey.currentState?.validate() ?? true)) return;
+    if (!(_transportFormKey.currentState?.validate() ?? false)) return;
     setState(() {
       _transportMembers.add(_captureCurrentTransportMember());
       _resetSharedGuest();
@@ -1091,7 +1091,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _showRequiredSnack();
       return;
     }
-    if (!(_transportFormKey.currentState?.validate() ?? true)) return;
+    if (!(_transportFormKey.currentState?.validate() ?? false)) return;
     setState(() {
       _transportMembers.add(_captureCurrentTransportMember());
       _resetSharedGuest();
@@ -1897,7 +1897,7 @@ Remarks              : ${m['remarks']}''';
 
     // Only validate the on-screen form when it still holds a member that
     // will be submitted — after "Apply & Add" it is cleared on purpose.
-    if (hasCurrentGuest && !(_transportFormKey.currentState?.validate() ?? true)) {
+    if (hasCurrentGuest && !(_transportFormKey.currentState?.validate() ?? false)) {
       return;
     }
 
@@ -2031,7 +2031,7 @@ final phoneNumber = await StorageUtil.getMobileNumber();
     // Only validate the on-screen form when it still holds a member that will
     // be submitted — after "Apply & Add" it is cleared on purpose.
     if ((hasCurrentGuest || currentHotels.isNotEmpty) &&
-        !(_hotelFormKey.currentState?.validate() ?? true)) {
+        !(_hotelFormKey.currentState?.validate() ?? false)) {
       return;
     }
 
@@ -2163,7 +2163,7 @@ print(" rrr : $body");
 
     // Only validate the on-screen form when it still holds a member that will
     // be submitted — after "Apply & Add" it is cleared on purpose.
-    if (hasCurrentGuest && !(_airFormKey.currentState?.validate() ?? true)) {
+    if (hasCurrentGuest && !(_airFormKey.currentState?.validate() ?? false)) {
       return;
     }
 
@@ -2474,8 +2474,9 @@ Widget _dateField(
   String label,
   TextEditingController ctrl,
   Color accent,
-  VoidCallback onTap,
-) {
+  VoidCallback onTap, {
+  String? Function(String?)? validator,
+}) {
   return TextFormField(
     controller: ctrl,
     readOnly: true,
@@ -2486,6 +2487,7 @@ Widget _dateField(
       accent: accent,
     ).copyWith(suffixIcon: Icon(Icons.arrow_drop_down, color: accent)),
     onTap: onTap,
+    validator: validator,
   );
 }
 
@@ -3185,10 +3187,16 @@ class _HotelForm extends StatelessWidget {
     final hotels = state.ref.watch(hotelsProvider);
     return Form(
       key: state._hotelFormKey,
-      child: ListView(
+      // A lazy ListView only builds the rows near the viewport, and
+      // Form.validate() skips fields that are not mounted, so saving from the
+      // top of the form silently bypassed every validator further down. A
+      // Column keeps all fields alive at all times.
+      child: SingleChildScrollView(
         controller: state._hotelScrollCtrl,
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
-        children: [
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           _sectionHeader(
             'Hotel Reservation Request',
             accent,
@@ -3406,6 +3414,12 @@ class _HotelForm extends StatelessWidget {
                 (context as Element).markNeedsBuild();
               }
             },
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Arrival Date is required';
+              }
+              return null;
+            },
           ),
           const SizedBox(height: 12),
           _dateField(
@@ -3428,6 +3442,12 @@ class _HotelForm extends StatelessWidget {
                 // ignore: invalid_use_of_protected_member
                 (context as Element).markNeedsBuild();
               }
+            },
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Departure Date is required';
+              }
+              return null;
             },
           ),
             const SizedBox(height: 12),
@@ -3462,6 +3482,8 @@ class _HotelForm extends StatelessWidget {
             itemAsString: (item) => _hotelName(item),
             compareFn: (a, b) => _hotelId(a) == _hotelId(b),
             selectedItem: state._selectedHotel,
+            validator: (value) =>
+                value == null ? 'Hotel Name is required' : null,
             decoratorProps: DropDownDecoratorProps(
               decoration: _fieldDeco(
                 'Hotel Name *',
@@ -3757,7 +3779,8 @@ class _HotelForm extends StatelessWidget {
             onRemove: (i) =>
                 () => state.setState(() => state._hotelMembers.removeAt(i)),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -3775,10 +3798,16 @@ class _AirForm extends StatelessWidget {
     const accent = _QuickReservationScreenState._airColor;
     return Form(
       key: state._airFormKey,
-      child: ListView(
+      // A lazy ListView only builds the rows near the viewport, and
+      // Form.validate() skips fields that are not mounted, so saving from the
+      // top of the form silently bypassed every validator further down. A
+      // Column keeps all fields alive at all times.
+      child: SingleChildScrollView(
         controller: state._airScrollCtrl,
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
-        children: [
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           _sectionHeader('Air Ticket Request', accent, Icons.flight_rounded),
           _guestIdentityRow(
             context: context,
@@ -4234,7 +4263,8 @@ class _AirForm extends StatelessWidget {
             onRemove: (i) =>
                 () => state.setState(() => state._airMembers.removeAt(i)),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -4296,10 +4326,16 @@ class _TransportForm extends StatelessWidget {
     const accent = _QuickReservationScreenState._transportColor;
     return Form(
       key: state._transportFormKey,
-      child: ListView(
+      // A lazy ListView only builds the rows near the viewport, and
+      // Form.validate() skips fields that are not mounted — so saving from the
+      // top of the tab silently bypassed every validator further down. A Column
+      // keeps all fields alive at all times.
+      child: SingleChildScrollView(
         controller: state._transportScrollCtrl,
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
-        children: [
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           _sectionHeader(
             'Transport Request',
             accent,
@@ -4379,6 +4415,12 @@ class _TransportForm extends StatelessWidget {
                 });
               }
             },
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Pickup Date is required';
+              }
+              return null;
+            },
           ),
           const SizedBox(height: 12),
           TextFormField(
@@ -4415,6 +4457,12 @@ class _TransportForm extends StatelessWidget {
                   state._t_pickupTimeCtrl.text = state._fmtTime(t);
                 });
               }
+            },
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Pickup Time is required';
+              }
+              return null;
             },
           ),
           const SizedBox(height: 12),
@@ -4495,6 +4543,12 @@ class _TransportForm extends StatelessWidget {
                     .toList(),
                 onChanged: (v) =>
                     state.setState(() => state._t_carTypes[i] = v),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Car Type is required';
+                  }
+                  return null;
+                },
               ),
               _StepperField(
                 controller: state._t_passengerCtrls[i],
@@ -4666,7 +4720,8 @@ class _TransportForm extends StatelessWidget {
             onRemove: (i) => () =>
                 state.setState(() => state._transportMembers.removeAt(i)),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

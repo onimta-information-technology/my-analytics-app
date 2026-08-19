@@ -658,7 +658,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
 
   void _applyAndAddMember() {
     if (!_requireGuest()) return;
-    if (!(_formKey.currentState?.validate() ?? true)) return;
+    if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() {
       _members.add(_captureCurrentMember());
       _clearGuestFields();
@@ -669,7 +669,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
 
   void _addMemberWithSameDetails() {
     if (!_requireGuest()) return;
-    if (!(_formKey.currentState?.validate() ?? true)) return;
+    if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() {
       _members.add(_captureCurrentMember());
       _clearGuestFields();
@@ -774,7 +774,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
 
     // Only validate the on-screen form when it still holds a member that
     // will be submitted — after "Apply & Add" it is cleared on purpose.
-    if (hasCurrentGuest && !(_formKey.currentState?.validate() ?? true)) {
+    if (hasCurrentGuest && !(_formKey.currentState?.validate() ?? false)) {
       return;
     }
 
@@ -980,10 +980,16 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
         children: [
           Form(
             key: _formKey,
-            child: ListView(
+            // A lazy ListView only builds the rows near the viewport, and
+            // Form.validate() skips fields that are not mounted — so saving
+            // from the top of the page silently bypassed every validator
+            // further down. A Column keeps all fields alive at all times.
+            child: SingleChildScrollView(
               controller: _scrollCtrl,
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
-              children: [
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                 // _sectionHeader('Transport Request'),
                 _guestIdentityRow(),
                 const SizedBox(height: 12),
@@ -1016,6 +1022,12 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
                         ),
                       ),
                   onTap: _pickPickupDate,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Pickup Date is required';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -1033,6 +1045,12 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
                         ),
                       ),
                   onTap: _pickPickupTime,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Pickup Time is required';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 12),
 
@@ -1119,6 +1137,12 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
                               )
                               .toList(),
                           onChanged: (v) => setState(() => _carTypes[i] = v),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Car Type is required';
+                            }
+                            return null;
+                          },
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -1280,7 +1304,8 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
                 _actionButtons(),
                 const SizedBox(height: 20),
                 _addedMembersSection(),
-              ],
+                ],
+              ),
             ),
           ),
           if (_isLoading)

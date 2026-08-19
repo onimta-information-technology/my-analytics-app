@@ -125,6 +125,39 @@ class NotificationService {
         );
         return; // ✅ Exit early, don't fall through to chat logic
       }
+
+      // ─── Transport Assignment (msg_type: 10) ──────────────────────────────
+      if (message.data['msg_type'] == '10') {
+        print('PUSH branch -> TRANSPORT (10)');
+        int notificationId = DateTime.now().millisecondsSinceEpoch.remainder(
+          100000,
+        );
+        final badgeService = BadgeService();
+        final currentBadge = await badgeService.getSavedBadgeCount();
+        final newBadgeCount = currentBadge + 1;
+        await badgeService.updateBadge(newBadgeCount);
+
+        await AwesomeNotifications().createNotification(
+          content: NotificationContent(
+            id: notificationId,
+            channelKey: 'high_importance_channel',
+            title: title,
+            body: body,
+            notificationLayout: NotificationLayout.Default,
+            payload: {
+              'type': '10',
+              'MasterId': message.data['MasterId'] ?? '',
+              'IsRejected': message.data['IsRejected'] ?? '',
+              'IsReceived': message.data['IsReceived'] ?? '',
+            },
+            icon: 'resource://mipmap/launcher_icon',
+            wakeUpScreen: true,
+            badge: newBadgeCount,
+          ),
+        );
+        return; // ✅ Exit early, don't fall through to chat logic
+      }
+
       // Parse the Details field
       String? detailsJson = message.data['Details'];
       Map<String, dynamic>? chatDetails;
@@ -235,6 +268,16 @@ class NotificationService {
               '/guest-bookings/view-booking',
               extra: {'booking': booking, 'isPending': true},
             );
+          }
+          return;
+        }
+        if (payload['type'] == '10') {
+          final context = navigatorKey.currentContext;
+          if (context != null && context.mounted) {
+            await Future.delayed(Duration(milliseconds: 500));
+            // TransportScreen reloads from the API in its initState, so simply
+            // landing on it gives the user fresh data.
+            context.go('/reservationMain/transport');
           }
           return;
         }

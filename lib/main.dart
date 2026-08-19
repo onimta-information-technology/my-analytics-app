@@ -14,6 +14,7 @@ import 'package:ballys_reservation_app/navigation/app_navigation.dart';
 import 'package:ballys_reservation_app/providers/app_notifications_provider.dart';
 import 'package:ballys_reservation_app/providers/auth_provider.dart';
 import 'package:ballys_reservation_app/providers/guest_booking_provider.dart';
+import 'package:ballys_reservation_app/providers/transport_provider.dart';
 import 'package:ballys_reservation_app/utils/badge_sync_helper.dart';
 import 'package:ballys_reservation_app/utils/connectivity_service.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -200,6 +201,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _reloadTransportGlobally() async {
+    try {
+      await globalContainer
+          .read(transportProvider.notifier)
+          .getTransportData();
+      print('✅ Transport data reloaded from global listener');
+    } catch (e) {
+      print('Error reloading transport data globally: $e');
+    }
+  }
+
   Future<void> _syncBadgeIfLoggedIn() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -223,13 +235,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       _logPushMessage('foreground', message);
       _recordNotification(message);
 
-      if (message.data['msg_type'] == '35') {
-        _showForegroundNotification(message);
-        _badgeService.addBadge(1);
+      final msgType = message.data['msg_type']?.toString();
+
+      _showForegroundNotification(message);
+      _badgeService.addBadge(1);
+
+      if (msgType == '35') {
         _reloadGuestBookingsGlobally();
-      } else {
-        _showForegroundNotification(message);
-        _badgeService.addBadge(1);
+      } else if (msgType == '10') {
+        // Transport assignment / rejection — refresh the transport list so an
+        // open TransportScreen picks up the new status without a manual pull.
+        _reloadTransportGlobally();
       }
     });
 
@@ -281,6 +297,20 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 
   void _handleNotificationTap(RemoteMessage message) {
+    // ─── Transport Notification (msg_type: 10) ──────────────────────────────
+    if (message.data['msg_type']?.toString() == '10') {
+      _reloadTransportGlobally();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Future.delayed(const Duration(milliseconds: 500), () {
+          final context = navigatorKey.currentContext;
+          if (context != null && context.mounted) {
+            context.go('/reservationMain/transport');
+          }
+        });
+      });
+      return;
+    }
+
     // ─── Guest Booking Notification (msg_type: 35) ───────────────────────────
     if (message.data['msg_type'] == '35') {
       WidgetsBinding.instance.addPostFrameCallback((_) {

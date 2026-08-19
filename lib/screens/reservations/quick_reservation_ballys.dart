@@ -2198,7 +2198,7 @@ Remarks              : ${m['remarks']}''';
   /// guest, so letting a blank one through just defers the complaint.
   void _goToHotelBookingStep() {
     FocusScope.of(context).unfocus();
-    if (!(_hotelGuestFormKey.currentState?.validate() ?? true)) return;
+    if (!(_hotelGuestFormKey.currentState?.validate() ?? false)) return;
     if (!_validateExtraMembers(
       _h_extraMembers,
       primaryMid: _sharedMemberId.text.trim(),
@@ -2217,7 +2217,7 @@ Remarks              : ${m['remarks']}''';
   /// The Air Ticket tab's counterpart of [_goToHotelBookingStep].
   void _goToAirBookingStep() {
     FocusScope.of(context).unfocus();
-    if (!(_airGuestFormKey.currentState?.validate() ?? true)) return;
+    if (!(_airGuestFormKey.currentState?.validate() ?? false)) return;
     if (!_validateExtraMembers(
       _a_extraMembers,
       primaryMid: _sharedMemberId.text.trim(),
@@ -2292,7 +2292,7 @@ Remarks              : ${m['remarks']}''';
 
     // Only validate the on-screen form when it still holds a member that
     // will be submitted — after "Apply & Add" it is cleared on purpose.
-    if (hasCurrentGuest && !(_transportFormKey.currentState?.validate() ?? true)) {
+    if (hasCurrentGuest && !(_transportFormKey.currentState?.validate() ?? false)) {
       return;
     }
 
@@ -2363,11 +2363,11 @@ Remarks              : ${m['remarks']}''';
     // half is checked first and, when it is the one at fault, the tab goes back
     // to it so the error is somewhere the user can actually see it.
     if (hasCurrentGuest || currentHotels.isNotEmpty) {
-      if (!(_hotelGuestFormKey.currentState?.validate() ?? true)) {
+      if (!(_hotelGuestFormKey.currentState?.validate() ?? false)) {
         setState(() => _hotelStep = 0);
         return;
       }
-      if (!(_hotelFormKey.currentState?.validate() ?? true)) return;
+      if (!(_hotelFormKey.currentState?.validate() ?? false)) return;
     }
 
     if (!_validateExtraMembers(
@@ -2426,11 +2426,11 @@ Remarks              : ${m['remarks']}''';
     // half is checked first and, when it is the one at fault, the tab goes back
     // to it so the error is somewhere the user can actually see it.
     if (hasCurrentGuest) {
-      if (!(_airGuestFormKey.currentState?.validate() ?? true)) {
+      if (!(_airGuestFormKey.currentState?.validate() ?? false)) {
         setState(() => _airStep = 0);
         return;
       }
-      if (!(_airFormKey.currentState?.validate() ?? true)) return;
+      if (!(_airFormKey.currentState?.validate() ?? false)) return;
     }
 
     if (!_validateExtraMembers(
@@ -2695,6 +2695,7 @@ Widget _dateField(
   Color accent,
   VoidCallback onTap, {
   VoidCallback? onClear,
+  String? Function(String?)? validator,
 }) {
   final hasValue = ctrl.text.trim().isNotEmpty;
   return TextFormField(
@@ -2730,6 +2731,7 @@ Widget _dateField(
           : Icon(Icons.arrow_drop_down, color: accent),
     ),
     onTap: onTap,
+    validator: validator,
   );
 }
 
@@ -4112,10 +4114,16 @@ class _HotelForm extends StatelessWidget {
   Widget _guestStep(BuildContext context, Color accent) {
     return Form(
       key: state._hotelGuestFormKey,
-      child: ListView(
+      // A lazy ListView only builds the rows near the viewport, and
+      // Form.validate() skips fields that are not mounted, so saving from the
+      // top of the form silently bypassed every validator further down. A
+      // Column keeps all fields alive at all times.
+      child: SingleChildScrollView(
         controller: state._hotelGuestScrollCtrl,
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
-        children: [
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           _guestIdentityRow(
             context: context,
             memberIdCtrl: state._sharedMemberId,
@@ -4229,7 +4237,8 @@ class _HotelForm extends StatelessWidget {
             onPressed: state._goToHotelBookingStep,
           ),
           const SizedBox(height: 20),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -4242,10 +4251,16 @@ class _HotelForm extends StatelessWidget {
   ) {
     return Form(
       key: state._hotelFormKey,
-      child: ListView(
+      // A lazy ListView only builds the rows near the viewport, and
+      // Form.validate() skips fields that are not mounted, so saving from the
+      // top of the form silently bypassed every validator further down. A
+      // Column keeps all fields alive at all times.
+      child: SingleChildScrollView(
         controller: state._hotelScrollCtrl,
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-        children: [
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           _bookingGuestBanner(accent),
           const SizedBox(height: 14),
 
@@ -4410,6 +4425,12 @@ class _HotelForm extends StatelessWidget {
               state._h_departureDate = null;
               state._h_departureCtrl.clear();
             }),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Arrival Date is required';
+              }
+              return null;
+            },
           ),
           const SizedBox(height: 12),
           _dateField(
@@ -4437,6 +4458,12 @@ class _HotelForm extends StatelessWidget {
               state._h_departureDate = null;
               state._h_departureCtrl.clear();
             }),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Departure Date is required';
+              }
+              return null;
+            },
           ),
             const SizedBox(height: 12),
           _rowPair(
@@ -4482,6 +4509,8 @@ class _HotelForm extends StatelessWidget {
             itemAsString: (item) => _hotelName(item),
             compareFn: (a, b) => _hotelId(a) == _hotelId(b),
             selectedItem: state._selectedHotel,
+            validator: (value) =>
+                value == null ? 'Hotel Name is required' : null,
             decoratorProps: DropDownDecoratorProps(
               decoration: _fieldDeco(
                 'Hotel Name *',
@@ -4773,7 +4802,8 @@ class _HotelForm extends StatelessWidget {
             onPressed: state._onSave,
           ),
           const SizedBox(height: 20),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -4828,10 +4858,16 @@ class _AirForm extends StatelessWidget {
   Widget _guestStep(BuildContext context, Color accent) {
     return Form(
       key: state._airGuestFormKey,
-      child: ListView(
+      // A lazy ListView only builds the rows near the viewport, and
+      // Form.validate() skips fields that are not mounted, so saving from the
+      // top of the form silently bypassed every validator further down. A
+      // Column keeps all fields alive at all times.
+      child: SingleChildScrollView(
         controller: state._airGuestScrollCtrl,
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
-        children: [
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           _guestIdentityRow(
             context: context,
             memberIdCtrl: state._sharedMemberId,
@@ -4945,7 +4981,8 @@ class _AirForm extends StatelessWidget {
             onPressed: state._goToAirBookingStep,
           ),
           const SizedBox(height: 20),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -4954,10 +4991,16 @@ class _AirForm extends StatelessWidget {
   Widget _bookingStep(BuildContext context, Color accent) {
     return Form(
       key: state._airFormKey,
-      child: ListView(
+      // A lazy ListView only builds the rows near the viewport, and
+      // Form.validate() skips fields that are not mounted, so saving from the
+      // top of the form silently bypassed every validator further down. A
+      // Column keeps all fields alive at all times.
+      child: SingleChildScrollView(
         controller: state._airScrollCtrl,
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-        children: [
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           _stepGuestBanner(
             accent: accent,
             memberId: state._sharedMemberId.text,
@@ -5571,7 +5614,8 @@ class _AirForm extends StatelessWidget {
             onPressed: state._onSave,
           ),
           const SizedBox(height: 20),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -5672,10 +5716,16 @@ class _TransportForm extends StatelessWidget {
     const accent = _QuickReservationBallysScreenState._transportColor;
     return Form(
       key: state._transportFormKey,
-      child: ListView(
+      // A lazy ListView only builds the rows near the viewport, and
+      // Form.validate() skips fields that are not mounted — so saving from the
+      // top of the tab silently bypassed every validator further down. A Column
+      // keeps all fields alive at all times.
+      child: SingleChildScrollView(
         controller: state._transportScrollCtrl,
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
-        children: [
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           // _sectionHeader(
           //   'Transport Request',
           //   accent,
@@ -5771,6 +5821,12 @@ class _TransportForm extends StatelessWidget {
                 });
               }
             },
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Pickup/ Drop Date is required';
+              }
+              return null;
+            },
           ),
           const SizedBox(height: 12),
           TextFormField(
@@ -5807,6 +5863,12 @@ class _TransportForm extends StatelessWidget {
                   state._t_pickupTimeCtrl.text = state._fmtTime(t);
                 });
               }
+            },
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Pickup/ Drop Time is required';
+              }
+              return null;
             },
           ),
           const SizedBox(height: 12),
@@ -5860,6 +5922,12 @@ class _TransportForm extends StatelessWidget {
                     .toList(),
                 onChanged: (v) =>
                     state.setState(() => state._t_carTypes[i] = v),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Car Type is required';
+                  }
+                  return null;
+                },
               ),
               _StepperField(
                 controller: state._t_passengerCtrls[i],
@@ -6034,7 +6102,8 @@ class _TransportForm extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-        ],
+          ],
+        ),
       ),
     );
   }

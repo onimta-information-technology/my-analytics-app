@@ -296,7 +296,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     await _notificationService.showForegroundNotification(message);
   }
 
-  void _handleNotificationTap(RemoteMessage message) {
+  Future<void> _handleNotificationTap(RemoteMessage message) async {
+    // A tap must never jump past the login wall. When the session is gone the
+    // app is either on the splash screen (which routes to /login itself) or
+    // already sitting on /login, so dropping the tap leaves the user there.
+    if (!await StorageUtil.hasActiveSession()) {
+      print('PUSH tap ignored — no active session, staying on login flow');
+      return;
+    }
+
     // ─── Transport Notification (msg_type: 10) ──────────────────────────────
     if (message.data['msg_type']?.toString() == '10') {
       _reloadTransportGlobally();
@@ -307,10 +315,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         Future.delayed(const Duration(milliseconds: 500), () {
           final context = navigatorKey.currentContext;
           if (context != null && context.mounted) {
-            context.go(masterId.isEmpty
-                ? '/reservationMain/transport'
-                : '/reservationMain/transport'
-                    '?masterId=${Uri.encodeComponent(masterId)}');
+            context.go(AppNavigation.transportLocation(masterId));
           }
         });
       });
@@ -690,6 +695,23 @@ class _SplashScreenState extends State<SplashScreen>
     }
   }
 
+  /// Master id of the transport request a terminated-app notification tap
+  /// refers to, from either transport path (FCM or awesome_notifications).
+  /// Null when the launch had nothing to do with transport.
+  static String? _transportMasterIdFrom(
+    RemoteMessage? initialMessage,
+    ReceivedAction? receivedAction,
+  ) {
+    String? masterId;
+    if (initialMessage?.data['msg_type']?.toString() == '10') {
+      masterId = initialMessage!.data['MasterId']?.toString();
+    } else if (receivedAction?.payload?['type'] == '10') {
+      masterId = receivedAction!.payload!['MasterId'];
+    }
+    final trimmed = masterId?.trim() ?? '';
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
   Future<void> _initializeSplash() async {
     setState(() {
       _hasInternet = true;
@@ -769,6 +791,12 @@ class _SplashScreenState extends State<SplashScreen>
       return;
     }
 
+    // ─── Transport: terminated app tapped notification ──────────────────────
+    // Without this the splash's own '/home' hop three seconds in would throw
+    // the user off the transport screen the tap opened.
+    final transportMasterId =
+        _transportMasterIdFrom(initialMessage, receivedAction);
+
     // ─── Chat / Normal notification routing ─────────────────────────────────
     Map<String, dynamic>? notificationChatData;
 
@@ -811,6 +839,8 @@ class _SplashScreenState extends State<SplashScreen>
           if (notificationChatData != null &&
               notificationChatData['chatId'] != '') {
             context.go('/menu/chats', extra: notificationChatData);
+          } else if (transportMasterId != null) {
+            context.go(AppNavigation.transportLocation(transportMasterId));
           } else {
             context.go('/home');
           }

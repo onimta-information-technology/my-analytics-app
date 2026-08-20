@@ -82,6 +82,15 @@ class AppNavigation {
 
   static String initialRoute = '/splash';
 
+  /// Location of the transport list, optionally asking it to reveal and
+  /// highlight one request — used by every transport notification tap.
+  static String transportLocation([String? masterId]) {
+    final id = masterId?.trim() ?? '';
+    return id.isEmpty
+        ? '/reservationMain/transport'
+        : '/reservationMain/transport?masterId=${Uri.encodeComponent(id)}';
+  }
+
   static final GoRouter router = GoRouter(
     navigatorKey: navigatorKey,
     initialLocation: initialRoute,

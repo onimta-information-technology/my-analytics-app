@@ -1,5 +1,6 @@
 import 'package:ballys_reservation_app/models/Guest/guest_booking.dart';
 import 'package:ballys_reservation_app/models/app_notification.dart';
+import 'package:ballys_reservation_app/navigation/app_navigation.dart';
 import 'package:ballys_reservation_app/providers/app_notifications_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -71,12 +72,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     // Transport notification — open the transport list with that request
     // highlighted.
     if (notification.msgType == '10') {
-      final masterId = (notification.data['MasterId'] ?? '').trim();
       context.go(
-        masterId.isEmpty
-            ? '/reservationMain/transport'
-            : '/reservationMain/transport'
-                '?masterId=${Uri.encodeComponent(masterId)}',
+        AppNavigation.transportLocation(notification.data['MasterId']),
       );
     }
   }

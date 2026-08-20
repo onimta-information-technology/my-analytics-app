@@ -3,7 +3,9 @@ import 'dart:io';
 import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/main.dart' show navigatorKey;
 import 'package:ballys_reservation_app/models/Guest/guest_booking.dart';
+import 'package:ballys_reservation_app/navigation/app_navigation.dart';
 import 'package:ballys_reservation_app/utils/current_chat_state.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
@@ -254,6 +256,14 @@ class NotificationService {
       if (receivedAction.payload != null &&
           receivedAction.payload!.isNotEmpty) {
         final payload = receivedAction.payload!;
+
+        // Logged out: the app belongs on the login screen, so drop the tap
+        // rather than deep-linking into an authenticated screen.
+        if (!await StorageUtil.hasActiveSession()) {
+          print('NOTIFICATION tap ignored — no active session');
+          return;
+        }
+
         if (payload['type'] == '35') {
           final context = navigatorKey.currentContext;
           if (context != null && context.mounted) {
@@ -280,13 +290,7 @@ class NotificationService {
             // TransportScreen reloads from the API in its initState, so simply
             // landing on it gives the user fresh data. `masterId` tells it
             // which request to reveal and highlight.
-            final masterId = (payload['MasterId'] ?? '').trim();
-            context.go(
-              masterId.isEmpty
-                  ? '/reservationMain/transport'
-                  : '/reservationMain/transport'
-                  '?masterId=${Uri.encodeComponent(masterId)}',
-            );
+            context.go(AppNavigation.transportLocation(payload['MasterId']));
           }
           return;
         }

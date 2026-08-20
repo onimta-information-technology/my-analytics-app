@@ -72,6 +72,17 @@ class StorageUtil {
     return prefs.getString('expiry');
   }
 
+  /// True while the saved session is still valid — the same expiry check the
+  /// splash screen routes on. Logging out clears prefs, so the expiry is gone.
+  /// Notification taps consult this so a logged-out user is never dropped into
+  /// an authenticated screen.
+  static Future<bool> hasActiveSession() async {
+    final expiry = await getExpiry();
+    if (expiry == null) return false;
+    final expiryTime = DateTime.tryParse(expiry);
+    return expiryTime != null && DateTime.now().isBefore(expiryTime);
+  }
+
   static Future<String?> getUserName() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('userName');

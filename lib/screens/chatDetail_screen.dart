@@ -1847,7 +1847,7 @@ Future<void> _markMessagesAsRead() async {
                               color: message.isMe
                                   ? Colors.white
                                   : Colors.black87,
-                              fontSize: fontSettings.fontSize,
+                              fontSize: fontSettings.fontSize + 2,
                               fontWeight: fontSettings.fontWeight,
                             ),
                           ),

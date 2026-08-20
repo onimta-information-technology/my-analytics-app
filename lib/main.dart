@@ -7,6 +7,7 @@ import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/components/developer_banner.dart';
 import 'package:ballys_reservation_app/components/localNotificationService.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
+import 'package:ballys_reservation_app/data/services/fcm_token_service.dart';
 import 'package:ballys_reservation_app/data/services/notification_store.dart';
 import 'package:ballys_reservation_app/data/services/versioncehck_service.dart';
 import 'package:ballys_reservation_app/models/Guest/guest_booking.dart';
@@ -226,10 +227,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 
   Future<void> _setupFirebaseListenersOnly() async {
-    // Listen for token refresh
-    FirebaseMessaging.instance.onTokenRefresh.listen((String token) {
-      // Token updated — handled after login
-    });
+    // Owns the onTokenRefresh subscription: whenever FCM rotates the token it
+    // is stored and pushed to the backend, so a stale row repairs itself
+    // instead of waiting for the next logout/login.
+    FcmTokenService.startRefreshListener();
+
+    // Repairs a row the backend is holding from an earlier run.
+    unawaited(FcmTokenService.resyncOnStartup());
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _logPushMessage('foreground', message);

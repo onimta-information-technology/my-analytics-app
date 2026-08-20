@@ -1,6 +1,6 @@
+import 'package:ballys_reservation_app/data/services/fcm_token_service.dart';
 import 'package:ballys_reservation_app/models/auth_state.dart';
 import 'package:ballys_reservation_app/utils/token_refresh_service.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -237,13 +237,15 @@ class AuthNotifier extends StateNotifier<AuthState?> {
     try {
      // TokenRefreshService().stop();
       final prefs = await SharedPreferences.getInstance();
-      final fcmToken = prefs.getString('FCMToken');
-      if (fcmToken != null) {
-        await FirebaseMessaging.instance.deleteToken();
 
-        // Clear stored FCM token
-        await prefs.remove('FCMToken');
-      } else {}
+      // Flip the flag first so a token refresh landing mid-logout cannot sync
+      // this device back onto the user we are signing out.
+      await prefs.setBool('is_logged_in', false);
+
+      // Detaches the token on the backend. Must run before clearUserData() —
+      // it needs the auth token and property url that call wipes.
+      await FcmTokenService.clearOnLogout();
+
       // Clear user data
       await StorageUtil.clearUserData();
 

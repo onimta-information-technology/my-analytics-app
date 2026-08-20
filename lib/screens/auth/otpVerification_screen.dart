@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:ballys_reservation_app/data/services/biometric_service.dart';
-import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
+import 'package:ballys_reservation_app/data/services/fcm_token_service.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
 import 'package:ballys_reservation_app/providers/auth_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
@@ -670,8 +670,6 @@ print(fullUrl);
         ref.read(appmodeSettingsProvider.notifier).setSalesCode(salesCode);
       }
 
-      final name = await StorageUtil.getUserName();
-
       // ✅ MARK USER AS LOGGED IN
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('is_logged_in', true);
@@ -685,7 +683,7 @@ print(fullUrl);
       }
 
       // Fire-and-forget: runs in the background, does not touch this widget.
-      unawaited(_completePostLoginSetup(name));
+      unawaited(_completePostLoginSetup());
     } else {
       throw Exception('Authentication failed after OTP verification');
     }
@@ -695,21 +693,14 @@ print(fullUrl);
   }
 }
 
-  Future<void> _completePostLoginSetup(String? name) async {
+  Future<void> _completePostLoginSetup() async {
     try {
       await _requestNotificationPermissions();
 
-      final prefs = await SharedPreferences.getInstance();
-      String? fcmtoken = await _getFCMTokenWithRetry();
-      if (fcmtoken != null) {
-        await prefs.setString('FCMToken', fcmtoken);
-
-        if (name != null) {
-          await _syncTokenWithServer(name, fcmtoken);
-        }
-      } else {
-        _setupTokenRefreshListener(name);
-      }
+      // FcmTokenService owns fetching, storing and syncing the token, and its
+      // global onTokenRefresh listener covers the case where the SDK is still
+      // re-registering and has nothing to hand back yet.
+      await FcmTokenService.registerAfterLogin();
     } catch (e) {
       print('Post-login setup failed (non-blocking): $e');
     }
@@ -736,47 +727,8 @@ print(fullUrl);
     }
   }
 
-  Future<String?> _getFCMTokenWithRetry({int maxRetries = 3}) async {
-    for (int i = 0; i < maxRetries; i++) {
-      try {
-        // Guard against getToken() hanging (e.g. after deleteToken() on logout
-        // without an app restart) — never let it block the caller indefinitely.
-        String? token = await FirebaseMessaging.instance
-            .getToken()
-            .timeout(const Duration(seconds: 5));
-        if (token != null) {
-          return token;
-        }
-        await Future.delayed(Duration(seconds: 1 + i));
-      } catch (e) {
-        if (i == maxRetries - 1) return null;
-        await Future.delayed(Duration(seconds: 1 + i));
-      }
-    }
-    return null;
-  }
 
-  void _setupTokenRefreshListener(String? name) {
-    FirebaseMessaging.instance.onTokenRefresh
-        .listen((String token) async {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('FCMToken', token);
 
-          if (name != null) {
-            await _syncTokenWithServer(name, token);
-          }
-        })
-        .onError((err) {});
-  }
-
-  Future<void> _syncTokenWithServer(String name, String token) async {
-    try {
-      var result = await FirebaseApiService.syncFmcToken(name, token);
-
-      if (result['success'] == true) {
-      } else {}
-    } catch (e) {}
-  }
 
   void _clearOTPFields() {
     for (var controller in _otpControllers) {

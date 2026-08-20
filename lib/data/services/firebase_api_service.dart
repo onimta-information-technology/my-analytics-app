@@ -26,6 +26,7 @@ class FirebaseApiService {
   static const Map<String, String> endpoints = {
     'InsertFcmToken': '/api/users/update-fcm-token',
     'InsertChatFMCToken': '/api/users/sync',
+    'RemoveFcmToken': '/api/users/remove-fcm-token',
     'sendMessage': '/api/chat/send-message-with-notification',
     'deleteMessage': '/api/chats',
     'createChat': '/api/chats/create',
@@ -321,6 +322,26 @@ class FirebaseApiService {
       await prefs.setString('name', user['name']);
     }
     print('syncFmcToken response: $response');
+    return response;
+  }
+
+  /// Detaches this device's FCM token from the backend on logout.
+  ///
+  /// Called instead of FirebaseMessaging.deleteToken(): dropping the row stops
+  /// the pushes without invalidating the device registration, so the next
+  /// login cannot pick a just-deleted token out of the SDK cache.
+  ///
+  /// Must run before StorageUtil.clearUserData() — it needs the auth token and
+  /// the property's api url, both of which live in SharedPreferences.
+  static Future<Map<String, dynamic>> removeFcmToken() async {
+    final domain = await resolveDomain();
+    final deviceId = await DeviceId.get();
+    final url = '$domain${endpoints['RemoveFcmToken']}';
+    final response = await postRequest(url, {
+      'userId': deviceId,
+      'appType': appType,
+    });
+    print('removeFcmToken response: $response');
     return response;
   }
 

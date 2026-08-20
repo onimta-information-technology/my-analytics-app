@@ -507,6 +507,61 @@ class FirebaseApiService {
     }
   }
 
+  /// Replaces a group's avatar. Admins only.
+  ///
+  /// The backend uploads the image to Cloud Storage and stores the resulting
+  /// public url on the group in one step, so nothing else needs calling after
+  /// this. Returns the same {success, data|error} shape as the other group
+  /// admin actions, with `avatarUrl` inside `data` on success.
+  static Future<Map<String, dynamic>> updateGroupAvatar({
+    required String groupId,
+    required String avatarPath,
+  }) async {
+    try {
+      print('updateGroupAvatar called with groupId: $groupId, avatarPath: $avatarPath');
+      final domain = await resolveDomain();
+      final deviceId = await DeviceId.get();
+      final token = await _getToken();
+      final url = Uri.parse('$domain${endpoints['groups']}/$groupId/avatar');
+
+      final file = File(avatarPath);
+      if (!file.existsSync()) {
+        return {'success': false, 'error': 'Image file not found'};
+      }
+
+      final ext = avatarPath.split('.').last.toLowerCase();
+      final mimeParts = _mimeFromExtension(ext).split('/');
+
+      final request = http.MultipartRequest('POST', url)
+        ..headers['Authorization'] = 'Bearer $token'
+        ..fields['requesterId'] = deviceId
+        ..fields['requesterAppType'] = appType.toString()
+        ..files.add(
+          await http.MultipartFile.fromPath(
+            'avatar',
+            avatarPath,
+            contentType: MediaType(mimeParts[0], mimeParts[1]),
+          ),
+        );
+
+      final streamedResponse = await request.send();
+      final responseBody = await streamedResponse.stream.bytesToString();
+
+      if (streamedResponse.statusCode == 200 ||
+          streamedResponse.statusCode == 201) {
+        return {'success': true, 'data': jsonDecode(responseBody)};
+      }
+      return {
+        'success': false,
+        'error': 'Server returned status code: ${streamedResponse.statusCode}',
+        'statusCode': streamedResponse.statusCode,
+        'responseBody': responseBody,
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   /// Adds members to a group. Admins only. Users already in the group are
   /// silently skipped by the backend.
   static Future<Map<String, dynamic>> addGroupMembers({

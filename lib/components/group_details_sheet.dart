@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
+
+import 'package:image_picker/image_picker.dart';
 import 'package:ballys_reservation_app/components/group_avatar.dart';
 
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
@@ -160,6 +163,65 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
       ),
       successMessage: 'Group renamed',
       failureMessage: 'Could not rename the group',
+    );
+  }
+
+  /// Picks a new group picture and uploads it. Admins only — the backend
+  /// rejects anyone else, and the tap target is hidden for them anyway.
+  Future<void> _changeGroupAvatar() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera),
+              title: Text(
+                'Take a photo',
+                style: TextStyle(fontSize: _fs.fontSize - 2),
+              ),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: Text(
+                'Choose from gallery',
+                style: TextStyle(fontSize: _fs.fontSize - 2),
+              ),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
+    XFile? picked;
+    try {
+      // Downscaled before upload — the endpoint caps the image at 5MB.
+      picked = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 80,
+      );
+    } catch (e) {
+      if (mounted) _snack('Could not pick image: $e', error: true);
+      return;
+    }
+    if (picked == null || !mounted) return;
+
+    final path = picked.path;
+    await _runAction(
+      () => FirebaseApiService.updateGroupAvatar(
+        groupId: widget.groupId,
+        avatarPath: path,
+      ),
+      successMessage: 'Group photo updated',
+      failureMessage: 'Could not update the group photo',
     );
   }
 
@@ -447,10 +509,40 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    GroupAvatar(
-                      avatarUrl: details.groupAvatarUrl,
-                      radius: 28,
-                      backgroundColor: widget.avatarColor,
+                    GestureDetector(
+                      onTap: (isAdmin && !_busy) ? _changeGroupAvatar : null,
+                      child: Stack(
+                        children: [
+                          GroupAvatar(
+                            avatarUrl: details.groupAvatarUrl,
+                            radius: 28,
+                            backgroundColor: widget.avatarColor,
+                          ),
+                          // Only admins may change the picture, so only they
+                          // get the affordance.
+                          if (isAdmin)
+                            Positioned(
+                              right: 0,
+                              bottom: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: BoxDecoration(
+                                  color: Colors.green,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.camera_alt,
+                                  size: 12,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(

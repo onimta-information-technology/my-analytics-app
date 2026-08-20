@@ -300,11 +300,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     // ─── Transport Notification (msg_type: 10) ──────────────────────────────
     if (message.data['msg_type']?.toString() == '10') {
       _reloadTransportGlobally();
+      // The master id lets the transport list highlight the request this
+      // notification is about.
+      final masterId = message.data['MasterId']?.toString().trim() ?? '';
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Future.delayed(const Duration(milliseconds: 500), () {
           final context = navigatorKey.currentContext;
           if (context != null && context.mounted) {
-            context.go('/reservationMain/transport');
+            context.go(masterId.isEmpty
+                ? '/reservationMain/transport'
+                : '/reservationMain/transport'
+                    '?masterId=${Uri.encodeComponent(masterId)}');
           }
         });
       });

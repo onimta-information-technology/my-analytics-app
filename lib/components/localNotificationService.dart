@@ -278,8 +278,15 @@ class NotificationService {
           if (context != null && context.mounted) {
             await Future.delayed(Duration(milliseconds: 500));
             // TransportScreen reloads from the API in its initState, so simply
-            // landing on it gives the user fresh data.
-            context.go('/reservationMain/transport');
+            // landing on it gives the user fresh data. `masterId` tells it
+            // which request to reveal and highlight.
+            final masterId = (payload['MasterId'] ?? '').trim();
+            context.go(
+              masterId.isEmpty
+                  ? '/reservationMain/transport'
+                  : '/reservationMain/transport'
+                  '?masterId=${Uri.encodeComponent(masterId)}',
+            );
           }
           return;
         }

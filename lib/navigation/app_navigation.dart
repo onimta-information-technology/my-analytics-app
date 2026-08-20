@@ -634,12 +634,16 @@ class AppNavigation {
     ),
 
     // Transport (Bellagio only)
+    // `?masterId=` comes from a transport push notification and tells the
+    // screen which request to reveal.
     GoRoute(
       path: 'transport',
       pageBuilder: (context, state) => CustomTransitionPage(
         fullscreenDialog: false,
         key: state.pageKey,
-        child: const TransportScreen(),
+        child: TransportScreen(
+          highlightMasterId: state.uri.queryParameters['masterId'],
+        ),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(
             opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),

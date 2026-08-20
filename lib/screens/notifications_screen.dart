@@ -40,6 +40,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     switch (notification.msgType) {
       case '35':
         return Icons.hotel;
+      case '10':
+        return Icons.local_taxi;
       default:
         return Icons.notifications_active;
     }
@@ -62,6 +64,19 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       context.push(
         '/guest-bookings/view-booking',
         extra: {'booking': booking, 'isPending': true},
+      );
+      return;
+    }
+
+    // Transport notification — open the transport list with that request
+    // highlighted.
+    if (notification.msgType == '10') {
+      final masterId = (notification.data['MasterId'] ?? '').trim();
+      context.go(
+        masterId.isEmpty
+            ? '/reservationMain/transport'
+            : '/reservationMain/transport'
+                '?masterId=${Uri.encodeComponent(masterId)}',
       );
     }
   }

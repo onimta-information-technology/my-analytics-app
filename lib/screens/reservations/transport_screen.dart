@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/models/transport/transport_reservation.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
@@ -10,7 +13,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class TransportScreen extends ConsumerStatefulWidget {
-  const TransportScreen({super.key});
+  const TransportScreen({super.key, this.highlightMasterId});
+
+  /// `master_id` of the request to reveal on open — set when the screen is
+  /// reached from a transport push notification, so the user lands on the
+  /// right tab with that request scrolled into view and highlighted.
+  final String? highlightMasterId;
 
   @override
   ConsumerState<TransportScreen> createState() => _TransportScreenState();
@@ -22,6 +30,17 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
   late TabController _tabController;
   String _searchQuery = '';
   bool _isSearching = false;
+
+  // ── Notification highlight ──
+  // The request a push notification asked us to show. It is revealed once
+  // (tab switch + scroll) and the highlight fades away a few seconds later.
+  String? _highlightMasterId;
+  bool _highlightRevealed = false;
+  Timer? _highlightTimer;
+  final Map<TransportStatus, ScrollController> _scrollControllers = {
+    for (final status in TransportStatus.values) status: ScrollController(),
+  };
+  final Map<String, GlobalKey> _cardKeys = {};
 
   // ── Visibility gating ──
   // Sales code AD001 sees every transport request; everyone else only sees the
@@ -40,10 +59,41 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
     super.initState();
     _tabController =
         TabController(length: TransportStatus.values.length, vsync: this);
+    _highlightMasterId = _normaliseMasterId(widget.highlightMasterId);
     _loadAccessSettings();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadTransportData();
     });
+  }
+
+  /// A second notification tap while the screen is already open reuses this
+  /// route, so pick up the new master id and reveal that request instead.
+  @override
+  void didUpdateWidget(covariant TransportScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final incoming = _normaliseMasterId(widget.highlightMasterId);
+    if (incoming == null) return;
+    // Same request tapped again is worth re-revealing once its highlight has
+    // faded, but not while it is still lit up.
+    if (incoming == _normaliseMasterId(oldWidget.highlightMasterId) &&
+        incoming == _highlightMasterId) {
+      return;
+    }
+    _highlightTimer?.cancel();
+    setState(() {
+      _highlightMasterId = incoming;
+      _highlightRevealed = false;
+      // A highlighted request must not stay hidden behind a stale search.
+      _isSearching = false;
+      _searchQuery = '';
+      _searchController.clear();
+    });
+    _loadTransportData();
+  }
+
+  static String? _normaliseMasterId(String? masterId) {
+    final trimmed = masterId?.trim() ?? '';
+    return trimmed.isEmpty ? null : trimmed;
   }
 
   Future<void> _loadAccessSettings() async {
@@ -55,6 +105,7 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
       _userName = userName;
       _accessLoaded = true;
     });
+    _revealHighlighted();
   }
 
   bool get _canSeeAllRequests =>
@@ -72,6 +123,10 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
 
   @override
   void dispose() {
+    _highlightTimer?.cancel();
+    for (final controller in _scrollControllers.values) {
+      controller.dispose();
+    }
     _tabController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -79,6 +134,91 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
 
   Future<void> _loadTransportData() async {
     await ref.read(transportProvider.notifier).getTransportData();
+    if (!mounted) return;
+    _revealHighlighted();
+  }
+
+  /// Opens the tab holding the notification's request and scrolls it into
+  /// view. Does nothing until both the access settings and the transport data
+  /// are in — whichever finishes last drives the reveal.
+  void _revealHighlighted() {
+    final masterId = _highlightMasterId;
+    if (masterId == null || _highlightRevealed || !_accessLoaded) return;
+
+    TransportReservation? target;
+    for (final reservation in ref.read(transportProvider).reservations) {
+      if (reservation.masterId == masterId && _isVisibleToUser(reservation)) {
+        target = reservation;
+        break;
+      }
+    }
+    if (target == null) return; // Not loaded (or not ours) — nothing to show.
+
+    _highlightRevealed = true;
+
+    final tabIndex = TransportStatus.values.indexOf(target.status);
+    if (tabIndex >= 0 && _tabController.index != tabIndex) {
+      _tabController.animateTo(tabIndex);
+    }
+
+    final found = target;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _scrollToHighlighted(found);
+    });
+  }
+
+  /// Brings the highlighted card on screen. The list is built lazily, so keep
+  /// paging down until the card exists, then hand over to [Scrollable].
+  Future<void> _scrollToHighlighted(TransportReservation target) async {
+    final controller = _scrollControllers[target.status];
+    final key = _cardKeys[target.masterId];
+    if (controller == null || key == null) {
+      _startHighlightTimer();
+      return;
+    }
+
+    for (var attempt = 0; attempt < 15; attempt++) {
+      if (!mounted) return;
+
+      final cardContext = key.currentContext;
+      if (cardContext != null && cardContext.mounted) {
+        await Scrollable.ensureVisible(
+          cardContext,
+          alignment: 0.15,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeInOut,
+        );
+        break;
+      }
+
+      if (!controller.hasClients) {
+        await Future.delayed(const Duration(milliseconds: 80));
+        continue;
+      }
+
+      final position = controller.position;
+      if (position.pixels >= position.maxScrollExtent) break;
+      await controller.animateTo(
+        math.min(
+          position.pixels + position.viewportDimension * 0.8,
+          position.maxScrollExtent,
+        ),
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+      );
+    }
+
+    _startHighlightTimer();
+  }
+
+  /// The highlight is a pointer, not a state — drop it once it has been seen.
+  void _startHighlightTimer() {
+    _highlightTimer?.cancel();
+    _highlightTimer = Timer(const Duration(seconds: 6), () {
+      if (!mounted) return;
+      setState(() => _highlightMasterId = null);
+    });
   }
 
   String _formatDateTime(DateTime? dt) {
@@ -216,6 +356,7 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
             children: [
               for (final status in TransportStatus.values)
                 _buildTransportList(byStatus[status]!,
+                    status: status,
                     isLoading: transportState.isLoading || !_accessLoaded),
             ],
           ),
@@ -259,6 +400,7 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
 
   Widget _buildTransportList(
     List<TransportReservation> reservations, {
+    required TransportStatus status,
     required bool isLoading,
   }) {
     return RefreshIndicator(
@@ -271,6 +413,7 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
               ],
             )
           : ListView.builder(
+              controller: _scrollControllers[status],
               padding: const EdgeInsets.symmetric(vertical: 8),
               itemCount: reservations.length,
               itemBuilder: (context, index) =>
@@ -282,10 +425,24 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
   Widget _buildTransportCard(TransportReservation reservation) {
     final fontSettings = ref.watch(fontSettingsProvider);
 
+    // The request a notification pointed us at wears a gold border and a warm
+    // tint until the highlight times out.
+    final isHighlighted = _highlightMasterId != null &&
+        reservation.masterId == _highlightMasterId;
+    final cardKey =
+        _cardKeys.putIfAbsent(reservation.masterId, () => GlobalKey());
+
     return Card(
+      key: cardKey,
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      elevation: isHighlighted ? 8 : 4,
+      color: isHighlighted ? const Color(0xFFFFF6E0) : null,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: isHighlighted
+            ? const BorderSide(color: Constants.kPrimaryColor, width: 2)
+            : BorderSide.none,
+      ),
       child: ListTile(
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

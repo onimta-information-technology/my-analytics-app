@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:image_picker/image_picker.dart';
 import 'package:ballys_reservation_app/components/group_avatar.dart';
+import 'package:ballys_reservation_app/components/group_photo_view.dart';
 
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
@@ -148,10 +148,8 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
     // would pull the controller out from under a live TextField.
     final newName = await showDialog<String>(
       context: context,
-      builder: (dialogContext) => _RenameGroupDialog(
-        currentName: currentName,
-        fontSettings: _fs,
-      ),
+      builder: (dialogContext) =>
+          _RenameGroupDialog(currentName: currentName, fontSettings: _fs),
     );
 
     if (newName == null || newName.isEmpty || newName == currentName) return;
@@ -279,7 +277,10 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
     );
   }
 
-  Future<void> _setAdminRole(GroupMember member, {required bool promote}) async {
+  Future<void> _setAdminRole(
+    GroupMember member, {
+    required bool promote,
+  }) async {
     await _runAction(
       () => promote
           ? FirebaseApiService.promoteGroupAdmin(
@@ -415,10 +416,8 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (pickerContext) => _MemberPicker(
-        candidates: candidates,
-        fontSettings: _fs,
-      ),
+      builder: (pickerContext) =>
+          _MemberPicker(candidates: candidates, fontSettings: _fs),
     );
 
     if (selected == null || selected.isEmpty) return;
@@ -459,7 +458,11 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline, size: 44, color: Colors.red),
+                    const Icon(
+                      Icons.error_outline,
+                      size: 44,
+                      color: Colors.red,
+                    ),
                     const SizedBox(height: 12),
                     Text(
                       'Could not load group details',
@@ -510,7 +513,23 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
                 child: Row(
                   children: [
                     GestureDetector(
-                      onTap: (isAdmin && !_busy) ? _changeGroupAvatar : null,
+                      // Tapping the picture shows it full screen; with no
+                      // picture yet, an admin goes straight to the picker.
+                      onTap: _busy
+                          ? null
+                          : () {
+                              final url = details.groupAvatarUrl;
+                              if (url != null && url.isNotEmpty) {
+                                showGroupPhoto(
+                                  context,
+                                  url: url,
+                                  title: details.groupName,
+                                  onEdit: isAdmin ? _changeGroupAvatar : null,
+                                );
+                              } else if (isAdmin) {
+                                _changeGroupAvatar();
+                              }
+                            },
                       child: Stack(
                         children: [
                           GroupAvatar(
@@ -524,20 +543,26 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
                             Positioned(
                               right: 0,
                               bottom: 0,
-                              child: Container(
-                                padding: const EdgeInsets.all(3),
-                                decoration: BoxDecoration(
-                                  color: Colors.green,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 1.5,
+                              // Its own tap target, so the badge always goes
+                              // straight to the picker even when the avatar
+                              // underneath opens the full-screen view.
+                              child: GestureDetector(
+                                onTap: _busy ? null : _changeGroupAvatar,
+                                child: Container(
+                                  padding: const EdgeInsets.all(3),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 1.5,
+                                    ),
                                   ),
-                                ),
-                                child: const Icon(
-                                  Icons.camera_alt,
-                                  size: 12,
-                                  color: Colors.white,
+                                  child: const Icon(
+                                    Icons.camera_alt,
+                                    size: 12,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                             ),
@@ -828,7 +853,9 @@ class _MemberPickerState extends State<_MemberPicker> {
     final fs = widget.fontSettings;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: SizedBox(
         height: MediaQuery.of(context).size.height * 0.8,
         child: Padding(
@@ -943,8 +970,10 @@ class _MemberPickerState extends State<_MemberPicker> {
                       ),
                       onPressed: _selected.isEmpty
                           ? null
-                          : () =>
-                                Navigator.pop(context, _selected.values.toList()),
+                          : () => Navigator.pop(
+                              context,
+                              _selected.values.toList(),
+                            ),
                       child: Text(
                         'Add',
                         style: TextStyle(fontSize: fs.fontSize - 2),
@@ -978,8 +1007,9 @@ class _RenameGroupDialog extends StatefulWidget {
 }
 
 class _RenameGroupDialogState extends State<_RenameGroupDialog> {
-  late final TextEditingController _controller =
-      TextEditingController(text: widget.currentName);
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.currentName,
+  );
 
   @override
   void dispose() {

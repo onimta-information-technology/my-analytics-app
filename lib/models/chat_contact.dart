@@ -19,6 +19,9 @@ class ChatContact {
   final DateTime createdAt;
   final String? lastMessageSenderName;
   final int appType;
+  /// Remote picture for this row — currently only groups have one, so it is
+  /// null for 1:1 chats, which keep falling back to coloured initials.
+  final String? avatarUrl;
 
   ChatContact({
     required this.id,
@@ -38,6 +41,7 @@ class ChatContact {
     required this.createdAt,
     required this.lastMessageSenderName,
     this.appType = 1,
+    this.avatarUrl,
   }) : userUuid = userUuid ?? id;
 
   // Backend sends appType as a string (e.g. "2") in some responses and an
@@ -66,6 +70,7 @@ class ChatContact {
     'createdAt': createdAt.millisecondsSinceEpoch,
     'lastMessageSenderName': lastMessageSenderName,
     'appType': appType,
+    'avatarUrl': avatarUrl,
   };
 
   static ChatContact fromJson(Map<String, dynamic> json) => ChatContact(
@@ -88,6 +93,7 @@ class ChatContact {
     createdAt: DateTime.fromMillisecondsSinceEpoch(json['createdAt']),
     lastMessageSenderName: json['lastMessageSenderName'],
     appType: parseAppType(json['appType']),
+    avatarUrl: json['avatarUrl']?.toString(),
   );
 
   // Fixed: Now accepts currentUserDeviceId instead of currentUserName

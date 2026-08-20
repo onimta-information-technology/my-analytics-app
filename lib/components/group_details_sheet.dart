@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:ballys_reservation_app/components/group_avatar.dart';
 
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
@@ -446,22 +447,10 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    CircleAvatar(
+                    GroupAvatar(
+                      avatarUrl: details.groupAvatarUrl,
                       radius: 28,
                       backgroundColor: widget.avatarColor,
-                      backgroundImage: details.groupAvatarUrl != null
-                          ? NetworkImage(details.groupAvatarUrl!)
-                          : null,
-                      child: details.groupAvatarUrl == null
-                          ? Text(
-                              ChatContact.generateInitials(details.groupName),
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: _fs.fontSize,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            )
-                          : null,
                     ),
                     const SizedBox(width: 12),
                     Expanded(

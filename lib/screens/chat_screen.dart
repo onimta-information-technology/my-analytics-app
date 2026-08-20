@@ -1,4 +1,5 @@
 import 'package:ballys_reservation_app/components/badge_service.dart';
+import 'package:ballys_reservation_app/components/group_avatar.dart';
 import 'package:ballys_reservation_app/components/group_details_sheet.dart';
 import 'package:ballys_reservation_app/components/notification_banner.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
@@ -15,8 +16,10 @@ import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import 'dart:async';
+import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 List<ChatContact> _filteredUsers = [];
@@ -1015,22 +1018,10 @@ if (message.data['msg_type'] == '35') {
       elevation: 0,
       color: Colors.transparent,
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: group.avatarColor,
+        leading: GroupAvatar(
+          avatarUrl: group.groupAvatarUrl,
           radius: 25,
-          backgroundImage: group.groupAvatarUrl != null
-              ? NetworkImage(group.groupAvatarUrl!)
-              : null,
-          child: group.groupAvatarUrl == null
-              ? Text(
-                  group.initials,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: fontSettings.fontSize,
-                    fontWeight: FontWeight.bold,
-                  ),
-                )
-              : null,
+          backgroundColor: group.avatarColor,
         ),
         title: Row(
           children: [
@@ -1163,6 +1154,7 @@ if (message.data['msg_type'] == '35') {
       createdAt: DateTime.now(),
       lastMessageSenderName: group.lastMessageSender,
       appType: FirebaseApiService.appType,
+      avatarUrl: group.groupAvatarUrl,
     );
 
     Navigator.of(context)
@@ -1952,6 +1944,8 @@ if (message.data['msg_type'] == '35') {
     // Keyed by userUuid so the selection survives search filtering.
     final Map<String, ChatContact> selectedMembers = {};
     List<ChatContact> visibleUsers = List.from(_allUsers);
+    // Optional group avatar, uploaded in the same multipart create call.
+    File? avatarFile;
 
     await showModalBottomSheet(
       context: context,
@@ -1983,6 +1977,51 @@ if (message.data['msg_type'] == '35') {
                         style: TextStyle(
                           fontSize: fontSettings.fontSize + 2,
                           fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Center(
+                        child: GestureDetector(
+                          onTap: () async {
+                            final picked = await _pickGroupAvatar(sheetContext);
+                            if (picked != null) {
+                              setModalState(() => avatarFile = picked);
+                            }
+                          },
+                          child: Stack(
+                            children: [
+                              CircleAvatar(
+                                radius: 40,
+                                backgroundColor: Colors.grey[300],
+                                backgroundImage: avatarFile != null
+                                    ? FileImage(avatarFile!)
+                                    : null,
+                                child: avatarFile == null
+                                    ? Icon(
+                                        Icons.group,
+                                        size: 44,
+                                        color: Colors.grey[600],
+                                      )
+                                    : null,
+                              ),
+                              Positioned(
+                                right: 0,
+                                bottom: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.green,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.camera_alt,
+                                    size: 14,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -2191,6 +2230,7 @@ if (message.data['msg_type'] == '35') {
                                       _createGroup(
                                         nameController.text.trim(),
                                         selectedMembers.values.toList(),
+                                        avatarPath: avatarFile?.path,
                                       );
                                     }
                                   : null,
@@ -2217,7 +2257,58 @@ if (message.data['msg_type'] == '35') {
     nameController.dispose();
   }
 
-  Future<void> _createGroup(String name, List<ChatContact> members) async {
+  /// Lets the user pick a group avatar from the camera or gallery.
+  Future<File?> _pickGroupAvatar(BuildContext sheetContext) async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: sheetContext,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera),
+              title: const Text('Take a photo'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return null;
+
+    try {
+      // Downscaled before upload — the backend caps the avatar at 5MB.
+      final picked = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 80,
+      );
+      return picked == null ? null : File(picked.path);
+    } catch (e) {
+      if (!mounted) return null;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not pick image: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return null;
+    }
+  }
+
+  Future<void> _createGroup(
+    String name,
+    List<ChatContact> members, {
+    String? avatarPath,
+  }) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     scaffoldMessenger.showSnackBar(
@@ -2244,6 +2335,7 @@ if (message.data['msg_type'] == '35') {
     final groupId = await FirebaseApiService.createGroup(
       name: name,
       members: members,
+      avatarPath: avatarPath,
     );
 
     scaffoldMessenger.hideCurrentSnackBar();

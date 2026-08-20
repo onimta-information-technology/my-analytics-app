@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:ballys_reservation_app/components/group_avatar.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:ballys_reservation_app/components/badge_service.dart';
@@ -67,6 +68,11 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
   List<ChatMessage> _messages = [];
   String? _currentUserName;
   String? _currentUserUuid;
+
+  /// Picture shown in the app bar. Seeded from the row we were opened with and
+  /// re-fetched for groups, since a chat opened from a notification carries no
+  /// avatar url of its own.
+  String? _avatarUrl;
   bool _isLoadingMessages = false;
   bool _isUploading = false;
 
@@ -87,6 +93,8 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     CurrentChatState().setCurrentChat(widget.contact.chatUuid);
+    _avatarUrl = widget.contact.avatarUrl;
+    if (widget.isGroup) _refreshGroupAvatar();
     _getCurrentUserName();
     _fetchMessagesFromApi();
     _setupForegroundMessageListener();
@@ -171,6 +179,23 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     } catch (_) {}
   }
 
+  /// Pulls the group's current avatar so the app bar matches the group list,
+  /// including after it is changed elsewhere. Failures are silent — the
+  /// initials fallback already renders something sensible.
+  Future<void> _refreshGroupAvatar() async {
+    try {
+      final group = await FirebaseApiService.fetchGroupDetails(
+        widget.contact.chatUuid,
+      );
+      final url = group['groupAvatarUrl']?.toString();
+      final resolved = (url == null || url.isEmpty) ? null : url;
+      if (!mounted || resolved == _avatarUrl) return;
+      setState(() => _avatarUrl = resolved);
+    } catch (_) {
+      // Keep whatever we were opened with.
+    }
+  }
+
   void _openGroupInfo() {
     showGroupDetailsSheet(
       context: context,
@@ -178,6 +203,8 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
       avatarColor: widget.contact.avatarColor,
       fontSettings: ref.read(fontSettingsProvider),
       currentUserUuid: _currentUserUuid,
+      // Avatar/name edits in the sheet reflect back into the app bar.
+      onGroupChanged: _refreshGroupAvatar,
       // Left or deleted: this conversation no longer exists for us.
       onGroupLeftOrDeleted: () {
         if (!mounted) return;
@@ -2047,18 +2074,26 @@ Future<void> _markMessagesAsRead() async {
                   children: [
                     Stack(
                       children: [
-                        CircleAvatar(
-                          backgroundColor: widget.contact.avatarColor,
-                          radius: 18,
-                          child: Text(
-                            widget.contact.initials,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: fontSettings.fontSize - 4,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
+                        // Groups get the picture (or the group glyph); 1:1
+                        // chats keep their coloured initials.
+                        widget.isGroup
+                            ? GroupAvatar(
+                                avatarUrl: _avatarUrl,
+                                radius: 18,
+                                backgroundColor: widget.contact.avatarColor,
+                              )
+                            : CircleAvatar(
+                                backgroundColor: widget.contact.avatarColor,
+                                radius: 18,
+                                child: Text(
+                                  widget.contact.initials,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: fontSettings.fontSize - 4,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
                         if (!widget.isGroup && widget.contact.isOnline)
                           Positioned(
                             bottom: 0,

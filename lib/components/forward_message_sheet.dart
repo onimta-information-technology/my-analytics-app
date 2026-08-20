@@ -1,4 +1,5 @@
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
+import 'package:ballys_reservation_app/components/group_avatar.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/models/chat_group.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
@@ -356,20 +357,10 @@ class _ForwardMessageSheetState extends State<_ForwardMessageSheet> {
                 }
               });
             },
-      secondary: CircleAvatar(
+      secondary: GroupAvatar(
+        avatarUrl: group.groupAvatarUrl,
+        radius: 20,
         backgroundColor: group.avatarColor,
-        backgroundImage: group.groupAvatarUrl != null
-            ? NetworkImage(group.groupAvatarUrl!)
-            : null,
-        child: group.groupAvatarUrl != null
-            ? null
-            : Text(
-                group.initials,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: _fs.fontSize - 4,
-                ),
-              ),
       ),
       title: Text(
         group.groupName,

@@ -375,25 +375,50 @@ class FirebaseApiService {
   static Future<String?> createGroup({
     required String name,
     required List<ChatContact> members,
+    String? avatarPath,
   }) async {
     try {
       final domain = await resolveDomain();
       final deviceId = await DeviceId.get();
-      final url = '$domain${endpoints['createGroup']}';
-      final response = await postRequest(url, {
-        'name': name,
-        'avatarUrl': "",
-        'creatorId': deviceId,
-        'creatorAppType': appType,
-        'members': members
-            .map((m) => {'userUuid': m.userUuid, 'appType': m.appType})
-            .toList(),
-      });
-print('createGroup response: $response');
-      if (response['success'] == true) {
-        final data = response['data'];
-        if (data?['success'] == true || data?['groupId'] != null) {
-          return data?['groupId']?.toString();
+      final token = await _getToken();
+      final url = Uri.parse('$domain${endpoints['createGroup']}');
+
+      final request = http.MultipartRequest('POST', url)
+        ..headers['Authorization'] = 'Bearer $token'
+        ..fields['name'] = name
+        ..fields['creatorId'] = deviceId
+        ..fields['creatorAppType'] = appType.toString()
+        // members travels as a JSON-encoded array inside the form field.
+        ..fields['members'] = jsonEncode(
+          members
+              .map((m) => {'userUuid': m.userUuid, 'appType': m.appType})
+              .toList(),
+        );
+
+      if (avatarPath != null && avatarPath.isNotEmpty) {
+        final file = File(avatarPath);
+        if (file.existsSync()) {
+          final ext = avatarPath.split('.').last.toLowerCase();
+          final mimeParts = _mimeFromExtension(ext).split('/');
+          request.files.add(
+            await http.MultipartFile.fromPath(
+              'avatar',
+              avatarPath,
+              contentType: MediaType(mimeParts[0], mimeParts[1]),
+            ),
+          );
+        }
+      }
+
+      final streamedResponse = await request.send();
+      final responseBody = await streamedResponse.stream.bytesToString();
+      print('createGroup response: ${streamedResponse.statusCode} $responseBody');
+
+      if (streamedResponse.statusCode == 200 ||
+          streamedResponse.statusCode == 201) {
+        final data = jsonDecode(responseBody) as Map<String, dynamic>;
+        if (data['success'] == true || data['groupId'] != null) {
+          return data['groupId']?.toString();
         }
       }
       return null;
@@ -473,7 +498,6 @@ print('createGroup response: $response');
       return await patchRequest(url, {
         'requesterId': deviceId,
         'requesterAppType': appType,
-         'avatarUrl': "",
         if (name != null) 'name': name,
         if (adminOnlyMessaging != null)
           'adminOnlyMessaging': adminOnlyMessaging,

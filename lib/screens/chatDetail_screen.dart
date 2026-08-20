@@ -7,6 +7,7 @@ import 'package:ballys_reservation_app/components/forward_message_sheet.dart';
 import 'package:ballys_reservation_app/components/group_details_sheet.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
+import 'package:ballys_reservation_app/models/chat_group.dart';
 import 'package:ballys_reservation_app/models/chat_message.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/utils/current_chat_state.dart';
@@ -73,6 +74,21 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
   /// re-fetched for groups, since a chat opened from a notification carries no
   /// avatar url of its own.
   String? _avatarUrl;
+
+  // ── @mentions ──
+  /// Group roster, used both to suggest names while typing and to highlight
+  /// mentions in bubbles. Empty for 1:1 chats.
+  List<GroupMember> _groupMembers = [];
+
+  /// People picked from the suggestion list, keyed by uuid. Kept until send so
+  /// their uuid/appType can be attached; entries whose "@Name" no longer
+  /// appears in the text are dropped at that point.
+  final Map<String, GroupMember> _pickedMentions = {};
+
+  /// Currently offered suggestions, and where in the text the "@" that
+  /// triggered them sits. Null anchor means no mention is being typed.
+  List<GroupMember> _mentionSuggestions = [];
+  int? _mentionAnchor;
   bool _isLoadingMessages = false;
   bool _isUploading = false;
 
@@ -94,7 +110,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     WidgetsBinding.instance.addObserver(this);
     CurrentChatState().setCurrentChat(widget.contact.chatUuid);
     _avatarUrl = widget.contact.avatarUrl;
-    if (widget.isGroup) _refreshGroupAvatar();
+    if (widget.isGroup) _loadGroupInfo();
     _getCurrentUserName();
     _fetchMessagesFromApi();
     _setupForegroundMessageListener();
@@ -179,18 +195,25 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     } catch (_) {}
   }
 
-  /// Pulls the group's current avatar so the app bar matches the group list,
-  /// including after it is changed elsewhere. Failures are silent — the
-  /// initials fallback already renders something sensible.
-  Future<void> _refreshGroupAvatar() async {
+  /// Pulls the group's avatar and roster: the avatar so the app bar matches
+  /// the group list (including after it is changed elsewhere), the roster so
+  /// @mentions can be suggested and highlighted. Failures are silent — the
+  /// initials fallback still renders, and mentions simply stay unavailable.
+  Future<void> _loadGroupInfo() async {
     try {
       final group = await FirebaseApiService.fetchGroupDetails(
         widget.contact.chatUuid,
       );
-      final url = group['groupAvatarUrl']?.toString();
-      final resolved = (url == null || url.isEmpty) ? null : url;
-      if (!mounted || resolved == _avatarUrl) return;
-      setState(() => _avatarUrl = resolved);
+      final details = GroupDetails.fromApiJson(group);
+      if (!mounted) return;
+      if (details.groupAvatarUrl == _avatarUrl &&
+          details.members.length == _groupMembers.length) {
+        return;
+      }
+      setState(() {
+        _avatarUrl = details.groupAvatarUrl;
+        _groupMembers = details.members;
+      });
     } catch (_) {
       // Keep whatever we were opened with.
     }
@@ -204,7 +227,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
       fontSettings: ref.read(fontSettingsProvider),
       currentUserUuid: _currentUserUuid,
       // Avatar/name edits in the sheet reflect back into the app bar.
-      onGroupChanged: _refreshGroupAvatar,
+      onGroupChanged: _loadGroupInfo,
       // Left or deleted: this conversation no longer exists for us.
       onGroupLeftOrDeleted: () {
         if (!mounted) return;
@@ -352,6 +375,224 @@ Future<void> _markMessagesAsRead() async {
     await FirebaseApiService.markMessagesAsRead(widget.contact.chatUuid, ids);
   } catch (_) {}
 }
+  // ─── @mentions ──────────────────────────────────────────────────────────────
+
+  /// Longest names first, so "@John Smith" wins over a member also called
+  /// "John" when both could match the same text.
+  List<GroupMember> get _mentionableMembers {
+    final list = _groupMembers
+        .where((m) => m.name.isNotEmpty && m.userUuid != _currentUserUuid)
+        .toList();
+    list.sort((a, b) => b.name.length.compareTo(a.name.length));
+    return list;
+  }
+
+  void _hideMentionSuggestions() {
+    if (_mentionAnchor == null && _mentionSuggestions.isEmpty) return;
+    setState(() {
+      _mentionAnchor = null;
+      _mentionSuggestions = [];
+    });
+  }
+
+  /// Works out whether the caret sits inside an "@..." token and, if so, which
+  /// members match what has been typed so far.
+  void _onComposerChanged(String value) {
+    if (!widget.isGroup || _groupMembers.isEmpty) return;
+
+    final selection = _messageController.selection;
+    final caret = selection.baseOffset;
+    if (!selection.isCollapsed || caret < 0 || caret > value.length) {
+      _hideMentionSuggestions();
+      return;
+    }
+
+    final before = value.substring(0, caret);
+    final at = before.lastIndexOf('@');
+    // Only a fresh word starts a mention, so "email@host" never triggers one.
+    if (at == -1 || (at > 0 && !RegExp(r'\s').hasMatch(before[at - 1]))) {
+      _hideMentionSuggestions();
+      return;
+    }
+
+    final query = before.substring(at + 1);
+    // Names may contain spaces, so the query does too — but a newline or a
+    // long run of text means the user has moved on from the mention.
+    if (query.contains('\n') || query.length > 24) {
+      _hideMentionSuggestions();
+      return;
+    }
+
+    final lower = query.toLowerCase();
+    final matches = _mentionableMembers
+        .where((m) => m.name.toLowerCase().contains(lower))
+        .toList();
+
+    if (matches.isEmpty) {
+      _hideMentionSuggestions();
+      return;
+    }
+    setState(() {
+      _mentionAnchor = at;
+      _mentionSuggestions = matches;
+    });
+  }
+
+  /// Swaps the half-typed "@que" for the full "@Name " and remembers who was
+  /// picked, so the uuid can be sent even though the text only carries a name.
+  void _insertMention(GroupMember member) {
+    final anchor = _mentionAnchor;
+    if (anchor == null) return;
+
+    final text = _messageController.text;
+    final caret = _messageController.selection.baseOffset;
+    if (caret < anchor || caret > text.length) return;
+
+    final token = '@${member.name} ';
+    final head = text.substring(0, anchor) + token;
+    final newText = head + text.substring(caret);
+
+    _messageController.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: head.length),
+    );
+
+    setState(() {
+      _pickedMentions[member.userUuid] = member;
+      _mentionAnchor = null;
+      _mentionSuggestions = [];
+    });
+  }
+
+  /// The picked mentions still present in [text], in the wire format the
+  /// backend wants. Someone the user picked and then deleted drops out here.
+  List<Map<String, dynamic>> _mentionsIn(String text) {
+    return _pickedMentions.values
+        .where((m) => text.contains('@${m.name}'))
+        .map((m) => {'userUuid': m.userUuid, 'appType': m.appType})
+        .toList();
+  }
+
+  /// Message text with any "@Name" that matches a current group member drawn
+  /// in bold. Matching against the roster rather than a server field means
+  /// both sent and received messages highlight without extra payload.
+  Widget _buildMessageText(String text, TextStyle baseStyle) {
+    if (!widget.isGroup || _groupMembers.isEmpty || !text.contains('@')) {
+      return Text(text, style: baseStyle);
+    }
+
+    // Longest first so "@John Smith" is preferred over a member named "John".
+    final byLength = _groupMembers.where((m) => m.name.isNotEmpty).toList()
+      ..sort((a, b) => b.name.length.compareTo(a.name.length));
+
+    final spans = <TextSpan>[];
+    final plain = StringBuffer();
+    var i = 0;
+    var matched = false;
+
+    void flush() {
+      if (plain.isEmpty) return;
+      spans.add(TextSpan(text: plain.toString(), style: baseStyle));
+      plain.clear();
+    }
+
+    while (i < text.length) {
+      if (text[i] == '@') {
+        final rest = text.substring(i + 1).toLowerCase();
+        GroupMember? hit;
+        for (final member in byLength) {
+          if (rest.startsWith(member.name.toLowerCase())) {
+            hit = member;
+            break;
+          }
+        }
+        if (hit != null) {
+          flush();
+          // Being named yourself is worth spotting in a busy group, so it
+          // reads louder than a mention of somebody else.
+          final isMe = _currentUserUuid != null &&
+              hit.userUuid.toLowerCase() == _currentUserUuid!.toLowerCase();
+          spans.add(
+            TextSpan(
+              text: text.substring(i, i + 1 + hit.name.length),
+              style: baseStyle.copyWith(
+                fontWeight: FontWeight.bold,
+                backgroundColor: isMe
+                    ? Colors.amber.withValues(alpha: 0.35)
+                    : null,
+              ),
+            ),
+          );
+          i += 1 + hit.name.length;
+          matched = true;
+          continue;
+        }
+      }
+      plain.write(text[i]);
+      i++;
+    }
+
+    if (!matched) return Text(text, style: baseStyle);
+    flush();
+    return RichText(text: TextSpan(children: spans));
+  }
+
+  /// True when this message names the signed-in user. Read from the server's
+  /// `mentions` rather than the text, so a rename or a "@Name" someone typed
+  /// by hand cannot produce a false positive.
+  bool _mentionsMe(ChatMessage message) =>
+      !message.isMe &&
+      message.mentionsUser(_currentUserUuid, FirebaseApiService.appType);
+
+  Widget _buildMentionSuggestions(FontSettings fontSettings) {
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 180),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Colors.grey[300]!)),
+      ),
+      child: ListView.builder(
+        shrinkWrap: true,
+        padding: EdgeInsets.zero,
+        itemCount: _mentionSuggestions.length,
+        itemBuilder: (context, index) {
+          final member = _mentionSuggestions[index];
+          return ListTile(
+            dense: true,
+            leading: CircleAvatar(
+              radius: 16,
+              backgroundColor: member.avatarColor,
+              child: Text(
+                member.initials,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: fontSettings.fontSize - 5,
+                ),
+              ),
+            ),
+            title: Text(
+              member.name,
+              style: TextStyle(
+                fontSize: fontSettings.fontSize - 2,
+                fontWeight: fontSettings.fontWeight,
+              ),
+            ),
+            trailing: member.isAdmin
+                ? Text(
+                    'Admin',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: fontSettings.fontSize - 5,
+                    ),
+                  )
+                : null,
+            onTap: () => _insertMention(member),
+          );
+        },
+      ),
+    );
+  }
+
   // ─── Send text ──────────────────────────────────────────────────────────────
 
   void _sendMessage() async {
@@ -368,6 +609,9 @@ Future<void> _markMessagesAsRead() async {
     // Taken before the composer is cleared, so the optimistic bubble and the
     // request agree on what is being quoted.
     final replyTo = _replyingTo;
+    // Resolved before the composer is cleared — the text is what decides which
+    // picked mentions actually survived.
+    final mentions = _mentionsIn(text);
 
     // Groups always use POST /api/chats/:chatId/messages. A 1:1 message
     // normally goes through send-message-with-notification instead (that is
@@ -387,11 +631,21 @@ Future<void> _markMessagesAsRead() async {
           replyToMessageId: replyTo?.apiMessageId,
           replyToText: replyTo == null ? null : _quotedPreviewText(replyTo),
           replyToSenderName: replyTo == null ? null : _senderLabel(replyTo),
+          mentions: mentions
+              .map(
+                (m) => MessageMention(
+                  userUuid: m['userUuid'] as String,
+                  appType: m['appType'] as int,
+                ),
+              )
+              .toList(),
         ),
       );
       _replyingTo = null;
     });
     _messageController.clear();
+    _pickedMentions.clear();
+    _hideMentionSuggestions();
     if (widget.onMessageSent != null) widget.onMessageSent!(text);
 
     try {
@@ -400,6 +654,7 @@ Future<void> _markMessagesAsRead() async {
               chatId: widget.contact.chatUuid,
               text: text,
               replyToMessageId: replyTo?.apiMessageId,
+              mentionedUserIds: mentions.isEmpty ? null : mentions,
             )
           : await FirebaseApiService.sendMessage(
               recipientUuid: widget.contact.userUuid,
@@ -1847,6 +2102,37 @@ Future<void> _markMessagesAsRead() async {
                           ),
                         ),
 
+                      // "Mentioned you" tag, driven by the server's mentions
+                      // list so it is right even when the text is edited or a
+                      // member was renamed.
+                      if (_mentionsMe(message))
+                        Padding(
+                          padding: EdgeInsets.only(
+                            bottom: 2,
+                            left: isImageBubble ? 8 : 0,
+                            right: isImageBubble ? 8 : 0,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.alternate_email,
+                                size: fontSettings.fontSize - 4,
+                                color: Colors.amber[800],
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Mentioned you',
+                                style: TextStyle(
+                                  fontSize: fontSettings.fontSize - 5,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.amber[800],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
                       // Attachment
                       if (hasGrouped) ...[
                         _buildImageGrid(
@@ -1868,9 +2154,9 @@ Future<void> _markMessagesAsRead() async {
                           padding: isImageBubble
                               ? const EdgeInsets.symmetric(horizontal: 8)
                               : EdgeInsets.zero,
-                          child: Text(
+                          child: _buildMessageText(
                             message.text,
-                            style: TextStyle(
+                            TextStyle(
                               color: message.isMe
                                   ? Colors.white
                                   : Colors.black87,
@@ -2262,6 +2548,8 @@ Future<void> _markMessagesAsRead() async {
 
               // ── Input bar (hidden in selection mode) ──
               if (!_isSelectionMode && widget.canSendMessages) ...[
+                if (_mentionSuggestions.isNotEmpty)
+                  _buildMentionSuggestions(fontSettings),
                 if (_replyingTo != null)
                   _buildReplyPreview(_replyingTo!, fontSettings),
                 Container(
@@ -2318,6 +2606,7 @@ Future<void> _markMessagesAsRead() async {
                           ),
                           maxLines: null,
                           textInputAction: TextInputAction.newline,
+                          onChanged: _onComposerChanged,
                           onSubmitted: (_) => _sendMessage(),
                           onTap: () {
                             Future.delayed(

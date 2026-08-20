@@ -96,62 +96,54 @@ class ChatContact {
     avatarUrl: json['avatarUrl']?.toString(),
   );
 
-  // Fixed: Now accepts currentUserDeviceId instead of currentUserName
+  /// Builds a 1:1 row, which is titled after the *other* participant.
+  ///
+  /// [currentUserDeviceId] is the chat backend's key for "you" (participants
+  /// are stored under the device id). [currentUserName] is only a second
+  /// guard: when the device id is missing or stale the uuid comparison used to
+  /// match nothing, so the first participant won — often the current user, and
+  /// the row rendered with the user's own name.
   static ChatContact fromChatApiJson(
     Map<String, dynamic> json,
-    String currentUserDeviceId, { // Changed parameter name to be clearer
+    String currentUserDeviceId, {
+    String? currentUserName,
     Map<String, dynamic>? participantDetails,
   }) {
     final List<dynamic> participantsData = json['participants'] ?? [];
 
-   
-   
+    bool isCurrentUser(dynamic participant) {
+      final String uuid = participant['user_uuid'] ?? '';
+      final String name = participant['name'] ?? '';
+
+      if (currentUserDeviceId.isNotEmpty && uuid == currentUserDeviceId) {
+        return true;
+      }
+      return currentUserName != null &&
+          currentUserName.isNotEmpty &&
+          name == currentUserName;
+    }
+
     String otherParticipantUuid = '';
     String otherParticipantName = '';
     dynamic otherParticipantAppType;
 
-    // Find the participant that is NOT the current user (by device ID)
     for (var participant in participantsData) {
-      final String participantUuid = participant['user_uuid'] ?? '';
-      final String participantName = participant['name'] ?? '';
+      if (isCurrentUser(participant)) continue;
 
-
-
-      // Compare with device ID, not name
-      if (participantUuid != currentUserDeviceId) {
-        otherParticipantUuid = participantUuid;
-        otherParticipantName = participantName;
-        otherParticipantAppType =
-            participant['appType'] ?? participant['app_type'];
-        break;
-      } else {
-
-      }
+      otherParticipantUuid = participant['user_uuid'] ?? '';
+      otherParticipantName = participant['name'] ?? '';
+      otherParticipantAppType =
+          participant['appType'] ?? participant['app_type'];
+      if (otherParticipantName.isNotEmpty) break;
     }
 
-    // Fallback if no other participant found
+    // Every participant is the current user (self chat), or the payload has no
+    // usable name — fall back to the first entry so the row is not blank.
     if (otherParticipantName.isEmpty && participantsData.isNotEmpty) {
-      // Try to find any participant that's not the current user
-      for (var participant in participantsData) {
-        final String participantUuid = participant['user_uuid'] ?? '';
-        final String participantName = participant['name'] ?? '';
-
-        if (participantUuid != currentUserDeviceId) {
-          otherParticipantUuid = participantUuid;
-          otherParticipantName = participantName;
-          otherParticipantAppType =
-              participant['appType'] ?? participant['app_type'];
-          break;
-        }
-      }
-
-      // If still empty, use the first participant (shouldn't happen in normal cases)
-      if (otherParticipantName.isEmpty) {
-        otherParticipantUuid = participantsData[0]['user_uuid'] ?? '';
-        otherParticipantName = participantsData[0]['name'] ?? 'Unknown';
-        otherParticipantAppType =
-            participantsData[0]['appType'] ?? participantsData[0]['app_type'];
-      }
+      otherParticipantUuid = participantsData[0]['user_uuid'] ?? '';
+      otherParticipantName = participantsData[0]['name'] ?? 'Unknown';
+      otherParticipantAppType =
+          participantsData[0]['appType'] ?? participantsData[0]['app_type'];
     }
 
     final String name = otherParticipantName.isNotEmpty

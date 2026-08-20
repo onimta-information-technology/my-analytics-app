@@ -460,10 +460,16 @@ class FirebaseApiService {
   /// [replyToMessageId] quotes an existing message — it must belong to this
   /// same chat, or the backend answers 400. The server snapshots the quoted
   /// text and sender name onto the new message, so nothing else is sent.
+  ///
+  /// [mentionedUserIds] flags the people named with an @ in [text] — each entry
+  /// is `{userUuid, appType}`, since the uuid alone does not identify a user
+  /// across apps. Mostly a group feature, but the endpoint accepts it for 1:1
+  /// chats too.
   static Future<Map<String, dynamic>> sendChatMessage({
     required String chatId,
     required String text,
     String? replyToMessageId,
+    List<Map<String, dynamic>>? mentionedUserIds,
   }) async {
     try {
       final domain = await resolveDomain();
@@ -478,6 +484,8 @@ class FirebaseApiService {
         'senderName': senderName,
         'text': text,
         if (replyToMessageId != null) 'replyToMessageId': replyToMessageId,
+        if (mentionedUserIds != null && mentionedUserIds.isNotEmpty)
+          'mentionedUserIds': mentionedUserIds,
       });
     } catch (e) {
       return {'success': false, 'error': e.toString()};

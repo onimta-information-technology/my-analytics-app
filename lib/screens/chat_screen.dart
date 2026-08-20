@@ -166,25 +166,7 @@ if (message.data['msg_type'] == '35') {
       if (chatData['chats'] != null) {
         final List<dynamic> chats = chatData['chats'];
 
-        // Extract the actual device ID from the first chat's participants
-        String? actualDeviceId;
-        if (chats.isNotEmpty && _currentUserName != null) {
-          final firstChat = chats[0];
-          final participants =
-              firstChat['participants'] as List<dynamic>? ?? [];
-
-          for (var participant in participants) {
-            final uuid = participant['user_uuid'] as String?;
-            final name = participant['name'] as String?;
-
-            if (name == _currentUserName && uuid != null && uuid != name) {
-              actualDeviceId = uuid;
-              break;
-            }
-          }
-        }
-
-        final String userIdentifier = actualDeviceId ?? _currentUserName ?? '';
+        final String userIdentifier = await _resolveCurrentUserId();
 
         Map<String, dynamic> userDetailsMap = {};
         if (userData['users'] != null) {
@@ -201,6 +183,7 @@ if (message.data['msg_type'] == '35') {
                 (chat) => ChatContact.fromChatApiJson(
                   chat,
                   userIdentifier,
+                  currentUserName: _currentUserName,
                   participantDetails: userDetailsMap,
                 ),
               )
@@ -371,18 +354,44 @@ if (message.data['msg_type'] == '35') {
   }
 
   Future<void> _getName() async {
+    // The chat backend keys users by device id, so keep it around to spot
+    // "you" in member lists. Resolve it first and on its own: it is the only
+    // reliable identifier, and a failing name lookup used to leave it null.
+    await _resolveCurrentUserId();
+
     try {
       final userName = await FirebaseApiService.getName();
-      // The chat backend keys users by device id, so keep it around to spot
-      // "you" in member lists.
-      final deviceId = await DeviceId.get();
       if (!mounted) return;
       setState(() {
         _currentUserName = userName;
-        _currentUserUuid = deviceId;
       });
     } catch (e) {
 
+    }
+  }
+
+  /// Returns the device id the chat backend stores this user under.
+  ///
+  /// A push can trigger a refresh before [_getName] has run, and an identifier
+  /// that matches no participant makes every row fall back to the first
+  /// participant — often the current user, so the row showed the user's own
+  /// name until a re-login refreshed the cache.
+  Future<String> _resolveCurrentUserId() async {
+    final cached = _currentUserUuid;
+    if (cached != null && cached.isNotEmpty) return cached;
+
+    try {
+      final deviceId = await DeviceId.get();
+      if (mounted) {
+        setState(() {
+          _currentUserUuid = deviceId;
+        });
+      } else {
+        _currentUserUuid = deviceId;
+      }
+      return deviceId;
+    } catch (e) {
+      return '';
     }
   }
 
@@ -516,27 +525,7 @@ if (message.data['msg_type'] == '35') {
       if (chatData['chats'] != null) {
         final List<dynamic> chats = chatData['chats'];
 
-        // Extract the actual device ID from the first chat's participants
-        String? actualDeviceId;
-        if (chats.isNotEmpty && _currentUserName != null) {
-          final firstChat = chats[0];
-          final participants =
-              firstChat['participants'] as List<dynamic>? ?? [];
-
-          for (var participant in participants) {
-            final uuid = participant['user_uuid'] as String?;
-            final name = participant['name'] as String?;
-
-            // Find the participant with matching name to get the real device ID
-            if (name == _currentUserName && uuid != null && uuid != name) {
-              actualDeviceId = uuid;
-              break;
-            }
-          }
-        }
-
-        // Use the actual device ID if found, otherwise fall back to current user name
-        final String userIdentifier = actualDeviceId ?? _currentUserName ?? '';
+        final String userIdentifier = await _resolveCurrentUserId();
 
         Map<String, dynamic> userDetailsMap = {};
         if (userData['users'] != null) {
@@ -553,6 +542,7 @@ if (message.data['msg_type'] == '35') {
                 (chat) => ChatContact.fromChatApiJson(
                   chat,
                   userIdentifier,
+                  currentUserName: _currentUserName,
                   participantDetails: userDetailsMap,
                 ),
               )

@@ -1,3 +1,5 @@
+import 'package:ballys_reservation_app/models/chat_contact.dart';
+
 /// A single attachment item (used inside groupedAttachments).
 class AttachmentItem {
   final String? url;        // remote URL
@@ -57,6 +59,43 @@ class AttachmentItem {
 
 // ---------------------------------------------------------------------------
 
+/// Someone named with an @ in a message, as sent in `mentionedUserIds` and
+/// returned in `mentions`.
+///
+/// The uuid alone does not identify a person — the same uuid can exist under
+/// another app — so [appType] is part of the identity.
+class MessageMention {
+  final String userUuid;
+  final int appType;
+
+  const MessageMention({required this.userUuid, required this.appType});
+
+  /// uuids arrive in mixed case (an Android device id versus an iOS vendor
+  /// uuid), so compare case-insensitively.
+  bool matches(String? userUuid, int appType) =>
+      userUuid != null &&
+      userUuid.toLowerCase() == this.userUuid.toLowerCase() &&
+      appType == this.appType;
+
+  Map<String, dynamic> toJson() => {'userUuid': userUuid, 'appType': appType};
+
+  static MessageMention fromJson(Map<String, dynamic> json) => MessageMention(
+        userUuid: json['userUuid']?.toString() ?? '',
+        appType: ChatContact.parseAppType(json['appType']),
+      );
+
+  /// Tolerates a null, a non-list, or rows that are not objects — a malformed
+  /// mentions field must not take out the whole message list.
+  static List<MessageMention> listFrom(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map<String, dynamic>>()
+        .map(MessageMention.fromJson)
+        .where((m) => m.userUuid.isNotEmpty)
+        .toList();
+  }
+}
+
 class ChatMessage {
   final String id;
   final String text;
@@ -94,6 +133,9 @@ class ChatMessage {
   // Multi-attachment: when non-empty, render as image grid
   final List<AttachmentItem> groupedAttachments;
 
+  // People @-mentioned in this message. Empty on messages with no mentions.
+  final List<MessageMention> mentions;
+
   ChatMessage({
     required this.id,
     required this.text,
@@ -115,7 +157,16 @@ class ChatMessage {
     this.replyToText,
     this.replyToSenderName,
     List<AttachmentItem>? groupedAttachments,
-  }) : groupedAttachments = groupedAttachments ?? const [];
+    List<MessageMention>? mentions,
+  })  : groupedAttachments = groupedAttachments ?? const [],
+        mentions = mentions ?? const [];
+
+  bool get hasMentions => mentions.isNotEmpty;
+
+  /// True when [userUuid]/[appType] is one of the people named in this
+  /// message — i.e. "this one is for you".
+  bool mentionsUser(String? userUuid, int appType) =>
+      mentions.any((m) => m.matches(userUuid, appType));
 
   bool get hasGroupedAttachments => groupedAttachments.isNotEmpty;
 
@@ -143,6 +194,7 @@ class ChatMessage {
     String? replyToText,
     String? replyToSenderName,
     List<AttachmentItem>? groupedAttachments,
+    List<MessageMention>? mentions,
   }) =>
       ChatMessage(
         id: id ?? this.id,
@@ -166,6 +218,7 @@ class ChatMessage {
         replyToText: replyToText ?? this.replyToText,
         replyToSenderName: replyToSenderName ?? this.replyToSenderName,
         groupedAttachments: groupedAttachments ?? this.groupedAttachments,
+        mentions: mentions ?? this.mentions,
       );
 
   Map<String, dynamic> toJson() => {
@@ -190,6 +243,7 @@ class ChatMessage {
         'replyToSenderName': replyToSenderName,
         'groupedAttachments':
             groupedAttachments.map((a) => a.toJson()).toList(),
+        'mentions': mentions.map((m) => m.toJson()).toList(),
       };
 
   static ChatMessage fromJson(Map<String, dynamic> json) => ChatMessage(
@@ -210,6 +264,7 @@ class ChatMessage {
         isForwarded: json['isForwarded'] == true,
         forwardedFromSenderName: json['forwardedFromSenderName'],
         replyToMessageId: json['replyToMessageId'],
+        mentions: MessageMention.listFrom(json['mentions']),
         replyToText: json['replyToText'],
         replyToSenderName: json['replyToSenderName'],
         groupedAttachments: (json['groupedAttachments'] as List<dynamic>?)
@@ -261,6 +316,7 @@ class ChatMessage {
       replyToMessageId: json['replyToMessageId'] as String?,
       replyToText: json['replyToText'] as String?,
       replyToSenderName: json['replyToSenderName'] as String?,
+      mentions: MessageMention.listFrom(json['mentions']),
     );
   }
 
@@ -323,6 +379,7 @@ class ChatMessage {
           replyToMessageId: msg.replyToMessageId,
           replyToText: msg.replyToText,
           replyToSenderName: msg.replyToSenderName,
+          mentions: msg.mentions,
           groupedAttachments: group,
         ));
         i = j;

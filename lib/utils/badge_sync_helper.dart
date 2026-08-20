@@ -1,6 +1,7 @@
 import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
+import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 
 class BadgeSyncHelper {
@@ -21,24 +22,8 @@ class BadgeSyncHelper {
       if (chatData['chats'] != null) {
         final List<dynamic> chats = chatData['chats'];
 
-        // Extract device ID
-        String? actualDeviceId;
-        if (chats.isNotEmpty) {
-          final firstChat = chats[0];
-          final participants = firstChat['participants'] as List<dynamic>? ?? [];
-
-          for (var participant in participants) {
-            final uuid = participant['user_uuid'] as String?;
-            final name = participant['name'] as String?;
-
-            if (name == userName && uuid != null && uuid != name) {
-              actualDeviceId = uuid;
-              break;
-            }
-          }
-        }
-
-        final String userIdentifier = actualDeviceId ?? userName;
+        // Participants are keyed by device id, so that identifies "you".
+        final String userIdentifier = await DeviceId.get();
 
         // Build user details map
         Map<String, dynamic> userDetailsMap = {};
@@ -55,6 +40,7 @@ class BadgeSyncHelper {
             .map((chat) => ChatContact.fromChatApiJson(
                   chat,
                   userIdentifier,
+                  currentUserName: userName,
                   participantDetails: userDetailsMap,
                 ))
             .toList();

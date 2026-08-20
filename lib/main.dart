@@ -347,6 +347,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           'chatId': chatDetails['chatId'] ?? '',
           'senderName': chatDetails['senderName'] ?? '',
           'senderId': chatDetails['senderId'] ?? '',
+          'action': chatDetails['action'] ?? '',
           'openChat': true,
         };
       } catch (e) {}
@@ -360,6 +361,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         'chatId': message.data['chatId'] ?? '',
         'senderName': message.data['senderName'] ?? '',
         'senderId': message.data['senderId'] ?? '',
+        'action': message.data['action'] ?? '',
         'openChat': true,
       };
     }
@@ -773,6 +775,7 @@ class _SplashScreenState extends State<SplashScreen>
             'chatId': chatDetails['chatId'] ?? '',
             'senderName': chatDetails['senderName'] ?? '',
             'senderId': chatDetails['senderId'] ?? '',
+            'action': chatDetails['action'] ?? '',
             'openChat': true,
           };
         } catch (e) {}
@@ -783,6 +786,7 @@ class _SplashScreenState extends State<SplashScreen>
         'chatId': receivedAction.payload!['chatId'] ?? '',
         'senderName': receivedAction.payload!['senderName'] ?? '',
         'senderId': receivedAction.payload!['senderId'] ?? '',
+        'action': receivedAction.payload!['action'] ?? '',
         'openChat': true,
       };
     }

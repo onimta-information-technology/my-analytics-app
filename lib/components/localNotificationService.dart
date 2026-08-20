@@ -190,6 +190,8 @@ class NotificationService {
         'senderId': chatDetails?['senderId']?.toString() ?? '',
         'senderName': chatDetails?['senderName']?.toString() ?? '',
         'hostName': chatDetails?['hostName']?.toString() ?? '',
+        // 'group_message' tells the chat screen the chatId is a group id.
+        'action': chatDetails?['action']?.toString() ?? '',
       };
 
       print(
@@ -288,6 +290,7 @@ class NotificationService {
           final senderName = payload['senderName'] ?? '';
           final senderId = payload['senderId'] ?? '';
           final hostName = payload['hostName'] ?? '';
+          final action = payload['action'] ?? '';
 
           final context = navigatorKey.currentContext;
           if (context != null && context.mounted) {
@@ -300,6 +303,7 @@ class NotificationService {
                 'senderName': senderName,
                 'senderId': senderId,
                 'hostName': hostName,
+                'action': action,
                 'openChat': true,
               },
             );
@@ -356,6 +360,7 @@ class NotificationService {
             'senderName': chatDetails?['senderName'] ?? '',
             'senderId': chatDetails?['senderId'] ?? '',
             'hostName': chatDetails?['hostName'] ?? '',
+            'action': chatDetails?['action'] ?? '',
             'openChat': true,
           },
         );

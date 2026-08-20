@@ -233,18 +233,66 @@ if (message.data['msg_type'] == '35') {
       final chatId = widget.notificationData!['chatId'] as String?;
       final senderName = widget.notificationData!['senderName'] as String?;
       final senderId = widget.notificationData!['senderId'] as String?;
+      // Group pushes carry action == 'group_message'; the chatId is the group
+      // id, not a 1:1 chat.
+      final action = widget.notificationData!['action']?.toString();
 
       if (chatId != null && chatId.isNotEmpty) {
         _hasProcessedNotification = true;
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          _openSpecificChat(chatId, senderName, senderId);
+          _openSpecificChat(
+            chatId,
+            senderName,
+            senderId,
+            isGroup: action == 'group_message',
+          );
         });
       }
     }
   }
 
-  void _openSpecificChat(String chatId, String? senderName, String? senderId) {
+  ChatGroup? _groupForId(String chatId) => _groups.cast<ChatGroup?>().firstWhere(
+        (group) => group?.groupId == chatId || group?.id == chatId,
+        orElse: () => null,
+      );
+
+  void _openSpecificChat(
+    String chatId,
+    String? senderName,
+    String? senderId, {
+    bool isGroup = false,
+  }) {
+    // Groups live in their own list, so resolve them first. Otherwise the
+    // senderName fallback below would open a 1:1 chat with whoever posted in
+    // the group instead of the group itself.
+    final group = _groupForId(chatId);
+    if (group != null) {
+      _openGroupChat(group);
+      return;
+    }
+
+    if (isGroup) {
+      // The group isn't in the cached list yet (just created/added). Refetch
+      // and retry once rather than falling through to the personal-chat match.
+      _fetchGroups().then((_) {
+        if (!mounted) return;
+        final refreshed = _groupForId(chatId);
+        if (refreshed != null) {
+          _openGroupChat(refreshed);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Group chat not found.'),
+              duration: const Duration(seconds: 2),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      });
+      return;
+    }
+
     ChatContact? targetContact = _contacts.cast<ChatContact?>().firstWhere(
       (contact) => contact?.chatUuid == chatId,
       orElse: () => null,

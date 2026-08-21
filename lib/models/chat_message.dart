@@ -185,6 +185,11 @@ class ChatMessage {
   // Emoji reactions, one entry per person who reacted. Empty when nobody has.
   final List<MessageReaction> reactions;
 
+  // Edited: the sender corrected the text after sending. [editedAt] is when
+  // the last edit landed, and is null on a message that was never edited.
+  final bool isEdited;
+  final DateTime? editedAt;
+
   ChatMessage({
     required this.id,
     required this.text,
@@ -208,6 +213,8 @@ class ChatMessage {
     List<AttachmentItem>? groupedAttachments,
     List<MessageMention>? mentions,
     List<MessageReaction>? reactions,
+    this.isEdited = false,
+    this.editedAt,
   })  : groupedAttachments = groupedAttachments ?? const [],
         mentions = mentions ?? const [],
         reactions = reactions ?? const [];
@@ -240,6 +247,32 @@ class ChatMessage {
     return counts;
   }
 
+  /// How long after sending the backend still accepts an edit. Rejected
+  /// server-side past this, so the client only hides the action early enough
+  /// to keep the user from writing a correction that would bounce.
+  static const Duration editWindow = Duration(minutes: 15);
+
+  /// Only a plain text message of the user's own can be edited: attachments
+  /// have no text to correct, and one still on its way to the server has no
+  /// id to address.
+  bool get isEditable =>
+      isMe &&
+      apiMessageId != null &&
+      apiChatId != null &&
+      fileType == null &&
+      !hasGroupedAttachments &&
+      text.trim().isNotEmpty;
+
+  /// Whether the 15-minute window is still open, as of [now].
+  bool isWithinEditWindow([DateTime? now]) =>
+      (now ?? DateTime.now()).difference(timestamp) < editWindow;
+
+  /// What is left of the edit window, or [Duration.zero] once it has closed.
+  Duration editWindowRemaining([DateTime? now]) {
+    final left = timestamp.add(editWindow).difference(now ?? DateTime.now());
+    return left.isNegative ? Duration.zero : left;
+  }
+
   bool get hasGroupedAttachments => groupedAttachments.isNotEmpty;
 
   bool get isImageGroup =>
@@ -268,6 +301,8 @@ class ChatMessage {
     List<AttachmentItem>? groupedAttachments,
     List<MessageMention>? mentions,
     List<MessageReaction>? reactions,
+    bool? isEdited,
+    DateTime? editedAt,
   }) =>
       ChatMessage(
         id: id ?? this.id,
@@ -293,6 +328,8 @@ class ChatMessage {
         groupedAttachments: groupedAttachments ?? this.groupedAttachments,
         mentions: mentions ?? this.mentions,
         reactions: reactions ?? this.reactions,
+        isEdited: isEdited ?? this.isEdited,
+        editedAt: editedAt ?? this.editedAt,
       );
 
   Map<String, dynamic> toJson() => {
@@ -319,6 +356,8 @@ class ChatMessage {
             groupedAttachments.map((a) => a.toJson()).toList(),
         'mentions': mentions.map((m) => m.toJson()).toList(),
         'reactions': reactions.map((r) => r.toJson()).toList(),
+        'isEdited': isEdited,
+        'editedAt': editedAt?.millisecondsSinceEpoch,
       };
 
   static ChatMessage fromJson(Map<String, dynamic> json) => ChatMessage(
@@ -347,6 +386,10 @@ class ChatMessage {
                 ?.map((e) => AttachmentItem.fromJson(e))
                 .toList() ??
             [],
+        isEdited: json['isEdited'] == true,
+        editedAt: json['editedAt'] == null
+            ? null
+            : DateTime.fromMillisecondsSinceEpoch(json['editedAt']),
       );
 
   /// Create ChatMessage from API response.
@@ -394,7 +437,17 @@ class ChatMessage {
       replyToSenderName: json['replyToSenderName'] as String?,
       mentions: MessageMention.listFrom(json['mentions']),
       reactions: MessageReaction.listFrom(json['reactions']),
+      // As with isForwarded, this arrives as 1/0 on some rows.
+      isEdited: json['isEdited'] == true || json['isEdited'] == 1,
+      editedAt: _parseTimestamp(json['editedAt']),
     );
+  }
+
+  /// A nullable ISO timestamp from the API. A malformed one is treated as
+  /// absent rather than taking out the whole message list.
+  static DateTime? _parseTimestamp(dynamic raw) {
+    if (raw is! String || raw.isEmpty) return null;
+    return DateTime.tryParse(raw)?.toLocal();
   }
 
   // ---------------------------------------------------------------------------
@@ -458,6 +511,8 @@ class ChatMessage {
           replyToSenderName: msg.replyToSenderName,
           mentions: msg.mentions,
           reactions: msg.reactions,
+          isEdited: msg.isEdited,
+          editedAt: msg.editedAt,
           groupedAttachments: group,
         ));
         i = j;

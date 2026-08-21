@@ -14,6 +14,16 @@ class NotificationStore {
   static const String _key = 'app_notification_history';
   static const int _maxStored = 100;
 
+  /// Pings that only tell the client a thread changed — an edited message, a
+  /// reaction — and carry no body of their own. They must never raise a
+  /// banner or bump the badge: nothing new was said.
+  static bool isSilentThreadUpdate(RemoteMessage message) {
+    final type = (message.data['msg_type'] ?? message.data['type'])?.toString();
+    return type == 'message_edit' ||
+        type == 'message_edited' ||
+        type == 'message_reaction';
+  }
+
   /// Chat pushes are handled by the chat screens, so they never enter history.
   static bool isChatMessage(RemoteMessage message) {
     final data = message.data;

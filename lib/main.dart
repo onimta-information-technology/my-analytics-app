@@ -56,6 +56,10 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
   _logPushMessage('background', message);
 
+  // Silent thread updates (an edit, a reaction) carry no new message — the
+  // chat is refetched when it is next opened, so nothing is stored or counted.
+  if (NotificationStore.isSilentThreadUpdate(message)) return;
+
   // Keep non-chat notifications in local history so the home screen bell shows
   // them the next time the app is opened.
   try {
@@ -240,6 +244,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       _recordNotification(message);
 
       final msgType = message.data['msg_type']?.toString();
+
+      // An edited message or a reaction is a silent refetch ping: the chat
+      // screens listen for it themselves, and it must not raise a banner or
+      // the unread badge.
+      if (NotificationStore.isSilentThreadUpdate(message)) return;
 
       _showForegroundNotification(message);
       _badgeService.addBadge(1);

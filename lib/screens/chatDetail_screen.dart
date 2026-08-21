@@ -299,7 +299,9 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
       // Silent edit/reaction pings carry no message body — they only tell the
       // client the thread changed, so the list has to be pulled again.
       final bool isSilentUpdate =
-          msgType == 'message_reaction' || msgType == 'message_edit';
+          msgType == 'message_reaction' ||
+          msgType == 'message_edit' ||
+          msgType == 'message_edited';
       if (isChatMessage || isSilentUpdate) {
         if (chatId == null ||
             chatId.isEmpty ||
@@ -1920,6 +1922,146 @@ Future<void> _markMessagesAsRead() async {
     return 'Could not forward the message.';
   }
 
+  // ─── Edit selected ──────────────────────────────────────────────────────────
+
+  /// A message the user can still correct: one of their own, plain text, known
+  /// to the server, and inside the 15-minute window the backend enforces.
+  /// Read-only conversations cannot be edited either.
+  bool _canEditMessage(ChatMessage msg) =>
+      widget.canSendMessages && msg.isEditable && msg.isWithinEditWindow();
+
+  /// The single selected message when it is editable, otherwise null — used
+  /// both to decide whether the Edit action is offered and to act on it.
+  ChatMessage? get _editableSelection {
+    if (_selectedMessageIds.length != 1) return null;
+    final id = _selectedMessageIds.first;
+    final index = _messages.indexWhere((m) => m.id == id);
+    if (index == -1) return null;
+    final msg = _messages[index];
+    return _canEditMessage(msg) ? msg : null;
+  }
+
+  void _editSelectedMessage() {
+    final msg = _editableSelection;
+    if (msg == null) {
+      _showErrorSnack(
+        'This message can no longer be edited — edits are allowed for '
+        '${ChatMessage.editWindow.inMinutes} minutes after sending.',
+      );
+      return;
+    }
+    _showEditDialog(msg);
+  }
+
+  /// The correction sheet: the current text, pre-filled and selected, with the
+  /// time left in the window spelled out so a rejected save is no surprise.
+  Future<void> _showEditDialog(ChatMessage message) async {
+    final newText = await showDialog<String>(
+      context: context,
+      builder: (ctx) => _EditMessageDialog(
+        initialText: message.text,
+        windowNote: _editWindowNote(message),
+        fontSettings: ref.read(fontSettingsProvider),
+      ),
+    );
+
+    if (!mounted || newText == null) return;
+
+    if (newText.isEmpty) {
+      _showErrorSnack('A message cannot be left empty — delete it instead.');
+      return;
+    }
+    // Nothing to send, but the selection has served its purpose.
+    if (newText == message.text.trim()) {
+      _clearSelection();
+      return;
+    }
+
+    await _performEdit(message, newText);
+  }
+
+  /// "13 minutes left to edit" — rounded up, so the last stretch reads as
+  /// "1 minute left" rather than "0".
+  String _editWindowNote(ChatMessage message) {
+    final left = message.editWindowRemaining();
+    if (left == Duration.zero) return 'The time to edit this message has run out.';
+    final minutes = (left.inSeconds / 60).ceil();
+    return '$minutes minute${minutes == 1 ? '' : 's'} left to edit this message.';
+  }
+
+  /// Shows the new text straight away, then tells the server. A rejected edit
+  /// (window closed, message deleted under us, network down) puts the original
+  /// back and says why.
+  Future<void> _performEdit(ChatMessage message, String newText) async {
+    final index = _indexOfMessage(message.id);
+    if (index == -1) return;
+
+    final previous = _messages[index];
+    setState(() {
+      _messages[index] = previous.copyWith(
+        text: newText,
+        isEdited: true,
+        editedAt: DateTime.now(),
+      );
+      _selectedMessageIds.clear();
+      // The composer's quoted banner holds a copy of the message, so it would
+      // otherwise keep showing the text that was just replaced.
+      if (_replyingTo?.id == message.id) {
+        _replyingTo = _messages[index];
+      }
+    });
+
+    final response = await FirebaseApiService.editMessage(
+      chatId: previous.apiChatId!,
+      messageId: previous.apiMessageId!,
+      text: newText,
+    );
+
+    if (!mounted) return;
+
+    if (response['success'] == true) {
+      // Others are told over push; pull the authoritative row back so the
+      // server's editedAt (and anything that landed alongside) is what shows.
+      _fetchMessagesFromApi(silent: true);
+      return;
+    }
+
+    final revertIndex = _indexOfMessage(message.id);
+    if (revertIndex != -1) {
+      setState(() {
+        _messages[revertIndex] = previous;
+        if (_replyingTo?.id == message.id) _replyingTo = previous;
+      });
+    }
+    _showErrorSnack(_editErrorText(response));
+  }
+
+  /// Why an edit was refused. The backend explains itself in the error body;
+  /// the two statuses it uses are spelled out here because "403" on its own
+  /// tells the user nothing.
+  String _editErrorText(Map<String, dynamic> response) {
+    final body = response['responseBody'];
+    if (body is String && body.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(body);
+        if (decoded is Map) {
+          final message = decoded['error'] ?? decoded['message'];
+          if (message is String && message.isNotEmpty) return message;
+        }
+      } catch (_) {
+        // Not JSON — fall through to the status-based message.
+      }
+    }
+    switch (response['statusCode']) {
+      case 403:
+        return 'Only the sender can edit this message.';
+      case 400:
+        return 'This message can no longer be edited.';
+      default:
+        return 'Could not save your edit.';
+    }
+  }
+
   // ─── Delete selected ────────────────────────────────────────────────────────
 
   void _deleteSelectedMessages() {
@@ -3077,6 +3219,22 @@ Future<void> _markMessagesAsRead() async {
                                     fontSize: fontSettings.fontSize - 4,
                                   ),
                                 ),
+                                // Corrected after sending: say so, the way
+                                // every other chat app does, so a changed
+                                // message is never silently different.
+                                if (message.isEdited) ...[
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'edited',
+                                    style: TextStyle(
+                                      color: message.isMe
+                                          ? Colors.white70
+                                          : Colors.grey[600],
+                                      fontSize: fontSettings.fontSize - 5,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ],
                                 if (message.isMe) ...[
                                   const SizedBox(width: 4),
                                   Icon(
@@ -3231,6 +3389,14 @@ Future<void> _markMessagesAsRead() async {
                       icon: const Icon(Icons.reply),
                       tooltip: 'Reply',
                       onPressed: _replyToSelectedMessage,
+                    ),
+                  // Own text messages only, and only while the 15-minute
+                  // window the backend enforces is still open.
+                  if (_editableSelection != null)
+                    IconButton(
+                      icon: const Icon(Icons.edit),
+                      tooltip: 'Edit',
+                      onPressed: _editSelectedMessage,
                     ),
                   IconButton(
                     icon: const Icon(Icons.copy),
@@ -3617,6 +3783,13 @@ Future<void> _markMessagesAsRead() async {
                               onPressed: _replyToSelectedMessage,
                               fontSettings: fontSettings,
                             ),
+                          if (_editableSelection != null)
+                            _selectionAction(
+                              icon: Icons.edit,
+                              label: 'Edit',
+                              onPressed: _editSelectedMessage,
+                              fontSettings: fontSettings,
+                            ),
                           _selectionAction(
                             icon: Icons.copy,
                             label: 'Copy',
@@ -3739,6 +3912,113 @@ class _GalleryViewState extends ConsumerState<_GalleryView> {
           return InteractiveViewer(child: Center(child: img));
         },
       ),
+    );
+  }
+}
+
+
+/// The edit sheet owns its own controller so the field is disposed with the
+/// dialog's element, not while the route is still animating away — disposing
+/// it the moment `showDialog` returns tears the text field out from under the
+/// exit transition and blows up the element tree.
+class _EditMessageDialog extends StatefulWidget {
+  const _EditMessageDialog({
+    required this.initialText,
+    required this.windowNote,
+    required this.fontSettings,
+  });
+
+  final String initialText;
+  final String windowNote;
+  final FontSettings fontSettings;
+
+  @override
+  State<_EditMessageDialog> createState() => _EditMessageDialogState();
+}
+
+class _EditMessageDialogState extends State<_EditMessageDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialText);
+    _controller.selection =
+        TextSelection.collapsed(offset: _controller.text.length);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fontSettings = widget.fontSettings;
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text(
+        'Edit message',
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: fontSettings.fontSize,
+        ),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            minLines: 1,
+            maxLines: 5,
+            textCapitalization: TextCapitalization.sentences,
+            style: TextStyle(fontSize: fontSettings.fontSize),
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              focusedBorder: const OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.green, width: 2),
+              ),
+              hintText: 'Message',
+              hintStyle: TextStyle(fontSize: fontSettings.fontSize - 2),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            widget.windowNote,
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: fontSettings.fontSize - 5,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            'Cancel',
+            style: TextStyle(
+              color: Colors.grey[700],
+              fontSize: fontSettings.fontSize - 2,
+            ),
+          ),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, _controller.text.trim()),
+          child: Text(
+            'Save',
+            style: TextStyle(
+              color: Colors.green[700],
+              fontWeight: FontWeight.bold,
+              fontSize: fontSettings.fontSize - 2,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

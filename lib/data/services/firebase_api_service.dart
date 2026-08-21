@@ -930,6 +930,41 @@ static Future<Map<String, dynamic>> reactToMessage({
   }
 }
 
+/// Rewrites the text of a message the user sent.
+///
+/// Sender only — the backend answers 403 for anyone else — and only within
+/// 15 minutes of sending (ChatMessage.editWindow); a later attempt, or an
+/// edit of a deleted message, comes back 400. The message is stamped `isEdited` and
+/// `editedAt`, the chat's last-message preview is refreshed when this was the
+/// latest one, and the other participants get a silent `message_edited` ping
+/// so their cached copy can be refetched.
+static Future<Map<String, dynamic>> editMessage({
+  required String chatId,
+  required String messageId,
+  required String text,
+}) async {
+  try {
+    final domain = await resolveDomain();
+    final deviceId = await DeviceId.get();
+    final url = '$domain/api/chats/$chatId/messages/$messageId/edit';
+    final body = {
+      'userId': deviceId,
+      'appType': appType,
+      'text': text,
+    };
+    _logLong('editMessage ▶ PATCH $url');
+    _logLong('editMessage ▶ body: ${jsonEncode(body)}');
+
+    final result = await patchRequest(url, body);
+
+    _logLong('editMessage ◀ response: ${jsonEncode(result)}');
+    return result;
+  } catch (e) {
+    print('editMessage ✖ exception: $e');
+    return {'success': false, 'error': e.toString()};
+  }
+}
+
 static Future<Map<String, dynamic>> patchRequest(
   String url,
   Map<String, dynamic> body,

@@ -3,6 +3,7 @@ import 'package:ballys_reservation_app/components/group_avatar.dart';
 import 'package:ballys_reservation_app/components/group_details_sheet.dart';
 import 'package:ballys_reservation_app/components/notification_banner.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
+import 'package:ballys_reservation_app/data/services/notification_store.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/models/chat_group.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
@@ -153,6 +154,12 @@ if (message.data['msg_type'] == '35') {
       _reloadGuestBookings();
       return;
     }
+      // An edit rewrites the chat's last-message preview, so the list is
+      // pulled again even though nothing new was said.
+      if (NotificationStore.isSilentThreadUpdate(message)) {
+        _fetchChatsFromApiSilently();
+        return;
+      }
       // Check if it's a chat notification
       if (message.data['msg_type'] == '11' ||
           message.data['type'] == 'chat' ||

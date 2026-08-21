@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:ballys_reservation_app/components/badge_service.dart';
+import 'package:ballys_reservation_app/data/services/notification_store.dart';
 import 'package:ballys_reservation_app/main.dart' show navigatorKey;
 import 'package:ballys_reservation_app/models/Guest/guest_booking.dart';
 import 'package:ballys_reservation_app/navigation/app_navigation.dart';
@@ -83,6 +84,15 @@ class NotificationService {
     print('Received foreground message: ${message.messageId}');
     print('Received foreground message: ${message.data}');
     try {
+      // An edit or a reaction only asks the open chat to refetch — it is not
+      // a new message, so it raises neither a banner nor the badge. Without
+      // this it would fall through to the chat branch below and show an
+      // empty "New Message".
+      if (NotificationStore.isSilentThreadUpdate(message)) {
+        print('PUSH branch -> SILENT THREAD UPDATE, no notification');
+        return;
+      }
+
       String? notificationChatId;
 
       // For iOS, skip custom notifications and let FCM handle natively

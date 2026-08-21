@@ -1464,11 +1464,25 @@ Future<void> _markMessagesAsRead() async {
   }
 
   /// The quoted snippet rendered inside a reply bubble.
+  /// Goes to the message [message] is quoting, the way every other chat app
+  /// does it. The original can be older than what is loaded, or deleted since
+  /// — the quote itself is a snapshot and survives either — so a miss says so
+  /// rather than doing nothing.
+  void _jumpToQuotedMessage(ChatMessage message) {
+    final id = message.replyToMessageId;
+    if (id == null) return;
+    if (_indexOfMessage(id) == -1) {
+      _showErrorSnack('Original message is not available');
+      return;
+    }
+    _scrollToMessage(id);
+  }
+
   Widget _buildQuotedMessage(ChatMessage message, FontSettings fontSettings) {
     final onGreen = message.isMe;
     final name = message.replyToSenderName?.trim();
 
-    return Container(
+    final quote = Container(
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
@@ -1509,6 +1523,19 @@ Future<void> _markMessagesAsRead() async {
           ),
         ],
       ),
+    );
+
+    // A tap on the quote jumps; a long press still falls through to the
+    // bubble's own recogniser, so selecting the message keeps working.
+    return GestureDetector(
+      onTap: () {
+        if (_isSelectionMode) {
+          _toggleSelection(message.id);
+          return;
+        }
+        _jumpToQuotedMessage(message);
+      },
+      child: quote,
     );
   }
 

@@ -36,6 +36,7 @@ class FirebaseApiService {
     'fetchMessages': '/api/chats',
     'softDeleteMessage': '/api/chats',
     'forwardMessage': '/api/chats', // base; full path: /api/chats/{chatId}/messages/{messageId}/forward
+    'reactToMessage': '/api/chats', // base; full path: /api/chats/{chatId}/messages/{messageId}/react
     'uploadFiles': '/api/chats', // base; full path: /api/chats/{chatId}/upload/multiple
     'createGroup': '/api/groups/create',
     'fetchUserGroups': '/api/groups/user',
@@ -895,6 +896,40 @@ static Future<Map<String, dynamic>> deleteMessageForEveryone(
     return {'success': false, 'error': e.toString()};
   }
 }
+/// Adds, changes or removes this user's emoji reaction on a message.
+///
+/// The backend keeps at most one reaction per user per message, so this one
+/// endpoint covers all three cases: sending the emoji they already have
+/// removes it, a different one replaces it. The response carries
+/// `reacted: true` when a reaction was added or changed and `reacted: false`
+/// when it was removed. Reacting to a deleted message is rejected with 400.
+static Future<Map<String, dynamic>> reactToMessage({
+  required String chatId,
+  required String messageId,
+  required String emoji,
+}) async {
+  try {
+    final domain = await resolveDomain();
+    final deviceId = await DeviceId.get();
+    final url = '$domain/api/chats/$chatId/messages/$messageId/react';
+    final body = {
+      'userId': deviceId,
+      'appType': appType,
+      'emoji': emoji,
+    };
+    _logLong('reactToMessage ▶ POST $url');
+    _logLong('reactToMessage ▶ body: ${jsonEncode(body)}');
+
+    final result = await postRequest(url, body);
+
+    _logLong('reactToMessage ◀ response: ${jsonEncode(result)}');
+    return result;
+  } catch (e) {
+    print('reactToMessage ✖ exception: $e');
+    return {'success': false, 'error': e.toString()};
+  }
+}
+
 static Future<Map<String, dynamic>> patchRequest(
   String url,
   Map<String, dynamic> body,

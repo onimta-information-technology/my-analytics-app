@@ -96,6 +96,52 @@ class MessageMention {
   }
 }
 
+/// One person's reaction to a message, as returned in `reactions` and sent to
+/// POST /api/chats/:chatId/messages/:messageId/react.
+///
+/// The backend keeps **at most one** reaction per user per message: sending
+/// the emoji someone already has removes it, a different one replaces it. As
+/// with [MessageMention], the uuid alone does not identify a person, so
+/// [appType] is part of the identity.
+class MessageReaction {
+  final String userUuid;
+  final int appType;
+  final String emoji;
+
+  const MessageReaction({
+    required this.userUuid,
+    required this.appType,
+    required this.emoji,
+  });
+
+  /// uuids arrive in mixed case (an Android device id versus an iOS vendor
+  /// uuid), so compare case-insensitively.
+  bool matches(String? userUuid, int appType) =>
+      userUuid != null &&
+      userUuid.toLowerCase() == this.userUuid.toLowerCase() &&
+      appType == this.appType;
+
+  Map<String, dynamic> toJson() =>
+      {'userUuid': userUuid, 'appType': appType, 'emoji': emoji};
+
+  static MessageReaction fromJson(Map<String, dynamic> json) => MessageReaction(
+        userUuid: json['userUuid']?.toString() ?? '',
+        appType: ChatContact.parseAppType(json['appType']),
+        emoji: json['emoji']?.toString() ?? '',
+      );
+
+  /// Tolerates a null, a non-list, or rows that are not objects — a malformed
+  /// reactions field must not take out the whole message list.
+  static List<MessageReaction> listFrom(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map<String, dynamic>>()
+        .map(MessageReaction.fromJson)
+        .where((r) => r.userUuid.isNotEmpty && r.emoji.isNotEmpty)
+        .toList();
+  }
+}
+
 class ChatMessage {
   final String id;
   final String text;
@@ -136,6 +182,9 @@ class ChatMessage {
   // People @-mentioned in this message. Empty on messages with no mentions.
   final List<MessageMention> mentions;
 
+  // Emoji reactions, one entry per person who reacted. Empty when nobody has.
+  final List<MessageReaction> reactions;
+
   ChatMessage({
     required this.id,
     required this.text,
@@ -158,8 +207,10 @@ class ChatMessage {
     this.replyToSenderName,
     List<AttachmentItem>? groupedAttachments,
     List<MessageMention>? mentions,
+    List<MessageReaction>? reactions,
   })  : groupedAttachments = groupedAttachments ?? const [],
-        mentions = mentions ?? const [];
+        mentions = mentions ?? const [],
+        reactions = reactions ?? const [];
 
   bool get hasMentions => mentions.isNotEmpty;
 
@@ -167,6 +218,27 @@ class ChatMessage {
   /// message — i.e. "this one is for you".
   bool mentionsUser(String? userUuid, int appType) =>
       mentions.any((m) => m.matches(userUuid, appType));
+
+  bool get hasReactions => reactions.isNotEmpty;
+
+  /// The emoji [userUuid]/[appType] currently has on this message, or null if
+  /// they have not reacted. At most one, by the backend's toggle rule.
+  String? reactionOf(String? userUuid, int appType) {
+    for (final r in reactions) {
+      if (r.matches(userUuid, appType)) return r.emoji;
+    }
+    return null;
+  }
+
+  /// Reactions collapsed into `emoji -> count`, in the order each emoji was
+  /// first used, so the summary bar does not reshuffle as people react.
+  Map<String, int> get reactionCounts {
+    final counts = <String, int>{};
+    for (final r in reactions) {
+      counts[r.emoji] = (counts[r.emoji] ?? 0) + 1;
+    }
+    return counts;
+  }
 
   bool get hasGroupedAttachments => groupedAttachments.isNotEmpty;
 
@@ -195,6 +267,7 @@ class ChatMessage {
     String? replyToSenderName,
     List<AttachmentItem>? groupedAttachments,
     List<MessageMention>? mentions,
+    List<MessageReaction>? reactions,
   }) =>
       ChatMessage(
         id: id ?? this.id,
@@ -219,6 +292,7 @@ class ChatMessage {
         replyToSenderName: replyToSenderName ?? this.replyToSenderName,
         groupedAttachments: groupedAttachments ?? this.groupedAttachments,
         mentions: mentions ?? this.mentions,
+        reactions: reactions ?? this.reactions,
       );
 
   Map<String, dynamic> toJson() => {
@@ -244,6 +318,7 @@ class ChatMessage {
         'groupedAttachments':
             groupedAttachments.map((a) => a.toJson()).toList(),
         'mentions': mentions.map((m) => m.toJson()).toList(),
+        'reactions': reactions.map((r) => r.toJson()).toList(),
       };
 
   static ChatMessage fromJson(Map<String, dynamic> json) => ChatMessage(
@@ -265,6 +340,7 @@ class ChatMessage {
         forwardedFromSenderName: json['forwardedFromSenderName'],
         replyToMessageId: json['replyToMessageId'],
         mentions: MessageMention.listFrom(json['mentions']),
+        reactions: MessageReaction.listFrom(json['reactions']),
         replyToText: json['replyToText'],
         replyToSenderName: json['replyToSenderName'],
         groupedAttachments: (json['groupedAttachments'] as List<dynamic>?)
@@ -317,6 +393,7 @@ class ChatMessage {
       replyToText: json['replyToText'] as String?,
       replyToSenderName: json['replyToSenderName'] as String?,
       mentions: MessageMention.listFrom(json['mentions']),
+      reactions: MessageReaction.listFrom(json['reactions']),
     );
   }
 
@@ -380,6 +457,7 @@ class ChatMessage {
           replyToText: msg.replyToText,
           replyToSenderName: msg.replyToSenderName,
           mentions: msg.mentions,
+          reactions: msg.reactions,
           groupedAttachments: group,
         ));
         i = j;

@@ -296,7 +296,11 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
           msgType == 'chat' ||
           message.data.containsKey('message') ||
           message.data.containsKey('Details');
-      if (isChatMessage) {
+      // Silent edit/reaction pings carry no message body — they only tell the
+      // client the thread changed, so the list has to be pulled again.
+      final bool isSilentUpdate =
+          msgType == 'message_reaction' || msgType == 'message_edit';
+      if (isChatMessage || isSilentUpdate) {
         if (chatId == null ||
             chatId.isEmpty ||
             chatId == widget.contact.chatUuid) {
@@ -1321,6 +1325,236 @@ Future<void> _markMessagesAsRead() async {
   /// Only messages the server already knows about can be quoted — the backend
   /// rejects a replyToMessageId it cannot find in this chat.
   bool _canReplyTo(ChatMessage msg) => msg.apiMessageId != null;
+
+  // ─── Reactions ──────────────────────────────────────────────────────────────
+
+  /// Emojis offered by the double-tap picker. One reaction per person, so this
+  /// is a pick-one row rather than a multi-select.
+  static const List<String> _reactionEmojis = [
+    '👍',
+    '❤️',
+    '😂',
+    '😮',
+    '😢',
+    '🙏',
+  ];
+
+  /// A message can be reacted to once the server knows about it — an
+  /// optimistic bubble still waiting for its messageId has nothing to react
+  /// to yet.
+  bool _canReactTo(ChatMessage msg) =>
+      msg.apiMessageId != null && msg.apiChatId != null;
+
+  /// Double-tap target: a small emoji row above the bubble. The emoji this
+  /// user already has is ringed, and tapping it again removes it — the same
+  /// toggle the backend applies.
+  void _showReactionPicker(ChatMessage message) {
+    if (!_canReactTo(message)) return;
+    final fontSettings = ref.read(fontSettingsProvider);
+    final mine = message.reactionOf(
+      _currentUserUuid,
+      FirebaseApiService.appType,
+    );
+    HapticFeedback.lightImpact();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => SafeArea(
+        child: Container(
+          margin: const EdgeInsets.all(12),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(32),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: _reactionEmojis.map((emoji) {
+              final isMine = emoji == mine;
+              return InkWell(
+                borderRadius: BorderRadius.circular(24),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  // The long-press that opened this also selected the
+                  // message; reacting is the whole action, so let it go.
+                  _clearSelection();
+                  _toggleReaction(message, emoji);
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isMine ? Colors.green.withOpacity(0.15) : null,
+                  ),
+                  child: Text(
+                    emoji,
+                    style: TextStyle(fontSize: fontSettings.fontSize + 12),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Applies the toggle locally first so the chip appears under the thumb,
+  /// then tells the server. A rejected call (the message was deleted, the
+  /// network is down) puts the old reactions back and says so.
+  Future<void> _toggleReaction(ChatMessage message, String emoji) async {
+    if (!_canReactTo(message)) return;
+    final index = _messages.indexWhere((m) => m.id == message.id);
+    if (index == -1) return;
+
+    final previous = _messages[index].reactions;
+    final mine = _messages[index].reactionOf(
+      _currentUserUuid,
+      FirebaseApiService.appType,
+    );
+
+    // Same emoji removes it, a different one replaces it — mirror of what the
+    // backend does, so the optimistic list matches what comes back.
+    final next = previous
+        .where((r) => !r.matches(_currentUserUuid, FirebaseApiService.appType))
+        .toList();
+    if (mine != emoji && (_currentUserUuid ?? '').isNotEmpty) {
+      next.add(MessageReaction(
+        userUuid: _currentUserUuid!,
+        appType: FirebaseApiService.appType,
+        emoji: emoji,
+      ));
+    }
+
+    setState(() {
+      _messages[index] = _messages[index].copyWith(reactions: next);
+    });
+
+    final response = await FirebaseApiService.reactToMessage(
+      chatId: message.apiChatId!,
+      messageId: message.apiMessageId!,
+      emoji: emoji,
+    );
+
+    if (!mounted) return;
+    if (response['success'] == true) {
+      // The other participants are told over push; pull the authoritative
+      // list back so a reaction that landed at the same time is not lost.
+      _fetchMessagesFromApi(silent: true);
+      return;
+    }
+
+    // The message may have been deleted under us — the list is refetched
+    // either way, but the bubble should not keep a reaction the server
+    // refused.
+    final revertIndex = _messages.indexWhere((m) => m.id == message.id);
+    if (revertIndex != -1) {
+      setState(() {
+        _messages[revertIndex] =
+            _messages[revertIndex].copyWith(reactions: previous);
+      });
+    }
+    _showErrorSnack(
+      response['statusCode'] == 400
+          ? 'This message is no longer available.'
+          : 'Could not save your reaction.',
+    );
+  }
+
+  /// The summary bar under a bubble: one chip per distinct emoji with its
+  /// count, the chip carrying this user's own reaction outlined. Tapping a
+  /// chip toggles that emoji, the same as picking it from the picker.
+  Widget _buildReactionChips(ChatMessage message, FontSettings fontSettings) {
+    final counts = message.reactionCounts;
+    final mine = message.reactionOf(
+      _currentUserUuid,
+      FirebaseApiService.appType,
+    );
+
+    // Pulled up so the chip overlaps the bottom edge of the bubble instead of
+    // floating under it — it is drawn after the bubble, so it sits on top.
+    return Transform.translate(
+      offset: const Offset(0, -12),
+      // heightFactor claims only half the chip's height in the column, so the
+      // half that lies over the bubble does not also push the next message
+      // down — the row keeps its normal spacing.
+      child: Align(
+        alignment:
+            message.isMe ? Alignment.topRight : Alignment.topLeft,
+        widthFactor: 1,
+        heightFactor: 0.5,
+        child: Padding(
+          padding: EdgeInsets.only(
+            left: message.isMe ? 4 : 12,
+            right: message.isMe ? 12 : 4,
+          ),
+          child: Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            children: counts.entries.map((entry) {
+              final isMine = entry.key == mine;
+              return GestureDetector(
+                onTap: _isSelectionMode
+                    ? null
+                    : () => _toggleReaction(message, entry.key),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: isMine ? Colors.green[50] : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    // A ring the colour of the chat ground keeps the chip legible
+                    // where it crosses the bubble.
+                    border: Border.all(
+                      color: isMine ? Colors.green : Colors.white,
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.12),
+                        blurRadius: 3,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        entry.key,
+                        style: TextStyle(fontSize: fontSettings.fontSize - 2),
+                      ),
+                      // A lone reaction reads fine as just the emoji.
+                      if (entry.value > 1) ...[
+                        const SizedBox(width: 3),
+                        Text(
+                          '${entry.value}',
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize - 4,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
 
   void _startReply(ChatMessage msg) {
     setState(() {
@@ -2568,10 +2802,21 @@ Future<void> _markMessagesAsRead() async {
         !_isSelectionMode && widget.canSendMessages && _canReplyTo(message);
 
     final bubble = GestureDetector(
-      onLongPress: () => _toggleSelection(message.id),
+      // The first long-press selects the message *and* offers the emoji row,
+      // so reacting and the reply/forward/copy/delete toolbar are both one
+      // gesture away. Once selection is running a long-press is plain
+      // multi-select, otherwise picking a second message would keep
+      // re-opening the picker.
+      onLongPress: () {
+        final opensPicker = !_isSelectionMode;
+        _toggleSelection(message.id);
+        if (opensPicker) _showReactionPicker(message);
+      },
       onTap: () {
         if (_isSelectionMode) _toggleSelection(message.id);
       },
+      // Kept as a shortcut for reacting without entering selection mode.
+      onDoubleTap: _isSelectionMode ? null : () => _showReactionPicker(message),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         color: isSelected
@@ -2646,203 +2891,215 @@ Future<void> _markMessagesAsRead() async {
 
               // ── Bubble ──
               Flexible(
-                child: Container(
-                  padding: isImageBubble
-                      ? const EdgeInsets.all(4)
-                      : const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                  decoration: BoxDecoration(
-                    color: message.isMe
-                        ? (isSelected
-                            ? Colors.green[600]
-                            : Colors.green)
-                        : (isSelected
-                            ? Colors.grey[350]
-                            : const Color.fromARGB(255, 200, 199, 199)),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Sender (groups only)
-                      if (showSenderName)
-                        Padding(
-                          padding: EdgeInsets.only(
-                            bottom: 2,
-                            left: isImageBubble ? 8 : 0,
-                            top: isImageBubble ? 4 : 0,
-                          ),
-                          child: Text(
-                            senderLabel,
-                            style: TextStyle(
-                              color: ChatContact.generateColorFromName(
-                                senderLabel,
-                              ),
-                              fontSize: fontSettings.fontSize - 4,
-                              fontWeight: FontWeight.bold,
+                child: Column(
+                  crossAxisAlignment: message.isMe
+                      ? CrossAxisAlignment.end
+                      : CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: isImageBubble
+                          ? const EdgeInsets.all(4)
+                          : const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
                             ),
-                          ),
-                        ),
-
-                      // Quoted message (reply)
-                      if (message.replyToMessageId != null)
-                        Padding(
-                          padding: EdgeInsets.only(
-                            left: isImageBubble ? 8 : 0,
-                            right: isImageBubble ? 8 : 0,
-                            top: isImageBubble ? 4 : 0,
-                          ),
-                          child: _buildQuotedMessage(message, fontSettings),
-                        ),
-
-                      // Forwarded tag — the backend marks messages created
-                      // by the forward endpoint, naming the original sender.
-                      if (message.isForwarded)
-                        Padding(
-                          padding: EdgeInsets.only(
-                            bottom: 4,
-                            left: isImageBubble ? 8 : 0,
-                            top: isImageBubble ? 4 : 0,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.forward,
-                                size: fontSettings.fontSize - 3,
-                                color: message.isMe
-                                    ? Colors.white70
-                                    : Colors.grey[700],
+                      decoration: BoxDecoration(
+                        color: message.isMe
+                            ? (isSelected
+                                ? Colors.green[600]
+                                : Colors.green)
+                            : (isSelected
+                                ? Colors.grey[350]
+                                : const Color.fromARGB(255, 200, 199, 199)),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Sender (groups only)
+                          if (showSenderName)
+                            Padding(
+                              padding: EdgeInsets.only(
+                                bottom: 2,
+                                left: isImageBubble ? 8 : 0,
+                                top: isImageBubble ? 4 : 0,
                               ),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  (message.forwardedFromSenderName
-                                              ?.trim()
-                                              .isNotEmpty ??
-                                          false)
-                                      ? 'Forwarded from '
-                                          '${message.forwardedFromSenderName!.trim()}'
-                                      : 'Forwarded',
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontStyle: FontStyle.italic,
-                                    fontSize: fontSettings.fontSize - 4,
+                              child: Text(
+                                senderLabel,
+                                style: TextStyle(
+                                  color: ChatContact.generateColorFromName(
+                                    senderLabel,
+                                  ),
+                                  fontSize: fontSettings.fontSize - 4,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+
+                          // Quoted message (reply)
+                          if (message.replyToMessageId != null)
+                            Padding(
+                              padding: EdgeInsets.only(
+                                left: isImageBubble ? 8 : 0,
+                                right: isImageBubble ? 8 : 0,
+                                top: isImageBubble ? 4 : 0,
+                              ),
+                              child: _buildQuotedMessage(message, fontSettings),
+                            ),
+
+                          // Forwarded tag — the backend marks messages created
+                          // by the forward endpoint, naming the original sender.
+                          if (message.isForwarded)
+                            Padding(
+                              padding: EdgeInsets.only(
+                                bottom: 4,
+                                left: isImageBubble ? 8 : 0,
+                                top: isImageBubble ? 4 : 0,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.forward,
+                                    size: fontSettings.fontSize - 3,
                                     color: message.isMe
                                         ? Colors.white70
                                         : Colors.grey[700],
                                   ),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      (message.forwardedFromSenderName
+                                                  ?.trim()
+                                                  .isNotEmpty ??
+                                              false)
+                                          ? 'Forwarded from '
+                                              '${message.forwardedFromSenderName!.trim()}'
+                                          : 'Forwarded',
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontStyle: FontStyle.italic,
+                                        fontSize: fontSettings.fontSize - 4,
+                                        color: message.isMe
+                                            ? Colors.white70
+                                            : Colors.grey[700],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                          // "Mentioned you" tag, driven by the server's mentions
+                          // list so it is right even when the text is edited or a
+                          // member was renamed.
+                          // if (_mentionsMe(message))
+                          //   Padding(
+                          //     padding: EdgeInsets.only(
+                          //       bottom: 2,
+                          //       left: isImageBubble ? 8 : 0,
+                          //       right: isImageBubble ? 8 : 0,
+                          //     ),
+                          //     child: Row(
+                          //       mainAxisSize: MainAxisSize.min,
+                          //       children: [
+                          //         Icon(
+                          //           Icons.alternate_email,
+                          //           size: fontSettings.fontSize - 4,
+                          //           color: Colors.amber[800],
+                          //         ),
+                          //         const SizedBox(width: 4),
+                          //         Text(
+                          //           'Mentioned you',
+                          //           style: TextStyle(
+                          //             fontSize: fontSettings.fontSize - 5,
+                          //             fontWeight: FontWeight.bold,
+                          //             color: Colors.amber[800],
+                          //           ),
+                          //         ),
+                          //       ],
+                          //     ),
+                          //   ),
+
+                          // Attachment
+                          if (hasGrouped) ...[
+                            _buildImageGrid(
+                              message.groupedAttachments,
+                              message.isMe,
+                              message.id,
+                              fontSettings,
+                            ),
+                          ] else if (message.fileType != null) ...[
+                            _buildSingleAttachment(message, fontSettings),
+                          ],
+
+                          if (hasGrouped || message.fileType != null)
+                            const SizedBox(height: 4),
+
+                          // Text
+                          if (showText)
+                            Padding(
+                              padding: isImageBubble
+                                  ? const EdgeInsets.symmetric(horizontal: 8)
+                                  : EdgeInsets.zero,
+                              child: _buildMessageText(
+                                message,
+                                TextStyle(
+                                  color: message.isMe
+                                      ? Colors.white
+                                      : Colors.black87,
+                                  fontSize: fontSettings.fontSize + 2,
+                                  fontWeight: fontSettings.fontWeight,
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
+                            ),
 
-                      // "Mentioned you" tag, driven by the server's mentions
-                      // list so it is right even when the text is edited or a
-                      // member was renamed.
-                      // if (_mentionsMe(message))
-                      //   Padding(
-                      //     padding: EdgeInsets.only(
-                      //       bottom: 2,
-                      //       left: isImageBubble ? 8 : 0,
-                      //       right: isImageBubble ? 8 : 0,
-                      //     ),
-                      //     child: Row(
-                      //       mainAxisSize: MainAxisSize.min,
-                      //       children: [
-                      //         Icon(
-                      //           Icons.alternate_email,
-                      //           size: fontSettings.fontSize - 4,
-                      //           color: Colors.amber[800],
-                      //         ),
-                      //         const SizedBox(width: 4),
-                      //         Text(
-                      //           'Mentioned you',
-                      //           style: TextStyle(
-                      //             fontSize: fontSettings.fontSize - 5,
-                      //             fontWeight: FontWeight.bold,
-                      //             color: Colors.amber[800],
-                      //           ),
-                      //         ),
-                      //       ],
-                      //     ),
-                      //   ),
-
-                      // Attachment
-                      if (hasGrouped) ...[
-                        _buildImageGrid(
-                          message.groupedAttachments,
-                          message.isMe,
-                          message.id,
-                          fontSettings,
-                        ),
-                      ] else if (message.fileType != null) ...[
-                        _buildSingleAttachment(message, fontSettings),
-                      ],
-
-                      if (hasGrouped || message.fileType != null)
-                        const SizedBox(height: 4),
-
-                      // Text
-                      if (showText)
-                        Padding(
-                          padding: isImageBubble
-                              ? const EdgeInsets.symmetric(horizontal: 8)
-                              : EdgeInsets.zero,
-                          child: _buildMessageText(
-                            message,
-                            TextStyle(
-                              color: message.isMe
-                                  ? Colors.white
-                                  : Colors.black87,
-                              fontSize: fontSettings.fontSize + 2,
-                              fontWeight: fontSettings.fontWeight,
+                          // Time + read tick
+                          Padding(
+                            padding: isImageBubble
+                                ? const EdgeInsets.only(
+                                    right: 8,
+                                    left: 8,
+                                    bottom: 4,
+                                  )
+                                : EdgeInsets.zero,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  _formatTime(message.timestamp),
+                                  style: TextStyle(
+                                    color: message.isMe
+                                        ? Colors.white70
+                                        : Colors.grey[600],
+                                    fontSize: fontSettings.fontSize - 4,
+                                  ),
+                                ),
+                                if (message.isMe) ...[
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    message.isRead == true
+                                        ? Icons.done_all
+                                        : Icons.done,
+                                    color: message.isRead == true
+                                        ? Colors.blue[200]
+                                        : Colors.white70,
+                                    size: 16,
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
-                        ),
-
-                      // Time + read tick
-                      Padding(
-                        padding: isImageBubble
-                            ? const EdgeInsets.only(
-                                right: 8,
-                                left: 8,
-                                bottom: 4,
-                              )
-                            : EdgeInsets.zero,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              _formatTime(message.timestamp),
-                              style: TextStyle(
-                                color: message.isMe
-                                    ? Colors.white70
-                                    : Colors.grey[600],
-                                fontSize: fontSettings.fontSize - 4,
-                              ),
-                            ),
-                            if (message.isMe) ...[
-                              const SizedBox(width: 4),
-                              Icon(
-                                message.isRead == true
-                                    ? Icons.done_all
-                                    : Icons.done,
-                                color: message.isRead == true
-                                    ? Colors.blue[200]
-                                    : Colors.white70,
-                                size: 16,
-                              ),
-                            ],
-                          ],
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    // Reaction summary, hung under the bubble rather than
+                    // inside it so it reads the same on an image bubble.
+                    if (message.hasReactions)
+                      _buildReactionChips(message, fontSettings),
+                  ],
                 ),
               ),
             ],

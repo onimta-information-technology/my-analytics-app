@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:ballys_reservation_app/components/airport_pickup_status_badge.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/models/transport/transport_reservation.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
@@ -544,6 +545,18 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
                   Colors.green,
                 ),
               ],
+            ],
+
+            // ✅ Airport pickup progress reported by transport staff
+            if (reservation.hasAirportPickup) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: AirportPickupStatusBadge(
+                  status: reservation.airportPickupStage,
+                  fontSettings: fontSettings,
+                ),
+              ),
             ],
 
             // ✅ Latest amendment note, so it's visible without opening the card

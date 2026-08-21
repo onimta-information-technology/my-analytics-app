@@ -130,6 +130,23 @@ class TransportReservation {
     );
   }
 
+  /// True when any leg of this request is an airport pickup.
+  bool get hasAirportPickup => details.any((d) => d.isAirportPickup);
+
+  /// Airport-pickup progress for the whole request: the least advanced stage
+  /// reported across its airport-pickup legs, so the card never claims more
+  /// progress than every leg has actually reached. Null when there is no
+  /// airport pickup, or when staff haven't reported anything yet.
+  AirportPickupStatus? get airportPickupStage {
+    AirportPickupStatus? lowest;
+    for (final detail in details) {
+      final stage = detail.airportPickupStage;
+      if (stage == null) continue;
+      if (lowest == null || stage.code < lowest.code) lowest = stage;
+    }
+    return lowest;
+  }
+
   /// Total vehicles across every leg of this request.
   int get totalVehicles =>
       details.fold(0, (sum, d) => sum + d.noOfVehicles);
@@ -159,6 +176,35 @@ enum TransportStatus {
   final String label;
 }
 
+/// `airport_pickup_status` on a transport leg — how far transport staff have
+/// taken an airport pickup.
+enum AirportPickupStatus {
+  /// Logged by transport staff, not yet taken on.
+  noted(1, 'Noted'),
+
+  /// Taken on by transport staff.
+  accepted(2, 'Accepted'),
+
+  /// Confirmed back to the requester.
+  acknowledged(3, 'Acknowledged');
+
+  const AirportPickupStatus(this.code, this.label);
+
+  /// The numeric value the API sends.
+  final int code;
+
+  /// Status name as shown on the cards and chips.
+  final String label;
+
+  /// Null for `0` (nothing reported yet) and any code the API adds later.
+  static AirportPickupStatus? fromCode(int? code) {
+    for (final status in AirportPickupStatus.values) {
+      if (status.code == code) return status;
+    }
+    return null;
+  }
+}
+
 class TransportDetail {
   final int detailId;
   final String mid;
@@ -174,6 +220,17 @@ class TransportDetail {
   final int noOfVehicles;
   final int noOfPassengers;
   final String contactNumber;
+
+  /// `1` when the leg is a Silk Route service, `0` otherwise.
+  final int silkRoute;
+
+  /// `1` when the leg is an airport pickup, `0` otherwise.
+  final int airportPickup;
+
+  /// Progress transport staff reported for the airport pickup — see
+  /// [AirportPickupStatus]. `0` while nothing has been reported yet.
+  final int airportPickupStatus;
+
   final String? receivedBy;
   final DateTime? receivedDate;
   final String? taxiPlateNumber;
@@ -195,12 +252,26 @@ class TransportDetail {
     required this.noOfVehicles,
     required this.noOfPassengers,
     required this.contactNumber,
+    this.silkRoute = 0,
+    this.airportPickup = 0,
+    this.airportPickupStatus = 0,
     this.receivedBy,
     this.receivedDate,
     this.taxiPlateNumber,
     this.driverName,
     this.driverPhoneNumber,
   });
+
+  /// True when this leg was raised as an airport pickup.
+  bool get isAirportPickup => airportPickup == 1;
+
+  /// True when this leg was raised as a Silk Route service.
+  bool get isSilkRoute => silkRoute == 1;
+
+  /// Airport-pickup progress, or null when this isn't an airport pickup or
+  /// staff haven't reported anything yet.
+  AirportPickupStatus? get airportPickupStage =>
+      isAirportPickup ? AirportPickupStatus.fromCode(airportPickupStatus) : null;
 
   /// True once transport staff have filled in the taxi/driver assignment.
   bool get hasDriverInfo =>
@@ -226,6 +297,9 @@ class TransportDetail {
       noOfVehicles: _parseInt(json['no_of_vehicles']),
       noOfPassengers: _parseInt(json['no_of_passengers']),
       contactNumber: json['contact_number']?.toString() ?? '',
+      silkRoute: _parseInt(json['silk_route']),
+      airportPickup: _parseInt(json['airport_pickup']),
+      airportPickupStatus: _parseInt(json['airport_pickup_status']),
       receivedBy: _parseText(json['received_by']),
       receivedDate: _parseDate(json['received_date']),
       taxiPlateNumber: _parseText(json['taxi_plate_number']),

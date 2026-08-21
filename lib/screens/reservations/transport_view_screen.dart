@@ -1,5 +1,6 @@
 import 'dart:io' show Platform;
 
+import 'package:ballys_reservation_app/components/airport_pickup_status_badge.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/transport_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
@@ -358,6 +359,16 @@ class TransportViewScreen extends ConsumerWidget {
                     Colors.brown,
                     fontSettings,
                   ),
+                  if (transport.hasAirportPickup) ...[
+                    const SizedBox(height: 6),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: AirportPickupStatusBadge(
+                        status: transport.airportPickupStage,
+                        fontSettings: fontSettings,
+                      ),
+                    ),
+                  ],
                   if (transport.isAssigned) ...[
                     const Divider(height: 20),
                     _infoRow(
@@ -826,6 +837,16 @@ class _TripCardState extends State<_TripCard> {
                       ),
                     ],
                   ),
+                  // if (base.isAirportPickup) ...[
+                  //   const SizedBox(height: 8),
+                  //   Align(
+                  //     alignment: Alignment.centerLeft,
+                  //     child: AirportPickupStatusBadge(
+                  //       status: base.airportPickupStage,
+                  //       fontSettings: fontSettings,
+                  //     ),
+                  //   ),
+                  // ],
                   if (!_expanded) ...[
                     const SizedBox(height: 10),
                     _collapsedSummary(base, fontSettings),
@@ -887,6 +908,15 @@ class _TripCardState extends State<_TripCard> {
                           iconColor: Colors.green,
                           fontSettings: fontSettings,
                         ),
+                        // if (base.isAirportPickup)
+                        //   TransportViewScreen._infoRow(
+                        //     Icons.flight_land,
+                        //     'Airport pickup',
+                        //     base.airportPickupStage?.label ?? 'Pending',
+                        //     base.airportPickupStage?.color ??
+                        //         Colors.blueGrey.shade600,
+                        //     fontSettings,
+                        //   ),
                         const Divider(height: 20),
                         Text(
                           multipleVehicleTypes ? 'Vehicles' : 'Vehicle',

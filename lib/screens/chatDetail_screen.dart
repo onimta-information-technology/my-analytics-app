@@ -27,6 +27,80 @@ import 'package:intl/intl.dart';
 const int _kImageQuality = 50;
 const double _kImageMaxDimension = 1280;
 
+// Colour the composer paints an "@Name" in once it has been picked from the
+// suggestion list.
+const Color _kMentionColor = Color.fromARGB(255, 12, 59, 121);
+
+/// The same blue lightened for the green outgoing bubble, where [_kMentionColor]
+/// on green would be too dark to read.
+const Color _kMentionColorOnGreen =Color.fromARGB(255, 12, 59, 121);
+
+/// Composer controller that paints picked "@Name" tokens in [_kMentionColor].
+///
+/// Only names in [mentionNames] are highlighted, so a half-typed "@que" or an
+/// "@" someone typed by hand stays plain until it is actually a mention.
+class _MentionTextEditingController extends TextEditingController {
+  final Set<String> mentionNames = {};
+
+  /// Rebuilds the field with the current [mentionNames] even when the text
+  /// itself did not change — picking or dropping a mention repaints it.
+  void refreshHighlights() => notifyListeners();
+
+  @override
+  TextSpan buildTextSpan({
+    required BuildContext context,
+    TextStyle? style,
+    required bool withComposing,
+  }) {
+    if (mentionNames.isEmpty || text.isEmpty) {
+      return super.buildTextSpan(
+        context: context,
+        style: style,
+        withComposing: withComposing,
+      );
+    }
+
+    final mentionStyle = (style ?? const TextStyle()).copyWith(
+      color: _kMentionColor,
+      fontWeight: FontWeight.w600,
+    );
+
+    final spans = <TextSpan>[];
+    var index = 0;
+    while (index < text.length) {
+      // The earliest "@Name" from here on, and on a tie the longest one, so
+      // "@John Smith" is coloured whole instead of only its "@John".
+      var start = -1;
+      var length = 0;
+      for (final name in mentionNames) {
+        if (name.isEmpty) continue;
+        final token = '@$name';
+        final at = text.indexOf(token, index);
+        if (at == -1) continue;
+        if (start == -1 || at < start || (at == start && token.length > length)) {
+          start = at;
+          length = token.length;
+        }
+      }
+      if (start == -1) break;
+
+      if (start > index) {
+        spans.add(TextSpan(text: text.substring(index, start), style: style));
+      }
+      spans.add(TextSpan(
+        text: text.substring(start, start + length),
+        style: mentionStyle,
+      ));
+      index = start + length;
+    }
+
+    if (index < text.length) {
+      spans.add(TextSpan(text: text.substring(index), style: style));
+    }
+    return TextSpan(style: style, children: spans);
+  }
+}
+
 class IndividualChatScreen extends ConsumerStatefulWidget {
   final ChatContact contact;
   final Function(String)? onMessageSent;
@@ -61,7 +135,8 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
   @override
   bool get wantKeepAlive => true;
 
-  final TextEditingController _messageController = TextEditingController();
+  final _MentionTextEditingController _messageController =
+      _MentionTextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _imagePicker = ImagePicker();
   final FocusNode _messageFocusNode = FocusNode();
@@ -462,6 +537,15 @@ Future<void> _markMessagesAsRead() async {
       _mentionAnchor = null;
       _mentionSuggestions = [];
     });
+    _syncMentionHighlights();
+  }
+
+  /// Keeps the composer's highlighted names in step with what has been picked.
+  void _syncMentionHighlights() {
+    _messageController.mentionNames
+      ..clear()
+      ..addAll(_pickedMentions.values.map((m) => m.name).where((n) => n.isNotEmpty));
+    _messageController.refreshHighlights();
   }
 
   /// The picked mentions still present in [text], in the wire format the
@@ -519,15 +603,35 @@ Future<void> _markMessagesAsRead() async {
   }
 
   /// One "@Name" chip. Being named yourself is worth spotting in a busy
-  /// group, so it reads louder than a mention of somebody else.
-  TextSpan _mentionSpan(String label, String userUuid, TextStyle baseStyle) {
+  /// group, so it sits in a rounded tint rather than just reading blue.
+  InlineSpan _mentionSpan(
+    String label,
+    String userUuid,
+    TextStyle baseStyle, {
+    required bool onGreen,
+  }) {
+    final style = baseStyle.copyWith(
+      color: onGreen ? _kMentionColorOnGreen : _kMentionColor,
+      fontWeight: FontWeight.bold,
+    );
+
     final isMe = _currentUserUuid != null &&
         userUuid.toLowerCase() == _currentUserUuid!.toLowerCase();
-    return TextSpan(
-      text: label,
-      style: baseStyle.copyWith(
-        fontWeight: FontWeight.bold,
-        backgroundColor: isMe ? Colors.amber.withValues(alpha: 0.35) : null,
+    if (!isMe) return TextSpan(text: label, style: style);
+
+    // A span's backgroundColor can only be a hard rectangle, so the pill is a
+    // widget instead.
+    return WidgetSpan(
+      alignment: PlaceholderAlignment.middle,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+        decoration: BoxDecoration(
+          color: onGreen
+              ? Colors.white.withValues(alpha: 0.25)
+              : _kMentionColor.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(label, style: style),
       ),
     );
   }
@@ -536,19 +640,27 @@ Future<void> _markMessagesAsRead() async {
   /// then the text itself with any inline "@Name" still in it drawn in bold.
   Widget _buildMessageText(ChatMessage message, TextStyle baseStyle) {
     final text = message.text;
+    final onGreen = message.isMe;
     final rebuilt = _rebuiltMentions(message);
-    if (rebuilt.isEmpty) return _buildInlineMentionText(text, baseStyle);
+    if (rebuilt.isEmpty) {
+      return _buildInlineMentionText(text, baseStyle, onGreen: onGreen);
+    }
 
-    final spans = <TextSpan>[];
+    final spans = <InlineSpan>[];
     for (var i = 0; i < rebuilt.length; i++) {
       if (i > 0) spans.add(TextSpan(text: ' ', style: baseStyle));
       spans.add(
-        _mentionSpan('@${rebuilt[i].name}', rebuilt[i].userUuid, baseStyle),
+        _mentionSpan(
+          '@${rebuilt[i].name}',
+          rebuilt[i].userUuid,
+          baseStyle,
+          onGreen: onGreen,
+        ),
       );
     }
     if (text.isNotEmpty) {
       spans.add(TextSpan(text: ' ', style: baseStyle));
-      spans.addAll(_inlineMentionSpans(text, baseStyle) ??
+      spans.addAll(_inlineMentionSpans(text, baseStyle, onGreen: onGreen) ??
           [TextSpan(text: text, style: baseStyle)]);
     }
     return RichText(text: TextSpan(children: spans));
@@ -557,15 +669,23 @@ Future<void> _markMessagesAsRead() async {
   /// Message text with any "@Name" that matches a current group member drawn
   /// in bold. Matching against the roster rather than a server field means
   /// both sent and received messages highlight without extra payload.
-  Widget _buildInlineMentionText(String text, TextStyle baseStyle) {
-    final spans = _inlineMentionSpans(text, baseStyle);
+  Widget _buildInlineMentionText(
+    String text,
+    TextStyle baseStyle, {
+    required bool onGreen,
+  }) {
+    final spans = _inlineMentionSpans(text, baseStyle, onGreen: onGreen);
     if (spans == null) return Text(text, style: baseStyle);
     return RichText(text: TextSpan(children: spans));
   }
 
-  /// The spans for [text] with its inline "@Name"s bolded, or null when there
+  /// The spans for [text] with its inline "@Name"s highlighted, or null when there
   /// is no mention in it to highlight.
-  List<TextSpan>? _inlineMentionSpans(String text, TextStyle baseStyle) {
+  List<InlineSpan>? _inlineMentionSpans(
+    String text,
+    TextStyle baseStyle, {
+    required bool onGreen,
+  }) {
     if (!widget.isGroup || _groupMembers.isEmpty || !text.contains('@')) {
       return null;
     }
@@ -574,7 +694,7 @@ Future<void> _markMessagesAsRead() async {
     final byLength = _groupMembers.where((m) => m.name.isNotEmpty).toList()
       ..sort((a, b) => b.name.length.compareTo(a.name.length));
 
-    final spans = <TextSpan>[];
+    final spans = <InlineSpan>[];
     final plain = StringBuffer();
     var i = 0;
     var matched = false;
@@ -602,6 +722,7 @@ Future<void> _markMessagesAsRead() async {
               text.substring(i, i + 1 + hit.name.length),
               hit.userUuid,
               baseStyle,
+              onGreen: onGreen,
             ),
           );
           i += 1 + hit.name.length;
@@ -731,6 +852,7 @@ Future<void> _markMessagesAsRead() async {
     });
     _messageController.clear();
     _pickedMentions.clear();
+    _syncMentionHighlights();
     _hideMentionSuggestions();
     if (widget.onMessageSent != null) widget.onMessageSent!(outgoing);
 
@@ -2191,33 +2313,33 @@ Future<void> _markMessagesAsRead() async {
                       // "Mentioned you" tag, driven by the server's mentions
                       // list so it is right even when the text is edited or a
                       // member was renamed.
-                      if (_mentionsMe(message))
-                        Padding(
-                          padding: EdgeInsets.only(
-                            bottom: 2,
-                            left: isImageBubble ? 8 : 0,
-                            right: isImageBubble ? 8 : 0,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.alternate_email,
-                                size: fontSettings.fontSize - 4,
-                                color: Colors.amber[800],
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Mentioned you',
-                                style: TextStyle(
-                                  fontSize: fontSettings.fontSize - 5,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.amber[800],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                      // if (_mentionsMe(message))
+                      //   Padding(
+                      //     padding: EdgeInsets.only(
+                      //       bottom: 2,
+                      //       left: isImageBubble ? 8 : 0,
+                      //       right: isImageBubble ? 8 : 0,
+                      //     ),
+                      //     child: Row(
+                      //       mainAxisSize: MainAxisSize.min,
+                      //       children: [
+                      //         Icon(
+                      //           Icons.alternate_email,
+                      //           size: fontSettings.fontSize - 4,
+                      //           color: Colors.amber[800],
+                      //         ),
+                      //         const SizedBox(width: 4),
+                      //         Text(
+                      //           'Mentioned you',
+                      //           style: TextStyle(
+                      //             fontSize: fontSettings.fontSize - 5,
+                      //             fontWeight: FontWeight.bold,
+                      //             color: Colors.amber[800],
+                      //           ),
+                      //         ),
+                      //       ],
+                      //     ),
+                      //   ),
 
                       // Attachment
                       if (hasGrouped) ...[

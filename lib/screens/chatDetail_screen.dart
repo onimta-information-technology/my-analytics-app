@@ -206,6 +206,22 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
   /// The opening jump is made once, on the first load that has the message.
   bool _initialMentionJumpDone = false;
 
+  // ── Message search ──
+  /// Search bar in place of the app bar title. The conversation itself is left
+  /// whole; the arrows below it walk the messages that matched.
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+
+  /// Trimmed and lower-cased. Empty means the bar is open but nothing typed.
+  String _searchQuery = '';
+
+  /// Ids of the matching messages, newest first, and which of them is being
+  /// shown. Recomputed every build rather than cached, so a message arriving
+  /// or being deleted with the bar open cannot leave a stale hit behind.
+  List<String> _searchHits = const [];
+  int _searchIndex = 0;
+
   // ─── Lifecycle ─────────────────────────────────────────────────────────────
 
   @override
@@ -233,6 +249,8 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     _messageController.dispose();
     _scrollController.dispose();
     _messageFocusNode.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -694,7 +712,7 @@ Future<void> _markMessagesAsRead() async {
     if (text.isNotEmpty) {
       spans.add(TextSpan(text: ' ', style: baseStyle));
       spans.addAll(_inlineMentionSpans(text, baseStyle, onGreen: onGreen) ??
-          [TextSpan(text: text, style: baseStyle)]);
+          _searchHighlightedSpans(text, baseStyle));
     }
     return RichText(text: TextSpan(children: spans));
   }
@@ -708,7 +726,12 @@ Future<void> _markMessagesAsRead() async {
     required bool onGreen,
   }) {
     final spans = _inlineMentionSpans(text, baseStyle, onGreen: onGreen);
-    if (spans == null) return Text(text, style: baseStyle);
+    if (spans == null) {
+      if (!_hasSearchTerm) return Text(text, style: baseStyle);
+      return RichText(
+        text: TextSpan(children: _searchHighlightedSpans(text, baseStyle)),
+      );
+    }
     return RichText(text: TextSpan(children: spans));
   }
 
@@ -734,7 +757,7 @@ Future<void> _markMessagesAsRead() async {
 
     void flush() {
       if (plain.isEmpty) return;
-      spans.add(TextSpan(text: plain.toString(), style: baseStyle));
+      spans.addAll(_searchHighlightedSpans(plain.toString(), baseStyle));
       plain.clear();
     }
 
@@ -1980,6 +2003,205 @@ Future<void> _markMessagesAsRead() async {
     );
   }
 
+  // ─── Message search ─────────────────────────────────────────────────────────
+
+  bool get _hasSearchTerm => _isSearching && _searchQuery.isNotEmpty;
+
+  /// The hit currently being shown, or null when nothing matched.
+  String? get _currentSearchHit =>
+      _searchIndex < _searchHits.length ? _searchHits[_searchIndex] : null;
+
+  /// What a search looks at: the message text plus the names of anything
+  /// attached, so "invoice.pdf" finds the message it was sent on.
+  String _searchableText(ChatMessage message) {
+    final parts = <String>[
+      message.text,
+      message.fileName ?? '',
+      for (final item in message.groupedAttachments) item.fileName ?? '',
+    ];
+    return parts.join(' ').toLowerCase();
+  }
+
+  /// Hits newest first, matching the order the conversation is read in — the
+  /// first one offered is the most recent.
+  List<String> _computeSearchHits() {
+    if (!_hasSearchTerm) return const [];
+    final hits = <String>[];
+    for (var i = _messages.length - 1; i >= 0; i--) {
+      if (_searchableText(_messages[i]).contains(_searchQuery)) {
+        hits.add(_messages[i].id);
+      }
+    }
+    return hits;
+  }
+
+  void _openSearch() {
+    setState(() => _isSearching = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _searchFocusNode.requestFocus();
+    });
+  }
+
+  void _closeSearch() {
+    _searchController.clear();
+    _searchFocusNode.unfocus();
+    _highlightTimer?.cancel();
+    setState(() {
+      _isSearching = false;
+      _searchQuery = '';
+      _searchHits = const [];
+      _searchIndex = 0;
+      _highlightedMessageId = null;
+    });
+  }
+
+  void _onSearchChanged(String value) {
+    final query = value.trim().toLowerCase();
+    if (query == _searchQuery) return;
+    setState(() {
+      _searchQuery = query;
+      _searchIndex = 0;
+    });
+    // The hits are recomputed by the build this setState schedules, so the
+    // jump waits for it — before then the newest match is not known.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final hit = _currentSearchHit;
+      if (mounted && hit != null) _scrollToMessage(hit);
+    });
+  }
+
+  /// Walks the hits: 1 goes further back in the conversation, -1 back towards
+  /// the newest. Stops at either end rather than wrapping around.
+  void _stepSearch(int delta) {
+    final next = _searchIndex + delta;
+    if (next < 0 || next >= _searchHits.length) return;
+    setState(() => _searchIndex = next);
+    _scrollToMessage(_searchHits[next]);
+  }
+
+  /// [text] with every occurrence of the search term given a yellow ground, so
+  /// the word that matched stands out inside a long message.
+  List<InlineSpan> _searchHighlightedSpans(String text, TextStyle baseStyle) {
+    if (!_hasSearchTerm || text.isEmpty) {
+      return [TextSpan(text: text, style: baseStyle)];
+    }
+
+    final spans = <InlineSpan>[];
+    final lower = text.toLowerCase();
+    var start = 0;
+    while (true) {
+      final at = lower.indexOf(_searchQuery, start);
+      if (at == -1) break;
+      if (at > start) {
+        spans.add(TextSpan(text: text.substring(start, at), style: baseStyle));
+      }
+      final end = at + _searchQuery.length;
+      spans.add(
+        TextSpan(
+          text: text.substring(at, end),
+          style: baseStyle.copyWith(
+            backgroundColor: Colors.amber,
+            color: Colors.black,
+          ),
+        ),
+      );
+      start = end;
+    }
+
+    if (spans.isEmpty) return [TextSpan(text: text, style: baseStyle)];
+    if (start < text.length) {
+      spans.add(TextSpan(text: text.substring(start), style: baseStyle));
+    }
+    return spans;
+  }
+
+  PreferredSizeWidget _buildSearchAppBar(FontSettings fontSettings) {
+    return AppBar(
+      backgroundColor: Colors.green,
+      foregroundColor: Colors.white,
+      titleSpacing: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back),
+        onPressed: _closeSearch,
+      ),
+      title: TextField(
+        controller: _searchController,
+        focusNode: _searchFocusNode,
+        onChanged: _onSearchChanged,
+        textInputAction: TextInputAction.search,
+        cursorColor: Colors.white,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: fontSettings.fontSize,
+        ),
+        decoration: InputDecoration(
+          hintText: 'Search messages...',
+          hintStyle: TextStyle(
+            color: Colors.white70,
+            fontSize: fontSettings.fontSize,
+          ),
+          border: InputBorder.none,
+        ),
+      ),
+      actions: [
+        if (_searchQuery.isNotEmpty)
+          IconButton(
+            icon: const Icon(Icons.close),
+            tooltip: 'Clear',
+            onPressed: () {
+              _searchController.clear();
+              _onSearchChanged('');
+              _searchFocusNode.requestFocus();
+            },
+          ),
+      ],
+    );
+  }
+
+  /// Bar in place of the composer while searching: how many messages matched,
+  /// and the arrows that walk them.
+  Widget _buildSearchNavBar(FontSettings fontSettings) {
+    final total = _searchHits.length;
+    final label = _searchQuery.isEmpty
+        ? 'Type to search this chat'
+        : total == 0
+            ? 'No messages found'
+            : '${_searchIndex + 1} of $total';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Colors.grey[300]!)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Colors.grey[700],
+                fontSize: fontSettings.fontSize - 3,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.keyboard_arrow_up),
+            tooltip: 'Older match',
+            color: Colors.green,
+            onPressed: _searchIndex < total - 1 ? () => _stepSearch(1) : null,
+          ),
+          IconButton(
+            icon: const Icon(Icons.keyboard_arrow_down),
+            tooltip: 'Newer match',
+            color: Colors.green,
+            onPressed: _searchIndex > 0 ? () => _stepSearch(-1) : null,
+          ),
+        ],
+      ),
+    );
+  }
+
   String _formatTime(DateTime ts) => DateFormat('HH:mm').format(ts);
 
   String _formatDateSeparator(DateTime date) {
@@ -2296,7 +2518,8 @@ Future<void> _markMessagesAsRead() async {
 
   Widget _buildMessage(ChatMessage message, FontSettings fontSettings) {
     final isSelected = _selectedMessageIds.contains(message.id);
-    final isHighlighted = _highlightedMessageId == message.id;
+    final isHighlighted =
+        _highlightedMessageId == message.id || _currentSearchHit == message.id;
     final hasGrouped = message.hasGroupedAttachments;
     final showText =
         message.text.isNotEmpty &&
@@ -2677,10 +2900,22 @@ Future<void> _markMessagesAsRead() async {
     super.build(context);
     final fontSettings = ref.watch(fontSettingsProvider);
 
+    // Derived from _messages, so recomputed here: a message arriving or being
+    // deleted while the bar is open must not leave a hit pointing at something
+    // the conversation no longer holds.
+    _searchHits = _computeSearchHits();
+    if (_searchIndex >= _searchHits.length) {
+      _searchIndex = _searchHits.isEmpty ? 0 : _searchHits.length - 1;
+    }
+
     return WillPopScope(
       onWillPop: () async {
         if (_isSelectionMode) {
           _clearSelection();
+          return false;
+        }
+        if (_isSearching) {
+          _closeSearch();
           return false;
         }
         return true;
@@ -2730,6 +2965,8 @@ Future<void> _markMessagesAsRead() async {
                   ),
                 ],
               )
+            : _isSearching
+            ? _buildSearchAppBar(fontSettings)
             : AppBar(
                 backgroundColor: Colors.green,
                 foregroundColor: Colors.white,
@@ -2827,6 +3064,11 @@ Future<void> _markMessagesAsRead() async {
                       onPressed: _openGroupInfo,
                     ),
                   IconButton(
+                    icon: const Icon(Icons.search),
+                    tooltip: 'Search messages',
+                    onPressed: _openSearch,
+                  ),
+                  IconButton(
                     icon: const Icon(Icons.refresh),
                     onPressed: () => _fetchMessagesFromApi(silent: false),
                   ),
@@ -2912,7 +3154,8 @@ Future<void> _markMessagesAsRead() async {
                                 );
                               },
                             ),
-                            if (_reachableMentions.isNotEmpty)
+                            if (_reachableMentions.isNotEmpty &&
+                                !_isSearching)
                               Positioned(
                                 right: 0,
                                 bottom: 0,
@@ -2923,8 +3166,10 @@ Future<void> _markMessagesAsRead() async {
                         ),
                 ),
               ),
+              if (_isSearching) _buildSearchNavBar(fontSettings),
+
               // ── Read-only notice (admin-only group) ──
-              if (!_isSelectionMode && !widget.canSendMessages)
+              if (!_isSelectionMode && !_isSearching && !widget.canSendMessages)
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
@@ -2950,8 +3195,8 @@ Future<void> _markMessagesAsRead() async {
                   ),
                 ),
 
-              // ── Input bar (hidden in selection mode) ──
-              if (!_isSelectionMode && widget.canSendMessages) ...[
+              // ── Input bar (hidden in selection and search mode) ──
+              if (!_isSelectionMode && !_isSearching && widget.canSendMessages) ...[
                 if (_mentionSuggestions.isNotEmpty)
                   _buildMentionSuggestions(fontSettings),
                 if (_replyingTo != null)

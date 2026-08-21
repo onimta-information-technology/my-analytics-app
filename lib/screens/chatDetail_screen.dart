@@ -116,6 +116,16 @@ class IndividualChatScreen extends ConsumerStatefulWidget {
   /// notice, since the backend would reject anything they typed.
   final bool canSendMessages;
 
+  /// Unread messages naming the user, oldest first, as counted by the chat
+  /// list. When non-empty the screen offers a jump to each of them in turn.
+  final List<String> mentionMessageIds;
+
+  /// Land on the oldest of [mentionMessageIds] instead of at the end of the
+  /// conversation. True when the "@" marker was tapped; opening the same
+  /// conversation by its row keeps the usual "newest message" landing, with
+  /// the "@" button still there to jump.
+  final bool jumpToMentionOnOpen;
+
   const IndividualChatScreen({
     super.key,
     required this.contact,
@@ -123,6 +133,8 @@ class IndividualChatScreen extends ConsumerStatefulWidget {
     this.isGroup = false,
     this.groupMemberCount = 0,
     this.canSendMessages = true,
+    this.mentionMessageIds = const [],
+    this.jumpToMentionOnOpen = false,
   });
 
   @override
@@ -177,6 +189,23 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
   Timer? _readStatusPollTimer;
   StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
 
+  // ── Jump to a mention ──
+  /// One key per rendered message, so a message can be scrolled to by name.
+  final Map<String, GlobalKey> _messageKeys = {};
+
+  /// Mentions still to be visited, oldest first — seeded from
+  /// [IndividualChatScreen.mentionMessageIds] and drained by the "@" button.
+  late final List<String> _pendingMentions = List<String>.from(
+    widget.mentionMessageIds,
+  );
+
+  /// The message currently flashing after being jumped to.
+  String? _highlightedMessageId;
+  Timer? _highlightTimer;
+
+  /// The opening jump is made once, on the first load that has the message.
+  bool _initialMentionJumpDone = false;
+
   // ─── Lifecycle ─────────────────────────────────────────────────────────────
 
   @override
@@ -197,6 +226,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
   @override
   void dispose() {
     _readStatusPollTimer?.cancel();
+    _highlightTimer?.cancel();
     _foregroundMessageSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     CurrentChatState().clearCurrentChat();
@@ -392,7 +422,10 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
               if (!silent) _isLoadingMessages = false;
             });
             await _markMessagesAsRead();
-            if (!hadMessages || (!silent && countChanged)) {
+            // Opened from the "@" marker: the mention is where the reader
+            // wants to be, not the end of the conversation.
+            if (!_consumeInitialMentionJump() &&
+                (!hadMessages || (!silent && countChanged))) {
               await Future.delayed(const Duration(milliseconds: 100));
               _scrollToBottom();
             }
@@ -1803,6 +1836,150 @@ Future<void> _markMessagesAsRead() async {
     });
   }
 
+  // ─── Jump to a mention ──────────────────────────────────────────────────────
+
+  GlobalKey _keyForMessage(String id) =>
+      _messageKeys.putIfAbsent(id, () => GlobalKey());
+
+  /// The row for [messageId], matched on either id the server may have used
+  /// for it, or -1 when this conversation has no such message.
+  int _indexOfMessage(String messageId) => _messages.indexWhere(
+        (m) => m.id == messageId || m.apiMessageId == messageId,
+      );
+
+  /// Mentions that are still ahead of the reader and actually in the loaded
+  /// conversation — what the "@" button offers to jump to.
+  List<String> get _reachableMentions =>
+      _pendingMentions.where((id) => _indexOfMessage(id) != -1).toList();
+
+  /// Opened from the "@" marker: land on the oldest mention instead of at the
+  /// end. Answers false when there is nothing to jump to, so the caller falls
+  /// back to its usual scroll.
+  bool _consumeInitialMentionJump() {
+    if (!widget.jumpToMentionOnOpen) return false;
+    if (_initialMentionJumpDone || _reachableMentions.isEmpty) return false;
+    _initialMentionJumpDone = true;
+    _jumpToNextMention();
+    return true;
+  }
+
+  /// Goes to the oldest mention not visited yet and takes it off the list, so
+  /// tapping again walks through the rest in order.
+  void _jumpToNextMention() {
+    // Ids the conversation does not contain (deleted since the list scanned
+    // it) would otherwise block the ones behind them.
+    _pendingMentions.removeWhere((id) => _indexOfMessage(id) == -1);
+    if (_pendingMentions.isEmpty) return;
+
+    final target = _pendingMentions.removeAt(0);
+    setState(() {});
+    _scrollToMessage(target);
+  }
+
+  /// Brings [messageId] into view and flashes it.
+  ///
+  /// The list is built lazily, so a message far from the current position has
+  /// no context to scroll to yet: jump to where the list estimates it sits,
+  /// let that build, and look again. The estimate is drawn from the extent of
+  /// the rows laid out so far, so it sharpens with every pass and normally
+  /// lands within a couple of them.
+  Future<void> _scrollToMessage(String messageId) async {
+    final index = _indexOfMessage(messageId);
+    if (index == -1) return;
+
+    final id = _messages[index].id;
+    // The list is reversed, so offset grows towards the older messages.
+    final rowsFromEnd = _messages.length - 1 - index;
+    final span = _messages.length - 1;
+
+    for (var attempt = 0; attempt < 12; attempt++) {
+      final ctx = _messageKeys[id]?.currentContext;
+      if (ctx != null) {
+        await Scrollable.ensureVisible(
+          ctx,
+          alignment: 0.5,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+        break;
+      }
+      if (!mounted) return;
+
+      // The first pass can arrive before the list itself exists — an empty
+      // conversation renders a placeholder instead — so a pass with no
+      // scrollable attached simply waits for the next frame.
+      if (_scrollController.hasClients) {
+        final position = _scrollController.position;
+        final estimate = span == 0
+            ? 0.0
+            : position.maxScrollExtent * (rowsFromEnd / span);
+        _scrollController.jumpTo(
+          estimate.clamp(position.minScrollExtent, position.maxScrollExtent),
+        );
+      }
+
+      // jumpTo does not always dirty anything, and endOfFrame only completes
+      // once a frame actually runs.
+      WidgetsBinding.instance.scheduleFrame();
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
+    }
+
+    _flashMessage(id);
+  }
+
+  /// Tints the message for a moment, so it is obvious which one was jumped to.
+  void _flashMessage(String id) {
+    if (!mounted) return;
+    _highlightTimer?.cancel();
+    setState(() => _highlightedMessageId = id);
+    _highlightTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _highlightedMessageId = null);
+    });
+  }
+
+  /// Round button offering the mentions still unvisited, mirroring the "@"
+  /// marker the chat list was opened from.
+  Widget _buildMentionJumpButton(FontSettings fontSettings) {
+    final remaining = _reachableMentions.length;
+    return Padding(
+      padding: const EdgeInsets.only(right: 12, bottom: 12),
+      child: Material(
+        color: Colors.green,
+        shape: const CircleBorder(),
+        elevation: 3,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: _jumpToNextMention,
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.alternate_email,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                if (remaining > 1) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    '$remaining',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: fontSettings.fontSize - 4,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   String _formatTime(DateTime ts) => DateFormat('HH:mm').format(ts);
 
   String _formatDateSeparator(DateTime date) {
@@ -2119,6 +2296,7 @@ Future<void> _markMessagesAsRead() async {
 
   Widget _buildMessage(ChatMessage message, FontSettings fontSettings) {
     final isSelected = _selectedMessageIds.contains(message.id);
+    final isHighlighted = _highlightedMessageId == message.id;
     final hasGrouped = message.hasGroupedAttachments;
     final showText =
         message.text.isNotEmpty &&
@@ -2146,8 +2324,11 @@ Future<void> _markMessagesAsRead() async {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        color:
-            isSelected ? Colors.green.withOpacity(0.15) : Colors.transparent,
+        color: isSelected
+            ? Colors.green.withOpacity(0.15)
+            : isHighlighted
+                ? Colors.amber.withOpacity(0.35)
+                : Colors.transparent,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Row(
@@ -2521,11 +2702,11 @@ Future<void> _markMessagesAsRead() async {
                   ),
                 ),
                 actions: [
-                  IconButton(
-                    icon: const Icon(Icons.select_all),
-                    tooltip: 'Select All',
-                    onPressed: _selectAll,
-                  ),
+                  // IconButton(
+                  //   icon: const Icon(Icons.select_all),
+                  //   tooltip: 'Select All',
+                  //   onPressed: _selectAll,
+                  // ),
                   if (_selectedMessageIds.length == 1)
                     IconButton(
                       icon: const Icon(Icons.reply),
@@ -2704,26 +2885,41 @@ Future<void> _markMessagesAsRead() async {
                             ),
                           ),
                         )
-                      : ListView.builder(
-                          controller: _scrollController,
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 8),
-                          reverse: true,
-                          itemCount: _messages.length,
-                          itemBuilder: (ctx, index) {
-                            final ri = _messages.length - 1 - index;
-                            final msg = _messages[ri];
-                            return Column(
-                              children: [
-                                if (_shouldShowDateSeparator(ri))
-                                  _buildDateSeparator(
-                                    msg.timestamp,
-                                    fontSettings,
-                                  ),
-                                _buildMessage(msg, fontSettings),
-                              ],
-                            );
-                          },
+                      : Stack(
+                          children: [
+                            ListView.builder(
+                              controller: _scrollController,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 8),
+                              reverse: true,
+                              itemCount: _messages.length,
+                              itemBuilder: (ctx, index) {
+                                final ri = _messages.length - 1 - index;
+                                final msg = _messages[ri];
+                                return Column(
+                                  children: [
+                                    if (_shouldShowDateSeparator(ri))
+                                      _buildDateSeparator(
+                                        msg.timestamp,
+                                        fontSettings,
+                                      ),
+                                    // Keyed so a mention can be scrolled to.
+                                    KeyedSubtree(
+                                      key: _keyForMessage(msg.id),
+                                      child: _buildMessage(msg, fontSettings),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                            if (_reachableMentions.isNotEmpty)
+                              Positioned(
+                                right: 0,
+                                bottom: 0,
+                                child:
+                                    _buildMentionJumpButton(fontSettings),
+                              ),
+                          ],
                         ),
                 ),
               ),
@@ -2879,12 +3075,12 @@ Future<void> _markMessagesAsRead() async {
                         spacing: 4,
                         runSpacing: 4,
                         children: [
-                          _selectionAction(
-                            icon: Icons.select_all,
-                            label: 'All',
-                            onPressed: _selectAll,
-                            fontSettings: fontSettings,
-                          ),
+                          // _selectionAction(
+                          //   icon: Icons.select_all,
+                          //   label: 'All',
+                          //   onPressed: _selectAll,
+                          //   fontSettings: fontSettings,
+                          // ),
                           if (_selectedMessageIds.length == 1)
                             _selectionAction(
                               icon: Icons.reply,

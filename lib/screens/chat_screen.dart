@@ -10,6 +10,7 @@ import 'package:ballys_reservation_app/providers/guest_booking_provider.dart';
 import 'package:ballys_reservation_app/screens/chatDetail_screen.dart';
 import 'package:ballys_reservation_app/utils/badge_sync_helper.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
+import 'package:ballys_reservation_app/utils/mention_tracker.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
@@ -51,6 +52,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   String? _currentUserUuid;
   String? _selectedContactId;
   bool _hasProcessedNotification = false;
+
+  /// Guards [_refreshGroupMentions]: chats and groups both trigger it, and the
+  /// two refreshes often land together.
+  bool _isScanningMentions = false;
 
   // Add message subscription
   StreamSubscription<RemoteMessage>? _messageSubscription;
@@ -195,7 +200,8 @@ if (message.data['msg_type'] == '35') {
         // Update badge with total unread count
         final unreadCount = _getTotalUnreadCount();
         await BadgeService().updateBadge(unreadCount);
-    
+        // Unread counts drive the "@" marker, so re-check it here too.
+        unawaited(_refreshGroupMentions());
       }
     } catch (e) {
    
@@ -554,6 +560,7 @@ if (message.data['msg_type'] == '35') {
         // Update badge with total unread count
         final unreadCount = _getTotalUnreadCount();
         await BadgeService().updateBadge(unreadCount);
+        unawaited(_refreshGroupMentions());
       } else {
         setState(() {
           _errorMessage = 'No chats data received';
@@ -593,6 +600,7 @@ if (message.data['msg_type'] == '35') {
         }..removeWhere((id) => id.isEmpty);
         _isLoadingGroups = false;
       });
+      unawaited(_refreshGroupMentions());
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -983,6 +991,38 @@ if (message.data['msg_type'] == '35') {
   /// back from the chats API — borrow the count from there.
   int _unreadForGroup(ChatGroup group) => _chatRowForGroup(group)?.unreadCount ?? 0;
 
+  /// Works out which groups have unread messages naming the user, so their row
+  /// can show the "@" marker. Runs in the background after a list refresh: a
+  /// group is only looked at while it has something unread, and only when its
+  /// unread count or last message moved since the previous scan.
+  Future<void> _refreshGroupMentions() async {
+    if (_isScanningMentions || _groups.isEmpty) return;
+    _isScanningMentions = true;
+
+    try {
+      final userUuid = await _resolveCurrentUserId();
+      var changed = false;
+
+      for (final group in List<ChatGroup>.from(_groups)) {
+        if (!mounted) return;
+        final unread = _unreadForGroup(group);
+        final signature =
+            '$unread|${_lastActivityForGroup(group)?.millisecondsSinceEpoch ?? 0}';
+        final moved = await MentionTracker.refresh(
+          chatId: group.groupId,
+          signature: signature,
+          hasUnread: unread > 0,
+          currentUserUuid: userUuid,
+        );
+        changed = changed || moved;
+      }
+
+      if (changed && mounted) setState(() {});
+    } finally {
+      _isScanningMentions = false;
+    }
+  }
+
   ChatContact? _chatRowForGroup(ChatGroup group) {
     for (final contact in _contacts) {
       if (contact.chatUuid == group.groupId || contact.id == group.groupId) {
@@ -1002,6 +1042,9 @@ if (message.data['msg_type'] == '35') {
   Widget _buildGroupCard(ChatGroup group, FontSettings fontSettings) {
     final bool hasLastMessage = group.lastMessage.isNotEmpty;
     final int unreadCount = _unreadForGroup(group);
+    // Unread messages in here name the user: the row gets the "@" marker,
+    // which opens the conversation at the mention rather than at the end.
+    final bool hasMentions = MentionTracker.hasMentions(group.groupId);
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1077,21 +1120,48 @@ if (message.data['msg_type'] == '35') {
                 fontSize: fontSettings.fontSize - 4,
               ),
             ),
-            if (unreadCount > 0)
-              Container(
-                margin: const EdgeInsets.only(top: 4),
-                padding: const EdgeInsets.all(6),
-                decoration: const BoxDecoration(
-                  color: Colors.green,
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  '$unreadCount',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: fontSettings.fontSize - 4,
-                    fontWeight: FontWeight.bold,
-                  ),
+            if (hasMentions || unreadCount > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (hasMentions) ...[
+                      InkWell(
+                        onTap: () => _openGroupChat(group, jumpToMentions: true),
+                        customBorder: const CircleBorder(),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.green,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.alternate_email,
+                            color: Colors.white,
+                            size: fontSettings.fontSize - 2,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    if (unreadCount > 0)
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '$unreadCount',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: fontSettings.fontSize - 4,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             InkWell(
@@ -1129,7 +1199,10 @@ if (message.data['msg_type'] == '35') {
   /// Opens the group conversation. The group chat reuses the 1:1 screen with
   /// the groupId standing in for the chatId, which is how the backend models
   /// group messages too.
-  void _openGroupChat(ChatGroup group) {
+  /// [jumpToMentions] opens the conversation on the oldest unread message
+  /// naming the user — what tapping the "@" marker does — instead of at the
+  /// end of the conversation.
+  void _openGroupChat(ChatGroup group, {bool jumpToMentions = false}) {
     final groupContact = ChatContact(
       id: group.groupId,
       chatUuid: group.groupId,
@@ -1155,6 +1228,10 @@ if (message.data['msg_type'] == '35') {
               isGroup: true,
               groupMemberCount: group.memberCount,
               canSendMessages: !group.adminOnlyMessaging || group.isAdmin,
+              // Carried either way, so the "@" button inside the chat can
+              // walk the unread mentions even when the row itself was tapped.
+              mentionMessageIds: MentionTracker.mentionsIn(group.groupId),
+              jumpToMentionOnOpen: jumpToMentions,
             ),
           ),
         )

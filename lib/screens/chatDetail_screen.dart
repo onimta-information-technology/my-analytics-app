@@ -865,7 +865,10 @@ Future<void> _markMessagesAsRead() async {
 
     // Exit selection mode if active
     if (_isSelectionMode) {
-      setState(() => _selectedMessageIds.clear());
+      setState(() {
+        _selectedMessageIds.clear();
+        _reactionTargetId = null;
+      });
     }
 
     final localId = DateTime.now().millisecondsSinceEpoch.toString();
@@ -1222,6 +1225,14 @@ Future<void> _markMessagesAsRead() async {
       } else {
         _selectedMessageIds.add(messageId);
       }
+      // A reaction is one message's business: the moment the selection is no
+      // longer exactly the message the emoji row was opened for, the row goes.
+      // The long-press path re-opens it right after this call.
+      if (_reactionTargetId != null &&
+          (_selectedMessageIds.length != 1 ||
+              !_selectedMessageIds.contains(_reactionTargetId))) {
+        _reactionTargetId = null;
+      }
     });
   }
 
@@ -1232,7 +1243,10 @@ Future<void> _markMessagesAsRead() async {
   }
 
   void _clearSelection() {
-    setState(() => _selectedMessageIds.clear());
+    setState(() {
+      _selectedMessageIds.clear();
+      _reactionTargetId = null;
+    });
   }
 
   /// One button in the selection action bar. Compact by design — the bar
@@ -1246,6 +1260,13 @@ Future<void> _markMessagesAsRead() async {
   }) {
     final labelStyle = TextStyle(fontSize: fontSettings.fontSize - 3);
     final padding = const EdgeInsets.symmetric(horizontal: 10);
+    // Picking any action means the user is done reacting, so the emoji half
+    // of the panel goes right away — the actions themselves finish (and drop
+    // the selection) asynchronously.
+    void handlePress() {
+      _closeReactionPicker();
+      onPressed();
+    }
 
     if (destructive) {
       return ElevatedButton.icon(
@@ -1258,7 +1279,7 @@ Future<void> _markMessagesAsRead() async {
             borderRadius: BorderRadius.circular(20),
           ),
         ),
-        onPressed: onPressed,
+        onPressed: handlePress,
         icon: Icon(icon, size: 18),
         label: Text(label, style: labelStyle),
       );
@@ -1270,7 +1291,7 @@ Future<void> _markMessagesAsRead() async {
         padding: padding,
         visualDensity: VisualDensity.compact,
       ),
-      onPressed: onPressed,
+      onPressed: handlePress,
       icon: Icon(icon, size: 18),
       label: Text(label, style: labelStyle),
     );
@@ -1347,36 +1368,141 @@ Future<void> _markMessagesAsRead() async {
   bool _canReactTo(ChatMessage msg) =>
       msg.apiMessageId != null && msg.apiChatId != null;
 
-  /// Double-tap target: a small emoji row above the bubble. The emoji this
-  /// user already has is ringed, and tapping it again removes it — the same
-  /// toggle the backend applies.
+  /// The message whose emoji row is open, or null when no row is showing.
+  ///
+  /// The row is drawn inline above the selection action bar instead of in a
+  /// modal sheet, so reacting no longer covers the reply/edit/copy/forward/
+  /// delete bar — both sit at the same level, stacked above the bottom edge.
+  String? _reactionTargetId;
+
+  /// Long-press and double-tap both land here; [_buildReactionBar] draws the
+  /// row itself as part of the normal layout.
   void _showReactionPicker(ChatMessage message) {
     if (!_canReactTo(message)) return;
-    final fontSettings = ref.read(fontSettingsProvider);
+    HapticFeedback.lightImpact();
+    setState(() => _reactionTargetId = message.id);
+  }
+
+  void _closeReactionPicker() {
+    if (_reactionTargetId == null) return;
+    setState(() => _reactionTargetId = null);
+  }
+
+  /// The message whose emoji row is open, or null when nothing is targeted
+  /// or the target has left the conversation since it was picked.
+  ChatMessage? get _reactionTarget {
+    final id = _reactionTargetId;
+    if (id == null) return null;
+    final index = _messages.indexWhere((m) => m.id == id);
+    if (index == -1) return null;
+    final message = _messages[index];
+    return _canReactTo(message) ? message : null;
+  }
+
+  /// The one bar above the composer: the emoji row and the selection actions
+  /// share a single card, so reacting and reply/edit/copy/forward/delete read
+  /// as one surface instead of two stacked sheets. Either half can be absent —
+  /// a double-tap opens the emoji row on its own, and selecting without
+  /// reacting shows only the actions.
+  Widget _buildBottomActionPanel(FontSettings fontSettings) {
+    final target = _reactionTarget;
+    if (target == null && !_isSelectionMode) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.3),
+            spreadRadius: 1,
+            blurRadius: 5,
+            offset: const Offset(0, -3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (target != null) _buildReactionRow(target, fontSettings),
+          // Only when both halves are showing — the card stays one surface,
+          // the rule just keeps the emoji row off the action labels.
+          if (target != null && _isSelectionMode)
+            Divider(
+              height: 14,
+              thickness: 1,
+              color: Colors.grey.withOpacity(0.2),
+            ),
+          if (_isSelectionMode) ...[
+            Text(
+              '${_selectedMessageIds.length} message'
+              '${_selectedMessageIds.length > 1 ? 's' : ''} selected',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: fontSettings.fontSize - 3,
+              ),
+            ),
+            const SizedBox(height: 6),
+            // Wrapped rather than a Row: five actions at a large font size do
+            // not fit one line on a narrow phone.
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 4,
+              runSpacing: 4,
+              children: [
+                if (_selectedMessageIds.length == 1)
+                  _selectionAction(
+                    icon: Icons.reply,
+                    label: 'Reply',
+                    onPressed: _replyToSelectedMessage,
+                    fontSettings: fontSettings,
+                  ),
+                if (_editableSelection != null)
+                  _selectionAction(
+                    icon: Icons.edit,
+                    label: 'Edit',
+                    onPressed: _editSelectedMessage,
+                    fontSettings: fontSettings,
+                  ),
+                _selectionAction(
+                  icon: Icons.copy,
+                  label: 'Copy',
+                  onPressed: _copySelectedMessages,
+                  fontSettings: fontSettings,
+                ),
+                _selectionAction(
+                  icon: Icons.forward,
+                  label: 'Forward',
+                  onPressed: _forwardSelectedMessages,
+                  fontSettings: fontSettings,
+                ),
+                _selectionAction(
+                  icon: Icons.delete,
+                  label: 'Delete',
+                  onPressed: _deleteSelectedMessages,
+                  fontSettings: fontSettings,
+                  destructive: true,
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// The emoji half of the panel. The emoji this user already has is ringed,
+  /// and tapping it again removes it — the same toggle the backend applies.
+  Widget _buildReactionRow(ChatMessage message, FontSettings fontSettings) {
     final mine = message.reactionOf(
       _currentUserUuid,
       FirebaseApiService.appType,
     );
-    HapticFeedback.lightImpact();
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => SafeArea(
-        child: Container(
-          margin: const EdgeInsets.all(12),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(32),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
+    return Row(
+      children: [
+        Expanded(
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: _reactionEmojis.map((emoji) {
@@ -1384,28 +1510,36 @@ Future<void> _markMessagesAsRead() async {
               return InkWell(
                 borderRadius: BorderRadius.circular(24),
                 onTap: () {
-                  Navigator.pop(ctx);
                   // The long-press that opened this also selected the
                   // message; reacting is the whole action, so let it go.
+                  _closeReactionPicker();
                   _clearSelection();
                   _toggleReaction(message, emoji);
                 },
                 child: Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: isMine ? Colors.green.withOpacity(0.15) : null,
                   ),
                   child: Text(
                     emoji,
-                    style: TextStyle(fontSize: fontSettings.fontSize + 12),
+                    style: TextStyle(fontSize: fontSettings.fontSize + 10),
                   ),
                 ),
               );
             }).toList(),
           ),
         ),
-      ),
+        // Selection mode already has the app bar's close to back out of, so
+        // the extra one would only be ambiguous inside the shared card.
+        if (!_isSelectionMode)
+          IconButton(
+            icon: const Icon(Icons.close, size: 20, color: Colors.grey),
+            tooltip: 'Close',
+            onPressed: _closeReactionPicker,
+          ),
+      ],
     );
   }
 
@@ -1562,6 +1696,7 @@ Future<void> _markMessagesAsRead() async {
     setState(() {
       _replyingTo = msg;
       _selectedMessageIds.clear();
+      _reactionTargetId = null;
     });
     _messageFocusNode.requestFocus();
   }
@@ -1631,7 +1766,10 @@ Future<void> _markMessagesAsRead() async {
     await Clipboard.setData(ClipboardData(text: payload));
     if (!mounted) return;
 
-    setState(() => _selectedMessageIds.clear());
+    setState(() {
+      _selectedMessageIds.clear();
+      _reactionTargetId = null;
+    });
 
     final skipped = selectedIds.length - copyable.length;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1878,7 +2016,10 @@ Future<void> _markMessagesAsRead() async {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    setState(() => _selectedMessageIds.clear());
+    setState(() {
+      _selectedMessageIds.clear();
+      _reactionTargetId = null;
+    });
 
     final String message;
     if (delivered == 0) {
@@ -2004,6 +2145,7 @@ Future<void> _markMessagesAsRead() async {
         editedAt: DateTime.now(),
       );
       _selectedMessageIds.clear();
+      _reactionTargetId = null;
       // The composer's quoted banner holds a copy of the message, so it would
       // otherwise keep showing the text that was just replaced.
       if (_replyingTo?.id == message.id) {
@@ -2218,6 +2360,7 @@ Future<void> _markMessagesAsRead() async {
     setState(() {
       _messages.removeWhere((m) => selectedIds.contains(m.id));
       _selectedMessageIds.clear();
+      _reactionTargetId = null;
       // Quoting a message that has just been deleted would be rejected on
       // send, so drop the pending reply with it.
       if (_replyingTo != null && selectedIds.contains(_replyingTo!.id)) {
@@ -2955,7 +3098,12 @@ Future<void> _markMessagesAsRead() async {
         if (opensPicker) _showReactionPicker(message);
       },
       onTap: () {
-        if (_isSelectionMode) _toggleSelection(message.id);
+        if (_isSelectionMode) {
+          _toggleSelection(message.id);
+        } else {
+          // A tap anywhere in the list dismisses a stray emoji row.
+          _closeReactionPicker();
+        }
       },
       // Kept as a shortcut for reacting without entering selection mode.
       onDoubleTap: _isSelectionMode ? null : () => _showReactionPicker(message),
@@ -3645,6 +3793,11 @@ Future<void> _markMessagesAsRead() async {
                   ),
                 ),
 
+              // ── Bottom action panel (emoji row + selection actions) ──
+              // Sits on whatever is below it: nothing while selecting (the
+              // composer is hidden then), the composer otherwise.
+              if (!_isSearching) _buildBottomActionPanel(fontSettings),
+
               // ── Input bar (hidden in selection and search mode) ──
               if (!_isSelectionMode && !_isSearching && widget.canSendMessages) ...[
                 if (_mentionSuggestions.isNotEmpty)
@@ -3731,89 +3884,6 @@ Future<void> _markMessagesAsRead() async {
                   ),
                 ),
               ],
-
-              // ── Selection action bar ──
-              if (_isSelectionMode)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.3),
-                        spreadRadius: 1,
-                        blurRadius: 5,
-                        offset: const Offset(0, -3),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '${_selectedMessageIds.length} message'
-                        '${_selectedMessageIds.length > 1 ? 's' : ''} selected',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: fontSettings.fontSize - 3,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      // Wrapped rather than a Row: five actions at a large
-                      // font size do not fit one line on a narrow phone.
-                      Wrap(
-                        alignment: WrapAlignment.end,
-                        spacing: 4,
-                        runSpacing: 4,
-                        children: [
-                          // _selectionAction(
-                          //   icon: Icons.select_all,
-                          //   label: 'All',
-                          //   onPressed: _selectAll,
-                          //   fontSettings: fontSettings,
-                          // ),
-                          if (_selectedMessageIds.length == 1)
-                            _selectionAction(
-                              icon: Icons.reply,
-                              label: 'Reply',
-                              onPressed: _replyToSelectedMessage,
-                              fontSettings: fontSettings,
-                            ),
-                          if (_editableSelection != null)
-                            _selectionAction(
-                              icon: Icons.edit,
-                              label: 'Edit',
-                              onPressed: _editSelectedMessage,
-                              fontSettings: fontSettings,
-                            ),
-                          _selectionAction(
-                            icon: Icons.copy,
-                            label: 'Copy',
-                            onPressed: _copySelectedMessages,
-                            fontSettings: fontSettings,
-                          ),
-                          _selectionAction(
-                            icon: Icons.forward,
-                            label: 'Forward',
-                            onPressed: _forwardSelectedMessages,
-                            fontSettings: fontSettings,
-                          ),
-                          _selectionAction(
-                            icon: Icons.delete,
-                            label: 'Delete',
-                            onPressed: _deleteSelectedMessages,
-                            fontSettings: fontSettings,
-                            destructive: true,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
             ],
           ),
         ),

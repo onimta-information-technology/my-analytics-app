@@ -477,7 +477,7 @@ class FirebaseApiService {
       final senderName =
           await StorageUtil.getUserName() ?? await getName() ?? '';
       final url = '$domain${endpoints['fetchMessages']}/$chatId/messages';
-
+print('sendChatMessage called with chatId: $chatId, text: $text, replyToMessageId: $replyToMessageId, mentionedUserIds: $mentionedUserIds');
       return await postRequest(url, {
         'senderId': deviceId,
         'senderAppType': appType,

@@ -473,12 +473,101 @@ Future<void> _markMessagesAsRead() async {
         .toList();
   }
 
+  /// [text] with every picked "@Name" taken out — that is what goes on the
+  /// wire. Who was named travels in `mentionedUserIds` instead, and the bubble
+  /// redraws the name from the roster, so the stored text stays clean and a
+  /// later rename cannot leave a stale name behind in it.
+  String _stripPickedMentions(String text) {
+    // Longest name first, so "@John Smith" is removed whole instead of
+    // "@John" going and leaving " Smith" behind.
+    final byLength = _pickedMentions.values.toList()
+      ..sort((a, b) => b.name.length.compareTo(a.name.length));
+
+    var out = text;
+    for (final member in byLength) {
+      if (member.name.isEmpty) continue;
+      // The trailing space belongs to the token — dropping it too keeps
+      // "hi @John ok" as "hi ok" rather than "hi  ok".
+      out = out.replaceAll('@${member.name} ', '');
+      out = out.replaceAll('@${member.name}', '');
+    }
+    return out.trim();
+  }
+
+  /// The people named in [message] whose "@Name" is no longer in its text.
+  ///
+  /// Sent text carries no "@Name" at all — only `mentions` says who was named
+  /// — so the names are rebuilt from the roster and drawn ahead of the text.
+  /// Older messages that still have the name inline are skipped here, since
+  /// the inline highlighter already draws those.
+  List<GroupMember> _rebuiltMentions(ChatMessage message) {
+    if (message.mentions.isEmpty || _groupMembers.isEmpty) return const [];
+
+    final out = <GroupMember>[];
+    for (final mention in message.mentions) {
+      for (final member in _groupMembers) {
+        if (member.name.isEmpty ||
+            member.appType != mention.appType ||
+            member.userUuid.toLowerCase() != mention.userUuid.toLowerCase()) {
+          continue;
+        }
+        if (!message.text.contains('@${member.name}')) out.add(member);
+        break;
+      }
+    }
+    return out;
+  }
+
+  /// One "@Name" chip. Being named yourself is worth spotting in a busy
+  /// group, so it reads louder than a mention of somebody else.
+  TextSpan _mentionSpan(String label, String userUuid, TextStyle baseStyle) {
+    final isMe = _currentUserUuid != null &&
+        userUuid.toLowerCase() == _currentUserUuid!.toLowerCase();
+    return TextSpan(
+      text: label,
+      style: baseStyle.copyWith(
+        fontWeight: FontWeight.bold,
+        backgroundColor: isMe ? Colors.amber.withValues(alpha: 0.35) : null,
+      ),
+    );
+  }
+
+  /// A message bubble's text: the "@Name" chips rebuilt from `mentions` first,
+  /// then the text itself with any inline "@Name" still in it drawn in bold.
+  Widget _buildMessageText(ChatMessage message, TextStyle baseStyle) {
+    final text = message.text;
+    final rebuilt = _rebuiltMentions(message);
+    if (rebuilt.isEmpty) return _buildInlineMentionText(text, baseStyle);
+
+    final spans = <TextSpan>[];
+    for (var i = 0; i < rebuilt.length; i++) {
+      if (i > 0) spans.add(TextSpan(text: ' ', style: baseStyle));
+      spans.add(
+        _mentionSpan('@${rebuilt[i].name}', rebuilt[i].userUuid, baseStyle),
+      );
+    }
+    if (text.isNotEmpty) {
+      spans.add(TextSpan(text: ' ', style: baseStyle));
+      spans.addAll(_inlineMentionSpans(text, baseStyle) ??
+          [TextSpan(text: text, style: baseStyle)]);
+    }
+    return RichText(text: TextSpan(children: spans));
+  }
+
   /// Message text with any "@Name" that matches a current group member drawn
   /// in bold. Matching against the roster rather than a server field means
   /// both sent and received messages highlight without extra payload.
-  Widget _buildMessageText(String text, TextStyle baseStyle) {
+  Widget _buildInlineMentionText(String text, TextStyle baseStyle) {
+    final spans = _inlineMentionSpans(text, baseStyle);
+    if (spans == null) return Text(text, style: baseStyle);
+    return RichText(text: TextSpan(children: spans));
+  }
+
+  /// The spans for [text] with its inline "@Name"s bolded, or null when there
+  /// is no mention in it to highlight.
+  List<TextSpan>? _inlineMentionSpans(String text, TextStyle baseStyle) {
     if (!widget.isGroup || _groupMembers.isEmpty || !text.contains('@')) {
-      return Text(text, style: baseStyle);
+      return null;
     }
 
     // Longest first so "@John Smith" is preferred over a member named "John".
@@ -508,19 +597,11 @@ Future<void> _markMessagesAsRead() async {
         }
         if (hit != null) {
           flush();
-          // Being named yourself is worth spotting in a busy group, so it
-          // reads louder than a mention of somebody else.
-          final isMe = _currentUserUuid != null &&
-              hit.userUuid.toLowerCase() == _currentUserUuid!.toLowerCase();
           spans.add(
-            TextSpan(
-              text: text.substring(i, i + 1 + hit.name.length),
-              style: baseStyle.copyWith(
-                fontWeight: FontWeight.bold,
-                backgroundColor: isMe
-                    ? Colors.amber.withValues(alpha: 0.35)
-                    : null,
-              ),
+            _mentionSpan(
+              text.substring(i, i + 1 + hit.name.length),
+              hit.userUuid,
+              baseStyle,
             ),
           );
           i += 1 + hit.name.length;
@@ -532,9 +613,9 @@ Future<void> _markMessagesAsRead() async {
       i++;
     }
 
-    if (!matched) return Text(text, style: baseStyle);
+    if (!matched) return null;
     flush();
-    return RichText(text: TextSpan(children: spans));
+    return spans;
   }
 
   /// True when this message names the signed-in user. Read from the server's
@@ -612,6 +693,11 @@ Future<void> _markMessagesAsRead() async {
     // Resolved before the composer is cleared — the text is what decides which
     // picked mentions actually survived.
     final mentions = _mentionsIn(text);
+    // The "@Name" itself never goes on the wire — `mentions` says who was
+    // named and the bubble redraws the name. A mention with nothing else
+    // typed keeps the name, so there is still something to send.
+    final stripped = _stripPickedMentions(text);
+    final outgoing = mentions.isEmpty || stripped.isEmpty ? text : stripped;
 
     // Groups always use POST /api/chats/:chatId/messages. A 1:1 message
     // normally goes through send-message-with-notification instead (that is
@@ -624,7 +710,7 @@ Future<void> _markMessagesAsRead() async {
       _messages.add(
         ChatMessage(
           id: localId,
-          text: text,
+          text: outgoing,
           isMe: true,
           timestamp: now,
           isRead: false,
@@ -646,21 +732,21 @@ Future<void> _markMessagesAsRead() async {
     _messageController.clear();
     _pickedMentions.clear();
     _hideMentionSuggestions();
-    if (widget.onMessageSent != null) widget.onMessageSent!(text);
+    if (widget.onMessageSent != null) widget.onMessageSent!(outgoing);
 
     try {
       final response = viaChatEndpoint
           ? await FirebaseApiService.sendChatMessage(
               chatId: widget.contact.chatUuid,
-              text: text,
+              text: outgoing,
               replyToMessageId: replyTo?.apiMessageId,
               mentionedUserIds: mentions.isEmpty ? null : mentions,
             )
           : await FirebaseApiService.sendMessage(
               recipientUuid: widget.contact.userUuid,
-              message: text,
+              message: outgoing,
               title: _currentUserName ?? '',
-              body: text,
+              body: outgoing,
               chatId: widget.contact.chatUuid,
               recipientAppType: widget.contact.appType,
             );
@@ -2155,7 +2241,7 @@ Future<void> _markMessagesAsRead() async {
                               ? const EdgeInsets.symmetric(horizontal: 8)
                               : EdgeInsets.zero,
                           child: _buildMessageText(
-                            message.text,
+                            message,
                             TextStyle(
                               color: message.isMe
                                   ? Colors.white

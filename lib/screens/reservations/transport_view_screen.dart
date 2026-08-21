@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/transport_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
@@ -321,12 +323,12 @@ class TransportViewScreen extends ConsumerWidget {
                     Colors.blueGrey,
                     fontSettings,
                   ),
-                  _infoRow(
-                    Icons.phone,
-                    'Contact',
-                    transport.contactNumber,
-                    Colors.green,
-                    fontSettings,
+                  _PhoneRow(
+                    icon: Icons.phone,
+                    label: 'Contact',
+                    value: transport.contactNumber,
+                    iconColor: Colors.green,
+                    fontSettings: fontSettings,
                   ),
                   _infoRow(
                     Icons.person_outline,
@@ -386,12 +388,12 @@ class TransportViewScreen extends ConsumerWidget {
                       Colors.indigo,
                       fontSettings,
                     ),
-                    _infoRow(
-                      Icons.phone_in_talk,
-                      'Driver phone',
-                      transport.driverPhoneNumber ?? '',
-                      Colors.green,
-                      fontSettings,
+                    _PhoneRow(
+                      icon: Icons.phone_in_talk,
+                      label: 'Driver phone',
+                      value: transport.driverPhoneNumber ?? '',
+                      iconColor: Colors.green,
+                      fontSettings: fontSettings,
                     ),
                   ],
                 ],
@@ -473,6 +475,249 @@ class TransportViewScreen extends ConsumerWidget {
             style: TextStyle(
               fontSize: fontSettings.fontSize - 4,
               color: Colors.black54,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Same layout as [TransportViewScreen._infoRow], but the number is a live
+/// dial link with a WhatsApp button beside it so both are a single tap away.
+class _PhoneRow extends StatelessWidget {
+  const _PhoneRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.iconColor,
+    required this.fontSettings,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color iconColor;
+  final FontSettings fontSettings;
+
+  /// Digits the dialler accepts, keeping `+`, `*` and `#` intact.
+  static String _dialDigits(String raw) =>
+      raw.replaceAll(RegExp(r'[^0-9+*#]'), '');
+
+  /// WhatsApp wants bare digits with a country code. Local numbers are stored
+  /// as `0xxxxxxxxx`, so the leading zero becomes the Sri Lankan code — the
+  /// same default the transport/quick-reservation forms use.
+  static String _whatsAppDigits(String raw) {
+    var digits = raw.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (digits.startsWith('+')) digits = digits.substring(1);
+    digits = digits.replaceAll('+', '');
+    if (digits.startsWith('00')) return digits.substring(2);
+    if (digits.startsWith('0')) return '94${digits.substring(1)}';
+    return digits;
+  }
+
+  Future<void> _call(BuildContext context) async {
+    final uri = Uri.parse('tel:${_dialDigits(value)}');
+    try {
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!opened && context.mounted) {
+        _showError(context, 'Could not start a call to $value');
+      }
+    } catch (_) {
+      if (context.mounted) _showError(context, 'Could not start a call to $value');
+    }
+  }
+
+  Future<void> _whatsApp(BuildContext context) async {
+    final number = _whatsAppDigits(value);
+    // Android goes straight to the app; iOS/fallback rides the wa.me link,
+    // which also covers the "WhatsApp not installed" case.
+    final targets = <String>[
+      if (Platform.isAndroid) 'whatsapp://send?phone=$number',
+      'https://wa.me/$number',
+    ];
+
+    for (final target in targets) {
+      try {
+        final opened = await launchUrl(
+          Uri.parse(target),
+          mode: LaunchMode.externalApplication,
+        );
+        if (opened) return;
+      } catch (_) {
+        // Try the next target.
+      }
+    }
+    if (context.mounted) _showError(context, 'Could not open WhatsApp for $value');
+  }
+
+  void _showError(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
+  /// Tapping a number can mean either thing, so ask instead of guessing.
+  Future<void> _showContactOptions(BuildContext context) async {
+    final number = value.trim();
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.black26,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              number,
+              style: TextStyle(
+                fontSize: fontSettings.fontSize + 3,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: fontSettings.fontSize - 1,
+                color: Colors.black54,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Divider(height: 1),
+            ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: Color(0xFFE8F5E9),
+                child: Icon(Icons.call, color: Colors.green),
+              ),
+              title: Text(
+                'Call',
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+              subtitle: Text(
+                'Open the dialler',
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize - 2,
+                  color: Colors.black54,
+                ),
+              ),
+              onTap: () => Navigator.pop(sheetContext, 'call'),
+            ),
+            ListTile(
+              leading: CircleAvatar(
+                backgroundColor: const Color(0xFF25D366).withOpacity(0.15),
+                child: Image.asset(
+                  'assets/images/others/whatsapp.png',
+                  width: 22,
+                  height: 22,
+                ),
+              ),
+              title: Text(
+                'WhatsApp',
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+              subtitle: Text(
+                'Open a WhatsApp chat',
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize - 2,
+                  color: Colors.black54,
+                ),
+              ),
+              onTap: () => Navigator.pop(sheetContext, 'whatsapp'),
+            ),
+            const SizedBox(height: 6),
+          ],
+        ),
+      ),
+    );
+
+    if (!context.mounted) return;
+    if (choice == 'call') {
+      await _call(context);
+    } else if (choice == 'whatsapp') {
+      await _whatsApp(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final number = value.trim();
+    if (number.isEmpty || _dialDigits(number).isEmpty) {
+      return TransportViewScreen._infoRow(
+        icon,
+        label,
+        value,
+        iconColor,
+        fontSettings,
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: iconColor),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: fontSettings.fontSize,
+                fontWeight: fontSettings.fontWeight,
+                color: Colors.black54,
+              ),
+            ),
+          ),
+          Expanded(
+            child: InkWell(
+              onTap: () => _showContactOptions(context),
+              borderRadius: BorderRadius.circular(4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        number,
+                        style: TextStyle(
+                          fontSize: fontSettings.fontSize,
+                          fontWeight: fontSettings.fontWeight,
+                          color: Colors.blue.shade800,
+                          // decoration: TextDecoration.underline,
+                          // decorationColor: Colors.blue.shade800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Icon(
+                      Icons.touch_app_outlined,
+                      size: 16,
+                      color: Colors.blue.shade800,
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
@@ -635,12 +880,12 @@ class _TripCardState extends State<_TripCard> {
                           Colors.indigo,
                           fontSettings,
                         ),
-                        TransportViewScreen._infoRow(
-                          Icons.phone,
-                          'Guest Mobile',
-                          base.contactNumber,
-                          Colors.green,
-                          fontSettings,
+                        _PhoneRow(
+                          icon: Icons.phone,
+                          label: 'Guest Mobile',
+                          value: base.contactNumber,
+                          iconColor: Colors.green,
+                          fontSettings: fontSettings,
                         ),
                         const Divider(height: 20),
                         Text(
@@ -740,12 +985,12 @@ class _TripCardState extends State<_TripCard> {
               Colors.indigo,
               fontSettings,
             ),
-            TransportViewScreen._infoRow(
-              Icons.phone_in_talk,
-              'Driver phone',
-              detail.driverPhoneNumber ?? '',
-              Colors.green,
-              fontSettings,
+            _PhoneRow(
+              icon: Icons.phone_in_talk,
+              label: 'Driver phone',
+              value: detail.driverPhoneNumber ?? '',
+              iconColor: Colors.green,
+              fontSettings: fontSettings,
             ),
           ],
         ],

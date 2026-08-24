@@ -193,9 +193,10 @@ class _HotelAmendmentBallysScreenState
     _lateCheckOut,
     _dateChange,
     _extras,
-    _hotelChange,
+ _occupancy,
     _roomCategory,
-    _occupancy,
+        _hotelChange,
+   
   ];
 
   static final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');

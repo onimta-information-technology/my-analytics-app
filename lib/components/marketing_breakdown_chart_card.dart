@@ -14,6 +14,87 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+void showAccessDeniedDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    barrierDismissible: true,
+    builder: (BuildContext context) {
+      return Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.lock_outline,
+                  size: 50,
+                  color: Colors.red.shade400,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                "Access Denied",
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2C3E50),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Constants.kPrimaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    "Got It",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
 // Groups guests by country, sorted by count desc
 Map<String, List<Guest>> groupByCountry(List<Guest> guests) {
   final Map<String, List<Guest>> grouped = {};
@@ -260,6 +341,12 @@ class _HalfPieSectionState extends State<_HalfPieSection>
   late final Animation<double> _animation;
   int? _hoveredIndex;
 
+  // Other Marketing is a Bellagio-only escape hatch: sales code AD001 may
+  // open it there. Every other Bellagio user, and Bally's regardless of
+  // sales code, sees Access Denied when tapping it.
+  String? _userSalesCode;
+  bool _isBellagio = false;
+
   @override
   void initState() {
     super.initState();
@@ -268,6 +355,17 @@ class _HalfPieSectionState extends State<_HalfPieSection>
     _animation =
         CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
     _controller.forward();
+    _loadAccessSettings();
+  }
+
+  Future<void> _loadAccessSettings() async {
+    final userSalesCode = await StorageUtil.getSalesCode();
+    final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+    if (!mounted) return;
+    setState(() {
+      _userSalesCode = userSalesCode;
+      _isBellagio = apiUrl.contains('bty.world');
+    });
   }
 
   @override
@@ -393,6 +491,12 @@ class _HalfPieSectionState extends State<_HalfPieSection>
     }
 
     if (gCode == 'OTHER') {
+      // Bellagio only: sale code AD001 can open Other Marketing; everyone
+      // else gets Access Denied.
+      if (_isBellagio && _userSalesCode != 'AD001') {
+        showAccessDeniedDialog(context);
+        return;
+      }
       showModalBottomSheet(
         context: context,
         useRootNavigator: true,
@@ -889,6 +993,13 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> with Con
     }
   }
 
+  // Other Marketing member profiles are a Bellagio-only escape hatch: sales
+  // code AD001 may open them there. Every other Bellagio user, and Bally's
+  // regardless of sales code, sees Access Denied.
+  bool _otherMarketingAccessAllowed() {
+    return !_isBallys && _userSalesCode == 'AD001';
+  }
+
   // Sales code AD001 can view every member profile.
   // Otherwise, when memProfSH is null or true, every member is accessible.
   // When memProfSH is false, only members in the logged-in user's
@@ -959,86 +1070,7 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> with Con
     });
   }
 
-  void _showAccessDeniedDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.lock_outline,
-                    size: 50,
-                    color: Colors.red.shade400,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  "Access Denied",
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2C3E50),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Constants.kPrimaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      "Got It",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
+  void _showAccessDeniedDialog() => showAccessDeniedDialog(context);
 
   @override
   Widget build(BuildContext context) {
@@ -1067,8 +1099,10 @@ class _MemberVisitsSheetState extends ConsumerState<_MemberVisitsSheet> with Con
                       child: InkWell(
                         borderRadius: BorderRadius.circular(10),
                         onTap: () {
-                          if (widget.disableNavigation ||
-                              !_hasPermissionToViewMember(guest)) {
+                          final denied = widget.disableNavigation
+                              ? !_otherMarketingAccessAllowed()
+                              : !_hasPermissionToViewMember(guest);
+                          if (denied) {
                             _showAccessDeniedDialog();
                             return;
                           }

@@ -61,7 +61,7 @@ class _AcademicScreenState extends ConsumerState<AcademicScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Academic')),
+      appBar: AppBar(title: const Text('Academy')),
       body: Stack(
         children: [
           if (!_hasError) WebViewWidget(controller: _controller),
@@ -70,7 +70,7 @@ class _AcademicScreenState extends ConsumerState<AcademicScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('Unable to load the academic page.'),
+                  const Text('Unable to load the Academy page.'),
                   const SizedBox(height: 12),
                   ElevatedButton(
                     onPressed: _loadAcademicUrl,

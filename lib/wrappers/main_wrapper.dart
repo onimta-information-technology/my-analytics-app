@@ -70,7 +70,7 @@ class _MainScreenState extends State<MainWrapper> {
                 ),
                 BottomNavigationBarItem(
                   icon: Icon(Icons.school, size: 30.0),
-                  label: 'Academic',
+                  label: 'Academy',
                 ),
                 BottomNavigationBarItem(
                   icon: Icon(Icons.settings, size: 30.0),

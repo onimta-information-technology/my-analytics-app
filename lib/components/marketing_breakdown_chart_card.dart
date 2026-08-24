@@ -504,6 +504,12 @@ class _HalfPieSectionState extends State<_HalfPieSection>
     }
 
     if (gCode == 'OTHER') {
+      // Marketing-group gating (Bellagio only): AD001 can drill into Other
+      // Marketing guests; everyone else sees the group but tapping a person
+      // shows Access Denied. Non-Bellagio stays fully locked, as before.
+      final restrictOtherMarketing =
+          _isBellagio ? _userSalesCode != 'AD001' : true;
+
       showModalBottomSheet(
         context: context,
         useRootNavigator: true,
@@ -514,7 +520,7 @@ class _HalfPieSectionState extends State<_HalfPieSection>
           title: 'Other Marketing — $label',
           salesPersons: groupByMGroup(widget.otherMarketingGuests),
           accentColor: color,
-          disableNavigation: true,
+          disableNavigation: restrictOtherMarketing,
         ),
       );
       return;

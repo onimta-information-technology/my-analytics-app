@@ -996,7 +996,7 @@ Widget _buildViewTypeButton(
                             ),
                             Expanded(
                               child: Text(
-                                _formatCurrency(result.winLost),
+                                _formatCurrency(result.winLost*1000),
                                 style: TextStyle(
                                   fontSize: fontSettings.fontSize - 1,
                                   fontWeight: FontWeight.bold,

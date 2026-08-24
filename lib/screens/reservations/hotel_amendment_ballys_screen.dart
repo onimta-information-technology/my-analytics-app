@@ -1,5 +1,8 @@
 import 'package:ballys_reservation_app/components/amendment_guest_header_ballys.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
+import 'package:ballys_reservation_app/data/repositories/hotel_repository.dart';
+import 'package:ballys_reservation_app/data/services/api_service.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart';
 import 'package:ballys_reservation_app/models/reervationBallys.dart';
 import 'package:ballys_reservation_app/models/reservation/assigned_guest.dart';
@@ -171,6 +174,8 @@ class HotelAmendmentBallysScreen extends ConsumerStatefulWidget {
 
 class _HotelAmendmentBallysScreenState
     extends ConsumerState<HotelAmendmentBallysScreen> {
+  bool _submitting = false;
+
   // ── Amendment category ─────────────────────────────────────────────────
   //
   // One level, unlike the air ticket's category → type: a hotel amendment is
@@ -1708,20 +1713,32 @@ class _HotelAmendmentBallysScreenState
 
     final payload = _buildPayload(reservation, rooms);
 
-    // The endpoint that takes this does not exist yet, so the amendment is
-    // built and shown rather than sent — the same place the air ticket side
-    // stands. Everything it needs is in [payload]; posting it is all that is
-    // left to add here.
-    debugPrint("Hotel amendment payload: $payload");
+    setState(() => _submitting = true);
 
-    _showMessage(
-      count == 1
-          ? "Amendment prepared for 1 room. It is not sent yet — the amendment "
-                "endpoint is still to be connected."
-          : "Amendment prepared for $count rooms. It is not sent yet — the "
-                "amendment endpoint is still to be connected.",
-      isError: false,
-    );
+    try {
+      final repo = HotelRepository(ApiService(SecureStorage.instance));
+      final result = await repo.submitAmendment(payload);
+      if (!mounted) return;
+
+      if (result.success) {
+        _showMessage(
+          result.message ??
+              (count == 1
+                  ? "Amendment submitted for 1 room."
+                  : "Amendment submitted for $count rooms."),
+          isError: false,
+        );
+        context.pop();
+        return;
+      }
+
+      setState(() => _submitting = false);
+      _showMessage(result.message ?? "Failed to submit amendment.");
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      _showMessage("Failed to submit amendment: $e");
+    }
   }
 
   /// The button that raises the amendment. Greyed until a room is ticked, since
@@ -1736,7 +1753,9 @@ class _HotelAmendmentBallysScreenState
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: count == 0 ? null : () => _onSubmit(reservation, rooms),
+        onPressed: count == 0 || _submitting
+            ? null
+            : () => _onSubmit(reservation, rooms),
         style: ElevatedButton.styleFrom(
           backgroundColor: Constants.kPrimaryColor,
           foregroundColor: Colors.white,
@@ -1748,17 +1767,26 @@ class _HotelAmendmentBallysScreenState
           ),
           elevation: 0,
         ),
-        child: Text(
-          count == 0
-              ? "Submit Amendment"
-              : count == 1
-              ? "Submit Amendment (1 Hotel)"
-              : "Submit Amendment ($count Hotels)",
-          style: TextStyle(
-            fontSize: fontSettings.fontSize,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        child: _submitting
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : Text(
+                count == 0
+                    ? "Submit Amendment"
+                    : count == 1
+                    ? "Submit Amendment (1 Hotel)"
+                    : "Submit Amendment ($count Hotels)",
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
       ),
     );
   }

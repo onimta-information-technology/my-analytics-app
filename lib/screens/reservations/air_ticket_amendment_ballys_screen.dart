@@ -2,6 +2,9 @@ import 'package:ballys_reservation_app/components/air_ticket_class_count_selecto
 import 'package:ballys_reservation_app/components/amendment_guest_header_ballys.dart';
 import 'package:ballys_reservation_app/components/custom_airport_field.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
+import 'package:ballys_reservation_app/data/repositories/air_ticket_repository.dart';
+import 'package:ballys_reservation_app/data/services/api_service.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 import 'package:ballys_reservation_app/models/reservation/air_ticket_class_count.dart';
 import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart';
 import 'package:ballys_reservation_app/models/reervationBallys.dart';
@@ -188,6 +191,8 @@ class AirTicketAmendmentBallysScreen extends ConsumerStatefulWidget {
 
 class _AirTicketAmendmentBallysScreenState
     extends ConsumerState<AirTicketAmendmentBallysScreen> {
+  bool _submitting = false;
+
   // ── Amendment category / type ──────────────────────────────────────────
   //
   // The type on offer depends entirely on the category picked, so the two
@@ -930,9 +935,8 @@ class _AirTicketAmendmentBallysScreenState
   /// The whole amendment as one payload: the reservation it belongs to, and a
   /// row per ticket carrying who it is for and what changes.
   ///
-  /// Each row holds only the detail its own type asked for, and states what
-  /// the ticket holds now beside what it moves to — the back office needs both
-  /// halves to record the change.
+  /// Each row holds only the detail its own type asked for — just the new
+  /// value it moves to, not what the ticket held before.
   Map<String, dynamic> _buildPayload(
     ReservationBallys reservation,
     List<_AmendableTicket> tickets,
@@ -967,15 +971,10 @@ class _AirTicketAmendmentBallysScreenState
       }
 
       if (draft.isCabinUpgrade) {
-        row['previous_classes'] =
-            flight.ticketClasses.map((c) => c.toJson()).toList();
         row['new_classes'] = draft.newClasses.map((c) => c.toJson()).toList();
       }
 
       if (draft.isDateChange) {
-        row['previous_arrival_date'] = flight.arrivalDate?.toIso8601String();
-        row['previous_departure_date'] =
-            flight.departureDate?.toIso8601String();
         row['new_arrival_date'] = draft.newArrivalDate?.toIso8601String();
         row['new_departure_date'] = draft.newDepartureDate?.toIso8601String();
       }
@@ -1093,19 +1092,32 @@ class _AirTicketAmendmentBallysScreenState
 
     final payload = _buildPayload(reservation, tickets);
 
-    // The endpoint that takes this does not exist yet, so the amendment is
-    // built and shown rather than sent. Everything it needs is in [payload] —
-    // posting it is all that is left to add here.
-    debugPrint("Air ticket amendment payload: $payload");
+    setState(() => _submitting = true);
 
-    _showMessage(
-      count == 1
-          ? "Amendment prepared for 1 ticket. It is not sent yet — the "
-              "amendment endpoint is still to be connected."
-          : "Amendment prepared for $count tickets. It is not sent yet — the "
-              "amendment endpoint is still to be connected.",
-      isError: false,
-    );
+    try {
+      final repo = AirTicketRepository(ApiService(SecureStorage.instance));
+      final result = await repo.submitAmendment(payload);
+      if (!mounted) return;
+
+      if (result.success) {
+        _showMessage(
+          result.message ??
+              (count == 1
+                  ? "Amendment submitted for 1 ticket."
+                  : "Amendment submitted for $count tickets."),
+          isError: false,
+        );
+        context.pop();
+        return;
+      }
+
+      setState(() => _submitting = false);
+      _showMessage(result.message ?? "Failed to submit amendment.");
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      _showMessage("Failed to submit amendment: $e");
+    }
   }
 
   /// The button that raises the amendment. Greyed until a ticket is ticked,
@@ -1120,8 +1132,9 @@ class _AirTicketAmendmentBallysScreenState
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed:
-            count == 0 ? null : () => _onSubmit(reservation, tickets),
+        onPressed: count == 0 || _submitting
+            ? null
+            : () => _onSubmit(reservation, tickets),
         style: ElevatedButton.styleFrom(
           backgroundColor: Constants.kPrimaryColor,
           foregroundColor: Colors.white,
@@ -1133,17 +1146,26 @@ class _AirTicketAmendmentBallysScreenState
           ),
           elevation: 0,
         ),
-        child: Text(
-          count == 0
-              ? "Submit Amendment"
-              : count == 1
-                  ? "Submit Amendment (1 ticket)"
-                  : "Submit Amendment ($count tickets)",
-          style: TextStyle(
-            fontSize: fontSettings.fontSize,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        child: _submitting
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : Text(
+                count == 0
+                    ? "Submit Amendment"
+                    : count == 1
+                        ? "Submit Amendment (1 ticket)"
+                        : "Submit Amendment ($count tickets)",
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
       ),
     );
   }

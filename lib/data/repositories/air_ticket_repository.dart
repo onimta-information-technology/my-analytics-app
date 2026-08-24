@@ -66,4 +66,38 @@ class AirTicketRepository {
     }
     return [];
   }
+
+  /// POST `{baseUrl}/Air_Ticket_Amendment_Insert` — submits an air ticket
+  /// amendment built by [AirTicketAmendmentBallysScreen].
+  Future<AirTicketAmendmentResult> submitAmendment(
+    Map<String, Object?> payload,
+  ) async {
+    final userName = await StorageUtil.getUserName();
+    final deviceId = await DeviceId.get();
+
+    final body = <String, Object?>{
+      ...payload,
+      'user_name': userName,
+      'device_id': deviceId,
+    };
+
+    print('submitAmendment payload: $body');
+    final response = await apiService.post(
+      'Air_Ticket_Amendment_Insert',
+      body,
+    );
+
+    return AirTicketAmendmentResult(
+      success: response['Status'] as bool? ?? false,
+      message: response['Message'] as String?,
+    );
+  }
+}
+
+/// Outcome of an `Air_Ticket_Amendment_Insert` call.
+class AirTicketAmendmentResult {
+  final bool success;
+  final String? message;
+
+  const AirTicketAmendmentResult({required this.success, this.message});
 }

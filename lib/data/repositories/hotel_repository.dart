@@ -294,4 +294,35 @@ print('API response for hotel costs: $response');
       throw Exception('Hotel Cost API failed');
     }
   }
+
+  /// POST `{baseUrl}/Hotel_Amendment_Insert` — submits a hotel amendment
+  /// built by [HotelAmendmentBallysScreen].
+  Future<HotelAmendmentResult> submitAmendment(
+    Map<String, Object?> payload,
+  ) async {
+    final userName = await StorageUtil.getUserName();
+    final deviceId = await DeviceId.get();
+
+    final body = <String, Object?>{
+      ...payload,
+      'user_name': userName,
+      'device_id': deviceId,
+    };
+
+    print('submitAmendment payload: $body');
+    final response = await apiService.post('Hotel_Amendment_Insert', body);
+
+    return HotelAmendmentResult(
+      success: response['Status'] as bool? ?? false,
+      message: response['Message'] as String?,
+    );
+  }
+}
+
+/// Outcome of a `Hotel_Amendment_Insert` call.
+class HotelAmendmentResult {
+  final bool success;
+  final String? message;
+
+  const HotelAmendmentResult({required this.success, this.message});
 }

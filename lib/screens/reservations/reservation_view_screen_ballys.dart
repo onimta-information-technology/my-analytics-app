@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:ballys_reservation_app/components/flight_card_ballys.dart';
 import 'package:ballys_reservation_app/components/guest_deatils_view_spGift.dart';
+import 'package:ballys_reservation_app/components/reservation_pdf_button_ballys.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
@@ -2494,6 +2495,16 @@ class _ReservationViewScreenBallysState
                         ),
                       ],
                     ),
+
+                  // ── Approved: send reservation details via WhatsApp ──────
+                  if (selectedReservation?.requestStatus == 'Approved') ...[
+                    const SizedBox(height: 12),
+                    ReservationPdfButtonBallys(
+                      reservation: selectedReservation!,
+                      hotels: selectedHotels,
+                      flights: selectedFlights,
+                    ),
+                  ],
 
                   // ── Reverse: send an actioned reservation back to Pending ─
                   if (isActioned && _canReverse) ...[

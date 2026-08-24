@@ -14,6 +14,7 @@ import 'package:ballys_reservation_app/utils/current_chat_state.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/download_helper.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,6 +22,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // Compression applied to camera/gallery images before upload, to keep chat
 // attachments small.
@@ -34,6 +36,12 @@ const Color _kMentionColor = Color.fromARGB(255, 12, 59, 121);
 /// The same blue lightened for the green outgoing bubble, where [_kMentionColor]
 /// on green would be too dark to read.
 const Color _kMentionColorOnGreen =Color.fromARGB(255, 12, 59, 121);
+
+/// Links in an incoming bubble read as the usual web blue; on the green
+/// outgoing bubble that blue goes muddy, so links there stay white and lean
+/// on the underline instead.
+const Color _kLinkColor = Color(0xFF1B6BC0);
+const Color _kLinkColorOnGreen = Colors.white;
 
 /// Composer controller that paints picked "@Name" tokens in [_kMentionColor].
 ///
@@ -251,6 +259,10 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     _messageFocusNode.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
+    for (final recognizer in _linkRecognizers.values) {
+      recognizer.dispose();
+    }
+    _linkRecognizers.clear();
     super.dispose();
   }
 
@@ -693,6 +705,142 @@ Future<void> _markMessagesAsRead() async {
     );
   }
 
+  // ─── Links ──────────────────────────────────────────────────────────────────
+
+  /// Endings a bare "academy.bcqr.lk" is allowed to have. A written-out
+  /// scheme or a leading "www." is linkified whatever it ends in, but a bare
+  /// domain needs one of these — otherwise "etc.the" in a sentence someone
+  /// forgot to put a space in becomes a link.
+  static const String _linkTlds =
+      'com|net|org|edu|gov|int|mil|info|biz|io|ai|app|dev|me|co|tv|fm|gg|xyz|'
+      'site|online|store|shop|blog|news|link|page|tech|cloud|live|pro|top|'
+      'lk|uk|us|ca|au|nz|in|pk|bd|np|mv|sg|my|th|vn|ph|id|hk|tw|kr|jp|cn|'
+      'ae|sa|qa|kw|om|bh|za|ke|ng|eg|de|fr|es|it|nl|be|ch|at|se|no|dk|fi|'
+      'ie|pt|pl|cz|gr|tr|ru|ua|br|mx|ar|cl|eu';
+
+  /// Matches, in order: anything with a scheme or a leading "www.", an email
+  /// address, and a bare domain ending in [_linkTlds] with an optional path.
+  static final RegExp _linkPattern = RegExp(
+    r'(?:https?://|www\.)[^\s<>"]+'
+    r'|[\w.+-]+@[\w-]+(?:\.[\w-]+)+'
+    r'|(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+'
+    '(?:$_linkTlds)'
+    r'(?![a-zA-Z0-9])(?:[/?#][^\s<>"]*)?',
+    caseSensitive: false,
+  );
+
+  /// Punctuation a link picks up from the sentence around it: "see
+  /// https://academy.bcqr.lk." must not open a url ending in a full stop.
+  static String _trimLinkTail(String link) {
+    var end = link.length;
+    while (end > 0) {
+      final ch = link[end - 1];
+      if ('.,;:!?"\''.contains(ch)) {
+        end--;
+        continue;
+      }
+      // A closing bracket only comes off when nothing inside the link opened
+      // it — some urls really do end in one.
+      if (ch == ')' || ch == ']' || ch == '}') {
+        final open = ch == ')' ? '(' : (ch == ']' ? '[' : '{');
+        final body = link.substring(0, end);
+        if (body.split(open).length < body.split(ch).length) {
+          end--;
+          continue;
+        }
+      }
+      break;
+    }
+    return link.substring(0, end);
+  }
+
+  /// What a tap actually opens. Text carries a domain far more often than a
+  /// full url, so a missing scheme is assumed to be https, and an address
+  /// with an @ in it is a mailto.
+  static Uri? _linkUri(String raw) {
+    final trimmed = _trimLinkTail(raw);
+    if (trimmed.isEmpty) return null;
+    if (RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*://').hasMatch(trimmed)) {
+      return Uri.tryParse(trimmed);
+    }
+    if (trimmed.contains('@')) return Uri.tryParse('mailto:$trimmed');
+    return Uri.tryParse('https://$trimmed');
+  }
+
+  Future<void> _openLink(String raw) async {
+    final uri = _linkUri(raw);
+    if (uri == null) {
+      _showErrorSnack('That link is not valid.');
+      return;
+    }
+    try {
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!opened && mounted) _showErrorSnack('Could not open $raw');
+    } catch (_) {
+      if (mounted) _showErrorSnack('Could not open $raw');
+    }
+  }
+
+  /// One recognizer per distinct link, because a [TextSpan]'s recognizer has
+  /// to outlive the build that made it and has to be disposed by hand — a
+  /// fresh one per build would leak on every rebuild of the list.
+  final Map<String, TapGestureRecognizer> _linkRecognizers = {};
+
+  TapGestureRecognizer _linkRecognizer(String link) =>
+      _linkRecognizers.putIfAbsent(
+        link,
+        () => TapGestureRecognizer()..onTap = () => _openLink(link),
+      );
+
+  /// Message text split into tappable links and everything else, with the
+  /// runs in between still going through the search highlighter.
+  List<InlineSpan> _linkAwareSpans(
+    String text,
+    TextStyle baseStyle, {
+    required bool onGreen,
+  }) {
+    if (text.isEmpty) return _searchHighlightedSpans(text, baseStyle);
+
+    final linkColor = onGreen ? _kLinkColorOnGreen : _kLinkColor;
+    final linkStyle = baseStyle.copyWith(
+      color: linkColor,
+      decoration: TextDecoration.underline,
+      decorationColor: linkColor,
+    );
+
+    final spans = <InlineSpan>[];
+    var last = 0;
+    for (final match in _linkPattern.allMatches(text)) {
+      // A match that starts inside the previous link (its trimmed tail) is
+      // already covered.
+      if (match.start < last) continue;
+      final link = _trimLinkTail(text.substring(match.start, match.end));
+      if (link.isEmpty) continue;
+      if (match.start > last) {
+        spans.addAll(
+          _searchHighlightedSpans(
+            text.substring(last, match.start),
+            baseStyle,
+          ),
+        );
+      }
+      spans.add(
+        TextSpan(
+          text: link,
+          style: linkStyle,
+          recognizer: _linkRecognizer(link),
+        ),
+      );
+      last = match.start + link.length;
+    }
+
+    if (spans.isEmpty) return _searchHighlightedSpans(text, baseStyle);
+    if (last < text.length) {
+      spans.addAll(_searchHighlightedSpans(text.substring(last), baseStyle));
+    }
+    return spans;
+  }
+
   /// A message bubble's text: the "@Name" chips rebuilt from `mentions` first,
   /// then the text itself with any inline "@Name" still in it drawn in bold.
   Widget _buildMessageText(ChatMessage message, TextStyle baseStyle) {
@@ -718,7 +866,7 @@ Future<void> _markMessagesAsRead() async {
     if (text.isNotEmpty) {
       spans.add(TextSpan(text: ' ', style: baseStyle));
       spans.addAll(_inlineMentionSpans(text, baseStyle, onGreen: onGreen) ??
-          _searchHighlightedSpans(text, baseStyle));
+          _linkAwareSpans(text, baseStyle, onGreen: onGreen));
     }
     return RichText(text: TextSpan(children: spans));
   }
@@ -733,9 +881,10 @@ Future<void> _markMessagesAsRead() async {
   }) {
     final spans = _inlineMentionSpans(text, baseStyle, onGreen: onGreen);
     if (spans == null) {
-      if (!_hasSearchTerm) return Text(text, style: baseStyle);
       return RichText(
-        text: TextSpan(children: _searchHighlightedSpans(text, baseStyle)),
+        text: TextSpan(
+          children: _linkAwareSpans(text, baseStyle, onGreen: onGreen),
+        ),
       );
     }
     return RichText(text: TextSpan(children: spans));
@@ -763,7 +912,9 @@ Future<void> _markMessagesAsRead() async {
 
     void flush() {
       if (plain.isEmpty) return;
-      spans.addAll(_searchHighlightedSpans(plain.toString(), baseStyle));
+      spans.addAll(
+        _linkAwareSpans(plain.toString(), baseStyle, onGreen: onGreen),
+      );
       plain.clear();
     }
 

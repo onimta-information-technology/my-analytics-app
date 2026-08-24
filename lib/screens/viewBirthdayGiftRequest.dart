@@ -18,10 +18,10 @@ import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 class ViewBirthdayGiftRequest extends ConsumerStatefulWidget {
   final GiftsRepository giftsRepository;
@@ -218,7 +218,7 @@ Future<void> _loadGiftCounts() async {
     try {
       setState(() => _isLoading = true);
       GuestRepository guestRepository =
-          GuestRepository(ApiService(const FlutterSecureStorage()));
+          GuestRepository(ApiService(SecureStorage.instance));
       List<GuestSearchResponse> guests =
           await guestRepository.searchGuest(9021, _memberIdController.text);
       if (guests.isNotEmpty) {
@@ -1203,7 +1203,7 @@ Widget _buildPendingIssuedGiftButtons(FontSettings fontSettings) {
                                     setState(() => _isLoading = true);
                                     GuestRepository guestRepository =
                                         GuestRepository(ApiService(
-                                            const FlutterSecureStorage()));
+                                            SecureStorage.instance));
                                     List<GuestSearchResponse> guests =
                                         await guestRepository.searchGuest(
                                             9021, _memberIdController.text);

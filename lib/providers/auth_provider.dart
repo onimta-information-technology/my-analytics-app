@@ -2,15 +2,15 @@ import 'package:ballys_reservation_app/data/services/fcm_token_service.dart';
 import 'package:ballys_reservation_app/models/auth_state.dart';
 import 'package:ballys_reservation_app/utils/token_refresh_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/services/api_service.dart';
 import '../utils/storage_util.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 final flutterSecureStorageProvider = Provider(
-  (ref) => const FlutterSecureStorage(),
+  (ref) => SecureStorage.instance,
 );
 
 final apiServiceProvider = Provider((ref) {

@@ -3,7 +3,7 @@ import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/birthday.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 class BirthdaysNotifier extends StateNotifier<Map<String, List<Birthday>>> {
   final BirthdayRepository birthdayRepository;
@@ -109,7 +109,7 @@ void clearBirthdays() {
 }
 
 final flutterSecureStorageProvider = Provider(
-  (ref) => const FlutterSecureStorage(),
+  (ref) => SecureStorage.instance,
 );
 
 final apiServiceProvider = Provider((ref) {

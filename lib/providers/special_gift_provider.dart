@@ -6,7 +6,7 @@ import 'package:ballys_reservation_app/models/gift/prev_gift.dart';
 import 'package:ballys_reservation_app/models/gift/special_gift_request.dart';
 import 'package:ballys_reservation_app/models/prev_gift_summary.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 class GiftNotifier extends StateNotifier<GiftState> {
   final GiftsRepository giftRepository;
@@ -543,7 +543,7 @@ state = state.copyWith(
 
 
 final flutterSecureStorageProvider = Provider(
-  (ref) => const FlutterSecureStorage(),
+  (ref) => SecureStorage.instance,
 );
 
 final apiServiceProvider = Provider((ref) {

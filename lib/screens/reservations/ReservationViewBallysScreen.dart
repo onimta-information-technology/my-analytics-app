@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 // import 'dart:convert';
 // import 'dart:typed_data';
 
@@ -29,7 +30,6 @@
 // import 'package:ballys_reservation_app/utils/storage_util.dart';
 // import 'package:flutter/material.dart';
 // import 'package:flutter_riverpod/flutter_riverpod.dart';
-// import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 // import 'package:go_router/go_router.dart';
 // import 'package:intl/intl.dart';
 // import 'package:url_launcher/url_launcher.dart';
@@ -610,7 +610,7 @@
 //       setState(() => _isGuestLoading = true);
 
 //       GuestRepository guestRepository = GuestRepository(
-//         ApiService(const FlutterSecureStorage()),
+//         ApiService(SecureStorage.instance),
 //       );
 
 //       List<GuestSearchResponse> guests = await guestRepository.searchGuest(

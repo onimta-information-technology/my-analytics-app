@@ -2,7 +2,7 @@ import 'package:ballys_reservation_app/data/repositories/guest_booking_repositor
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/Guest/guest_booking.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 class GuestBookingNotifier extends StateNotifier<GuestBookingState> {
   final GuestBookingRepository bookingRepository;
@@ -77,8 +77,8 @@ final guestBookingProvider = StateNotifierProvider<GuestBookingNotifier, GuestBo
 });
 
 final guestBookingRepositoryProvider = Provider((ref) {
-  final apiService = ApiService(const FlutterSecureStorage());
-  return GuestBookingRepository(apiService, const FlutterSecureStorage());
+  final apiService = ApiService(SecureStorage.instance);
+  return GuestBookingRepository(apiService, SecureStorage.instance);
 });
 
 class GuestBookingState {

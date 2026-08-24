@@ -8,7 +8,6 @@ import 'package:ballys_reservation_app/data/repositories/contact_person_reposito
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/providers/selected_passport_provider_ballys.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:ballys_reservation_app/models/airport_search_response.dart';
 import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart';
 import 'package:ballys_reservation_app/models/reservation/air_ticket_class_count.dart';
@@ -24,6 +23,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:dropdown_search/dropdown_search.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 class AirTicketsSelectionBallysScreen extends ConsumerStatefulWidget {
   final AirportRepository airportRepository;
@@ -125,7 +125,7 @@ class _AirTicketsSelectionBallysScreenState
 
   Future<void> _loadContactPersons() async {
     try {
-      final repo = ContactPersonRepository(ApiService(const FlutterSecureStorage()));
+      final repo = ContactPersonRepository(ApiService(SecureStorage.instance));
       final persons = await repo.getContactPersons();
       if (mounted) setState(() => _contactPersons = persons);
     } catch (_) {}

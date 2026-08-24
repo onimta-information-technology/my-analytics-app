@@ -44,6 +44,13 @@ class TokenManager {
 
     try {
       final baseUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+      if (baseUrl.isEmpty) {
+        // Nothing to refresh against — the device config is gone. The splash
+        // re-fetches it on the next launch; failing here keeps the caller from
+        // reading this as a rejected credential.
+        _refreshCompleter!.complete(null);
+        return null;
+      }
       final response = await http.post(
         Uri.parse('$baseUrl/Login'),
         headers: {'Content-Type': 'application/json'},

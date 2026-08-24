@@ -2,10 +2,10 @@ import 'package:ballys_reservation_app/data/repositories/follow_up_repository.da
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/follow_up_item.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 final _followUpSecureStorageProvider = Provider(
-  (ref) => const FlutterSecureStorage(),
+  (ref) => SecureStorage.instance,
 );
 
 final _followUpApiServiceProvider = Provider((ref) {

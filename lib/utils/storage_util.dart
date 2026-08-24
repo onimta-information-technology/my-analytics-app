@@ -1,11 +1,11 @@
 import 'dart:convert';
 
 import 'package:ballys_reservation_app/data/services/device_config_service.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 class StorageUtil {
-  static const _storage = FlutterSecureStorage();
+  static const _storage = SecureStorage.instance;
   static const _keyAppVersion = 'app_version';
  static const _keyCurrentApiUrl = 'current_api_url';
   static const _keyCurrentLocation = 'current_location';
@@ -29,7 +29,7 @@ class StorageUtil {
     bool? marketingP,
   ) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
+    await _clearPreservingDeviceConfig(prefs);
     await prefs.setString('userName', userName);
     await prefs.setString('userLevel', userLevel);
     await prefs.setString('salesCode', salesCode);
@@ -105,7 +105,7 @@ class StorageUtil {
 
   static Future<void> clearUserData() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
+    await _clearPreservingDeviceConfig(prefs);
   }
 
   static Future<String?> getMarketingCode() async {
@@ -233,45 +233,57 @@ class StorageUtil {
 
   Future getToken() async {}
    static Future<void> saveCurrentLocation(LocationConfig location) async {
-    await _storage.write(key: _keyCurrentApiUrl, value: location.apiUrl);
-    await _storage.write(key: _keyCurrentLocation, value: jsonEncode(location.toJson()));
+    await _writeDeviceConfig(_keyCurrentApiUrl, location.apiUrl);
+    await _writeDeviceConfig(
+      _keyCurrentLocation,
+      jsonEncode(location.toJson()),
+    );
   }
 
   /// Get current API URL
   static Future<String?> getCurrentApiUrl() async {
-    return await _storage.read(key: _keyCurrentApiUrl);
+    return await _readDeviceConfig(_keyCurrentApiUrl);
   }
 
   /// Get current location
   static Future<LocationConfig?> getCurrentLocation() async {
-    final locationJson = await _storage.read(key: _keyCurrentLocation);
+    final locationJson = await _readDeviceConfig(_keyCurrentLocation);
     if (locationJson != null) {
-      return LocationConfig.fromJson(jsonDecode(locationJson));
+      try {
+        return LocationConfig.fromJson(jsonDecode(locationJson));
+      } catch (_) {
+        // A half-written or legacy-format entry is no better than none.
+        return null;
+      }
     }
     return null;
   }
 
   /// Save admin status
   static Future<void> saveAdminStatus(bool isAdmin) async {
-    await _storage.write(key: _keyIsAdmin, value: isAdmin.toString());
+    await _writeDeviceConfig(_keyIsAdmin, isAdmin.toString());
   }
 
   /// Check if user is admin
   static Future<bool> isAdmin() async {
-    final isAdminStr = await _storage.read(key: _keyIsAdmin);
+    final isAdminStr = await _readDeviceConfig(_keyIsAdmin);
     return isAdminStr == 'true';
   }
    /// Save all locations (for admin)
   static Future<void> saveLocations(List<LocationConfig> locations) async {
     final locationsJson = jsonEncode(locations.map((loc) => loc.toJson()).toList());
-    await _storage.write(key: _keyLocations, value: locationsJson);
+    await _writeDeviceConfig(_keyLocations, locationsJson);
     await saveAdminStatus(true);
   }
   static Future<List<LocationConfig>> getLocations() async {
-    final locationsJson = await _storage.read(key: _keyLocations);
+    final locationsJson = await _readDeviceConfig(_keyLocations);
     if (locationsJson != null) {
-      final List<dynamic> decoded = jsonDecode(locationsJson);
-      return decoded.map((json) => LocationConfig.fromJson(json)).toList();
+      try {
+        final List<dynamic> decoded = jsonDecode(locationsJson);
+        return decoded.map((json) => LocationConfig.fromJson(json)).toList();
+      } catch (_) {
+        return [];
+      }
     }
     return [];
   }
@@ -285,9 +297,77 @@ static Future<String?> getSmsGatewayUrl() async {
 }
   /// Clear location data (on logout)
   static Future<void> clearLocationData() async {
-    await _storage.delete(key: _keyCurrentApiUrl);
-    await _storage.delete(key: _keyCurrentLocation);
-    await _storage.delete(key: _keyIsAdmin);
-    await _storage.delete(key: _keyLocations);
+    final prefs = await SharedPreferences.getInstance();
+    for (final key in _deviceConfigKeys) {
+      await prefs.remove(key);
+      try {
+        await _storage.delete(key: key);
+      } catch (_) {}
+    }
+  }
+
+  // ── Device config (API URL, location, admin flag) ──────────────────────────
+  //
+  // These four keys used to live in secure storage alone. None of them is a
+  // secret — the device-log endpoint hands them out for a device id — but
+  // secure storage is exactly what an OEM keystore reset or an Auto Backup
+  // restore wipes on Android, and losing the API URL points every request at a
+  // hostless '/9009'. SharedPreferences is the source of truth now; secure
+  // storage is written alongside it and read only as a migration fallback for
+  // installs that still have the old copy.
+
+  static const _deviceConfigKeys = <String>[
+    _keyCurrentApiUrl,
+    _keyCurrentLocation,
+    _keyIsAdmin,
+    _keyLocations,
+  ];
+
+  /// Wipes user state without taking the device config down with it.
+  ///
+  /// The config belongs to the device, not the account: it is fetched from the
+  /// device-log endpoint against the device id. Both callers here reset
+  /// SharedPreferences in the middle of a login — `completeLoginAfterOTP` calls
+  /// [clearUserData] and then [saveUserData] — so a plain prefs.clear() would
+  /// throw away the config the login flow had just fetched.
+  static Future<void> _clearPreservingDeviceConfig(
+    SharedPreferences prefs,
+  ) async {
+    final deviceConfig = <String, String>{
+      for (final key in _deviceConfigKeys)
+        if (prefs.getString(key) != null) key: prefs.getString(key)!,
+    };
+    await prefs.clear();
+    for (final entry in deviceConfig.entries) {
+      await prefs.setString(entry.key, entry.value);
+    }
+  }
+
+  static Future<void> _writeDeviceConfig(String key, String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(key, value);
+    try {
+      await _storage.write(key: key, value: value);
+    } catch (_) {
+      // The mirror in SharedPreferences is what the app reads back.
+    }
+  }
+
+  static Future<String?> _readDeviceConfig(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    final mirrored = prefs.getString(key);
+    if (mirrored != null && mirrored.isNotEmpty) return mirrored;
+
+    String? legacy;
+    try {
+      legacy = await _storage.read(key: key);
+    } catch (_) {
+      legacy = null;
+    }
+    if (legacy != null && legacy.isNotEmpty) {
+      await prefs.setString(key, legacy); // migrate forward, once
+      return legacy;
+    }
+    return null;
   }
 }

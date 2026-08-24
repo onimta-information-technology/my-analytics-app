@@ -5,7 +5,7 @@ import 'package:ballys_reservation_app/models/marketing_group.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 class GuestsNotifier extends StateNotifier<GuestsState> {
   final GuestRepository guestRepository;
@@ -194,7 +194,7 @@ final _emptyGroup = MarketingGroup(gCode: '', gName: 'No Data', rc: 0);
 // ── Providers ──────────────────────────────────────────────────────────────
 
 final flutterSecureStorageProvider = Provider(
-  (ref) => const FlutterSecureStorage(),
+  (ref) => SecureStorage.instance,
 );
 
 final apiServiceProvider = Provider((ref) {

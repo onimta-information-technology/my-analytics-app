@@ -4,6 +4,10 @@
         android:label="My Analytics"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon"
+        android:allowBackup="false"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        tools:replace="android:allowBackup"
         android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"

@@ -6,7 +6,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:country_picker/country_picker.dart';
 
@@ -25,6 +24,7 @@ import 'package:ballys_reservation_app/providers/transport_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 // Mirrors the Transport tab of the Quick Reservation screen as a standalone
 // create screen, reached from the + action on TransportScreen.
@@ -275,7 +275,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
   }
 
   Future<void> _openGuestSearch({required int iid}) async {
-    final repo = GuestRepository(ApiService(const FlutterSecureStorage()));
+    final repo = GuestRepository(ApiService(SecureStorage.instance));
     final term = iid == 8002 ? _memberIdCtrl.text : _guestNameCtrl.text;
     if (term.length < 3) {
       _showSearchSheet([], term, iid);
@@ -312,7 +312,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
           if (newTerm.length < 3) return;
           try {
             final repo = GuestRepository(
-              ApiService(const FlutterSecureStorage()),
+              ApiService(SecureStorage.instance),
             );
             final r = await repo.searchGuest(newIid, newTerm);
             if (!ctx.mounted) return;
@@ -337,7 +337,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
     required String name,
   }) async {
     try {
-      final repo = GuestRepository(ApiService(const FlutterSecureStorage()));
+      final repo = GuestRepository(ApiService(SecureStorage.instance));
       final guests = await repo.searchGuest(9021, mid);
       if (!mounted) return;
       if (guests.isNotEmpty) {
@@ -812,7 +812,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
     try {
       _logLong('Saving transport reservation', body);
       final repo = TransportRepository(
-        ApiService(const FlutterSecureStorage()),
+        ApiService(SecureStorage.instance),
       );
       final result = await repo.insertTransport(body);
       if (!mounted) return;

@@ -13,9 +13,9 @@ import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 class ViewGuestBooking extends ConsumerStatefulWidget {
   final GuestBookingRepository bookingRepository;
@@ -107,7 +107,7 @@ class _ViewGuestBookingState extends ConsumerState<ViewGuestBooking> {
       setState(() => _isGuestLoading = true);
 
       final GuestRepository guestRepository = GuestRepository(
-        ApiService(const FlutterSecureStorage()),
+        ApiService(SecureStorage.instance),
       );
 
       final List<GuestSearchResponse> guests =

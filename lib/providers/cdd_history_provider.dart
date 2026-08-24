@@ -6,10 +6,10 @@ import 'package:ballys_reservation_app/models/cdd/cdd_history_item.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 final _apiServiceProvider = Provider(
-  (ref) => ApiService(const FlutterSecureStorage()),
+  (ref) => ApiService(SecureStorage.instance),
 );
 
 final cddRepositoryProvider2 = Provider((ref) {

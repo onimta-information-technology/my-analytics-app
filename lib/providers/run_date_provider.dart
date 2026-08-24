@@ -2,10 +2,10 @@ import 'package:ballys_reservation_app/data/repositories/run_date_repository.dar
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/run_date.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 final _flutterSecureStorageProvider = Provider(
-  (ref) => const FlutterSecureStorage(),
+  (ref) => SecureStorage.instance,
 );
 final _apiServiceProvider = Provider((ref) {
   final storage = ref.read(_flutterSecureStorageProvider);

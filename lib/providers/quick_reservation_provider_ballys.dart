@@ -9,6 +9,7 @@ import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
 import 'package:ballys_reservation_app/models/reservation/airline_response.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 /// Everything the quick reservation screen (Ballys) knows that is not a text
 /// field: the reference data its dropdowns run on, the location-driven member
@@ -252,7 +253,7 @@ class QuickReservationBallysNotifier
 }
 
 final quickReservationBallysStorageProvider =
-    Provider<FlutterSecureStorage>((ref) => const FlutterSecureStorage());
+    Provider<FlutterSecureStorage>((ref) => SecureStorage.instance);
 
 final quickReservationBallysApiProvider = Provider<ApiService>((ref) {
   return ApiService(ref.read(quickReservationBallysStorageProvider));

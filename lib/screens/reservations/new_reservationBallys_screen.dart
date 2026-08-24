@@ -42,10 +42,10 @@ import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 class NewReservationBallysScreen extends ConsumerStatefulWidget {
   const NewReservationBallysScreen({super.key});
@@ -340,7 +340,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
             searchIid: iid,
             onSearch: (String term, int searchIid) async {
               final results = await GuestRepository(
-                ApiService(const FlutterSecureStorage()),
+                ApiService(SecureStorage.instance),
               ).searchGuest(searchIid, term);
               if (!mounted) return;
               Navigator.of(context).pop();
@@ -367,7 +367,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
     setState(() => _isLoading = true);
     try {
       final guests = await GuestRepository(
-        ApiService(const FlutterSecureStorage()),
+        ApiService(SecureStorage.instance),
       ).searchGuest(iid, searchTerm);
       if (!mounted) return;
       setState(() => _isLoading = false);
@@ -679,7 +679,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
       ),
       builder: (BuildContext context) {
         return HotelAndRoomSelectionBallysBottomSheet(
-          HotelRepository(ApiService(const FlutterSecureStorage())),
+          HotelRepository(ApiService(SecureStorage.instance)),
           onClose: () => Navigator.pop(context), // ← X button callback
           reservationArrivalDate: _arrivalDate,
           reservationDepartureDate: _departureDate,
@@ -750,7 +750,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
 
   Future<void> _openMemberSearchBottomSheet(int iid) async {
     GuestRepository guestRepository = GuestRepository(
-      ApiService(const FlutterSecureStorage()),
+      ApiService(SecureStorage.instance),
     );
 
     String searchTerm =
@@ -813,7 +813,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
     if (searchTerm.length < 3) return;
 
     GuestRepository guestRepository = GuestRepository(
-      ApiService(const FlutterSecureStorage()),
+      ApiService(SecureStorage.instance),
     );
 
     try {
@@ -1163,7 +1163,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
 
     try {
       final guestRepository = GuestRepository(
-        ApiService(const FlutterSecureStorage()),
+        ApiService(SecureStorage.instance),
       );
       final guests = await guestRepository.searchGuest(9021, mid);
 
@@ -1394,7 +1394,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
     }
 
     ReservationRepository reservationRepository = ReservationRepository(
-      ApiService(const FlutterSecureStorage()),
+      ApiService(SecureStorage.instance),
     );
 
     setState(() => _isLoading = true);
@@ -1483,7 +1483,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
       setState(() => _isLoading = true);
 
       GuestRepository guestRepository = GuestRepository(
-        ApiService(const FlutterSecureStorage()),
+        ApiService(SecureStorage.instance),
       );
 
       List<GuestSearchResponse> guests =

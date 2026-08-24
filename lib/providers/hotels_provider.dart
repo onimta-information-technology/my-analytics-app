@@ -2,7 +2,7 @@ import 'package:ballys_reservation_app/data/repositories/hotel_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_response.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 class HotelsNotifier extends StateNotifier<List<HotelResponse>> {
   final HotelRepository hotelRepository;
@@ -28,7 +28,7 @@ class HotelsNotifier extends StateNotifier<List<HotelResponse>> {
 }
 
 final flutterSecureStorageProvider =
-    Provider((ref) => const FlutterSecureStorage());
+    Provider((ref) => SecureStorage.instance);
 
 final apiServiceProvider = Provider((ref) {
   final storage = ref.read(flutterSecureStorageProvider);

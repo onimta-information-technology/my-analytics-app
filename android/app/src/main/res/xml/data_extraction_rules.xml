@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+ backup/transfer rules.
+
+  Nothing is carried to another device. The app's session lives in
+  SharedPreferences while its access token lives in secure storage, whose key
+  never leaves the source device's keystore: restoring one without the other
+  produces an install that looks signed in but cannot talk to the API. A fresh
+  device is meant to start at the login screen, which re-registers it against
+  the device-log endpoint.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>

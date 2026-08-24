@@ -20,11 +20,11 @@ import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ballys_reservation_app/components/bottom_sheets/member_search_by_mid_bottom_sheet.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 class NewGiftRequest extends ConsumerStatefulWidget {
   final GiftsRepository giftsRepository;
@@ -95,7 +95,7 @@ Future<void> _loadLocationPrefix() async {
 
   Future<void> _openMemberSearchBottomSheet(int iid) async {
     GuestRepository guestRepository = GuestRepository(
-      ApiService(const FlutterSecureStorage()),
+      ApiService(SecureStorage.instance),
     );
 
     String searchTerm = "";
@@ -169,7 +169,7 @@ Future<void> _loadLocationPrefix() async {
     if (searchTerm.length < 3) return;
 
     GuestRepository guestRepository = GuestRepository(
-      ApiService(const FlutterSecureStorage()),
+      ApiService(SecureStorage.instance),
     );
 
     try {

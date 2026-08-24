@@ -2,7 +2,7 @@ import 'package:ballys_reservation_app/data/repositories/member_profile_reposito
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/member/f_and_b_history.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 class FAndBHistoryNotifier extends StateNotifier<FAndBHistory> {
   final MemberProfileRepository memberProfileRepository;
@@ -50,7 +50,7 @@ class FAndBHistoryNotifier extends StateNotifier<FAndBHistory> {
 }
 
 final flutterSecureStorageProvider =
-    Provider((ref) => const FlutterSecureStorage());
+    Provider((ref) => SecureStorage.instance);
 
 final apiServiceProvider = Provider((ref) {
   final storage = ref.read(flutterSecureStorageProvider);

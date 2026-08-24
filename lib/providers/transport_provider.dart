@@ -2,7 +2,7 @@ import 'package:ballys_reservation_app/data/repositories/transport_repository.da
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/transport/transport_reservation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 class TransportNotifier extends StateNotifier<TransportState> {
   final TransportRepository repository;
@@ -30,7 +30,7 @@ class TransportNotifier extends StateNotifier<TransportState> {
 }
 
 final transportRepositoryProvider = Provider((ref) {
-  final apiService = ApiService(const FlutterSecureStorage());
+  final apiService = ApiService(SecureStorage.instance);
   return TransportRepository(apiService);
 });
 

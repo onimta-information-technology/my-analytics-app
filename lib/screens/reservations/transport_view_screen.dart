@@ -11,9 +11,9 @@ import 'package:ballys_reservation_app/providers/transport_provider.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 class TransportViewScreen extends ConsumerWidget {
   const TransportViewScreen({super.key});
@@ -1244,7 +1244,7 @@ class _AmendmentDialogState extends ConsumerState<_AmendmentDialog> {
 
     try {
       final repo = TransportRepository(
-        ApiService(const FlutterSecureStorage()),
+        ApiService(SecureStorage.instance),
       );
       final result = await repo.submitAmendment(
         masterId: widget.transport.masterId,

@@ -7,6 +7,7 @@ import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/components/developer_banner.dart';
 import 'package:ballys_reservation_app/components/localNotificationService.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
+import 'package:ballys_reservation_app/data/services/device_config_service.dart';
 import 'package:ballys_reservation_app/data/services/fcm_token_service.dart';
 import 'package:ballys_reservation_app/data/services/notification_store.dart';
 import 'package:ballys_reservation_app/data/services/versioncehck_service.dart';
@@ -725,6 +726,26 @@ class _SplashScreenState extends State<SplashScreen>
     return trimmed.isEmpty ? null : trimmed;
   }
 
+  /// Makes sure the app knows which API it is talking to before it routes.
+  ///
+  /// Returns false only when a signed-in user has no API URL and the device-log
+  /// endpoint cannot supply one: the session is unusable, so the caller clears
+  /// it and sends the user back to login.
+  Future<bool> _ensureDeviceConfig() async {
+    final apiUrl = await StorageUtil.getCurrentApiUrl();
+    if (apiUrl != null && apiUrl.isNotEmpty) return true;
+
+    // Nobody is signed in — the login screen fetches the config on its own.
+    if (!await StorageUtil.hasActiveSession()) return true;
+
+    try {
+      final result = await DeviceConfigService.fetchDeviceConfig();
+      return result.isConfigured && (result.apiUrl?.isNotEmpty ?? false);
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> _initializeSplash() async {
     setState(() {
       _hasInternet = true;
@@ -740,6 +761,22 @@ class _SplashScreenState extends State<SplashScreen>
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showNoInternetDialog();
       });
+      return;
+    }
+
+    // ─── Device config self-heal ────────────────────────────────────────────
+    // The API URL used to live in secure storage alone, and some Android ROMs
+    // drop the keystore key that protects it across a Play Store update. The
+    // session in SharedPreferences survives regardless, so the splash would
+    // hand the user a home screen whose every request has nowhere to go — the
+    // username renders and nothing else loads. Re-fetch the config before
+    // routing, and send them to login rather than to a blank home if even that
+    // cannot be recovered.
+    if (!await _ensureDeviceConfig()) {
+      await StorageUtil.clearUserData();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_logged_in', false);
+      if (mounted) context.go('/login');
       return;
     }
 

@@ -13,8 +13,8 @@ import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 class MembersScreen extends ConsumerStatefulWidget {
   final GiftsRepository giftsRepository;
@@ -252,7 +252,7 @@ Future<void> _loadLocationPrefix() async {
 
   // Future<void> _openMemberSearchBottomSheet(int iid) async {
   //   GuestRepository guestRepository = GuestRepository(
-  //     ApiService(const FlutterSecureStorage()),
+  //     ApiService(SecureStorage.instance),
   //   );
 
   //   String searchTerm = "";
@@ -297,7 +297,7 @@ Future<void> _loadLocationPrefix() async {
   // }
 Future<void> _openMemberSearchBottomSheet(int iid) async {
   GuestRepository guestRepository = GuestRepository(
-    ApiService(const FlutterSecureStorage()),
+    ApiService(SecureStorage.instance),
   );
 
   if (_memberIdController.text.isEmpty) return;

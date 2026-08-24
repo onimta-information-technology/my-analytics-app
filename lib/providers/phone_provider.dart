@@ -3,7 +3,7 @@ import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/add_phone/phone_response.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 class PhoneState {
   final bool isLoading;
@@ -91,7 +91,7 @@ final phoneProvider = StateNotifierProvider<PhoneNotifier, PhoneState>((ref) {
 // Note: Make sure apiServiceProvider is available in your project
 // If not already defined, add this:
 final flutterSecureStorageProvider = Provider(
-  (ref) => const FlutterSecureStorage(),
+  (ref) => SecureStorage.instance,
 );
 
 final apiServiceProvider = Provider((ref) {

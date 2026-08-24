@@ -2,7 +2,7 @@ import 'package:ballys_reservation_app/data/repositories/birthday_gift_repositor
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/birthday_gift_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 // State class to hold gift data
 class BirthdayGiftState {
@@ -67,7 +67,7 @@ class BirthdayGiftNotifier extends StateNotifier<BirthdayGiftState> {
 
 // Providers
 final birthdayGiftRepositoryProvider = Provider<BirthdayGiftRepository>((ref) {
-  final storage = const FlutterSecureStorage();
+  final storage = SecureStorage.instance;
   final apiService = ApiService(storage);
   return BirthdayGiftRepository(apiService);
 });

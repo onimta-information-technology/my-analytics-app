@@ -33,8 +33,9 @@ void registerLogoutCallback(void Function() callback) {
 class ApiService {
   final TokenManager _tokenManager;
 
-  /// Accepts [FlutterSecureStorage] directly — matches all existing call sites:
-  ///   ApiService(const FlutterSecureStorage())
+  /// Accepts [FlutterSecureStorage] directly — matches all existing call sites,
+  /// which pass the app-wide instance:
+  ///   ApiService(SecureStorage.instance)
   ///   ApiService(storage)
   ///
   /// [TokenManager] is built internally, so no call sites need to change.
@@ -200,6 +201,7 @@ print('API response for $endpoint: ${response.body}');
     String? token,
   ) async {
     final baseUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+    if (baseUrl.isEmpty) throw MissingApiUrlException();
     return http.get(
       Uri.parse('$baseUrl/$endpoint'),
       headers: {
@@ -216,6 +218,7 @@ print('API response for $endpoint: ${response.body}');
     String? token,
   ) async {
     final baseUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+    if (baseUrl.isEmpty) throw MissingApiUrlException();
     return http.post(
       Uri.parse('$baseUrl/$endpoint'),
       headers: {

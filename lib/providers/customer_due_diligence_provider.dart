@@ -3,11 +3,11 @@
 import 'package:ballys_reservation_app/data/repositories/customer_due_diligence_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 // ─── Shared low-level providers (reuse or define once app-wide) ───────────────
 
-final _secureStorageProvider = Provider((ref) => const FlutterSecureStorage());
+final _secureStorageProvider = Provider((ref) => SecureStorage.instance);
 
 final _apiServiceProvider = Provider((ref) {
   final storage = ref.read(_secureStorageProvider);

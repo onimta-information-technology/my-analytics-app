@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:ballys_reservation_app/components/air_ticket_class_selector.dart';
@@ -35,6 +34,7 @@ import 'package:ballys_reservation_app/data/repositories/contact_person_reposito
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/amount_util.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 enum _Section { airTicket, hotel, transport }
 
@@ -560,7 +560,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
         });
       }
 
-      final repo = ContactPersonRepository(ApiService(const FlutterSecureStorage()));
+      final repo = ContactPersonRepository(ApiService(SecureStorage.instance));
       final persons = await repo.getContactPersons();
       if (mounted) setState(() => _hamoueContactPersons = persons);
     } catch (_) {}
@@ -568,7 +568,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
 
   Future<void> _loadRoomCategories(double hotelId) async {
     try {
-      final repo = HotelRepository(ApiService(const FlutterSecureStorage()));
+      final repo = HotelRepository(ApiService(SecureStorage.instance));
       final result = await repo.getSelectedHotelRoomCategories(hotelId);
       setState(() {
         _roomCategories = result.map((c) => c.toJson()).toList();
@@ -589,7 +589,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
 
   Future<void> _loadRoomTypes(double hotelId, int categoryId) async {
     try {
-      final repo = HotelRepository(ApiService(const FlutterSecureStorage()));
+      final repo = HotelRepository(ApiService(SecureStorage.instance));
       final result = await repo.getSelectedHotelCategoryRoomTypes(
         hotelId,
         categoryId,
@@ -628,7 +628,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     });
 
     try {
-      final repo = AirportRepository(ApiService(const FlutterSecureStorage()));
+      final repo = AirportRepository(ApiService(SecureStorage.instance));
       final costs = await repo.getAirportCosts(
         departureFrom: from,
         departureTo: to,
@@ -1117,7 +1117,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     required int iid,
     required VoidCallback onCardVisible,
   }) async {
-    final repo = GuestRepository(ApiService(const FlutterSecureStorage()));
+    final repo = GuestRepository(ApiService(SecureStorage.instance));
     final term = iid == 8002 ? _sharedMemberId.text : _sharedGuestName.text;
     if (term.length < 3) {
       _showSearchSheet([], term, iid, onCardVisible);
@@ -1139,7 +1139,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     required VoidCallback onReady,
   }) async {
     try {
-      final repo = GuestRepository(ApiService(const FlutterSecureStorage()));
+      final repo = GuestRepository(ApiService(SecureStorage.instance));
       final guests = await repo.searchGuest(9021, mid);
       if (!mounted) return;
       if (guests.isNotEmpty) {
@@ -1187,7 +1187,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
           if (newTerm.length < 3) return;
           try {
             final repo =
-                GuestRepository(ApiService(const FlutterSecureStorage()));
+                GuestRepository(ApiService(SecureStorage.instance));
             final r = await repo.searchGuest(newIid, newTerm);
             Navigator.of(ctx).pop();
             _showSearchSheet(r, newTerm, newIid, onCardVisible);
@@ -1233,7 +1233,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     }
     setState(() => _isLoading = true);
     try {
-      final repo = GuestRepository(ApiService(const FlutterSecureStorage()));
+      final repo = GuestRepository(ApiService(SecureStorage.instance));
       final guests = await repo.searchGuest(9021, mid);
       setState(() => _isLoading = false);
       if (guests.isNotEmpty) {
@@ -1947,7 +1947,7 @@ final phoneNumber = await StorageUtil.getMobileNumber();
     setState(() => _isLoading = true);
     try {
       _logLong('Saving transport reservation', body);
-      final apiService = ApiService(const FlutterSecureStorage());
+      final apiService = ApiService(SecureStorage.instance);
       final response = await apiService.post('Transport_Insert', body);
       if (!mounted) return;
       setState(() => _isLoading = false);
@@ -2122,7 +2122,7 @@ final phoneNumber = await StorageUtil.getMobileNumber();
 print(" rrr : $body");
     setState(() => _isLoading = true);
     try {
-      final apiService = ApiService(const FlutterSecureStorage());
+      final apiService = ApiService(SecureStorage.instance);
       
       final response =
           await apiService.post('Reservation_InsertReservation', body);
@@ -2228,7 +2228,7 @@ print(" rrr : $airTicketDetails");
 print(" rrr : $body");
     setState(() => _isLoading = true);
     try {
-      final apiService = ApiService(const FlutterSecureStorage());
+      final apiService = ApiService(SecureStorage.instance);
       final response =
           await apiService.post('Reservation_InsertReservation', body);
            print("test4 $response");

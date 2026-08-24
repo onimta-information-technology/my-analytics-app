@@ -4,7 +4,7 @@ import 'package:ballys_reservation_app/models/marketing.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 enum MarketingViewType {
   performance,
@@ -270,7 +270,7 @@ class MarketingNotifier extends StateNotifier<MarketingState> {
 
 // Providers
 final flutterSecureStorageProvider = Provider(
-  (ref) => const FlutterSecureStorage(),
+  (ref) => SecureStorage.instance,
 );
 
 final apiServiceProvider = Provider((ref) {

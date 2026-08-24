@@ -3,7 +3,7 @@ import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/gift/birthday_gift_request.dart';
 import 'package:ballys_reservation_app/models/gift/special_gift_request.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 class BirthdayGiftIncreesNotifier extends StateNotifier<BirthdayGiftIncreesState> {
   final GiftsRepository giftRepository;
@@ -134,7 +134,7 @@ final birthdayGiftIncreesProvider = StateNotifierProvider<BirthdayGiftIncreesNot
 
 // Reusing the existing providers from special_gift_provider
 final giftRepositoryIncreesProvider = Provider((ref) {
-  final apiService = ApiService(const FlutterSecureStorage());
+  final apiService = ApiService(SecureStorage.instance);
   return GiftsRepository(apiService);
 });
 

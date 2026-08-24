@@ -23,3 +23,16 @@ class NetworkException extends ApiException {
   NetworkException([String message = 'No internet connection.'])
       : super(message);
 }
+
+
+/// The device's API base URL is missing, so no request can even be addressed.
+///
+/// Raised instead of firing a hostless '/9009' at http and letting the
+/// ArgumentError fall into a generic catch — that path showed the user an
+/// empty screen with no explanation.
+class MissingApiUrlException extends ApiException {
+  MissingApiUrlException([
+    String message =
+        'App configuration was lost. Please log in again.',
+  ]) : super(message);
+}

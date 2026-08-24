@@ -2,7 +2,7 @@ import 'package:ballys_reservation_app/data/repositories/member_profile_reposito
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/member/trip_history.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 class TripHistoryNotifier extends StateNotifier<List<TripHistory>> {
   final MemberProfileRepository memberProfileRepository;
@@ -52,7 +52,7 @@ class TripHistoryNotifier extends StateNotifier<List<TripHistory>> {
 }
 
 final flutterSecureStorageProvider = Provider(
-  (ref) => const FlutterSecureStorage(),
+  (ref) => SecureStorage.instance,
 );
 
 final apiServiceProvider = Provider((ref) {

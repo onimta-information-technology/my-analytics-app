@@ -2,7 +2,7 @@ import 'package:ballys_reservation_app/data/repositories/member_profile_reposito
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/member/member_summary.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 class MemberSummaryNotifier extends StateNotifier<MemberSummaryResult> {
   final MemberProfileRepository memberProfileRepository;
@@ -34,7 +34,7 @@ class MemberSummaryNotifier extends StateNotifier<MemberSummaryResult> {
 }
 
 final flutterSecureStorageProvider =
-    Provider((ref) => const FlutterSecureStorage());
+    Provider((ref) => SecureStorage.instance);
 
 final apiServiceProvider = Provider((ref) {
   final storage = ref.read(flutterSecureStorageProvider);

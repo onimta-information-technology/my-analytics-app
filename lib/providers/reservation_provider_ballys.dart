@@ -2,7 +2,7 @@ import 'package:ballys_reservation_app/data/repositories/reservation_repository.
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/reervationBallys.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 class ReservationBallysNotifier
     extends StateNotifier<Map<String, List<ReservationBallys>>> {
@@ -82,7 +82,7 @@ void clearReservations() {
 }
 
 final flutterSecureStorageProvider = Provider(
-  (ref) => const FlutterSecureStorage(),
+  (ref) => SecureStorage.instance,
 );
 
 final apiServiceProvider = Provider((ref) {

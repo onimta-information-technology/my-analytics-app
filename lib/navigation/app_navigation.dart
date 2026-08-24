@@ -73,9 +73,9 @@ import 'package:ballys_reservation_app/screens/viewBirthdayGiftRequest.dart';
 import 'package:ballys_reservation_app/screens/view_guest_booking.dart';
 import 'package:ballys_reservation_app/wrappers/main_wrapper.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ballys_reservation_app/main.dart' show navigatorKey;
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 class AppNavigation {
   AppNavigation._();
@@ -188,7 +188,7 @@ class AppNavigation {
                         key: state.pageKey,
                         child: GuestPerformanceScreen(
                           memberProfileRepository: MemberProfileRepository(
-                            ApiService(const FlutterSecureStorage()),
+                            ApiService(SecureStorage.instance),
                           ),
                         ),
                         transitionsBuilder:
@@ -211,7 +211,7 @@ class AppNavigation {
                         key: state.pageKey,
                         child: MemberSummaryScreen(
                           memberProfileRepository: MemberProfileRepository(
-                            ApiService(const FlutterSecureStorage()),
+                            ApiService(SecureStorage.instance),
                           ),
                         ),
                         transitionsBuilder:
@@ -234,7 +234,7 @@ class AppNavigation {
                         key: state.pageKey,
                         child: TripHistoryScreen(
                           memberProfileRepository: MemberProfileRepository(
-                            ApiService(const FlutterSecureStorage()),
+                            ApiService(SecureStorage.instance),
                           ),
                         ),
                         transitionsBuilder:
@@ -374,7 +374,7 @@ class AppNavigation {
           //               key: state.pageKey,
           //               child: AirTicketsSelectionScreen(
           //                 AirportRepository(
-          //                   ApiService(const FlutterSecureStorage()),
+          //                   ApiService(SecureStorage.instance),
           //                 ),
           //                 arrivalDate: arrivalDate,
           //                 departureDate: departureDate,
@@ -468,7 +468,7 @@ class AppNavigation {
                   fullscreenDialog: false,
                   key: state.pageKey,
                   child: AirTicketsSelectionScreen(
-                    AirportRepository(ApiService(const FlutterSecureStorage())),
+                    AirportRepository(ApiService(SecureStorage.instance)),
                     arrivalDate: arrivalDate,
                     departureDate: departureDate,
                   ),
@@ -513,7 +513,7 @@ class AppNavigation {
                   fullscreenDialog: false,
                   key: state.pageKey,
                   child: AirTicketsSelectionBallysScreen(
-                    AirportRepository(ApiService(const FlutterSecureStorage())),
+                    AirportRepository(ApiService(SecureStorage.instance)),
                     arrivalDate: arrivalDate,
                     departureDate: departureDate,
                     guests: guests,
@@ -752,7 +752,7 @@ class AppNavigation {
               key: state.pageKey,
               child: BirthdayScreen(
                 giftsRepository: GiftsRepository(
-                  ApiService(const FlutterSecureStorage()),
+                  ApiService(SecureStorage.instance),
                 ),
               ),
               transitionsBuilder:
@@ -776,7 +776,7 @@ class AppNavigation {
                     child: BirthdayGiftPriceIncreaseScreen(
                       birthday: birthday,
                       giftsRepository: GiftsRepository(
-                        ApiService(const FlutterSecureStorage()),
+                        ApiService(SecureStorage.instance),
                       ),
                     ),
                     transitionsBuilder:
@@ -815,7 +815,7 @@ class AppNavigation {
               key: state.pageKey,
               child: InactiveMembersScreen(
                 inactiveMembersRepository: InactiveMembersRepository(
-                  ApiService(const FlutterSecureStorage()),
+                  ApiService(SecureStorage.instance),
                 ),
               ),
               transitionsBuilder:
@@ -877,7 +877,7 @@ class AppNavigation {
               key: state.pageKey,
               child: GiftsMainScreen(
                 giftsRepository: GiftsRepository(
-                  ApiService(const FlutterSecureStorage()),
+                  ApiService(SecureStorage.instance),
                 ),
               ),
               transitionsBuilder:
@@ -898,7 +898,7 @@ class AppNavigation {
                   key: state.pageKey,
                   child: GiftsScreen(
                     giftsRepository: GiftsRepository(
-                      ApiService(const FlutterSecureStorage()),
+                      ApiService(SecureStorage.instance),
                     ),
                   ),
                   transitionsBuilder:
@@ -921,7 +921,7 @@ class AppNavigation {
                         key: state.pageKey,
                         child: GuestGiftsScreen(
                           giftsRepository: GiftsRepository(
-                            ApiService(const FlutterSecureStorage()),
+                            ApiService(SecureStorage.instance),
                           ),
                           mid: mid,
                         ),
@@ -946,7 +946,7 @@ class AppNavigation {
                   key: state.pageKey,
                   child: SpecialGiftRequestScreen(
                     giftsRepository: GiftsRepository(
-                      ApiService(const FlutterSecureStorage()),
+                      ApiService(SecureStorage.instance),
                     ),
                   ),
                   transitionsBuilder:
@@ -967,7 +967,7 @@ class AppNavigation {
                       key: state.pageKey,
                       child: NewGiftRequest(
                         giftsRepository: GiftsRepository(
-                          ApiService(const FlutterSecureStorage()),
+                          ApiService(SecureStorage.instance),
                         ),
                       ),
                       transitionsBuilder:
@@ -994,7 +994,7 @@ class AppNavigation {
                         child: PrvGiftScreen(
                           memberId: mid,
                           giftsRepository: GiftsRepository(
-                            ApiService(const FlutterSecureStorage()),
+                            ApiService(SecureStorage.instance),
                           ),
                           iid: iid,
                            text2: text2,
@@ -1024,7 +1024,7 @@ class AppNavigation {
     final isViewOnly = extra['isViewOnly'] as bool? ?? false;
     return ViewSpecificGiftRequest(
       giftsRepository: GiftsRepository(
-        ApiService(const FlutterSecureStorage()),
+        ApiService(SecureStorage.instance),
       ),
       gift: gift,
       isPending: isPending,
@@ -1046,7 +1046,7 @@ class AppNavigation {
               key: state.pageKey,
               child: MemberMainScreen(
                 // giftsRepository: GiftsRepository(
-                //   ApiService(const FlutterSecureStorage()),
+                //   ApiService(SecureStorage.instance),
                 // ),
               ),
               transitionsBuilder:
@@ -1067,7 +1067,7 @@ class AppNavigation {
                   key: state.pageKey,
                   child: MembersScreen(
                     giftsRepository: GiftsRepository(
-                      ApiService(const FlutterSecureStorage()),
+                      ApiService(SecureStorage.instance),
                     ),
                   ),
                   transitionsBuilder:
@@ -1088,7 +1088,7 @@ class AppNavigation {
                   key: state.pageKey,
                   child: CustomerDueDiligenceScreen(
                     // giftsRepository: GiftsRepository(
-                    //   ApiService(const FlutterSecureStorage()),
+                    //   ApiService(SecureStorage.instance),
                     // ),
                   ),
                   transitionsBuilder:
@@ -1201,8 +1201,8 @@ GoRoute(
               key: state.pageKey,
               child: GuestBookingScreen(
                 bookingRepository: GuestBookingRepository(
-                  ApiService(const FlutterSecureStorage()),
-                  const FlutterSecureStorage(),
+                  ApiService(SecureStorage.instance),
+                  SecureStorage.instance,
                 ),
               ),
               transitionsBuilder:
@@ -1224,8 +1224,8 @@ GoRoute(
                   final isPending = extra['isPending'] as bool? ?? false;
                   return ViewGuestBooking(
                     bookingRepository: GuestBookingRepository(
-                      ApiService(const FlutterSecureStorage()),
-                      const FlutterSecureStorage(),
+                      ApiService(SecureStorage.instance),
+                      SecureStorage.instance,
                     ),
                     booking: booking,
                     isPending: isPending,
@@ -1328,7 +1328,7 @@ GoRoute(
                                 key: state.pageKey,
                                 child: AirTicketsSelectionScreen(
                                   AirportRepository(
-                                    ApiService(const FlutterSecureStorage()),
+                                    ApiService(SecureStorage.instance),
                                   ),
                                   arrivalDate: arrivalDate,
                                   departureDate: departureDate,
@@ -1385,7 +1385,7 @@ GoRoute(
                       key: state.pageKey,
                       child: SpecialGiftRequestScreen(
                         giftsRepository: GiftsRepository(
-                          ApiService(const FlutterSecureStorage()),
+                          ApiService(SecureStorage.instance),
                         ),
                         hideAddButton: true,
                       ),
@@ -1407,7 +1407,7 @@ GoRoute(
                           key: state.pageKey,
                           child: NewGiftRequest(
                             giftsRepository: GiftsRepository(
-                              ApiService(const FlutterSecureStorage()),
+                              ApiService(SecureStorage.instance),
                             ),
                           ),
                           transitionsBuilder:
@@ -1436,7 +1436,7 @@ GoRoute(
                               memberId: mid,
 
                               giftsRepository: GiftsRepository(
-                                ApiService(const FlutterSecureStorage()),
+                                ApiService(SecureStorage.instance),
                               ),
                               iid: iid,
                                text2: text2,
@@ -1471,7 +1471,7 @@ GoRoute(
     final isViewOnly = extra['isViewOnly'] as bool? ?? false;
     return ViewSpecificGiftRequest(
       giftsRepository: GiftsRepository(
-        ApiService(const FlutterSecureStorage()),
+        ApiService(SecureStorage.instance),
       ),
       gift: gift,
       isPending: isPending,
@@ -1491,7 +1491,7 @@ GoRoute(
                       key: state.pageKey,
                       child: BirthdayGiftRequestScreen(
                         giftsRepository: GiftsRepository(
-                          ApiService(const FlutterSecureStorage()),
+                          ApiService(SecureStorage.instance),
                         ),
                         hideAddButton: true,
                       ),
@@ -1526,7 +1526,7 @@ GoRoute(
                             final isViewOnly = extra['isViewOnly'] as bool? ?? false; 
                           return ViewBirthdayGiftRequest(
                             giftsRepository: GiftsRepository(
-                              ApiService(const FlutterSecureStorage()),
+                              ApiService(SecureStorage.instance),
                             ),
                             gift: gift,
                             isPending: isPending,
@@ -1551,7 +1551,7 @@ GoRoute(
                             child: PrvGiftScreen(
                               memberId: mid,
                               giftsRepository: GiftsRepository(
-                                ApiService(const FlutterSecureStorage()),
+                                ApiService(SecureStorage.instance),
                               ),
                               iid: iid,
                                text2: text2,

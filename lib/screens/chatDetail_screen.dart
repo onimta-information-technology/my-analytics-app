@@ -801,7 +801,7 @@ Future<void> _markMessagesAsRead() async {
   }) {
     if (text.isEmpty) return _searchHighlightedSpans(text, baseStyle);
 
-    final linkColor = onGreen ? _kLinkColorOnGreen : _kLinkColor;
+    final linkColor = onGreen ? _kLinkColor : _kLinkColor;
     final linkStyle = baseStyle.copyWith(
       color: linkColor,
       decoration: TextDecoration.underline,

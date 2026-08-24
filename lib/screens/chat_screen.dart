@@ -210,8 +210,29 @@ if (message.data['msg_type'] == '35') {
         // Unread counts drive the "@" marker, so re-check it here too.
         unawaited(_refreshGroupMentions());
       }
+      // Group tiles read their last-message preview from _groups, not
+      // _contacts, so it must be refreshed here too or it goes stale.
+      await _fetchGroupsSilently();
     } catch (e) {
-   
+
+    }
+  }
+
+  // Same as _fetchGroups but without the loading indicator, for push refreshes.
+  Future<void> _fetchGroupsSilently() async {
+    try {
+      final groups = await FirebaseApiService.fetchUserGroups();
+
+      if (!mounted) return;
+      final parsed = groups.map(ChatGroup.fromApiJson).toList();
+      setState(() {
+        _groups = parsed;
+        _groupIds = {
+          for (final g in parsed) ...[g.groupId, g.id],
+        }..removeWhere((id) => id.isEmpty);
+      });
+    } catch (e) {
+      // Silent refresh: ignore errors, next manual refresh will retry.
     }
   }
 

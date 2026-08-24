@@ -1605,26 +1605,24 @@ Future<void> _markMessagesAsRead() async {
     );
   }
 
-  /// The summary bar under a bubble: one chip per distinct emoji with its
-  /// count, the chip carrying this user's own reaction outlined. Tapping a
-  /// chip toggles that emoji, the same as picking it from the picker.
-  Widget _buildReactionChips(ChatMessage message, FontSettings fontSettings) {
+  /// The summary pill under a bubble: every emoji on the message in one
+  /// rounded pill with the total count, the way WhatsApp shows it. Tapping it
+  /// opens the per-person breakdown, where this user's own reaction can be
+  /// taken back.
+  Widget _buildReactionPill(ChatMessage message, FontSettings fontSettings) {
     final counts = message.reactionCounts;
-    final mine = message.reactionOf(
-      _currentUserUuid,
-      FirebaseApiService.appType,
-    );
+    if (counts.isEmpty) return const SizedBox.shrink();
+    final total = message.reactions.length;
 
-    // Pulled up so the chip overlaps the bottom edge of the bubble instead of
+    // Pulled up so the pill overlaps the bottom edge of the bubble instead of
     // floating under it — it is drawn after the bubble, so it sits on top.
     return Transform.translate(
       offset: const Offset(0, -12),
-      // heightFactor claims only half the chip's height in the column, so the
+      // heightFactor claims only half the pill's height in the column, so the
       // half that lies over the bubble does not also push the next message
       // down — the row keeps its normal spacing.
       child: Align(
-        alignment:
-            message.isMe ? Alignment.topRight : Alignment.topLeft,
+        alignment: message.isMe ? Alignment.topRight : Alignment.topLeft,
         widthFactor: 1,
         heightFactor: 0.5,
         child: Padding(
@@ -1632,60 +1630,316 @@ Future<void> _markMessagesAsRead() async {
             left: message.isMe ? 4 : 12,
             right: message.isMe ? 12 : 4,
           ),
-          child: Wrap(
-            spacing: 4,
-            runSpacing: 4,
-            children: counts.entries.map((entry) {
-              final isMine = entry.key == mine;
-              return GestureDetector(
-                onTap: _isSelectionMode
-                    ? null
-                    : () => _toggleReaction(message, entry.key),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: isMine ? Colors.green[50] : Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    // A ring the colour of the chat ground keeps the chip legible
-                    // where it crosses the bubble.
-                    border: Border.all(
-                      color: isMine ? Colors.green : Colors.white,
-                      width: 1.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.12),
-                        blurRadius: 3,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
+          child: GestureDetector(
+            onTap:
+                _isSelectionMode ? null : () => _showReactionDetails(message),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                // A ring the colour of the chat ground keeps the pill legible
+                // where it crosses the bubble.
+                border: Border.all(color: Colors.white, width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.12),
+                    blurRadius: 3,
+                    offset: const Offset(0, 1),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        entry.key,
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // One of each distinct emoji, in the order it was first
+                  // used, so the pill does not reshuffle as people react.
+                  ...counts.keys.map(
+                    (emoji) => Padding(
+                      padding: const EdgeInsets.only(right: 2),
+                      child: Text(
+                        emoji,
                         style: TextStyle(fontSize: fontSettings.fontSize - 2),
                       ),
-                      // A lone reaction reads fine as just the emoji.
-                      if (entry.value > 1) ...[
-                        const SizedBox(width: 3),
-                        Text(
-                          '${entry.value}',
-                          style: TextStyle(
-                            fontSize: fontSettings.fontSize - 4,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[800],
-                          ),
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
-                ),
-              );
-            }).toList(),
+                  // A lone reaction reads fine as just the emoji.
+                  if (total > 1)
+                    Text(
+                      '$total',
+                      style: TextStyle(
+                        fontSize: fontSettings.fontSize - 4,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
+        ),
+      ),
+    );
+  }
+
+  /// Who reacted, in the order the sheet lists them: this user first, then
+  /// everyone else as the backend returned them.
+  List<MessageReaction> _orderedReactions(ChatMessage message) {
+    final mine = <MessageReaction>[];
+    final others = <MessageReaction>[];
+    for (final r in message.reactions) {
+      (r.matches(_currentUserUuid, FirebaseApiService.appType) ? mine : others)
+          .add(r);
+    }
+    return [...mine, ...others];
+  }
+
+  /// A reaction's owner. The wire format carries only a uuid, so the name is
+  /// looked up in the group roster, then among the senders of messages
+  /// already loaded, then — in a 1:1 chat — the other party.
+  ({String name, bool isMe}) _reactorIdentity(MessageReaction reaction) {
+    if (reaction.matches(_currentUserUuid, FirebaseApiService.appType)) {
+      return (name: 'You', isMe: true);
+    }
+    final uuid = reaction.userUuid.toLowerCase();
+
+    // The same uuid under another app is a different person, so an appType
+    // match wins; a roster row without one is only a last resort.
+    GroupMember? loose;
+    for (final member in _groupMembers) {
+      if (member.userUuid.toLowerCase() != uuid) continue;
+      if (member.appType == reaction.appType) {
+        return (name: member.name, isMe: false);
+      }
+      loose ??= member;
+    }
+    if (loose != null) return (name: loose.name, isMe: false);
+
+    for (final message in _messages) {
+      if ((message.senderId ?? '').toLowerCase() == uuid &&
+          (message.senderName ?? '').isNotEmpty) {
+        return (name: message.senderName!, isMe: false);
+      }
+    }
+
+    if (!widget.isGroup &&
+        widget.contact.userUuid.toLowerCase() == uuid) {
+      return (name: widget.contact.name, isMe: false);
+    }
+    return (name: 'Unknown', isMe: false);
+  }
+
+  /// The breakdown behind the summary pill: a chip per emoji that filters the
+  /// list, and a row per person. This user's own row says so — tapping it
+  /// takes the reaction back, the same toggle the picker applies.
+  void _showReactionDetails(ChatMessage message) {
+    final fontSettings = ref.read(fontSettingsProvider);
+    final reactions = _orderedReactions(message);
+    if (reactions.isEmpty) return;
+    final counts = message.reactionCounts;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        // Which emoji is being filtered on is the sheet's own business —
+        // nothing outside it changes when a chip is picked.
+        String? filter;
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            final shown = filter == null
+                ? reactions
+                : reactions.where((r) => r.emoji == filter).toList();
+
+            return SafeArea(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(ctx).size.height * 0.6,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        margin: const EdgeInsets.only(top: 10, bottom: 12),
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Text(
+                        '${reactions.length} reaction'
+                        '${reactions.length > 1 ? 's' : ''}',
+                        style: TextStyle(
+                          fontSize: fontSettings.fontSize,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 44,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        children: [
+                          // Back to the emoji row, so another reaction can be
+                          // picked without closing the sheet by hand.
+                          _reactionFilterChip(
+                            selected: false,
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              _showReactionPicker(message);
+                            },
+                            child: Icon(
+                              Icons.add_reaction_outlined,
+                              size: fontSettings.fontSize + 2,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                          // Tapping the chip already filtering clears it, so
+                          // there is always a way back to the full list.
+                          ...counts.entries.map(
+                            (entry) => _reactionFilterChip(
+                              selected: filter == entry.key,
+                              onTap: () => setSheetState(
+                                () => filter =
+                                    filter == entry.key ? null : entry.key,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    entry.key,
+                                    style: TextStyle(
+                                      fontSize: fontSettings.fontSize - 2,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '${entry.value}',
+                                    style: TextStyle(
+                                      fontSize: fontSettings.fontSize - 4,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey[800],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Flexible(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.only(bottom: 8),
+                        itemCount: shown.length,
+                        itemBuilder: (context, index) {
+                          final reaction = shown[index];
+                          final who = _reactorIdentity(reaction);
+                          return ListTile(
+                            leading: CircleAvatar(
+                              radius: 20,
+                              backgroundColor: who.isMe
+                                  ? Colors.grey[400]
+                                  : ChatContact.generateColorFromName(
+                                      who.name,
+                                    ),
+                              child: who.isMe
+                                  ? const Icon(
+                                      Icons.person,
+                                      color: Colors.white,
+                                      size: 22,
+                                    )
+                                  : Text(
+                                      ChatContact.generateInitials(who.name),
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: fontSettings.fontSize - 4,
+                                      ),
+                                    ),
+                            ),
+                            title: Text(
+                              who.name,
+                              style: TextStyle(
+                                fontSize: fontSettings.fontSize - 2,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            subtitle: who.isMe
+                                ? Text(
+                                    'Tap to remove',
+                                    style: TextStyle(
+                                      fontSize: fontSettings.fontSize - 6,
+                                      color: Colors.grey[600],
+                                    ),
+                                  )
+                                : null,
+                            trailing: Text(
+                              reaction.emoji,
+                              style: TextStyle(
+                                fontSize: fontSettings.fontSize + 6,
+                              ),
+                            ),
+                            // Only your own reaction is yours to remove; the
+                            // sheet closes so the pill updating is visible.
+                            onTap: who.isMe
+                                ? () {
+                                    Navigator.pop(ctx);
+                                    _toggleReaction(message, reaction.emoji);
+                                  }
+                                : null,
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// One chip in the sheet's emoji row — the leading add-reaction button and
+  /// the per-emoji filters share the shape.
+  Widget _reactionFilterChip({
+    required Widget child,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected
+                ? Colors.green.withOpacity(0.12)
+                : Colors.grey.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected ? Colors.green : Colors.transparent,
+              width: 1.2,
+            ),
+          ),
+          child: child,
         ),
       ),
     );
@@ -3404,7 +3658,7 @@ Future<void> _markMessagesAsRead() async {
                     // Reaction summary, hung under the bubble rather than
                     // inside it so it reads the same on an image bubble.
                     if (message.hasReactions)
-                      _buildReactionChips(message, fontSettings),
+                      _buildReactionPill(message, fontSettings),
                   ],
                 ),
               ),

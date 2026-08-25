@@ -27,6 +27,18 @@ class _MemberVisitsState extends ConsumerState<MemberVisits> with ConnectivityMi
   String? _userMarketingCode;
   String? _userSalesCode;
 
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  List<Guest> get _filteredGuestList {
+    if (_searchQuery.isEmpty) return widget.guestList;
+    final query = _searchQuery.toLowerCase();
+    return widget.guestList.where((guest) {
+      return guest.mid.toLowerCase().contains(query) ||
+          guest.memberName.toLowerCase().contains(query);
+    }).toList();
+  }
+
   // final Map<String, String> ratingImageMap = {
   //   "CLASSIC": "assets/images/ratings/CLASSIC.png",
   //   "DIAMOND": "assets/images/ratings/DIAMOND.png",
@@ -59,6 +71,12 @@ class _MemberVisitsState extends ConsumerState<MemberVisits> with ConnectivityMi
     super.initState();
     _loadRatingMode();
     _loadAccessSettings();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadRatingMode() async {
@@ -219,14 +237,55 @@ class _MemberVisitsState extends ConsumerState<MemberVisits> with ConnectivityMi
       ),
       body: Stack(
         children: [
-          widget.guestList.isEmpty
-              ? Center(child: Text("No guests available for ${widget.title}"))
-              : Padding(
+          Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 0),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search by member ID or name',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {
+                                _searchQuery = '';
+                              });
+                            },
+                          )
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                    ),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value;
+                    });
+                  },
+                ),
+              ),
+              Expanded(
+                child: _filteredGuestList.isEmpty
+                    ? Center(
+                        child: Text(
+                          widget.guestList.isEmpty
+                              ? "No guests available for ${widget.title}"
+                              : "No guests match your search",
+                        ),
+                      )
+                    : Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: ListView.builder(
-                    itemCount: widget.guestList.length,
+                    itemCount: _filteredGuestList.length,
                     itemBuilder: (context, index) {
-                      final guest = widget.guestList[index];
+                      final guest = _filteredGuestList[index];
                       return Stack(
                         children: [
                           InkWell(
@@ -402,6 +461,9 @@ class _MemberVisitsState extends ConsumerState<MemberVisits> with ConnectivityMi
                     },
                   ),
                 ),
+              ),
+            ],
+          ),
           const Watermark(),
         ],
       ),

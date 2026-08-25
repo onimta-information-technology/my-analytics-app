@@ -13,6 +13,7 @@ import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/utils/current_chat_state.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/download_helper.dart';
+import 'package:ballys_reservation_app/utils/image_clipboard.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -1290,6 +1291,11 @@ Future<void> _markMessagesAsRead() async {
   }
 
   void _onAttachFilePressed() async {
+    // Checked up front so the sheet only offers Paste when there is actually
+    // an image waiting on the clipboard.
+    final bool clipboardHasImage = await ImageClipboard.hasImage();
+    if (!mounted) return;
+
     final fontSettings = ref.read(fontSettingsProvider);
     final optionStyle = TextStyle(
       fontSize: fontSettings.fontSize - 2,
@@ -1323,6 +1329,15 @@ Future<void> _markMessagesAsRead() async {
                 _pickDocuments();
               },
             ),
+            if (clipboardHasImage)
+              ListTile(
+                leading: const Icon(Icons.content_paste, color: Colors.green),
+                title: Text('Paste image', style: optionStyle),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pasteImageFromClipboard();
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.cancel, color: Colors.red),
               title: Text('Cancel', style: optionStyle),
@@ -1346,6 +1361,21 @@ Future<void> _markMessagesAsRead() async {
       }
     } catch (e) {
       _showErrorSnack('Error selecting image: $e');
+    }
+  }
+
+  /// Sends whatever image is sitting on the clipboard, through the same
+  /// upload path as a file picked from the gallery.
+  Future<void> _pasteImageFromClipboard() async {
+    try {
+      final path = await ImageClipboard.pasteImageToFile();
+      if (path == null) {
+        _showErrorSnack('No image on the clipboard');
+        return;
+      }
+      await _uploadAndSendFiles([path]);
+    } catch (e) {
+      _showErrorSnack('Error pasting image: $e');
     }
   }
 
@@ -2141,11 +2171,65 @@ Future<void> _markMessagesAsRead() async {
     return text;
   }
 
+  /// The one image a message carries, or null when it has none or carries
+  /// several — copying just one of a grid would be a guess.
+  AttachmentItem? _singleImageAttachment(ChatMessage msg) {
+    if (msg.groupedAttachments.isNotEmpty) {
+      if (msg.groupedAttachments.length != 1) return null;
+      final item = msg.groupedAttachments.first;
+      return _isImageItem(item) ? item : null;
+    }
+    if (msg.fileType != 'image') return null;
+    if (msg.attachmentUrl == null && msg.filePath == null) return null;
+    return AttachmentItem(
+      url: msg.attachmentUrl,
+      localPath: msg.filePath,
+      fileName: msg.fileName,
+      mimeType: msg.attachmentType,
+    );
+  }
+
+  bool _isImageItem(AttachmentItem item) {
+    final mime = item.mimeType?.toLowerCase();
+    if (mime != null && mime.isNotEmpty) return mime.startsWith('image');
+    final source = (item.fileName ?? item.url ?? '').toLowerCase();
+    return const ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp']
+        .any(source.split('?').first.endsWith);
+  }
+
   /// Copies the selected messages to the clipboard. One message goes across as
   /// its bare text; several are stamped with time and sender so the copied
   /// block still reads as a conversation.
   Future<void> _copySelectedMessages() async {
     final selectedIds = Set<String>.from(_selectedMessageIds);
+
+    // A lone image has no text to copy, but the picture itself can go on the
+    // clipboard, so handle that before the text path calls it uncopyable.
+    if (selectedIds.length == 1) {
+      ChatMessage? msg;
+      for (final m in _messages) {
+        if (m.id == selectedIds.first) {
+          msg = m;
+          break;
+        }
+      }
+      if (msg != null && _copyableText(msg) == null) {
+        final image = _singleImageAttachment(msg);
+        if (image != null) {
+          setState(() {
+            _selectedMessageIds.clear();
+            _reactionTargetId = null;
+          });
+          await ImageClipboard.copyImage(
+            context,
+            url: image.url,
+            localPath: image.localPath,
+            fileName: image.fileName,
+          );
+          return;
+        }
+      }
+    }
     // _messages is oldest-first, so this keeps the reading order.
     final copyable = <ChatMessage>[];
     for (final msg in _messages) {
@@ -4346,6 +4430,19 @@ class _GalleryViewState extends ConsumerState<_GalleryView> {
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.copy),
+            tooltip: 'Copy image',
+            onPressed: () {
+              final item = widget.items[_currentIndex];
+              ImageClipboard.copyImage(
+                context,
+                url: item.url,
+                localPath: item.localPath,
+                fileName: item.fileName,
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.download),
             tooltip: 'Download',

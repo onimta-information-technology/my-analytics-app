@@ -52,6 +52,46 @@ import FirebaseMessaging
           result(FlutterMethodNotImplemented)
         }
       }
+
+      // Image clipboard MethodChannel
+      let clipboardChannel = FlutterMethodChannel(name: "image_clipboard",
+                                                  binaryMessenger: controller.binaryMessenger)
+
+      clipboardChannel.setMethodCallHandler { (call: FlutterMethodCall, result: @escaping FlutterResult) in
+        if call.method == "hasImage" {
+          result(UIPasteboard.general.hasImages)
+          return
+        }
+        if call.method == "readImage" {
+          guard let image = UIPasteboard.general.image,
+                let data = image.pngData() else {
+            result(nil)
+            return
+          }
+          result(["bytes": FlutterStandardTypedData(bytes: data), "extension": "png"])
+          return
+        }
+        guard call.method == "copyImage" else {
+          result(FlutterMethodNotImplemented)
+          return
+        }
+        guard let args = call.arguments as? [String: Any],
+              let typed = args["bytes"] as? FlutterStandardTypedData,
+              !typed.data.isEmpty else {
+          result(FlutterError(code: "NO_DATA",
+                              message: "No image bytes were supplied",
+                              details: nil))
+          return
+        }
+        guard let image = UIImage(data: typed.data) else {
+          result(FlutterError(code: "COPY_FAILED",
+                              message: "Could not decode the image",
+                              details: nil))
+          return
+        }
+        UIPasteboard.general.image = image
+        result(true)
+      }
     }
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)

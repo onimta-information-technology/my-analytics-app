@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
@@ -7,6 +8,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 class DownloadHelper {
   static final Dio _dio = Dio();
+  static int? _cachedSdkInt;
 
   /// Download any file (image or PDF) and save it locally, then open it.
   static Future<void> downloadAndOpen(
@@ -15,7 +17,7 @@ class DownloadHelper {
     String fileName,
   ) async {
     try {
-      // Request storage permission
+      // Request storage permission (only needed on legacy Android)
       final bool granted = await _requestPermission();
       if (!granted) {
         if (context.mounted) {
@@ -53,19 +55,18 @@ class DownloadHelper {
         );
       }
 
-      // Determine save directory
-      final Directory dir = await _getSaveDirectory();
-      final String savePath = '${dir.path}/$fileName';
+      String savePath = '${(await _getSaveDirectory()).path}/$fileName';
 
-      // Download
-      await _dio.download(
-        url,
-        savePath,
-        onReceiveProgress: (received, total) {
-          // optional: hook for progress
-        },
-      );
+      try {
+        await _dio.download(url, savePath);
+      } on FileSystemException {
+        // Public Downloads folder is not writable (scoped storage) — fall back
+        // to the app-specific directory, which never needs a permission.
+        savePath = '${(await _appDirectory()).path}/$fileName';
+        await _dio.download(url, savePath);
+      }
 
+      final String openPath = savePath;
       if (context.mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -75,7 +76,7 @@ class DownloadHelper {
             action: SnackBarAction(
               label: 'OPEN',
               textColor: Colors.white,
-              onPressed: () => OpenFilex.open(savePath),
+              onPressed: () => OpenFilex.open(openPath),
             ),
             duration: const Duration(seconds: 5),
           ),
@@ -96,38 +97,61 @@ class DownloadHelper {
 
   static Future<Directory> _getSaveDirectory() async {
     if (Platform.isAndroid) {
-      // Use Downloads folder on Android
+      // Use the public Downloads folder when it is actually writable.
       final dir = Directory('/storage/emulated/0/Download');
-      if (await dir.exists()) return dir;
+      if (await dir.exists() && await _isWritable(dir)) return dir;
     }
-    // Fallback: app documents directory
+    return _appDirectory();
+  }
+
+  /// App-specific directory — readable/writable without any runtime permission.
+  static Future<Directory> _appDirectory() async {
+    if (Platform.isAndroid) {
+      final external = await getExternalStorageDirectory();
+      if (external != null) return external;
+    }
     return getApplicationDocumentsDirectory();
   }
 
-  static Future<bool> _requestPermission() async {
-    if (Platform.isAndroid) {
-      final androidVersion = await _getAndroidSdkVersion();
-      if (androidVersion >= 33) {
-        // Android 13+ uses granular media permissions
-        final photos = await Permission.photos.request();
-        return photos.isGranted || photos.isLimited;
-      } else {
-        final storage = await Permission.storage.request();
-        return storage.isGranted;
-      }
+  static Future<bool> _isWritable(Directory dir) async {
+    final probe = File(
+      '${dir.path}/.write_probe_${DateTime.now().microsecondsSinceEpoch}',
+    );
+    try {
+      await probe.writeAsString('');
+      await probe.delete();
+      return true;
+    } catch (_) {
+      return false;
     }
-    // iOS doesn't need explicit permission for app documents dir
-    return true;
+  }
+
+  static Future<bool> _requestPermission() async {
+    if (!Platform.isAndroid) {
+      // iOS doesn't need explicit permission for app documents dir
+      return true;
+    }
+
+    final sdkInt = await _getAndroidSdkVersion();
+
+    // Android 10+ (API 29) uses scoped storage: writing to Downloads or to the
+    // app-specific directory needs no runtime permission. READ_MEDIA_* is also
+    // stripped from the manifest, so requesting Permission.photos here would
+    // always come back denied.
+    if (sdkInt >= 29) return true;
+
+    final storage = await Permission.storage.request();
+    return storage.isGranted;
   }
 
   static Future<int> _getAndroidSdkVersion() async {
+    if (_cachedSdkInt != null) return _cachedSdkInt!;
     try {
-      if (Platform.isAndroid) {
-        // Read from system property
-        final result = await Process.run('getprop', ['ro.build.version.sdk']);
-        return int.tryParse(result.stdout.toString().trim()) ?? 0;
-      }
-    } catch (_) {}
-    return 0;
+      final info = await DeviceInfoPlugin().androidInfo;
+      _cachedSdkInt = info.version.sdkInt;
+    } catch (_) {
+      _cachedSdkInt = 0;
+    }
+    return _cachedSdkInt!;
   }
 }

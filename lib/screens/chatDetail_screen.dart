@@ -1310,6 +1310,21 @@ Future<void> _markMessagesAsRead() async {
       builder: (ctx) => SafeArea(
         child: Wrap(
           children: [
+             if (clipboardHasImage)
+              ListTile(
+                leading: const Icon(Icons.content_paste, color: Colors.green),
+                title: Text('Paste image', style: optionStyle),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pasteImageFromClipboard();
+                },
+              ),
+            if (clipboardHasImage)
+              Container(
+                width: MediaQuery.of(ctx).size.width,
+                height: 1,
+                color: Colors.black,
+              ),
             ListTile(
               leading: const Icon(Icons.photo_library, color: Colors.blue),
               title: Text('Gallery', style: optionStyle),
@@ -1329,15 +1344,7 @@ Future<void> _markMessagesAsRead() async {
                 _pickDocuments();
               },
             ),
-            if (clipboardHasImage)
-              ListTile(
-                leading: const Icon(Icons.content_paste, color: Colors.green),
-                title: Text('Paste image', style: optionStyle),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _pasteImageFromClipboard();
-                },
-              ),
+           
             ListTile(
               leading: const Icon(Icons.cancel, color: Colors.red),
               title: Text('Cancel', style: optionStyle),
@@ -4167,7 +4174,7 @@ Future<void> _markMessagesAsRead() async {
                           ),
                       ],
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 2),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

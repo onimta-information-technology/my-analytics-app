@@ -22,6 +22,7 @@ class ChatContact {
   /// Remote picture for this row — currently only groups have one, so it is
   /// null for 1:1 chats, which keep falling back to coloured initials.
   final String? avatarUrl;
+  final bool lastMessageRead;
 
   ChatContact({
     required this.id,
@@ -42,6 +43,7 @@ class ChatContact {
     required this.lastMessageSenderName,
     this.appType = 1,
     this.avatarUrl,
+    this.lastMessageRead = true,
   }) : userUuid = userUuid ?? id;
 
   // Backend sends appType as a string (e.g. "2") in some responses and an
@@ -71,6 +73,7 @@ class ChatContact {
     'lastMessageSenderName': lastMessageSenderName,
     'appType': appType,
     'avatarUrl': avatarUrl,
+    'lastMessageRead': lastMessageRead,
   };
 
   static ChatContact fromJson(Map<String, dynamic> json) => ChatContact(
@@ -94,6 +97,7 @@ class ChatContact {
     lastMessageSenderName: json['lastMessageSenderName'],
     appType: parseAppType(json['appType']),
     avatarUrl: json['avatarUrl']?.toString(),
+    lastMessageRead: json['lastMessageRead'] ?? true,
   );
 
   /// Builds a 1:1 row, which is titled after the *other* participant.
@@ -201,6 +205,7 @@ class ChatContact {
       createdAt: DateTime.parse(json['createdAt']),
       lastMessageSenderName: json['lastMessageSenderName'],
       appType: appType,
+      lastMessageRead: json['lastMessageRead'] ?? true,
     );
   }
 

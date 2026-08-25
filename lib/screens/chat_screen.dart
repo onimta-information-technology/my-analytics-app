@@ -795,6 +795,7 @@ if (message.data['msg_type'] == '35') {
           createdAt: _contacts[index].createdAt,
           lastMessageSenderName: _contacts[index].lastMessageSenderName,
           appType: _contacts[index].appType,
+          lastMessageRead: _contacts[index].lastMessageRead,
         );
       
         final filteredIndex = _filteredContacts.indexWhere(
@@ -849,6 +850,7 @@ if (message.data['msg_type'] == '35') {
             createdAt: contact.createdAt,
             lastMessageSenderName: contact.lastMessageSenderName,
             appType: contact.appType,
+            lastMessageRead: contact.lastMessageRead,
           );
 
           Navigator.of(context)
@@ -995,7 +997,15 @@ if (message.data['msg_type'] == '35') {
                         ),
                       ),
                     if (hasLastMessage && contact.unreadCount == 0)
-                      const Icon(Icons.done_all, color: Colors.grey, size: 16),
+                      Icon(
+                        contact.lastMessageRead
+                            ? Icons.done_all
+                            : Icons.done,
+                        color: contact.lastMessageRead
+                            ? Colors.blue
+                            : Colors.grey,
+                        size: 16,
+                      ),
                   ],
                 ),
         ),
@@ -1922,6 +1932,8 @@ if (message.data['msg_type'] == '35') {
                                                       lastMessageSenderName: contact
                                                           .lastMessageSenderName,
                                                       appType: contact.appType,
+                                                      lastMessageRead: contact
+                                                          .lastMessageRead,
                                                     );
 
                                                     await navigator.push(
@@ -1994,6 +2006,8 @@ if (message.data['msg_type'] == '35') {
                                                       lastMessageSenderName: contact
                                                           .lastMessageSenderName,
                                                       appType: contact.appType,
+                                                      lastMessageRead: contact
+                                                          .lastMessageRead,
                                                     );
 
                                                     await navigator.push(

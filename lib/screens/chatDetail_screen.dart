@@ -1420,7 +1420,11 @@ Future<void> _markMessagesAsRead() async {
 
   void _selectAll() {
     setState(() {
-      _selectedMessageIds.addAll(_messages.map((m) => m.id));
+      // System notices cannot be replied to, forwarded or deleted, so they
+      // stay out of the selection.
+      _selectedMessageIds.addAll(
+        _messages.where((m) => !m.isSystem).map((m) => m.id),
+      );
     });
   }
 
@@ -1529,7 +1533,7 @@ Future<void> _markMessagesAsRead() async {
 
   /// Only messages the server already knows about can be quoted — the backend
   /// rejects a replyToMessageId it cannot find in this chat.
-  bool _canReplyTo(ChatMessage msg) => msg.apiMessageId != null;
+  bool _canReplyTo(ChatMessage msg) => !msg.isSystem && msg.apiMessageId != null;
 
   // ─── Reactions ──────────────────────────────────────────────────────────────
 
@@ -3064,6 +3068,7 @@ Future<void> _markMessagesAsRead() async {
     if (!_hasSearchTerm) return const [];
     final hits = <String>[];
     for (var i = _messages.length - 1; i >= 0; i--) {
+      if (_messages[i].isSystem) continue;
       if (_searchableText(_messages[i]).contains(_searchQuery)) {
         hits.add(_messages[i].id);
       }
@@ -3553,6 +3558,11 @@ Future<void> _markMessagesAsRead() async {
   // ─── Message bubble ─────────────────────────────────────────────────────────
 
   Widget _buildMessage(ChatMessage message, FontSettings fontSettings) {
+    // Nobody wrote this one — the backend narrating a change to the chat
+    // itself. It gets the centered notice, not a bubble, and none of the
+    // gestures below.
+    if (message.isSystem) return _buildSystemMessage(message, fontSettings);
+
     final isSelected = _selectedMessageIds.contains(message.id);
     final isHighlighted =
         _highlightedMessageId == message.id || _currentSearchHit == message.id;
@@ -3947,6 +3957,48 @@ Future<void> _markMessagesAsRead() async {
       ),
       child: bubble,
     );
+  }
+
+  // ─── System message ─────────────────────────────────────────────────────────
+
+  /// A chat event the backend narrates — "Pasindu added Tharindu", a rename,
+  /// admin-only messaging toggled. Centered notice in the same style as the
+  /// date separator, since both are the conversation talking about itself.
+  Widget _buildSystemMessage(ChatMessage message, FontSettings fontSettings) {
+    final text = message.text.trim().isNotEmpty
+        ? message.text.trim()
+        : _systemEventFallback(message.systemEvent);
+    if (text.isEmpty) return const SizedBox.shrink();
+
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 32, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color.fromARGB(255, 236, 236, 226),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: const Color.fromARGB(255, 80, 80, 80),
+            fontSize: fontSettings.fontSize - 4,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Last resort when the backend sent the event but no sentence for it:
+  /// `member_added` reads as "Member added" rather than as raw slug.
+  String _systemEventFallback(String? event) {
+    final slug = event?.trim() ?? '';
+    if (slug.isEmpty) return '';
+    final words = slug.replaceAll('_', ' ').trim();
+    if (words.isEmpty) return '';
+    return words[0].toUpperCase() + words.substring(1);
   }
 
   // ─── Date separator ─────────────────────────────────────────────────────────

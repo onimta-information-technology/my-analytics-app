@@ -26,11 +26,17 @@ class StorageUtil {
     bool? otgiChk,
     bool? bgApp,
     bool? bgChk,
-    bool? marketingP,
-  ) async {
+    bool? marketingP, {
+    String? uName,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     await _clearPreservingDeviceConfig(prefs);
     await prefs.setString('userName', userName);
+    // U_Name doesn't always come back on the login response, so it's only
+    // written when present rather than clobbering it with an empty string.
+    if (uName != null && uName.isNotEmpty) {
+      await prefs.setString('uName', uName);
+    }
     await prefs.setString('userLevel', userLevel);
     await prefs.setString('salesCode', salesCode);
     await prefs.setString('marketingCode', marketingCode);
@@ -86,6 +92,11 @@ class StorageUtil {
   static Future<String?> getUserName() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('userName');
+  }
+
+  static Future<String?> getUName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('uName');
   }
 
   static Future<String?> getMobileNumber() async {

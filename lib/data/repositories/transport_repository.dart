@@ -51,7 +51,8 @@ class TransportRepository {
     required String guestName,
     required String amendment,
   }) async {
-    final userName = await StorageUtil.getUserName();
+    final userName = await StorageUtil.getUName();
+  print('Submitting amendment for $guestName ($mid) by $userName: $amendment');
     final deviceId = await DeviceId.get();
 
     final body = <String, Object?>{

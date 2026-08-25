@@ -168,6 +168,7 @@ class AuthNotifier extends StateNotifier<AuthState?> {
           _pendingUser.bgApp,
           _pendingUser.bgChk,
           _pendingUser.marketingP,
+          uName: _pendingUser.uName,
         );
 
         // Iid 646 decides whether this user's access is unrestricted. It has

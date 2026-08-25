@@ -109,6 +109,7 @@ print("hellooo");
       if (tableData['LoginStatus'] == 'True') {
         return User(
           userName: tableData['Login_By'],
+          uName: tableData['U_Name'],
           userLevel: tableData['User_Level'].toString(),
           salesCode: tableData['Sales_Code'].toString(),
           marketingCode: tableData['Marketing_Code'].toString(),

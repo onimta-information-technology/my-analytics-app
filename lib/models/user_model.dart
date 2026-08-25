@@ -1,5 +1,6 @@
 class User {
   final String userName;
+  final String? uName;
   final String userLevel;
   final String salesCode;
   final String marketingCode;
@@ -16,6 +17,7 @@ class User {
   final bool? marketingP;
   User({
     required this.userName,
+    this.uName,
     required this.userLevel,
     required this.salesCode,
     required this.marketingCode,
@@ -35,6 +37,7 @@ class User {
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       userName: json['Login_By'],
+      uName: json['U_Name'],
       userLevel: json['User_Level'],
       salesCode: json['Sales_Code'],
       marketingCode: json['Marketing_Code'],

@@ -372,6 +372,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
       // Left or deleted: this conversation no longer exists for us.
       onGroupLeftOrDeleted: () {
         if (!mounted) return;
+        FocusManager.instance.primaryFocus?.unfocus();
         _readStatusPollTimer?.cancel();
         _foregroundMessageSubscription?.cancel();
         CurrentChatState().clearCurrentChat();
@@ -3913,6 +3914,7 @@ Future<void> _markMessagesAsRead() async {
           _closeSearch();
           return false;
         }
+        FocusManager.instance.primaryFocus?.unfocus();
         return true;
       },
       child: Scaffold(
@@ -3976,6 +3978,7 @@ Future<void> _markMessagesAsRead() async {
                 leading: IconButton(
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () {
+                    FocusManager.instance.primaryFocus?.unfocus();
                     _readStatusPollTimer?.cancel();
                     _foregroundMessageSubscription?.cancel();
                     CurrentChatState().clearCurrentChat();

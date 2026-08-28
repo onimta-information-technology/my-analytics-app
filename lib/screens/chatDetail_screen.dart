@@ -10,6 +10,7 @@ import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/models/chat_group.dart';
 import 'package:ballys_reservation_app/models/chat_message.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
+import 'package:ballys_reservation_app/utils/chat_text_format.dart';
 import 'package:ballys_reservation_app/utils/current_chat_state.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/download_helper.dart';
@@ -801,7 +802,7 @@ Future<void> _markMessagesAsRead() async {
     TextStyle baseStyle, {
     required bool onGreen,
   }) {
-    if (text.isEmpty) return _searchHighlightedSpans(text, baseStyle);
+    if (text.isEmpty) return _formattedSpans(text, baseStyle);
 
     final linkColor = onGreen ? _kLinkColor : _kLinkColor;
     final linkStyle = baseStyle.copyWith(
@@ -820,10 +821,7 @@ Future<void> _markMessagesAsRead() async {
       if (link.isEmpty) continue;
       if (match.start > last) {
         spans.addAll(
-          _searchHighlightedSpans(
-            text.substring(last, match.start),
-            baseStyle,
-          ),
+          _formattedSpans(text.substring(last, match.start), baseStyle),
         );
       }
       spans.add(
@@ -836,9 +834,9 @@ Future<void> _markMessagesAsRead() async {
       last = match.start + link.length;
     }
 
-    if (spans.isEmpty) return _searchHighlightedSpans(text, baseStyle);
+    if (spans.isEmpty) return _formattedSpans(text, baseStyle);
     if (last < text.length) {
-      spans.addAll(_searchHighlightedSpans(text.substring(last), baseStyle));
+      spans.addAll(_formattedSpans(text.substring(last), baseStyle));
     }
     return spans;
   }
@@ -1529,7 +1527,9 @@ Future<void> _markMessagesAsRead() async {
 
   String _quoteTextOrAttachmentLabel(String? raw) {
     final text = raw?.trim() ?? '';
-    if (!text.startsWith('📎')) return text.isEmpty ? 'Message' : text;
+    if (!text.startsWith('📎')) {
+      return text.isEmpty ? 'Message' : stripChatFormatting(text);
+    }
 
     final fileName = text.substring('📎'.length).trim();
     if (fileName.isEmpty) return 'Attachment';
@@ -3125,6 +3125,27 @@ Future<void> _markMessagesAsRead() async {
     if (next < 0 || next >= _searchHits.length) return;
     setState(() => _searchIndex = next);
     _scrollToMessage(_searchHits[next]);
+  }
+
+  /// A run of message text with its "*bold*" markers applied and removed,
+  /// each resulting piece still going through the search highlighter so a hit
+  /// inside an emphasised word is still shown.
+  List<InlineSpan> _formattedSpans(String text, TextStyle baseStyle) {
+    final runs = splitChatFormatting(text);
+    if (runs.length == 1 && !runs.first.bold) {
+      return _searchHighlightedSpans(text, baseStyle);
+    }
+
+    final spans = <InlineSpan>[];
+    for (final run in runs) {
+      spans.addAll(
+        _searchHighlightedSpans(
+          run.text,
+          run.bold ? baseStyle.copyWith(fontWeight: FontWeight.bold) : baseStyle,
+        ),
+      );
+    }
+    return spans;
   }
 
   /// [text] with every occurrence of the search term given a yellow ground, so

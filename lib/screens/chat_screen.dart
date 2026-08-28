@@ -9,6 +9,7 @@ import 'package:ballys_reservation_app/models/chat_group.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/guest_booking_provider.dart';
 import 'package:ballys_reservation_app/screens/chatDetail_screen.dart';
+import 'package:ballys_reservation_app/utils/chat_text_format.dart';
 import 'package:ballys_reservation_app/utils/badge_sync_helper.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/mention_tracker.dart';
@@ -919,7 +920,7 @@ if (message.data['msg_type'] == '35') {
             children: [
               if (hasLastMessage) ...[
                 Text(
-                  contact.lastMessage,
+                  stripChatFormatting(contact.lastMessage),
                   style: TextStyle(
                     color: Colors.grey[600],
                     fontSize: fontSettings.fontSize - 2,
@@ -1129,7 +1130,9 @@ if (message.data['msg_type'] == '35') {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              hasLastMessage ? group.lastMessage : 'No messages yet',
+              hasLastMessage
+                  ? stripChatFormatting(group.lastMessage)
+                  : 'No messages yet',
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: fontSettings.fontSize - 2,

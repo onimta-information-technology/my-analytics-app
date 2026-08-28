@@ -87,6 +87,49 @@ class _ReservationPdfButtonBallysState
 
   String _fmtDate(DateTime dt) => DateFormat('yyyy-MM-dd').format(dt);
 
+  // ── Guest label helpers (mirrors ReservationViewScreenBallys) ─────────────
+  String _packageLabel(String raw, {bool shared = false}) {
+    final amount = raw.trim();
+    final numeric = amount.isEmpty
+        ? null
+        : double.tryParse(amount.replaceAll(RegExp(r'[^0-9.]'), ''));
+    // No package of their own — they travel on another guest's package.
+    if (numeric == null || numeric == 0) return 'Shared';
+
+    final currency = amount.replaceAll(RegExp(r'[0-9.,]'), '').trim();
+    final formatted = NumberFormat('#,##0').format(numeric);
+    final label = currency.isEmpty ? formatted : '$currency $formatted';
+    return shared ? '$label (Shared)' : label;
+  }
+
+  /// A guest's own stay, shown only when it differs from the reservation's —
+  /// the payload repeats the reservation dates on every guest, so printing
+  /// them each time would say nothing.
+  String? _stayLabel(
+    DateTime? arrival,
+    DateTime? departure,
+    DateTime? reservationArrival,
+    DateTime? reservationDeparture,
+  ) {
+    if (arrival == null && departure == null) return null;
+
+    bool sameDay(DateTime? a, DateTime? b) =>
+        a != null &&
+        b != null &&
+        a.year == b.year &&
+        a.month == b.month &&
+        a.day == b.day;
+
+    if (sameDay(arrival, reservationArrival) &&
+        sameDay(departure, reservationDeparture)) {
+      return null;
+    }
+
+    final from = arrival != null ? _fmtDate(arrival) : '-';
+    final to = departure != null ? _fmtDate(departure) : '-';
+    return '$from > $to';
+  }
+
   // ── PDF builder ──────────────────────────────────────────────────────────
   Future<pw.Document> _buildPdf() async {
     final ttf = _ttf ?? await PdfGoogleFonts.nunitoRegular();
@@ -166,18 +209,30 @@ class _ReservationPdfButtonBallysState
         );
 
     // ── Hotel Cards ──────────────────────────────────────────────────────
-    pw.Widget hotelCards() {
+    // Each card is returned as a separate MultiPage child. Wrapping them in one
+    // pw.Column makes the whole group a single unsplittable block, so as soon as
+    // it grows past the page it gets clipped and only the first card survives.
+    List<pw.Widget> hotelCards() {
       if (widget.hotels.isEmpty) {
-        return pw.Padding(
-          padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          child: pw.Text('No hotels selected.', style: valueStyle),
-        );
+        return [
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: pw.Text('No hotels selected.', style: valueStyle),
+          ),
+        ];
       }
-      return pw.Column(
-        children: widget.hotels.map((hotel) {
+      return widget.hotels.map((hotel) {
+          // A room booked over its own dates — an amendment can move one room
+          // without moving the reservation.
+          final roomStay = _stayLabel(
+            hotel.arrivalDate,
+            hotel.departureDate,
+            widget.reservation.arrDate,
+            widget.reservation.depDate,
+          );
           return pw.Container(
             width: double.infinity,
-            margin: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 6),
+            margin: const pw.EdgeInsets.symmetric(horizontal: 9, vertical: 6),
             decoration: pw.BoxDecoration(
               color: cardBg,
               borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
@@ -188,20 +243,38 @@ class _ReservationPdfButtonBallysState
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text(hotel.hotelName ?? 'N/A', style: cardTitleStyle),
+                // The rooms are listed once for the whole reservation, so each
+                // one names the guest(s) it was booked for.
+                if (hotel.assignedGuests.isNotEmpty) ...[
+                  pw.SizedBox(height: 4),
+                  pw.Text(
+                    hotel.assignedGuests.map((g) => g.label).join(', '),
+                    style: cardLabelStyle.copyWith(color: textGrey),
+                  ),
+                ],
                 pw.SizedBox(height: 5),
                 cardRichRow('Category', hotel.roomCategoryName ?? 'N/A'),
                 pw.SizedBox(height: 4),
                 cardRichRow('Room Type', hotel.roomTypeName ?? 'N/A'),
                 pw.SizedBox(height: 5),
-                pw.Row(
+                pw.Wrap(
+                  spacing: 16,
+                  runSpacing: 4,
                   children: [
                     pw.Text('Guests: ${hotel.guestCount}', style: cardValueStyle),
-                    pw.SizedBox(width: 16),
+                    if ((hotel.childrenCount ?? 0) > 0)
+                      pw.Text(
+                        'Children: ${hotel.childrenCount}',
+                        style: cardValueStyle,
+                      ),
                     pw.Text('Nights: ${hotel.noOfNights}', style: cardValueStyle),
-                    pw.SizedBox(width: 16),
                     pw.Text('Rooms: ${hotel.roomCount}', style: cardValueStyle),
                   ],
                 ),
+                if (roomStay != null) ...[
+                  pw.SizedBox(height: 5),
+                  cardRichRow('Stay', roomStay),
+                ],
                 pw.SizedBox(height: 6),
                 pw.Text(
                   'Estimated Cost: ${hotel.selectedCost ?? 'N/A'}',
@@ -210,20 +283,20 @@ class _ReservationPdfButtonBallysState
               ],
             ),
           );
-        }).toList(),
-      );
+      }).toList();
     }
 
     // ── Flight Cards ─────────────────────────────────────────────────────
-    pw.Widget flightCards() {
+    List<pw.Widget> flightCards() {
       if (widget.flights.isEmpty) {
-        return pw.Padding(
-          padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          child: pw.Text('No air tickets.', style: valueStyle),
-        );
+        return [
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: pw.Text('No air tickets.', style: valueStyle),
+          ),
+        ];
       }
-      return pw.Column(
-        children: widget.flights.map((flight) {
+      return widget.flights.map((flight) {
           final dep = flight.airports?.departure;
           final ret = flight.airports?.returnFlight;
 
@@ -249,7 +322,7 @@ class _ReservationPdfButtonBallysState
 
           return pw.Container(
             width: double.infinity,
-            margin: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 6),
+            margin: const pw.EdgeInsets.symmetric(horizontal: 9, vertical: 6),
             decoration: pw.BoxDecoration(
               color: cardBg,
               borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
@@ -311,6 +384,15 @@ class _ReservationPdfButtonBallysState
                               ),
                             ),
                           ],
+                        ),
+                      ],
+                      // Tickets are listed once for the whole reservation, so
+                      // each one names the guest(s) it was booked for.
+                      if (flight.assignedGuests.isNotEmpty) ...[
+                        pw.SizedBox(height: 6),
+                        pw.Text(
+                          flight.assignedGuests.map((g) => g.label).join(', '),
+                          style: flightLabelStyle.copyWith(color: textGrey),
                         ),
                       ],
                       pw.SizedBox(height: 6),
@@ -396,60 +478,138 @@ class _ReservationPdfButtonBallysState
               ],
             ),
           );
-        }).toList(),
-      );
+      }).toList();
     }
 
     // ── Guest Cards ──────────────────────────────────────────────────────
-    pw.Widget guestCards() {
-      if (widget.reservation.guests.isEmpty) {
-        return pw.Padding(
-          padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          child: pw.Text('No guests.', style: valueStyle),
+    // Members travelling on another guest's package are folded into that
+    // guest's `accompanyingMembers` when the payload is parsed, so walking
+    // `guests` alone prints only the package owner. Flatten owner + members
+    // into one card each, exactly the way the Approved tab lists them.
+    List<pw.Widget> guestCards() {
+      final cards = <_PdfGuestCard>[];
+
+      for (final guest in widget.reservation.guests) {
+        // Members travel on the owner's dates, so both carry the same stay.
+        final stay = _stayLabel(
+          guest.arrivalDate,
+          guest.departureDate,
+          widget.reservation.arrDate,
+          widget.reservation.depDate,
         );
+        final owner = guest.guestName.trim().isNotEmpty
+            ? guest.guestName.trim()
+            : guest.mid;
+
+        cards.add(_PdfGuestCard(
+          mid: guest.mid,
+          name: guest.guestName,
+          package: _packageLabel(
+            guest.packageAmount,
+            shared: guest.sharedPackage,
+          ),
+          hasFamilyMembers: guest.hasFamilyMembers,
+          stay: stay,
+          sharesWith: null,
+          airTicket: guest.airTicketRequisition,
+          remarks: guest.remarks,
+        ));
+
+        for (final member in guest.accompanyingMembers) {
+          cards.add(_PdfGuestCard(
+            mid: member.mid,
+            name: member.guestName,
+            package: _packageLabel(
+              member.packageAmount,
+              shared: member.sharedPackage,
+            ),
+            hasFamilyMembers: member.hasFamilyMembers,
+            stay: stay,
+            sharesWith: owner,
+            // Rooms, tickets and dates sit on the owner, so a member carries
+            // no air-ticket flag or remarks of their own.
+            airTicket: null,
+            remarks: '',
+          ));
+        }
       }
-      return pw.Column(
-        children: widget.reservation.guests.map((guest) {
-          final arr = guest.arrivalDate != null ? _fmtDate(guest.arrivalDate!) : 'N/A';
-          final dep = guest.departureDate != null ? _fmtDate(guest.departureDate!) : 'N/A';
-          return pw.Container(
-            width: double.infinity,
-            margin: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 6),
-            decoration: pw.BoxDecoration(
-              color: cardBg,
-              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-              border: pw.Border.all(color: cardBorder, width: 0.5),
-            ),
-            padding: const pw.EdgeInsets.all(12),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Text(
-                  guest.guestName.isNotEmpty ? guest.guestName : 'N/A',
-                  style: cardTitleStyle,
-                ),
+
+      if (cards.isEmpty) {
+        return [
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: pw.Text('No guests.', style: valueStyle),
+          ),
+        ];
+      }
+
+      return cards.asMap().entries.map((entry) {
+        final index = entry.key;
+        final card = entry.value;
+
+        return pw.Container(
+          width: double.infinity,
+          margin: const pw.EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+          decoration: pw.BoxDecoration(
+            color: cardBg,
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+            border: pw.Border.all(color: cardBorder, width: 0.5),
+          ),
+          padding: const pw.EdgeInsets.all(12),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                '${index + 1}. '
+                '${card.name.trim().isNotEmpty ? card.name.trim() : 'Unnamed guest'}',
+                style: cardTitleStyle,
+              ),
+              if (card.mid.trim().isNotEmpty) ...[
                 pw.SizedBox(height: 5),
-                cardRichRow('Member ID', guest.mid.isNotEmpty ? guest.mid : 'N/A'),
-                pw.SizedBox(height: 4),
-                pw.Row(
-                  children: [
-                    pw.Text('Arrival: $arr', style: cardValueStyle),
-                    pw.SizedBox(width: 16),
-                    pw.Text('Departure: $dep', style: cardValueStyle),
-                  ],
-                ),
-                pw.SizedBox(height: 4),
-                cardRichRow('Air Ticket', guest.airTicketRequisition),
-                if (guest.remarks.trim().isNotEmpty) ...[
-                  pw.SizedBox(height: 4),
-                  cardRichRow('Remarks', guest.remarks),
-                ],
+                cardRichRow('Member ID', card.mid),
               ],
-            ),
-          );
-        }).toList(),
-      );
+              // The rooms, tickets and dates sit on the guest whose package
+              // this member is on, so the card says whose that is.
+              // if (card.sharesWith != null) ...[
+              //   pw.SizedBox(height: 4),
+              //   pw.Text(
+              //     'Shared package with ${card.sharesWith}',
+              //     style: cardLabelStyle.copyWith(color: textGrey),
+              //   ),
+              // ],
+              pw.SizedBox(height: 4),
+              cardRichRow('Package', card.package),
+              pw.SizedBox(height: 4),
+              cardRichRow(
+                'Family members',
+                card.hasFamilyMembers ? 'Included' : 'Not included',
+              ),
+              // A guest travelling on their own dates rather than the
+              // reservation's.
+              if (card.stay != null) ...[
+                pw.SizedBox(height: 4),
+                cardRichRow('Stay', card.stay!),
+              ],
+              if (card.airTicket != null) ...[
+                pw.SizedBox(height: 4),
+                cardRichRow('Air Ticket', card.airTicket!),
+              ],
+              if (card.remarks.trim().isNotEmpty) ...[
+                pw.SizedBox(height: 4),
+                cardRichRow('Remarks', card.remarks.trim()),
+              ],
+            ],
+          ),
+        );
+      }).toList();
     }
+
+    // Every person on the reservation: each guest plus the members travelling
+    // on that guest's package.
+    final guestCount = widget.reservation.guests.fold<int>(
+      0,
+      (sum, guest) => sum + 1 + guest.accompanyingMembers.length,
+    );
 
     pdf.addPage(
       pw.MultiPage(
@@ -482,18 +642,18 @@ class _ReservationPdfButtonBallysState
           pw.SizedBox(height: 4),
           kv('Member ID', widget.reservation.mid),
           kv('Member Name', widget.reservation.mName),
-          kv('Rating', widget.reservation.gRating ?? 'N/A'),
+          // kv('Rating', widget.reservation.gRating ?? 'N/A'),
           kv(
             'Requested By',
             widget.reservation.reqBy.trim().isNotEmpty ? widget.reservation.reqBy : 'N/A',
           ),
           kv('Reservation Date', _fmtDate(widget.reservation.reservDate)),
-          kv(
-            'Package Amount',
-            widget.reservation.packageAmountDisplay.trim().isNotEmpty
-                ? widget.reservation.packageAmountDisplay
-                : 'N/A',
-          ),
+          // kv(
+          //   'Package Amount',
+          //   widget.reservation.packageAmountDisplay.trim().isNotEmpty
+          //       ? widget.reservation.packageAmountDisplay
+          //       : 'N/A',
+          // ),
           kv(
             'Air Ticket',
             widget.reservation.airticketReservationStatus.trim().isNotEmpty
@@ -509,21 +669,17 @@ class _ReservationPdfButtonBallysState
           divider(),
 
           if (widget.reservation.guests.isNotEmpty) ...[
-            sectionHeader('Guest Details'),
-            pw.SizedBox(height: 2),
-            pw.Padding(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 6),
-              child: guestCards(),
+            sectionHeader(
+              guestCount > 1 ? 'Guest Details ($guestCount)' : 'Guest Details',
             ),
+            pw.SizedBox(height: 2),
+            ...guestCards(),
             divider(),
           ],
 
           sectionHeader('Hotel & Room Details'),
           pw.SizedBox(height: 2),
-          pw.Padding(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 6),
-            child: hotelCards(),
-          ),
+          ...hotelCards(),
           divider(),
 
           sectionHeader('Stay Dates'),
@@ -535,10 +691,7 @@ class _ReservationPdfButtonBallysState
           if (widget.flights.isNotEmpty) ...[
             sectionHeader('Air Ticket Details'),
             pw.SizedBox(height: 2),
-            pw.Padding(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 6),
-              child: flightCards(),
-            ),
+            ...flightCards(),
             divider(),
           ],
 
@@ -627,4 +780,38 @@ class _ReservationPdfButtonBallysState
       ),
     );
   }
+}
+
+/// One printed guest row: either a guest standing on their own or a member
+/// travelling on that guest's package. Flattened out of
+/// `ReservationBallys.guests` so every person on the reservation gets a card.
+class _PdfGuestCard {
+  final String mid;
+  final String name;
+  final String package;
+  final bool hasFamilyMembers;
+
+  /// The guest's own stay, or null when it matches the reservation's.
+  final String? stay;
+
+  /// Name of the guest whose package this member is on; null for a guest
+  /// standing on their own.
+  final String? sharesWith;
+
+  /// "Yes" / "No" for a guest; null for a member, whose tickets sit on the
+  /// package owner.
+  final String? airTicket;
+
+  final String remarks;
+
+  const _PdfGuestCard({
+    required this.mid,
+    required this.name,
+    required this.package,
+    required this.hasFamilyMembers,
+    required this.stay,
+    required this.sharesWith,
+    required this.airTicket,
+    required this.remarks,
+  });
 }

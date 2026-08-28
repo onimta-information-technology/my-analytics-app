@@ -22,7 +22,8 @@ class MemberSummaryScreen extends ConsumerStatefulWidget {
   ConsumerState<MemberSummaryScreen> createState() => _GuestPerformanceState();
 }
 
-class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> with ConnectivityMixin{
+class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen>
+    with ConnectivityMixin {
   final TextEditingController _startDateController = TextEditingController();
   final TextEditingController _endDateController = TextEditingController();
   final ValueNotifier<DateTime?> startDateNotifier = ValueNotifier<DateTime?>(
@@ -33,6 +34,8 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> with Con
   );
 
   bool _isLoading = false;
+  // Text zoom level for this screen only (1x / 2x / 3x).
+  double _textScale = 1.0;
   DateTime? _dateFrom;
   DateTime? _dateTo;
 
@@ -272,17 +275,18 @@ class _GuestPerformanceState extends ConsumerState<MemberSummaryScreen> with Con
   //   final date = DateTime.parse(dateString);
   //   return DateFormat('dd MMM yyyy').format(date);
   // }
-String formatDate(String dateString) {
-  if (dateString.isEmpty || dateString == "1990-01-01") {
-    return "N/A";
+  String formatDate(String dateString) {
+    if (dateString.isEmpty || dateString == "1990-01-01") {
+      return "N/A";
+    }
+    try {
+      final date = DateTime.parse(dateString);
+      return DateFormat('dd MMM yyyy').format(date);
+    } catch (e) {
+      return "N/A";
+    }
   }
-  try {
-    final date = DateTime.parse(dateString);
-    return DateFormat('dd MMM yyyy').format(date);
-  } catch (e) {
-    return "N/A";
-  }
-}
+
   String _formatAmount(double value) {
     final formatter = NumberFormat('#,##0.##');
     return formatter.format(value);
@@ -296,7 +300,7 @@ String formatDate(String dateString) {
   //   "PLATINUM": "assets/images/ratings/PLATINUM.png",
   //   "SILVER": "assets/images/ratings/SILVER.png",
   // };
- Color _getRatingColorBallys(String? rating) {
+  Color _getRatingColorBallys(String? rating) {
     switch ((rating ?? '').toUpperCase()) {
       case 'GOLD':
         return const Color(0xFFDAA520);
@@ -359,143 +363,159 @@ String formatDate(String dateString) {
       appBar: AppBar(title: const Text("Member Summary")),
       body: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              vertical: 10.0,
-              horizontal: 15.0,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  // ── Profile Card ──────────────────────────────────────────
-                  Stack(
-                    children: [
-                      Card(
-                        elevation: 5,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 20.0,
-                            horizontal: 5.0,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 120,
-                                height: 120,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
-                                      spreadRadius: 3,
-                                      blurRadius: 5,
-                                      offset: const Offset(0, 5),
-                                    ),
-                                  ],
-                                ),
-                                child: GestureDetector(
-                                  onTap: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (BuildContext context) {
-                                        return Dialog(
-                                          backgroundColor: Colors.transparent,
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Hero(
-                                                tag: "guest-image",
-                                                child: guest.memImage2 != null
-                                                    ? Image.memory(
-                                                        base64Decode(
-                                                          guest.memImage2!,
+          MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(_textScale)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                vertical: 10.0,
+                horizontal: 15.0,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // ── Text size selector (1x / 2x / 3x) ─────────────────────
+                    MediaQuery(
+                      data: MediaQuery.of(
+                        context,
+                      ).copyWith(textScaler: TextScaler.noScaling),
+                      child: _buildTextScaleSelector(),
+                    ),
+
+                    const SizedBox(height: 12.0),
+
+                    // ── Profile Card ──────────────────────────────────────────
+                    Stack(
+                      children: [
+                        Card(
+                          elevation: 5,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 20.0,
+                              horizontal: 5.0,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 120,
+                                  height: 120,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.1),
+                                        spreadRadius: 3,
+                                        blurRadius: 5,
+                                        offset: const Offset(0, 5),
+                                      ),
+                                    ],
+                                  ),
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (BuildContext context) {
+                                          return Dialog(
+                                            backgroundColor: Colors.transparent,
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Hero(
+                                                  tag: "guest-image",
+                                                  child: guest.memImage2 != null
+                                                      ? Image.memory(
+                                                          base64Decode(
+                                                            guest.memImage2!,
+                                                          ),
+                                                          fit: BoxFit.contain,
+                                                        )
+                                                      : Image.asset(
+                                                          'assets/images/placeholder_image.jpg',
+                                                          fit: BoxFit.contain,
                                                         ),
-                                                        fit: BoxFit.contain,
-                                                      )
-                                                    : Image.asset(
-                                                        'assets/images/placeholder_image.jpg',
-                                                        fit: BoxFit.contain,
-                                                      ),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      },
-                                    );
-                                  },
-                                  child: Hero(
-                                    tag: "guest-image",
-                                    child: CircleAvatar(
-                                      radius: 70,
-                                      backgroundImage: guest.memImage2 != null
-                                          ? MemoryImage(
-                                              base64Decode(guest.memImage2!),
-                                            )
-                                          : const AssetImage(
-                                              'assets/images/placeholder_image.jpg',
+                                                ),
+                                              ],
                                             ),
-                                      backgroundColor: Colors.grey[200],
+                                          );
+                                        },
+                                      );
+                                    },
+                                    child: Hero(
+                                      tag: "guest-image",
+                                      child: CircleAvatar(
+                                        radius: 70,
+                                        backgroundImage: guest.memImage2 != null
+                                            ? MemoryImage(
+                                                base64Decode(guest.memImage2!),
+                                              )
+                                            : const AssetImage(
+                                                'assets/images/placeholder_image.jpg',
+                                              ),
+                                        backgroundColor: Colors.grey[200],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: 12),
-                              Center(
-                                child: Text(
-                                  "${guest.mid} -  ${guest.memberName}",
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 5),
-                              Center(
-                                child: Text(
-                                  "M P - ${guest.gName}",
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    color: Color.fromARGB(255, 158, 0, 148),
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 5),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(
-                                    Icons.calendar_today,
-                                    size: 16,
-                                    color: Colors.grey,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    "Last Visit on -  ${formatDate(guest.lastVisitDate ?? '')}",
+                                const SizedBox(height: 12),
+                                Center(
+                                  child: Text(
+                                    "${guest.mid} -  ${guest.memberName}",
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(
                                       fontSize: 20,
-                                      fontWeight: FontWeight.bold,
+                                      fontWeight: FontWeight.w900,
                                     ),
                                   ),
-                                ],
-                              ),
-                            ],
+                                ),
+                                const SizedBox(height: 5),
+                                Center(
+                                  child: Text(
+                                    "M P - ${guest.gName}",
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      color: Color.fromARGB(255, 158, 0, 148),
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 5),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.calendar_today,
+                                      size: 16,
+                                      color: Colors.grey,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        "Last Visit on -  ${formatDate(guest.lastVisitDate ?? '')}",
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                      Positioned(
-                        top: 10,
-                        left: 10,
-                        // child: Card(
-                        //   elevation: 5,
-                        //   shape: RoundedRectangleBorder(
-                        //     borderRadius: BorderRadius.circular(6),
-                        //   ),
+                        Positioned(
+                          top: 10,
+                          left: 10,
+                          // child: Card(
+                          //   elevation: 5,
+                          //   shape: RoundedRectangleBorder(
+                          //     borderRadius: BorderRadius.circular(6),
+                          //   ),
                           child:
                               // Padding(
                               //   padding: const EdgeInsets.all(0),
@@ -541,359 +561,392 @@ String formatDate(String dateString) {
                                 ),
                               ),
                         ),
-                    //  ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16.0),
-
-                  // ── Date Pickers ──────────────────────────────────────────
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ValueListenableBuilder<DateTime?>(
-                          valueListenable: startDateNotifier,
-                          builder: (context, value, child) {
-                            return TextFormField(
-                              controller: TextEditingController(
-                                text: value != null
-                                    ? DateFormat('yyyy-MM-dd').format(value)
-                                    : '',
-                              ),
-                              readOnly: true,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 15,
-                              ),
-                              decoration: InputDecoration(
-                                labelText: "Start Date",
-                                labelStyle: const TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 18,
-                                ),
-                                border: const OutlineInputBorder(),
-                                suffixIcon: IconButton(
-                                  icon: const Icon(Icons.calendar_today),
-                                  onPressed: () => _selectArrivalDate(context),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: ValueListenableBuilder<DateTime?>(
-                          valueListenable: endDateNotifier,
-                          builder: (context, value, child) {
-                            return TextFormField(
-                              controller: TextEditingController(
-                                text: value != null
-                                    ? DateFormat('yyyy-MM-dd').format(value)
-                                    : '',
-                              ),
-                              readOnly: true,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 15,
-                              ),
-                              decoration: InputDecoration(
-                                labelText: "End Date",
-                                labelStyle: const TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 18,
-                                ),
-                                border: const OutlineInputBorder(),
-                                suffixIcon: IconButton(
-                                  icon: const Icon(Icons.calendar_today),
-                                  onPressed: () =>
-                                      _selectDepartureDate(context),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // ── Search Button ─────────────────────────────────────────
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _getLoyalitySummary,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Constants.kSecondaryColor,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 16,
-                          horizontal: 20,
-                        ),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.search, size: 20),
-                          SizedBox(width: 10),
-                          Text(
-                            "Search",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
+                        //  ),
+                      ],
                     ),
-                  ),
 
-                  const SizedBox(height: 16.0),
+                    const SizedBox(height: 16.0),
 
-                  // ── Summary Card (from Table1) ────────────────────────────
-                  memberSummary.isEmpty
-                      ? Container(
-                          height: 200,
-                          alignment: Alignment.center,
-                          child: const Text(
-                            "No data available",
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                        )
-                      : SizedBox(
-                          width: double.infinity,
-                          child: Card(
-                            elevation: 4.0,
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Total Cash In
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        "Total Cash In (Est):",
-                                        style: TextStyle(
-                                          fontSize: fontSettings.fontSize ,
-                                          fontWeight: fontSettings.fontWeight,
-                                        ),
-                                      ),
-                                      Text(
-                                        table1 != null
-                                            ? _formatAmount(table1.mDrop)
-                                            : "N/A",
-                                        style: TextStyle(
-                                          fontSize: fontSettings.fontSize + 2,
-                                          fontWeight: fontSettings.fontWeight,
-                                          fontFamily: 'monospace',
-                                          fontFeatures: const [
-                                            FontFeature.tabularFigures(),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
+                    // ── Date Pickers ──────────────────────────────────────────
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ValueListenableBuilder<DateTime?>(
+                            valueListenable: startDateNotifier,
+                            builder: (context, value, child) {
+                              return TextFormField(
+                                controller: TextEditingController(
+                                  text: value != null
+                                      ? DateFormat('yyyy-MM-dd').format(value)
+                                      : '',
+                                ),
+                                readOnly: true,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15,
+                                ),
+                                decoration: InputDecoration(
+                                  labelText: "Start Date",
+                                  labelStyle: const TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 18,
                                   ),
-                                  const SizedBox(height: 8.0),
-
-                                  // Total Cash Out
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        "Total Cash Out (Est):",
-                                        style: TextStyle(
-                                          fontSize: fontSettings.fontSize,
-                                          fontWeight: fontSettings.fontWeight,
-                                        ),
-                                      ),
-                                      Text(
-                                        table1 != null
-                                            ? _formatAmount(table1.cashOut)
-                                            : "N/A",
-                                        style: TextStyle(
-                                          fontSize: fontSettings.fontSize +1,
-                                          fontWeight: fontSettings.fontWeight,
-                                          fontFamily: 'monospace',
-                                          fontFeatures: const [
-                                            FontFeature.tabularFigures(),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
+                                  border: const OutlineInputBorder(),
+                                  suffixIcon: IconButton(
+                                    icon: const Icon(Icons.calendar_today),
+                                    onPressed: () =>
+                                        _selectArrivalDate(context),
                                   ),
-                                  const SizedBox(height: 8.0),
-
-                                  // Win / Loss
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        table1 != null && table1.res >= 0
-                                            ? "Win (Est):"
-                                            : "Loss (Est):",
-                                        style: TextStyle(
-                                          fontSize: fontSettings.fontSize + 2,
-                                          fontWeight: fontSettings.fontWeight,
-                                          color:
-                                              table1 != null && table1.res >= 0
-                                              ? Colors.green
-                                              : Colors.red,
-                                        ),
-                                      ),
-                                      Text(
-                                        table1 != null
-                                            ? _formatAmount(table1.res.abs())
-                                            : "N/A",
-                                        style: TextStyle(
-                                          fontSize: fontSettings.fontSize + 2,
-                                          fontWeight: fontSettings.fontWeight,
-                                          fontFamily: 'monospace',
-                                          color:
-                                              table1 != null && table1.res >= 0
-                                              ? Colors.green
-                                              : Colors.red,
-                                          fontFeatures: const [
-                                            FontFeature.tabularFigures(),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
+                                ),
+                              );
+                            },
                           ),
                         ),
-
-                  // ── Detail Table (from Table) ─────────────────────────────
-                  if (memberSummary.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16.0),
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Table(
-                          border: TableBorder.all(),
-                          columnWidths: const {
-                            0: IntrinsicColumnWidth(),
-                            1: IntrinsicColumnWidth(),
-                            2: IntrinsicColumnWidth(),
-                            3: IntrinsicColumnWidth(),
-                            4: IntrinsicColumnWidth(),
-                            5: IntrinsicColumnWidth(),
-                            6: IntrinsicColumnWidth(),
-                            7: IntrinsicColumnWidth(),
-                          },
-                          children: [
-                            // Header Row
-                            TableRow(
-                              decoration: BoxDecoration(
-                                color: Constants.kPrimaryColor.withAlpha(50),
-                              ),
-                              children:
-                                  [
-                                        "DESCRIPTION",
-                                        "IN",
-                                        "OUT",
-                                        "TDATE",
-                                        "TTIME",
-                                        "CURRENCY",
-                                        "INSERT DATE",
-                                        "RN",
-                                      ]
-                                      .map(
-                                        (header) => Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Text(
-                                            header,
-                                            style: TextStyle(
-                                              fontSize: fontSettings.fontSize,
-                                              fontWeight: FontWeight.w900,
-                                            ),
-                                          ),
-                                        ),
-                                      )
-                                      .toList(),
-                            ),
-
-                            // Data Rows
-                            ...memberSummary.map((entry) {
-                              return TableRow(
-                                children: [
-                                  _tableCell(
-                                    entry.descrip.isNotEmpty
-                                        ? entry.descrip
-                                        : "N/A",
-                                    fontSettings,
-                                    align: TextAlign.start,
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: ValueListenableBuilder<DateTime?>(
+                            valueListenable: endDateNotifier,
+                            builder: (context, value, child) {
+                              return TextFormField(
+                                controller: TextEditingController(
+                                  text: value != null
+                                      ? DateFormat('yyyy-MM-dd').format(value)
+                                      : '',
+                                ),
+                                readOnly: true,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15,
+                                ),
+                                decoration: InputDecoration(
+                                  labelText: "End Date",
+                                  labelStyle: const TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 18,
                                   ),
-                                  _tableCell(
-                                    entry.inAmount.isNotEmpty
-                                        ? entry.inAmount
-                                        : "N/A",
-                                    fontSettings,
-                                    align: TextAlign.end,
-                                    mono: true,
+                                  border: const OutlineInputBorder(),
+                                  suffixIcon: IconButton(
+                                    icon: const Icon(Icons.calendar_today),
+                                    onPressed: () =>
+                                        _selectDepartureDate(context),
                                   ),
-                                  _tableCell(
-                                    entry.outAmount.isNotEmpty
-                                        ? entry.outAmount
-                                        : "N/A",
-                                    fontSettings,
-                                    align: TextAlign.end,
-                                    mono: true,
-                                  ),
-                                  _tableCell(
-                                    entry.tDate.isNotEmpty
-                                        ? entry.tDate
-                                        : "N/A",
-                                    fontSettings,
-                                    align: TextAlign.end,
-                                    mono: true,
-                                  ),
-                                  _tableCell(
-                                    entry.tTime.isNotEmpty
-                                        ? entry.tTime
-                                        : "N/A",
-                                    fontSettings,
-                                    align: TextAlign.end,
-                                    mono: true,
-                                  ),
-                                  _tableCell(
-                                    entry.cur.isNotEmpty ? entry.cur : "N/A",
-                                    fontSettings,
-                                    align: TextAlign.end,
-                                  ),
-                                  _tableCell(
-                                    entry.insertDate.isNotEmpty
-                                        ? entry.insertDate
-                                        : "N/A",
-                                    fontSettings,
-                                    align: TextAlign.end,
-                                    mono: true,
-                                  ),
-                                  _tableCell(
-                                    entry.rn.toString(),
-                                    fontSettings,
-                                    align: TextAlign.end,
-                                    mono: true,
-                                  ),
-                                ],
+                                ),
                               );
-                            }),
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // ── Search Button ─────────────────────────────────────────
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _getLoyalitySummary,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Constants.kSecondaryColor,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 16,
+                            horizontal: 20,
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.search, size: 20),
+                            SizedBox(width: 10),
+                            Text(
+                              "Search",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ],
                         ),
                       ),
                     ),
-                ],
+                    const SizedBox(height: 16.0),
+
+                    // ── Summary Card (from Table1) ────────────────────────────
+                    memberSummary.isEmpty
+                        ? Container(
+                            height: 200,
+                            alignment: Alignment.center,
+                            child: const Text(
+                              "No data available",
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          )
+                        : SizedBox(
+                            width: double.infinity,
+                            child: Card(
+                              elevation: 4.0,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Total Cash In
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            "Total Cash In (Est):",
+                                            style: TextStyle(
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Flexible(
+                                          child: Text(
+                                            table1 != null
+                                                ? _formatAmount(table1.mDrop)
+                                                : "N/A",
+                                            textAlign: TextAlign.end,
+                                            style: TextStyle(
+                                              fontSize:
+                                                  fontSettings.fontSize + 2,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
+                                              fontFamily: 'monospace',
+                                              fontFeatures: const [
+                                                FontFeature.tabularFigures(),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8.0),
+
+                                    // Total Cash Out
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            "Total Cash Out (Est):",
+                                            style: TextStyle(
+                                              fontSize: fontSettings.fontSize,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Flexible(
+                                          child: Text(
+                                            table1 != null
+                                                ? _formatAmount(table1.cashOut)
+                                                : "N/A",
+                                            textAlign: TextAlign.end,
+                                            style: TextStyle(
+                                              fontSize:
+                                                  fontSettings.fontSize + 1,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
+                                              fontFamily: 'monospace',
+                                              fontFeatures: const [
+                                                FontFeature.tabularFigures(),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8.0),
+
+                                    // Win / Loss
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            table1 != null && table1.res >= 0
+                                                ? "Win (Est):"
+                                                : "Loss (Est):",
+                                            style: TextStyle(
+                                              fontSize:
+                                                  fontSettings.fontSize + 2,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
+                                              color:
+                                                  table1 != null &&
+                                                      table1.res >= 0
+                                                  ? Colors.green
+                                                  : Colors.red,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Flexible(
+                                          child: Text(
+                                            table1 != null
+                                                ? _formatAmount(
+                                                    table1.res.abs(),
+                                                  )
+                                                : "N/A",
+                                            textAlign: TextAlign.end,
+                                            style: TextStyle(
+                                              fontSize:
+                                                  fontSettings.fontSize + 2,
+                                              fontWeight:
+                                                  fontSettings.fontWeight,
+                                              fontFamily: 'monospace',
+                                              color:
+                                                  table1 != null &&
+                                                      table1.res >= 0
+                                                  ? Colors.green
+                                                  : Colors.red,
+                                              fontFeatures: const [
+                                                FontFeature.tabularFigures(),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+
+                    // ── Detail Table (from Table) ─────────────────────────────
+                    if (memberSummary.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16.0),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Table(
+                            border: TableBorder.all(),
+                            columnWidths: const {
+                              0: IntrinsicColumnWidth(),
+                              1: IntrinsicColumnWidth(),
+                              2: IntrinsicColumnWidth(),
+                              3: IntrinsicColumnWidth(),
+                              4: IntrinsicColumnWidth(),
+                              5: IntrinsicColumnWidth(),
+                              6: IntrinsicColumnWidth(),
+                              7: IntrinsicColumnWidth(),
+                            },
+                            children: [
+                              // Header Row
+                              TableRow(
+                                decoration: BoxDecoration(
+                                  color: Constants.kPrimaryColor.withAlpha(50),
+                                ),
+                                children:
+                                    [
+                                          "DESCRIPTION",
+                                          "IN",
+                                          "OUT",
+                                          "TDATE",
+                                          "TTIME",
+                                          "CURRENCY",
+                                          "INSERT DATE",
+                                          "RN",
+                                        ]
+                                        .map(
+                                          (header) => Padding(
+                                            padding: const EdgeInsets.all(8.0),
+                                            child: Text(
+                                              header,
+                                              style: TextStyle(
+                                                fontSize: fontSettings.fontSize,
+                                                fontWeight: FontWeight.w900,
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                        .toList(),
+                              ),
+
+                              // Data Rows
+                              ...memberSummary.map((entry) {
+                                return TableRow(
+                                  children: [
+                                    _tableCell(
+                                      entry.descrip.isNotEmpty
+                                          ? entry.descrip
+                                          : "N/A",
+                                      fontSettings,
+                                      align: TextAlign.start,
+                                    ),
+                                    _tableCell(
+                                      entry.inAmount.isNotEmpty
+                                          ? entry.inAmount
+                                          : "N/A",
+                                      fontSettings,
+                                      align: TextAlign.end,
+                                      mono: true,
+                                    ),
+                                    _tableCell(
+                                      entry.outAmount.isNotEmpty
+                                          ? entry.outAmount
+                                          : "N/A",
+                                      fontSettings,
+                                      align: TextAlign.end,
+                                      mono: true,
+                                    ),
+                                    _tableCell(
+                                      entry.tDate.isNotEmpty
+                                          ? entry.tDate
+                                          : "N/A",
+                                      fontSettings,
+                                      align: TextAlign.end,
+                                      mono: true,
+                                    ),
+                                    _tableCell(
+                                      entry.tTime.isNotEmpty
+                                          ? entry.tTime
+                                          : "N/A",
+                                      fontSettings,
+                                      align: TextAlign.end,
+                                      mono: true,
+                                    ),
+                                    _tableCell(
+                                      entry.cur.isNotEmpty ? entry.cur : "N/A",
+                                      fontSettings,
+                                      align: TextAlign.end,
+                                    ),
+                                    _tableCell(
+                                      entry.insertDate.isNotEmpty
+                                          ? entry.insertDate
+                                          : "N/A",
+                                      fontSettings,
+                                      align: TextAlign.end,
+                                      mono: true,
+                                    ),
+                                    _tableCell(
+                                      entry.rn.toString(),
+                                      fontSettings,
+                                      align: TextAlign.end,
+                                      mono: true,
+                                    ),
+                                  ],
+                                );
+                              }),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -916,6 +969,54 @@ String formatDate(String dateString) {
           const Watermark(),
         ],
       ),
+    );
+  }
+
+  // ── Text scale (1x / 2x / 3x) selector ────────────────────────────────────
+  Widget _buildTextScaleSelector() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        const Text(
+          "Text Size",
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+            color: Color.fromARGB(255, 0, 0, 0),
+          ),
+        ),
+        const SizedBox(width: 10),
+        ...[1.0, 1.2, 1.3].map((scale) {
+          final bool selected = _textScale == scale;
+          return Padding(
+            padding: const EdgeInsets.only(left: 6.0),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => setState(() => _textScale = scale),
+              child: Container(
+                width: 44,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? Constants.kSecondaryColor
+                      : Colors.transparent,
+                  border: Border.all(color: Constants.kSecondaryColor),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  "${scale.toDouble()}x",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: selected ? Colors.white : Constants.kSecondaryColor,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
     );
   }
 

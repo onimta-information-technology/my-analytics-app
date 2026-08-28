@@ -422,7 +422,7 @@ class _MarketingDetailPageState extends ConsumerState<MarketingDetailPage> with 
                                     ? "WIN"
                                     : "N/A",
                                 value: NumberFormat("#,##0.##").format(
-                                  widget.winSpecificMember.toDouble() * 1000,
+                                  widget.winSpecificMember.toDouble(),
                                 ),
                                 color: _getAmountColor(
                                   widget.winSpecificMember.toDouble(),

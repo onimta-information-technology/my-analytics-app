@@ -1554,7 +1554,10 @@ if (message.data['msg_type'] == '35') {
                 _fetchGroups();
               },
             ),
-            IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
+            IconButton(
+              icon: const Icon(Icons.more_vert),
+              onPressed: _showChatOptions,
+            ),
           ],
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(100),
@@ -2092,7 +2095,7 @@ if (message.data['msg_type'] == '35') {
                       Center(
                         child: GestureDetector(
                           onTap: () async {
-                            final picked = await _pickGroupAvatar(sheetContext);
+                            final picked = await _pickAvatarImage(sheetContext);
                             if (picked != null) {
                               setModalState(() => avatarFile = picked);
                             }
@@ -2366,8 +2369,72 @@ if (message.data['msg_type'] == '35') {
     nameController.dispose();
   }
 
-  /// Lets the user pick a group avatar from the camera or gallery.
-  Future<File?> _pickGroupAvatar(BuildContext sheetContext) async {
+  /// Overflow menu for the chats list.
+  void _showChatOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.account_circle_outlined),
+              title: const Text('Change profile photo'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _updateMyAvatar();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Picks an image and uploads it as the signed-in user's chat avatar.
+  Future<void> _updateMyAvatar() async {
+    final picked = await _pickAvatarImage(context);
+    if (picked == null || !mounted) return;
+
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    scaffoldMessenger.showSnackBar(
+      const SnackBar(content: Text('Uploading profile photo...')),
+    );
+
+    final result = await FirebaseApiService.updateUserAvatar(
+      avatarPath: picked.path,
+    );
+    if (!mounted) return;
+
+    scaffoldMessenger.hideCurrentSnackBar();
+    if (result['success'] == true) {
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('Profile photo updated'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      // Contact rows carry the avatar url from the backend, so re-pull the
+      // lists to show the new picture straight away.
+      _fetchChatsFromApi();
+      _fetchGroups();
+    } else {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Could not update the profile photo: ${result['error'] ?? ''}',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  /// Lets the user pick an avatar image from the camera or gallery — used for
+  /// both the group photo and the signed-in user's own chat profile photo.
+  Future<File?> _pickAvatarImage(BuildContext sheetContext) async {
     final source = await showModalBottomSheet<ImageSource>(
       context: sheetContext,
       shape: const RoundedRectangleBorder(

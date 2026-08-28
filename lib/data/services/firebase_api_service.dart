@@ -32,6 +32,7 @@ class FirebaseApiService {
     'createChat': '/api/chats/create',
     'fetchUserChats': '/api/chats/user',
     'fetchAllUsers': '/api/users/contacts',
+     'users': '/api/users', // base; full path: /api/users/{userUuid}/avatar
     'markAsRead': '/api/chats',
     'fetchMessages': '/api/chats',
     'softDeleteMessage': '/api/chats',
@@ -556,6 +557,61 @@ print('sendChatMessage called with chatId: $chatId, text: $text, replyToMessageI
       final streamedResponse = await request.send();
       final responseBody = await streamedResponse.stream.bytesToString();
 
+      if (streamedResponse.statusCode == 200 ||
+          streamedResponse.statusCode == 201) {
+        return {'success': true, 'data': jsonDecode(responseBody)};
+      }
+      return {
+        'success': false,
+        'error': 'Server returned status code: ${streamedResponse.statusCode}',
+        'statusCode': streamedResponse.statusCode,
+        'responseBody': responseBody,
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Uploads the signed-in user's chat profile picture.
+  /// POST /api/users/{userUuid}/avatar — multipart with the appType field and
+  /// the image under `avatar`.
+  ///
+  /// Like the group avatar endpoint the backend stores the image and returns
+  /// the resulting public url, so nothing else needs calling afterwards.
+  /// `userUuid` defaults to this device's id, which is what identifies the
+  /// logged-in user everywhere else in the chat api.
+  static Future<Map<String, dynamic>> updateUserAvatar({
+    required String avatarPath,
+    String? userUuid,
+  }) async {
+    try {
+      final domain = await resolveDomain();
+      final token = await _getToken();
+      final uuid = userUuid ?? await DeviceId.get();
+      final url = Uri.parse('$domain${endpoints['users']}/$uuid/avatar');
+
+      final file = File(avatarPath);
+      if (!file.existsSync()) {
+        return {'success': false, 'error': 'Image file not found'};
+      }
+
+      final ext = avatarPath.split('.').last.toLowerCase();
+      final mimeParts = _mimeFromExtension(ext).split('/');
+
+      final request = http.MultipartRequest('POST', url)
+        ..headers['Authorization'] = 'Bearer $token'
+        ..fields['appType'] = appType.toString()
+        ..files.add(
+          await http.MultipartFile.fromPath(
+            'avatar',
+            avatarPath,
+            contentType: MediaType(mimeParts[0], mimeParts[1]),
+          ),
+        );
+
+      final streamedResponse = await request.send();
+      final responseBody = await streamedResponse.stream.bytesToString();
+print('updateUserAvatar response: ${streamedResponse.statusCode} $responseBody');
       if (streamedResponse.statusCode == 200 ||
           streamedResponse.statusCode == 201) {
         return {'success': true, 'data': jsonDecode(responseBody)};

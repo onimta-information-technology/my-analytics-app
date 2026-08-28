@@ -3127,25 +3127,33 @@ Future<void> _markMessagesAsRead() async {
     _scrollToMessage(_searchHits[next]);
   }
 
-  /// A run of message text with its "*bold*" markers applied and removed,
-  /// each resulting piece still going through the search highlighter so a hit
-  /// inside an emphasised word is still shown.
+  /// A run of message text with its "*bold*", "_italic_" and "~strike~"
+  /// markers applied and removed, each resulting piece still going through the
+  /// search highlighter so a hit inside an emphasised word is still shown.
   List<InlineSpan> _formattedSpans(String text, TextStyle baseStyle) {
     final runs = splitChatFormatting(text);
-    if (runs.length == 1 && !runs.first.bold) {
+    if (runs.length == 1 && runs.first.isPlain) {
       return _searchHighlightedSpans(text, baseStyle);
     }
 
     final spans = <InlineSpan>[];
     for (final run in runs) {
       spans.addAll(
-        _searchHighlightedSpans(
-          run.text,
-          run.bold ? baseStyle.copyWith(fontWeight: FontWeight.bold) : baseStyle,
-        ),
+        _searchHighlightedSpans(run.text, _emphasised(baseStyle, run)),
       );
     }
     return spans;
+  }
+
+  /// [baseStyle] with whatever emphasis [run] carries layered onto it.
+  TextStyle _emphasised(TextStyle baseStyle, ChatTextRun run) {
+    if (run.isPlain) return baseStyle;
+    return baseStyle.copyWith(
+      fontWeight: run.bold ? FontWeight.bold : null,
+      fontStyle: run.italic ? FontStyle.italic : null,
+      decoration: run.strike ? TextDecoration.lineThrough : null,
+      decorationColor: run.strike ? baseStyle.color : null,
+    );
   }
 
   /// [text] with every occurrence of the search term given a yellow ground, so

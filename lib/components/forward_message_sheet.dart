@@ -18,10 +18,17 @@ class ForwardTargets {
   /// Names of the picked targets, in picking order, for the result message.
   final List<String> names;
 
+  /// The picked people themselves. The forward endpoint only needs their
+  /// `{userUuid, appType}` pair, but a caller that uploads a file instead
+  /// needs a real chatId per person, which it resolves with
+  /// `FirebaseApiService.createChat(userUuid)`.
+  final List<ChatContact> contacts;
+
   const ForwardTargets({
     required this.chatIds,
     required this.users,
     required this.names,
+    this.contacts = const [],
   });
 
   bool get isEmpty => chatIds.isEmpty && users.isEmpty;
@@ -34,12 +41,17 @@ class ForwardTargets {
 /// [excludeChatId] and [excludeUserUuid] drop the conversation the message is
 /// already in — the backend rejects forwarding a message back into its own
 /// chat, so there is no point offering it.
+/// [title] and [icon] override the "Forward message" heading, so the same
+/// picker can front other send-to-a-chat actions — sharing a reservation PDF,
+/// say — instead of only message forwarding.
 Future<ForwardTargets?> showForwardMessageSheet({
   required BuildContext context,
   required FontSettings fontSettings,
   required int messageCount,
   String? excludeChatId,
   String? excludeUserUuid,
+  String? title,
+  IconData? icon,
 }) {
   return showModalBottomSheet<ForwardTargets>(
     context: context,
@@ -52,6 +64,8 @@ Future<ForwardTargets?> showForwardMessageSheet({
       messageCount: messageCount,
       excludeChatId: excludeChatId,
       excludeUserUuid: excludeUserUuid,
+      title: title,
+      icon: icon,
     ),
   );
 }
@@ -61,12 +75,16 @@ class _ForwardMessageSheet extends StatefulWidget {
   final int messageCount;
   final String? excludeChatId;
   final String? excludeUserUuid;
+  final String? title;
+  final IconData? icon;
 
   const _ForwardMessageSheet({
     required this.fontSettings,
     required this.messageCount,
     this.excludeChatId,
     this.excludeUserUuid,
+    this.title,
+    this.icon,
   });
 
   @override
@@ -181,6 +199,7 @@ class _ForwardMessageSheetState extends State<_ForwardMessageSheet> {
           ..._selectedGroups.values.map((g) => g.groupName),
           ..._selectedContacts.values.map((c) => c.name),
         ],
+        contacts: _selectedContacts.values.toList(),
       ),
     );
   }
@@ -198,13 +217,14 @@ class _ForwardMessageSheetState extends State<_ForwardMessageSheet> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.forward, color: Colors.green),
+                  Icon(widget.icon ?? Icons.forward, color: Colors.green),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      widget.messageCount > 1
-                          ? 'Forward ${widget.messageCount} messages'
-                          : 'Forward message',
+                      widget.title ??
+                          (widget.messageCount > 1
+                              ? 'Forward ${widget.messageCount} messages'
+                              : 'Forward message'),
                       style: TextStyle(
                         fontSize: _fs.fontSize + 2,
                         fontWeight: FontWeight.bold,
@@ -303,7 +323,7 @@ class _ForwardMessageSheetState extends State<_ForwardMessageSheet> {
       return Center(
         child: Text(
           _query.isEmpty
-              ? 'Nowhere to forward to'
+              ? 'No groups or contacts available'
               : 'No groups or contacts match "$_query"',
           style: TextStyle(fontSize: _fs.fontSize - 2),
         ),

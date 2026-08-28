@@ -2,8 +2,9 @@
 // FILE: lib/components/reservation_pdf_button_ballys.dart
 //
 // Ballys counterpart of reservation_pdf_button.dart — builds the same
-// approved-reservation PDF summary and shares it via WhatsApp (or any other
-// share target the OS offers), but reads off the ReservationBallys model.
+// approved-reservation PDF summary and offers two ways out of it: the OS share
+// sheet (WhatsApp and friends) and the app's own chat, where it can go to any
+// mix of 1:1 conversations and groups. Reads off the ReservationBallys model.
 //
 // USAGE in ReservationViewScreenBallys build(), Approved tab:
 //   if (selectedReservation?.requestStatus == 'Approved')
@@ -14,17 +15,24 @@
 //     ),
 // ============================================================
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
+import 'package:ballys_reservation_app/components/forward_message_sheet.dart';
+import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/reervationBallys.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_desc_ballys.dart';
+import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 
-class ReservationPdfButtonBallys extends StatefulWidget {
+class ReservationPdfButtonBallys extends ConsumerStatefulWidget {
   final ReservationBallys reservation;
   final List<HotelDescipBallys> hotels;
   final List<FlightBookingBallys> flights;
@@ -37,17 +45,21 @@ class ReservationPdfButtonBallys extends StatefulWidget {
   });
 
   @override
-  State<ReservationPdfButtonBallys> createState() =>
+  ConsumerState<ReservationPdfButtonBallys> createState() =>
       _ReservationPdfButtonBallysState();
 }
 
 class _ReservationPdfButtonBallysState
-    extends State<ReservationPdfButtonBallys> {
+    extends ConsumerState<ReservationPdfButtonBallys> {
   // ── Cached fonts (loaded once in initState) ──────────────────────────────
   pw.Font? _ttf;
   pw.Font? _ttfBold;
   pw.Font? _ttfLight;
   bool _fontsReady = false;
+
+  /// True while the picked chats are being uploaded to, so both buttons are
+  /// held shut and the chat one shows progress.
+  bool _isSendingToChat = false;
 
   @override
   void initState() {
@@ -728,15 +740,21 @@ class _ReservationPdfButtonBallysState
     return pdf;
   }
 
+  /// Reservation numbers can carry slashes and spaces, neither of which
+  /// belongs in a filename, so keep only what is safe on disk.
+  String get _pdfFileName {
+    final safe = widget.reservation.reservNo
+        .replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_')
+        .replaceAll(RegExp(r'_+'), '_');
+    return 'Reservation_${safe.isEmpty ? 'details' : safe}.pdf';
+  }
+
   // ── Share PDF via WhatsApp ────────────────────────────────────────────────
   Future<void> _sharePdfToWhatsApp(BuildContext context) async {
     try {
       final doc = await _buildPdf();
       final bytes = await doc.save();
-      await Printing.sharePdf(
-        bytes: bytes,
-        filename: 'Reservation_${widget.reservation.reservNo}.pdf',
-      );
+      await Printing.sharePdf(bytes: bytes, filename: _pdfFileName);
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -749,34 +767,162 @@ class _ReservationPdfButtonBallysState
     }
   }
 
+  // ── Send PDF into the in-app chat ─────────────────────────────────────────
+  //
+  // The chat upload endpoint takes file paths, not bytes, so the document is
+  // written to the temp directory first. Targets come from the same picker
+  // message forwarding uses, which lists groups and people together — a group
+  // already carries the chatId the upload needs, while a person is resolved to
+  // one (existing or new) with createChat.
+  Future<void> _sendPdfToChat() async {
+    if (_isSendingToChat) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final fontSettings = ref.read(fontSettingsProvider);
+
+    final targets = await showForwardMessageSheet(
+      context: context,
+      fontSettings: fontSettings,
+      messageCount: 1,
+      title: 'Send reservation PDF',
+      icon: Icons.picture_as_pdf,
+    );
+    if (targets == null || targets.isEmpty || !mounted) return;
+
+    setState(() => _isSendingToChat = true);
+
+    final sent = <String>[];
+    final failed = <String>[];
+
+    try {
+      final doc = await _buildPdf();
+      final bytes = await doc.save();
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/$_pdfFileName');
+      await file.writeAsBytes(bytes, flush: true);
+
+      // Groups first, matching the order the picker reports names in.
+      for (var i = 0; i < targets.chatIds.length; i++) {
+        final name = i < targets.names.length ? targets.names[i] : 'Group';
+        final ok = await _uploadPdfTo(targets.chatIds[i], file.path);
+        (ok ? sent : failed).add(name);
+      }
+
+      for (final contact in targets.contacts) {
+        final chatId = await FirebaseApiService.createChat(contact.userUuid);
+        if (chatId == null || chatId.isEmpty) {
+          failed.add(contact.name);
+          continue;
+        }
+        final ok = await _uploadPdfTo(chatId, file.path);
+        (ok ? sent : failed).add(contact.name);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSendingToChat = false);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Failed to send PDF: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => _isSendingToChat = false);
+
+    final message = failed.isEmpty
+        ? 'Reservation PDF sent to ${sent.join(', ')}'
+        : sent.isEmpty
+            ? 'Could not send to ${failed.join(', ')}'
+            : 'Sent to ${sent.join(', ')} · failed for ${failed.join(', ')}';
+
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: failed.isEmpty
+            ? Colors.green
+            : (sent.isEmpty ? Colors.red : Colors.orange),
+      ),
+    );
+  }
+
+  Future<bool> _uploadPdfTo(String chatId, String filePath) async {
+    try {
+      final result = await FirebaseApiService.uploadFiles(
+        chatId: chatId,
+        filePaths: [filePath],
+      );
+      return result['success'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final enabled = _fontsReady && !_isSendingToChat;
+
+    return Column(
+      children: [
+        _pdfButton(
+          color: const Color(0xFF25D366),
+          icon: Icons.share,
+          label: _fontsReady
+              ? 'SEND RESERVATION DETAILS VIA WHATSAPP'
+              : 'PREPARING...',
+          busy: !_fontsReady,
+          onPressed: enabled ? () => _sharePdfToWhatsApp(context) : null,
+        ),
+        const SizedBox(height: 10),
+        _pdfButton(
+          color: const Color(0xFF0C3B79),
+          icon: Icons.forum,
+          label: _isSendingToChat
+              ? 'SENDING...'
+              : 'SEND RESERVATION DETAILS VIA CHAT',
+          busy: _isSendingToChat || !_fontsReady,
+          onPressed: enabled ? _sendPdfToChat : null,
+        ),
+      ],
+    );
+  }
+
+  Widget _pdfButton({
+    required Color color,
+    required IconData icon,
+    required String label,
+    required bool busy,
+    required VoidCallback? onPressed,
+  }) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
-        icon: _fontsReady
-            ? const Icon(Icons.share, size: 20)
-            : const SizedBox(
+        icon: busy
+            ? const SizedBox(
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   color: Colors.white,
                 ),
-              ),
+              )
+            : Icon(icon, size: 20),
         label: Text(
-          _fontsReady ? 'SEND RESERVATION DETAILS VIA WHATSAPP' : 'PREPARING...',
+          label,
           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF25D366),
+          backgroundColor: color,
           foregroundColor: Colors.white,
-          disabledBackgroundColor: const Color(0xFF25D366).withOpacity(0.6),
+          disabledBackgroundColor: color.withOpacity(0.6),
           disabledForegroundColor: Colors.white70,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
         ),
-        onPressed: _fontsReady ? () => _sharePdfToWhatsApp(context) : null,
+        onPressed: onPressed,
       ),
     );
   }

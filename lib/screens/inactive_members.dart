@@ -45,6 +45,9 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
   List<InactiveMemberGroup> groups = [];
   InactiveMemberGroup? _selectedGroup;
 
+  /// Rating chip currently filtering the member list; null means "All".
+  String? _selectedRating;
+
   final TextEditingController _searchController = TextEditingController();
 
   int _requestId = 0;
@@ -145,6 +148,7 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
         originalGroups = result.groups;
         groups = List<InactiveMemberGroup>.from(originalGroups);
         _selectedGroup = null;
+        _selectedRating = null;
       });
     } catch (e) {
       if (!mounted || requestId != _requestId) return;
@@ -156,6 +160,7 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
         originalGroups = [];
         groups = [];
         _selectedGroup = null;
+        _selectedRating = null;
       });
     } finally {
       if (mounted && requestId == _requestId) {
@@ -169,9 +174,8 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
     _searchController.clear();
     setState(() {
       _selectedGroup = group;
-      inactiveMembers = originalMembers
-          .where((g) => (g.mGroup ?? '') == group.mGroup)
-          .toList();
+      _selectedRating = null;
+      inactiveMembers = _filteredMembers();
     });
   }
 
@@ -180,7 +184,8 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
     _searchController.clear();
     setState(() {
       _selectedGroup = null;
-      inactiveMembers = List<Guest>.from(originalMembers);
+      _selectedRating = null;
+      inactiveMembers = _filteredMembers();
       groups = List<InactiveMemberGroup>.from(originalGroups);
     });
   }
@@ -201,20 +206,65 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
         return;
       }
 
-      final source = _selectedGroup == null
-          ? originalMembers
-          : originalMembers
-                .where((g) => (g.mGroup ?? '') == _selectedGroup!.mGroup)
-                .toList();
-      inactiveMembers = query.isEmpty
-          ? List<Guest>.from(source)
-          : source
-                .where(
-                  (guest) =>
-                      guest.memberName.toLowerCase().contains(query) ||
-                      guest.mid.toLowerCase().contains(query),
-                )
-                .toList();
+      inactiveMembers = _filteredMembers();
+    });
+  }
+
+  /// Members of the current scope (one marketing group once drilled in),
+  /// before the rating chips and the search box narrow them further.
+  List<Guest> get _scopedMembers => _selectedGroup == null
+      ? List<Guest>.from(originalMembers)
+      : originalMembers
+            .where((g) => (g.mGroup ?? '') == _selectedGroup!.mGroup)
+            .toList();
+
+  /// Rating bucket a member falls in; blanks fold into 'N/A' so every member
+  /// is counted exactly once.
+  String _ratingKey(Guest guest) {
+    final rating = (guest.gRating ?? '').trim();
+    return rating.isEmpty ? 'N/A' : rating.toUpperCase();
+  }
+
+  /// Scope + search, with the rating chip deliberately left out: these are the
+  /// numbers the chips show, so tapping one lands on exactly that many rows.
+  List<Guest> _searchedMembers() {
+    final query = _searchController.text.trim().toLowerCase();
+    if (query.isEmpty) return _scopedMembers;
+    return _scopedMembers
+        .where(
+          (guest) =>
+              guest.memberName.toLowerCase().contains(query) ||
+              guest.mid.toLowerCase().contains(query),
+        )
+        .toList();
+  }
+
+  /// The list actually rendered: scope + search + the selected rating chip.
+  List<Guest> _filteredMembers() {
+    final searched = _searchedMembers();
+    if (_selectedRating == null) return searched;
+    return searched.where((g) => _ratingKey(g) == _selectedRating).toList();
+  }
+
+  /// Per-rating tally for the chip row, biggest bucket first.
+  List<MapEntry<String, int>> _ratingCounts() {
+    final counts = <String, int>{};
+    for (final guest in _searchedMembers()) {
+      counts.update(_ratingKey(guest), (value) => value + 1, ifAbsent: () => 1);
+    }
+    return counts.entries.toList()
+      ..sort(
+        (a, b) => b.value != a.value
+            ? b.value.compareTo(a.value)
+            : a.key.compareTo(b.key),
+      );
+  }
+
+  /// Taps a rating chip. Tapping the selected one clears back to 'All'.
+  void _onRatingSelected(String? rating) {
+    setState(() {
+      _selectedRating = _selectedRating == rating ? null : rating;
+      inactiveMembers = _filteredMembers();
     });
   }
 
@@ -386,6 +436,7 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
                   ),
                 ),
                 _buildAppliedFilterBar(),
+                if (!_showingGroups && !_isLoading) _buildRatingCountBar(),
                 if (_showingGroups)
                   Expanded(
                     child: groups.isEmpty
@@ -687,6 +738,99 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  /// Rating tally shown above the member cards. Each chip filters the list to
+  /// that rating; tapping the selected chip (or 'All') clears the filter.
+  Widget _buildRatingCountBar() {
+    final counts = _ratingCounts();
+    if (counts.isEmpty) return const SizedBox.shrink();
+
+    final total = counts.fold<int>(0, (sum, entry) => sum + entry.value);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Row(
+          children: [
+            _buildRatingChip(
+              label: 'ALL',
+              count: total,
+              color: Constants.kPrimaryColor,
+              selected: _selectedRating == null,
+              onTap: () => _onRatingSelected(null),
+            ),
+            for (final entry in counts)
+              _buildRatingChip(
+                label: entry.key,
+                count: entry.value,
+                color: _getRatingColor(entry.key),
+                selected: _selectedRating == entry.key,
+                onTap: () => _onRatingSelected(entry.key),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// One rating chip: the rating name with its count, filled while selected.
+  Widget _buildRatingChip({
+    required String label,
+    required int count,
+    required Color color,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: selected ? color : color.withOpacity(0.10),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: color),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: selected ? Colors.white : color,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 6,
+                  vertical: 1,
+                ),
+                decoration: BoxDecoration(
+                  color: selected ? Colors.white : color,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '$count',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: selected ? color : Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

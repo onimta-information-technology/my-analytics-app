@@ -99,7 +99,8 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
 
   Future<void> _loadAccessSettings() async {
     final salesCode = await StorageUtil.getSalesCode();
-    final userName = await StorageUtil.getUserName();
+    final userName = await StorageUtil.getUName();
+    print('Loaded access settings: salesCode=$salesCode, userName=$userName');
     if (!mounted) return;
     setState(() {
       _userSalesCode = salesCode;

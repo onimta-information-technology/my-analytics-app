@@ -1140,7 +1140,7 @@ Widget _buildViewTypeButton(
             const SizedBox(height: 6),
             // Row 2: Drop
             _buildTargetDetailRow(
-              'Drop',
+              'Actual Drop',
               _formatWithThousands(target.actualDrop),
               fontSettings,
             ),

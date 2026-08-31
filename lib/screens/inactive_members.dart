@@ -31,6 +31,10 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
   String selectedBuyInOption = "1";
   bool _isLoading = false;
 
+  /// Text size multiplier picked with the on-screen selector, mirroring the
+  /// Ballys reservation view screen.
+  double _textScale = 1.0;
+
   List<Guest> originalMembers = [];
   List<Guest> inactiveMembers = [];
 
@@ -302,8 +306,27 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
 
         body: Stack(
           children: [
-            Column(
+            // Builder so the MediaQuery below is derived from a context
+            // *inside* the Scaffold body: the outer context still carries the
+            // status bar padding that Scaffold strips for the body, and
+            // reinstating it makes ListView pad itself by that amount.
+            Builder(
+              builder: (context) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: TextScaler.linear(_textScale)),
+              child: Column(
               children: [
+                // ── Text size selector (1x / 1.2x / 1.3x) ──────────────
+                MediaQuery(
+                  data: MediaQuery.of(
+                    context,
+                  ).copyWith(textScaler: TextScaler.noScaling),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                    child: _buildTextScaleSelector(),
+                  ),
+                ),
                 if (_isFilterPanelOpen)
                   _buildFilterPanel()
                 else ...[
@@ -534,6 +557,8 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
                 ),
                 ],
               ],
+              ),
+            ),
             ),
             if (_isLoading)
               Positioned.fill(
@@ -555,6 +580,54 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
         ),
       ),
     ),
+    );
+  }
+
+  // ── Text scale (1x / 1.2x / 1.3x) selector ──────────────────────────────
+  Widget _buildTextScaleSelector() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        const Text(
+          "Text Size",
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+            color: Color.fromARGB(255, 0, 0, 0),
+          ),
+        ),
+        const SizedBox(width: 10),
+        ...[1.0, 1.2, 1.3].map((scale) {
+          final bool selected = _textScale == scale;
+          return Padding(
+            padding: const EdgeInsets.only(left: 6.0),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => setState(() => _textScale = scale),
+              child: Container(
+                width: 44,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? Constants.kSecondaryColor
+                      : Colors.transparent,
+                  border: Border.all(color: Constants.kSecondaryColor),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  "${scale.toDouble()}x",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: selected ? Colors.white : Constants.kSecondaryColor,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
     );
   }
 

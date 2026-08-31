@@ -65,6 +65,8 @@ class _ReservationViewScreenBallysState
       TextEditingController();
   String _airTicketRequisition = "No";
   bool _isLoading = false;
+  // Text zoom level for this screen only (1x / 2x / 3x).
+  double _textScale = 1.0;
   bool _isGuestLoading = false;
   bool _guestDataLoaded = false;
 
@@ -1708,11 +1710,24 @@ class _ReservationViewScreenBallysState
       ),
       body: Stack(
         children: [
-          SingleChildScrollView(
+          MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(_textScale)),
+            child: SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
+                  // ── Text size selector (1x / 2x / 3x) ────────────────
+                  MediaQuery(
+                    data: MediaQuery.of(
+                      context,
+                    ).copyWith(textScaler: TextScaler.noScaling),
+                    child: _buildTextScaleSelector(),
+                  ),
+                  const SizedBox(height: 12.0),
+
                   // ── Reservation No ───────────────────────────────────
                   TextFormField(
                     autofocus: false,
@@ -2540,6 +2555,7 @@ class _ReservationViewScreenBallysState
                 ],
               ),
             ),
+            ),
           ),
 
           // ── Full-screen loading overlay ──────────────────────────────
@@ -2559,6 +2575,54 @@ class _ReservationViewScreenBallysState
           const Watermark(),
         ],
       ),
+    );
+  }
+
+  // ── Text scale (1x / 2x / 3x) selector ────────────────────────────────────
+  Widget _buildTextScaleSelector() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        const Text(
+          "Text Size",
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+            color: Colors.grey,
+          ),
+        ),
+        const SizedBox(width: 10),
+        ...[1.0, 1.2, 1.3].map((scale) {
+          final bool selected = _textScale == scale;
+          return Padding(
+            padding: const EdgeInsets.only(left: 6.0),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => setState(() => _textScale = scale),
+              child: Container(
+                width: 44,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? Constants.kSecondaryColor
+                      : Colors.transparent,
+                  border: Border.all(color: Constants.kSecondaryColor),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  "${scale.toDouble()}x",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: selected ? Colors.white : Constants.kSecondaryColor,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
     );
   }
 }

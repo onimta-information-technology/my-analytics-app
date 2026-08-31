@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
 
 /// A single attachment item (used inside groupedAttachments).
@@ -412,12 +413,22 @@ class ChatMessage {
       );
 
   /// Create ChatMessage from API response.
+  ///
+  /// A uuid alone does not identify a person: the same device id exists under
+  /// both appTypes when one phone has both apps installed, so "mine" is the
+  /// `(senderId, senderAppType)` pair — matching how mentions and reactions
+  /// already compare identity.
   static ChatMessage fromApiResponse(
     Map<String, dynamic> json,
-    String currentUserID,
-  ) {
+    String currentUserID, {
+    int currentAppType = FirebaseApiService.appType,
+  }) {
     final senderID = json['senderId'] ?? '';
-    final isMe = senderID == currentUserID;
+    final senderAppType = ChatContact.parseAppType(
+      json['senderAppType'],
+      fallback: currentAppType,
+    );
+    final isMe = senderID == currentUserID && senderAppType == currentAppType;
 
     String? attachmentUrl;
     String? attachmentType;

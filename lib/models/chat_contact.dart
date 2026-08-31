@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 
 class ChatContact {
   final String id;
@@ -107,24 +108,35 @@ class ChatContact {
   /// guard: when the device id is missing or stale the uuid comparison used to
   /// match nothing, so the first participant won — often the current user, and
   /// the row rendered with the user's own name.
+  ///
+  /// The device id alone does not identify "you": one phone carrying both apps
+  /// registers the same uuid under both appTypes, so both participants of that
+  /// 1:1 chat would match and the title would fall back to whichever entry the
+  /// payload happened to list first. Identity is the `(uuid, appType)` pair.
   static ChatContact fromChatApiJson(
     Map<String, dynamic> json,
     String currentUserDeviceId, {
     String? currentUserName,
     Map<String, dynamic>? participantDetails,
+    int currentAppType = FirebaseApiService.appType,
   }) {
     final List<dynamic> participantsData = json['participants'] ?? [];
 
     bool isCurrentUser(dynamic participant) {
       final String uuid = participant['user_uuid'] ?? '';
       final String name = participant['name'] ?? '';
+      final int appType = parseAppType(
+        participant['appType'] ?? participant['app_type'],
+        fallback: currentAppType,
+      );
 
       if (currentUserDeviceId.isNotEmpty && uuid == currentUserDeviceId) {
-        return true;
+        return appType == currentAppType;
       }
       return currentUserName != null &&
           currentUserName.isNotEmpty &&
-          name == currentUserName;
+          name == currentUserName &&
+          appType == currentAppType;
     }
 
     String otherParticipantUuid = '';

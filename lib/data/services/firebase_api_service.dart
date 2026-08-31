@@ -282,6 +282,7 @@ class FirebaseApiService {
     List<String> messageIds,
   ) async {
     try {
+      print('markMessagesAsRead called with chatId: $chatId, messageIds: $messageIds');
       final domain = await resolveDomain();
       final deviceId = await DeviceId.get();
       final url = '$domain${endpoints['markAsRead']}/$chatId/messages/read';

@@ -330,7 +330,7 @@ class _LastThreeMonthsDetailPageState
                                         ? "WIN"
                                         : "N/A",
                                 value: NumberFormat("#,##0.##").format(
-                                  widget.winSpecificMember,
+                                  widget.winSpecificMember*1000,
                                 ),
                                 color: _getAmountColor(
                                   widget.winSpecificMember,

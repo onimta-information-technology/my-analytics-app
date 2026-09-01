@@ -9,6 +9,7 @@ import 'package:ballys_reservation_app/models/chat_group.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/guest_booking_provider.dart';
 import 'package:ballys_reservation_app/screens/chatDetail_screen.dart';
+import 'package:ballys_reservation_app/screens/profile/chat_profile_screen.dart';
 import 'package:ballys_reservation_app/utils/chat_text_format.dart';
 import 'package:ballys_reservation_app/utils/badge_sync_helper.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
@@ -52,6 +53,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   String? _errorMessage;
   String? _currentUserName;
   String? _currentUserUuid;
+  /// Signed-in user's chat profile picture, straight from
+  /// GET /api/users/{uuid}. Null until it loads, or when none is set.
+  String? _myAvatarUrl;
   String? _selectedContactId;
   bool _hasProcessedNotification = false;
 
@@ -402,6 +406,30 @@ if (message.data['msg_type'] == '35') {
       });
     } catch (e) {
 
+    }
+
+    // The cached name is only a fallback: the chat backend holds the display
+    // name and the avatar the other participants actually see.
+    await _loadMyProfile();
+  }
+
+  /// Pulls the signed-in user's chat profile so the header can show the name
+  /// and photo the backend has, and so a fresh upload shows up straight away.
+  Future<void> _loadMyProfile() async {
+    try {
+      final profile = await FirebaseApiService.fetchUserProfile(
+        userUuid: await _resolveCurrentUserId(),
+      );
+      if (profile == null || !mounted) return;
+
+      final name = profile['name']?.toString();
+      final avatar = profile['profileImageUrl']?.toString();
+      setState(() {
+        if (name != null && name.isNotEmpty) _currentUserName = name;
+        _myAvatarUrl = (avatar == null || avatar.isEmpty) ? null : avatar;
+      });
+    } catch (e) {
+      print('_loadMyProfile error: $e');
     }
   }
 
@@ -1494,26 +1522,44 @@ if (message.data['msg_type'] == '35') {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          titleSpacing: 8,
+          title: Row(
             children: [
-              // Text(_selectedContactId != null ? "Select action" : "Chats"),
-              Text(
-                "Chats",
-                style: TextStyle(
-                  fontSize: fontSettings.fontSize + 2,
-                  fontWeight: fontSettings.fontWeight,
+              // The header doubles as the profile entry point: tapping the
+              // photo runs the same upload as the overflow menu's
+              // "Change profile photo".
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _updateMyAvatar,
+                child: _buildMyAvatar(),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Chats",
+                      style: TextStyle(
+                        fontSize: fontSettings.fontSize + 2,
+                        fontWeight: fontSettings.fontWeight,
+                      ),
+                    ),
+                    if ((_currentUserName ?? '').isNotEmpty)
+                      Text(
+                        _currentUserName!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: fontSettings.fontSize - 5,
+                          fontWeight: FontWeight.normal,
+                          color: Colors.white70,
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              // Text(
-              //   _selectedContactId != null
-              //       ? "1 selected"
-              //       : "${_contacts.length} conversations",
-              //   style: const TextStyle(
-              //     fontSize: 12,
-              //     fontWeight: FontWeight.normal,
-              //   ),
-              // ),
             ],
           ),
           // backgroundColor: _selectedContactId != null
@@ -1559,7 +1605,7 @@ if (message.data['msg_type'] == '35') {
             ),
             IconButton(
               icon: const Icon(Icons.more_vert),
-              onPressed: _showChatOptions,
+              onPressed: _openMyProfile,
             ),
           ],
           bottom: PreferredSize(
@@ -2372,26 +2418,66 @@ if (message.data['msg_type'] == '35') {
     nameController.dispose();
   }
 
-  /// Overflow menu for the chats list.
-  void _showChatOptions() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (sheetContext) => SafeArea(
-        child: Wrap(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.account_circle_outlined),
-              title: const Text('Change profile photo'),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                _updateMyAvatar();
-              },
+  /// Opens the signed-in user's chat profile. It pops `true` when the photo
+  /// was replaced there, which the contact rows carry, so refresh on that.
+  Future<void> _openMyProfile() async {
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const ChatProfileScreen()),
+    );
+    if (!mounted) return;
+
+    await _loadMyProfile();
+    if (changed == true) {
+      _fetchChatsFromApi();
+      _fetchGroups();
+    }
+  }
+
+  /// Header avatar for the signed-in user: the uploaded photo when the
+  /// backend has one, the first letter of the name otherwise, with a small
+  /// camera badge so it reads as tappable.
+  Widget _buildMyAvatar() {
+    final name = (_currentUserName ?? '').trim();
+    final initial = name.isEmpty ? '?' : name[0].toUpperCase();
+    final url = _myAvatarUrl;
+
+    return SizedBox(
+      width: 38,
+      height: 38,
+      child: Stack(
+        children: [
+          CircleAvatar(
+            radius: 17,
+            backgroundColor: Colors.white,
+            backgroundImage: url == null ? null : NetworkImage(url),
+            child: url == null
+                ? Text(
+                    initial,
+                    style: const TextStyle(
+                      color: Colors.green,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )
+                : null,
+          ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.camera_alt,
+                size: 10,
+                color: Colors.green,
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -2420,7 +2506,9 @@ if (message.data['msg_type'] == '35') {
         ),
       );
       // Contact rows carry the avatar url from the backend, so re-pull the
-      // lists to show the new picture straight away.
+      // lists — and the user's own profile — to show the new picture straight
+      // away.
+      _loadMyProfile();
       _fetchChatsFromApi();
       _fetchGroups();
     } else {

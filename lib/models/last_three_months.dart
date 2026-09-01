@@ -21,14 +21,18 @@ class LastThreeMonthsPerformance {
     this.oldReg = 0,
   });
 
-  bool get isPositive => winLost >= 0;
+  /// Same sign convention as [MarketingPerformance] and the detail page:
+  /// a NEGATIVE `WinLost` is a win for us (green bar, sorted to the top);
+  /// a positive value is a loss (red bar).
+  bool get isPositive => winLost < 0;
 
   /// Total guests for this SM = new + old registrations.
   int get totalReg => newReg + oldReg;
 
-  /// Kept as its own getter (mirrors MarketingPerformance.displayValue)
-  /// so the widget's sort logic doesn't need to know the underlying field.
-  double get displayValue => winLost;
+  /// Magnitude used for sorting/labels — mirrors
+  /// MarketingPerformance.displayValue (absolute value, scaled by 100) so the
+  /// widget's sort logic doesn't need to know the underlying field or sign.
+  double get displayValue => winLost.abs() / 100;
 
   factory LastThreeMonthsPerformance.fromJson(Map<String, dynamic> json) {
     return LastThreeMonthsPerformance(
@@ -97,7 +101,9 @@ class LastThreeMonthsDetailedData {
     this.gRating,
   });
 
-  bool get isPositive => winLost >= 0;
+  /// Negative `WinLost` = win (green), matching the detail page's
+  /// `_getAmountColor` and the SM-level row above.
+  bool get isPositive => winLost < 0;
 
   /// True when this member is flagged as a new member (`G_Status == 1`).
   bool get isNewMember => gStatus == 1;

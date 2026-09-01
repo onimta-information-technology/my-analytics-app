@@ -194,6 +194,8 @@ class _LastThreeMonthsGuestCardState
       packageMembersBySm,
     );
 
+    // Same ordering as MarketingPerformanceWidget: wins (green) first,
+    // biggest win at the top; then losses (red), smallest loss first.
     final positiveData = dataWithPercentages
         .where((item) => item.item.isPositive)
         .toList()
@@ -202,7 +204,7 @@ class _LastThreeMonthsGuestCardState
     final negativeData = dataWithPercentages
         .where((item) => !item.item.isPositive)
         .toList()
-      ..sort((a, b) => b.item.displayValue.compareTo(a.item.displayValue));
+      ..sort((a, b) => a.item.displayValue.compareTo(b.item.displayValue));
 
     final sortedData = [...positiveData, ...negativeData];
 

@@ -628,6 +628,35 @@ print('updateUserAvatar response: ${streamedResponse.statusCode} $responseBody')
     }
   }
 
+  /// Reads a chat user's profile — `name`, `profileImageUrl`, `phoneNo` and
+  /// the rest of the record the chat backend keeps.
+  /// GET /api/users/{userUuid}?appType=2, defaulting to the signed-in user.
+  ///
+  /// Returns the `user` object out of the response, or null when the lookup
+  /// fails so callers can keep showing whatever they had cached.
+  static Future<Map<String, dynamic>?> fetchUserProfile({
+    String? userUuid,
+  }) async {
+    try {
+      final domain = await resolveDomain();
+      final uuid = userUuid ?? await DeviceId.get();
+      final url = '$domain${endpoints['users']}/$uuid?appType=$appType';
+      final result = await getRequest(url);
+
+      if (result['success'] == true) {
+        final data = result['data'];
+        if (data is Map && data['user'] is Map) {
+          return Map<String, dynamic>.from(data['user'] as Map);
+        }
+      }
+      print('fetchUserProfile failed: $result');
+      return null;
+    } catch (e) {
+      print('fetchUserProfile exception: $e');
+      return null;
+    }
+  }
+
   /// Adds members to a group. Admins only. Users already in the group are
   /// silently skipped by the backend.
   static Future<Map<String, dynamic>> addGroupMembers({

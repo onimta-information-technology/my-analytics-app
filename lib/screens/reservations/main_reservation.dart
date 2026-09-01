@@ -19,6 +19,10 @@ class _ReservationMainScreenState extends ConsumerState<ReservationMainScreen>
   /// Transport is a Bellagio-only (bty.world) feature.
   bool _isBellagio = false;
 
+  /// Group Reservation is a Ballys-only card. Resolved up front rather than on
+  /// tap, since it decides whether the card is drawn at all.
+  bool _isBallys = false;
+
   @override
   void initState() {
     super.initState();
@@ -27,8 +31,12 @@ class _ReservationMainScreenState extends ConsumerState<ReservationMainScreen>
 
   Future<void> _resolveLocation() async {
     final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+    final isBallys = await _isBallysLocation();
     if (!mounted) return;
-    setState(() => _isBellagio = apiUrl.contains('bty.world'));
+    setState(() {
+      _isBellagio = apiUrl.contains('bty.world');
+      _isBallys = isBallys;
+    });
   }
 
   /// True when the logged-in device/user is on the Ballys location, which
@@ -151,6 +159,50 @@ class _ReservationMainScreenState extends ConsumerState<ReservationMainScreen>
                     ),
                   ],
                 ),
+
+                // ── Group Reservation (Ballys only) ──────────────────────
+                // For a party arriving together: one lead guest plus an
+                // uploaded sheet naming everybody else.
+                if (_isBallys)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            context.go(
+                              '/reservationMain/group-reservation-ballys',
+                            );
+                          },
+                          child: Card(
+                            color: const Color.fromARGB(255, 103, 58, 183),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              child: Column(
+                                children: const [
+                                  Icon(
+                                    Icons.groups,
+                                    size: 80,
+                                    color: Colors.white,
+                                  ),
+                                  Text(
+                                    'Group Reservation',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 16.0,
+                                      fontWeight: FontWeight.normal,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Keeps the card the same width as the cards above.
+                      const Expanded(child: SizedBox()),
+                    ],
+                  ),
 
                 // ── Transport (Bellagio only) ────────────────────────────
                 if (_isBellagio)

@@ -53,6 +53,7 @@ import 'package:ballys_reservation_app/screens/profile/trip_history_screen.dart'
 import 'package:ballys_reservation_app/screens/report_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/air_tickets_selection_ballys_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/air_tickets_selection_screen.dart';
+import 'package:ballys_reservation_app/screens/reservations/group_reservation_ballys_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/main_reservation.dart';
 import 'package:ballys_reservation_app/screens/reservations/air_ticket_amendment_ballys_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/hotel_amendment_ballys_screen.dart';
@@ -633,6 +634,23 @@ class AppNavigation {
         fullscreenDialog: false,
         key: state.pageKey,
         child: const QuickReservationBallysScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+            child: child,
+          );
+        },
+      ),
+    ),
+
+    // Group reservation (Ballys only) — a party arriving together, keyed in as
+    // one lead guest plus an uploaded sheet of everybody else.
+    GoRoute(
+      path: 'group-reservation-ballys',
+      pageBuilder: (context, state) => CustomTransitionPage(
+        fullscreenDialog: false,
+        key: state.pageKey,
+        child: const GroupReservationBallysScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(
             opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),

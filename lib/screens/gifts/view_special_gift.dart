@@ -63,6 +63,10 @@ class _NewGiftRequestState extends ConsumerState<ViewSpecificGiftRequest> with C
   final TextEditingController _whatsappNumberController =
       TextEditingController();
 
+  /// Text size multiplier picked with the on-screen selector, mirroring the
+  /// inactive members and Ballys reservation view screens.
+  double _textScale = 1.0;
+
   String? _selectedGift;
   String _remarks = "";
   String? userName = "";
@@ -743,6 +747,54 @@ Widget _buildPendingIssuedButtons(FontSettings fontSettings) {
     ],
   );
 }
+  // ── Text scale (1x / 1.2x / 1.3x) selector ──────────────────────────────
+  Widget _buildTextScaleSelector() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        const Text(
+          "Text Size",
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+            color: Color.fromARGB(255, 0, 0, 0),
+          ),
+        ),
+        const SizedBox(width: 10),
+        ...[1.0, 1.2, 1.3].map((scale) {
+          final bool selected = _textScale == scale;
+          return Padding(
+            padding: const EdgeInsets.only(left: 6.0),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => setState(() => _textScale = scale),
+              child: Container(
+                width: 44,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? Constants.kSecondaryColor
+                      : Colors.transparent,
+                  border: Border.all(color: Constants.kSecondaryColor),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  "${scale.toDouble()}x",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: selected ? Colors.white : Constants.kSecondaryColor,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final fontSettings = ref.watch(fontSettingsProvider);
@@ -846,9 +898,33 @@ Widget _buildPendingIssuedButtons(FontSettings fontSettings) {
         },
         child: Stack(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: SingleChildScrollView(
+            // Builder so the MediaQuery below is derived from a context
+            // *inside* the Scaffold body: the outer context still carries the
+            // status bar padding that Scaffold strips for the body, and
+            // reinstating it makes the scroll view pad itself by that amount.
+            Builder(
+              builder: (context) => MediaQuery(
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(textScaler: TextScaler.linear(_textScale)),
+                child: Column(
+                  children: [
+                    // ── Text size selector (1x / 1.2x / 1.3x) ──────────────
+                    // Kept at its own size so scaling up does not push the
+                    // selector itself off the row.
+                    MediaQuery(
+                      data: MediaQuery.of(
+                        context,
+                      ).copyWith(textScaler: TextScaler.noScaling),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        child: _buildTextScaleSelector(),
+                      ),
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: SingleChildScrollView(
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -2650,8 +2726,13 @@ Row(
                         _buildReverseButton(fontSettings, true),
 
                       const SizedBox(height: 16),
-                    ],
-                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

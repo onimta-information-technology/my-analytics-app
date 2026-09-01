@@ -4,6 +4,7 @@ import 'package:ballys_reservation_app/components/user_avatar.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/models/chat_group.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
+import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:flutter/material.dart';
 
 /// Where the user chose to forward to, in the shape
@@ -21,8 +22,9 @@ class ForwardTargets {
 
   /// The picked people themselves. The forward endpoint only needs their
   /// `{userUuid, appType}` pair, but a caller that uploads a file instead
-  /// needs a real chatId per person, which it resolves with
-  /// `FirebaseApiService.createChat(userUuid)`.
+  /// needs a real chatId per person: `chatUuid` carries the existing 1:1 chat
+  /// when there is one, and is empty for someone never messaged before, who
+  /// has to be resolved with `FirebaseApiService.createChatDetailed`.
   final List<ChatContact> contacts;
 
   const ForwardTargets({
@@ -134,6 +136,17 @@ class _ForwardMessageSheetState extends State<_ForwardMessageSheet> {
       failure = e;
     }
 
+    // People come out of the user directory without a chat of their own, but
+    // a caller that uploads a file needs a chatId. The 1:1 chats the user
+    // already has carry one, so pair them up here and leave only the people
+    // never messaged before to be resolved at send time.
+    Map<String, String> existingChats = const {};
+    try {
+      existingChats = await _existingOneToOneChats();
+    } catch (_) {
+      // Best effort: without it the sender just opens the chat itself.
+    }
+
     try {
       final data = await FirebaseApiService.fetchAllUsers();
       final users = (data['users'] as List<dynamic>?) ?? [];
@@ -141,10 +154,11 @@ class _ForwardMessageSheetState extends State<_ForwardMessageSheet> {
           .whereType<Map<String, dynamic>>()
           .map((user) {
             final name = user['name'] ?? user['firstName'] ?? 'Unknown';
+            final userUuid = (user['userUuid'] ?? user['id'] ?? '').toString();
             return ChatContact(
               id: user['id'] ?? user['userUuid'] ?? '',
-              chatUuid: '',
-              userUuid: user['userUuid'] ?? user['id'] ?? '',
+              chatUuid: existingChats[userUuid] ?? '',
+              userUuid: userUuid,
               name: name,
               firstName: user['firstName'] ?? name,
               lastMessage: '',
@@ -175,6 +189,34 @@ class _ForwardMessageSheetState extends State<_ForwardMessageSheet> {
           ? 'Could not load your chats and contacts'
           : null;
     });
+  }
+
+  /// userUuid -> chatId for every 1:1 chat the user is already in.
+  ///
+  /// Keyed on the *other* participant, so the current device is skipped, and
+  /// only two-person chats count — a group's id is picked up from the groups
+  /// list instead.
+  Future<Map<String, String>> _existingOneToOneChats() async {
+    final data = await FirebaseApiService.fetchUserChats();
+    final chats = (data['chats'] as List<dynamic>?) ?? const [];
+    final deviceId = await DeviceId.get();
+    final byUser = <String, String>{};
+
+    for (final chat in chats.whereType<Map<String, dynamic>>()) {
+      final chatId = (chat['chatUuid'] ?? chat['id'] ?? '').toString();
+      final participants = (chat['participants'] as List<dynamic>?) ?? const [];
+      if (chatId.isEmpty || participants.length != 2) continue;
+
+      for (final participant in participants.whereType<Map>()) {
+        final uuid =
+            (participant['user_uuid'] ?? participant['userUuid'] ?? '')
+                .toString();
+        if (uuid.isEmpty || uuid == deviceId) continue;
+        byUser[uuid] = chatId;
+      }
+    }
+
+    return byUser;
   }
 
   bool _matches(String value) =>

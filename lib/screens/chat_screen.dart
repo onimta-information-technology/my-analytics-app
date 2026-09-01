@@ -862,7 +862,10 @@ if (message.data['msg_type'] == '35') {
             return;
           }
 
-          final chatId = await FirebaseApiService.createChat(contact.userUuid);
+          final chatId = await FirebaseApiService.createChat(
+            contact.userUuid,
+            userAppType: contact.appType,
+          );
 
           final contactWithChatId = ChatContact(
             id: contact.id,
@@ -1939,6 +1942,8 @@ if (message.data['msg_type'] == '35') {
                                                     final chatId =
                                                         await FirebaseApiService.createChat(
                                                           contact.userUuid,
+                                                          userAppType:
+                                                              contact.appType,
                                                         );
 
                                                     scaffoldMessenger

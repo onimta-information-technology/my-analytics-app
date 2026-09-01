@@ -772,8 +772,10 @@ class _ReservationPdfButtonBallysState
   // The chat upload endpoint takes file paths, not bytes, so the document is
   // written to the temp directory first. Targets come from the same picker
   // message forwarding uses, which lists groups and people together — a group
-  // already carries the chatId the upload needs, while a person is resolved to
-  // one (existing or new) with createChat.
+  // already carries the chatId the upload needs, and so does a person the user
+  // has messaged before; only a first-time recipient has to have a chat opened
+  // for them, which is the one step that can fail on its own, so its reason is
+  // reported rather than a bare "could not send".
   Future<void> _sendPdfToChat() async {
     if (_isSendingToChat) return;
 
@@ -793,6 +795,7 @@ class _ReservationPdfButtonBallysState
 
     final sent = <String>[];
     final failed = <String>[];
+    String? firstError;
 
     try {
       final doc = await _buildPdf();
@@ -804,18 +807,30 @@ class _ReservationPdfButtonBallysState
       // Groups first, matching the order the picker reports names in.
       for (var i = 0; i < targets.chatIds.length; i++) {
         final name = i < targets.names.length ? targets.names[i] : 'Group';
-        final ok = await _uploadPdfTo(targets.chatIds[i], file.path);
-        (ok ? sent : failed).add(name);
+        final error = await _uploadPdfTo(targets.chatIds[i], file.path);
+        (error == null ? sent : failed).add(name);
+        if (error != null) firstError ??= error;
       }
 
       for (final contact in targets.contacts) {
-        final chatId = await FirebaseApiService.createChat(contact.userUuid);
-        if (chatId == null || chatId.isEmpty) {
-          failed.add(contact.name);
-          continue;
+        var chatId = contact.chatUuid;
+
+        if (chatId.isEmpty) {
+          final created = await FirebaseApiService.createChatDetailed(
+            contact.userUuid,
+            userAppType: contact.appType,
+          );
+          chatId = (created['chatId'] as String?) ?? '';
+          if (chatId.isEmpty) {
+            failed.add(contact.name);
+            firstError ??= created['error']?.toString();
+            continue;
+          }
         }
-        final ok = await _uploadPdfTo(chatId, file.path);
-        (ok ? sent : failed).add(contact.name);
+
+        final error = await _uploadPdfTo(chatId, file.path);
+        (error == null ? sent : failed).add(contact.name);
+        if (error != null) firstError ??= error;
       }
     } catch (e) {
       if (mounted) {
@@ -833,11 +848,13 @@ class _ReservationPdfButtonBallysState
     if (!mounted) return;
     setState(() => _isSendingToChat = false);
 
+    final reason = firstError == null ? '' : ': $firstError';
     final message = failed.isEmpty
         ? 'Reservation PDF sent to ${sent.join(', ')}'
         : sent.isEmpty
-            ? 'Could not send to ${failed.join(', ')}'
-            : 'Sent to ${sent.join(', ')} · failed for ${failed.join(', ')}';
+            ? 'Could not send to ${failed.join(', ')}$reason'
+            : 'Sent to ${sent.join(', ')} · failed for '
+                '${failed.join(', ')}$reason';
 
     messenger.showSnackBar(
       SnackBar(
@@ -849,15 +866,17 @@ class _ReservationPdfButtonBallysState
     );
   }
 
-  Future<bool> _uploadPdfTo(String chatId, String filePath) async {
+  /// Returns null when the upload landed, or why it did not.
+  Future<String?> _uploadPdfTo(String chatId, String filePath) async {
     try {
       final result = await FirebaseApiService.uploadFiles(
         chatId: chatId,
         filePaths: [filePath],
       );
-      return result['success'] == true;
-    } catch (_) {
-      return false;
+      if (result['success'] == true) return null;
+      return FirebaseApiService.errorTextFrom(result);
+    } catch (e) {
+      return e.toString();
     }
   }
 

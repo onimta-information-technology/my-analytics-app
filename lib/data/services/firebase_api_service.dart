@@ -353,21 +353,85 @@ class FirebaseApiService {
     return prefs.getString('name');
   }
 
-  static Future<String?> createChat(String userUid) async {
-    final deviceId = await DeviceId.get();
+  /// Opens the 1:1 chat with [userUid], creating it when there is none.
+  ///
+  /// [userAppType] is the other person's app, which defaults to this one —
+  /// the same uuid can exist under another appType, so identity is the
+  /// `(userUuid, appType)` pair the participants carry.
+  ///
+  /// Returns `{'chatId': String?, 'error': String?}`. [createChat] drops the
+  /// reason on the floor, which the chat list can live with — it falls back to
+  /// the contact's own chatUuid and still opens the screen — but a caller that
+  /// needs a real chatId to upload into has nothing to tell the user without
+  /// it.
+  static Future<Map<String, dynamic>> createChatDetailed(
+    String userUid, {
+    int? userAppType,
+  }) async {
     try {
+      final deviceId = await DeviceId.get();
       final domain = await resolveDomain();
       final url = '$domain${endpoints['createChat']}';
+      // Participants are `{userUuid, appType}` objects, not bare ids — a list
+      // of plain strings is rejected with "At least 2 participants (userUuid,
+      // appType) required".
       final response = await postRequest(url, {
-        "participants": [userUid, deviceId],
+        "participants": [
+          {'userUuid': userUid, 'appType': userAppType ?? appType},
+          {'userUuid': deviceId, 'appType': appType},
+        ],
       });
-      if (response['success'] == true && response['data']?['chatId'] != null) {
-        return response['data']['chatId'];
+
+      if (response['success'] != true) {
+        return {'chatId': null, 'error': errorTextFrom(response)};
       }
-      return null;
+
+      final chatId = _chatIdFrom(response['data']);
+      return (chatId == null || chatId.isEmpty)
+          ? {'chatId': null, 'error': 'The chat could not be opened'}
+          : {'chatId': chatId, 'error': null};
     } catch (e) {
-      return null;
+      return {'chatId': null, 'error': e.toString()};
     }
+  }
+
+  static Future<String?> createChat(String userUid, {int? userAppType}) async =>
+      (await createChatDetailed(userUid, userAppType: userAppType))['chatId']
+          as String?;
+
+  /// Digs the chat id out of a create-chat response. The id has come back at
+  /// the top level and nested under `chat` / `data` depending on the backend
+  /// build, so read whichever shape answers instead of assuming one.
+  static String? _chatIdFrom(dynamic data) {
+    if (data is! Map) return null;
+
+    for (final key in const ['chatId', 'chatUuid', 'id', '_id']) {
+      final value = data[key];
+      if (value is String && value.isNotEmpty) return value;
+    }
+    for (final key in const ['chat', 'data', 'result']) {
+      final nested = _chatIdFrom(data[key]);
+      if (nested != null) return nested;
+    }
+    return null;
+  }
+
+  /// The server's own message for a failed request, so the UI can show why
+  /// instead of a bare status code. Falls back to the transport error.
+  static String errorTextFrom(Map<String, dynamic> response) {
+    final body = response['responseBody'];
+    if (body is String && body.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(body);
+        if (decoded is Map) {
+          final message = decoded['message'] ?? decoded['error'];
+          if (message is String && message.isNotEmpty) return message;
+        }
+      } catch (_) {
+        // Not JSON — fall through to the generic error below.
+      }
+    }
+    return response['error']?.toString() ?? 'Unknown error';
   }
 
   /// Creates a group with the current user as creator/admin.

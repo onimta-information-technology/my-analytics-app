@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:ballys_reservation_app/components/group_avatar.dart';
 import 'package:ballys_reservation_app/components/user_avatar.dart';
-import 'package:ballys_reservation_app/components/group_photo_view.dart';
+import 'package:ballys_reservation_app/components/avatar_photo_view.dart';
 
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
@@ -522,7 +522,7 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
                           : () {
                               final url = details.groupAvatarUrl;
                               if (url != null && url.isNotEmpty) {
-                                showGroupPhoto(
+                                showAvatarPhoto(
                                   context,
                                   url: url,
                                   title: details.groupName,
@@ -675,11 +675,20 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
                           final bool canRemove = isAdmin && !isMe;
 
                           return ListTile(
-                            leading: UserAvatar(
-                              avatarUrl: member.avatarUrl,
-                              initials: member.initials,
-                              backgroundColor: member.avatarColor,
-                              fontSize: _fs.fontSize - 4,
+                            leading: GestureDetector(
+                              // A member with a picture opens it full screen;
+                              // plain initials have nothing to enlarge.
+                              onTap: () => showAvatarPhoto(
+                                context,
+                                url: member.avatarUrl,
+                                title: member.name,
+                              ),
+                              child: UserAvatar(
+                                avatarUrl: member.avatarUrl,
+                                initials: member.initials,
+                                backgroundColor: member.avatarColor,
+                                fontSize: _fs.fontSize - 4,
+                              ),
                             ),
                             title: Text(
                               isMe ? '${member.name} (You)' : member.name,

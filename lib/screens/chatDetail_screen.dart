@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:ballys_reservation_app/components/group_avatar.dart';
 import 'package:ballys_reservation_app/components/user_avatar.dart';
+import 'package:ballys_reservation_app/components/avatar_photo_view.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:ballys_reservation_app/components/badge_service.dart';
@@ -1887,6 +1888,14 @@ Future<void> _markMessagesAsRead() async {
   /// A reaction's owner. The wire format carries only a uuid, so the name is
   /// looked up in the group roster, then among the senders of messages
   /// already loaded, then — in a 1:1 chat — the other party.
+  /// Picture behind the app bar avatar: the group's photo in a group, the
+  /// other person's in a 1:1 chat. Null when neither has one.
+  String? get _headerAvatarUrl {
+    final url = (widget.isGroup ? _avatarUrl : widget.contact.avatarUrl)
+        ?.trim();
+    return (url == null || url.isEmpty) ? null : url;
+  }
+
   /// Profile picture of whoever sent [message], for the avatar beside an
   /// incoming group bubble.
   ///
@@ -3700,21 +3709,38 @@ Future<void> _markMessagesAsRead() async {
               if (!message.isMe) ...[
                 Stack(
                   children: [
-                    UserAvatar(
-                      // In a group every incoming bubble can be a different
-                      // person, so derive the avatar from that sender — and
-                      // only a 1:1 chat knows the sender's picture.
-                      avatarUrl: widget.isGroup
-                          ? _senderAvatarUrl(message, senderLabel)
-                          : widget.contact.avatarUrl,
-                      initials: widget.isGroup
-                          ? ChatContact.generateInitials(senderLabel)
-                          : widget.contact.initials,
-                      backgroundColor: widget.isGroup
-                          ? ChatContact.generateColorFromName(senderLabel)
-                          : widget.contact.avatarColor,
-                      radius: 15,
-                      fontSize: fontSettings.fontSize - 4,
+                    Builder(
+                      builder: (context) {
+                        // In a group every incoming bubble can be a different
+                        // person, so derive the avatar from that sender — and
+                        // only a 1:1 chat knows the sender's picture.
+                        final avatarUrl = widget.isGroup
+                            ? _senderAvatarUrl(message, senderLabel)
+                            : widget.contact.avatarUrl;
+
+                        return GestureDetector(
+                          // Same as the header: a picture opens full screen,
+                          // plain initials have nothing to enlarge.
+                          onTap: () => showAvatarPhoto(
+                            context,
+                            url: avatarUrl,
+                            title: widget.isGroup
+                                ? senderLabel
+                                : widget.contact.name,
+                          ),
+                          child: UserAvatar(
+                            avatarUrl: avatarUrl,
+                            initials: widget.isGroup
+                                ? ChatContact.generateInitials(senderLabel)
+                                : widget.contact.initials,
+                            backgroundColor: widget.isGroup
+                                ? ChatContact.generateColorFromName(senderLabel)
+                                : widget.contact.avatarColor,
+                            radius: 15,
+                            fontSize: fontSettings.fontSize - 4,
+                          ),
+                        );
+                      },
                     ),
                     if (!widget.isGroup && widget.contact.isOnline)
                       Positioned(
@@ -4186,7 +4212,19 @@ Future<void> _markMessagesAsRead() async {
                       children: [
                         // Groups get the picture (or the group glyph); 1:1
                         // chats keep their coloured initials.
-                        widget.isGroup
+                        //
+                        // Tapping the picture opens it full screen. Without
+                        // one there is nothing to enlarge, so the tap falls
+                        // through to the row's own handler (group info).
+                        GestureDetector(
+                          onTap: _headerAvatarUrl == null
+                              ? (widget.isGroup ? _openGroupInfo : null)
+                              : () => showAvatarPhoto(
+                                  context,
+                                  url: _headerAvatarUrl,
+                                  title: widget.contact.name,
+                                ),
+                          child: widget.isGroup
                             ? GroupAvatar(
                                 avatarUrl: _avatarUrl,
                                 radius: 18,
@@ -4199,6 +4237,7 @@ Future<void> _markMessagesAsRead() async {
                                 radius: 18,
                                 fontSize: fontSettings.fontSize - 4,
                               ),
+                        ),
                         if (!widget.isGroup && widget.contact.isOnline)
                           Positioned(
                             bottom: 0,

@@ -1396,6 +1396,26 @@ GoRoute(
                       ),
                     ],
                   ),
+                  // Approve → Reservations for Ballys logins. Same list the
+                  // Ballys Reservations menu shows, minus the add button —
+                  // nothing is created from the Approve flow.
+                  GoRoute(
+                    path: '/reservations-ballys',
+                    pageBuilder: (context, state) => CustomTransitionPage(
+                      fullscreenDialog: true,
+                      key: state.pageKey,
+                      child: const ReservationScreenBallys(hideAddButton: true),
+                      transitionsBuilder:
+                          (context, animation, secondaryAnimation, child) {
+                            return FadeTransition(
+                              opacity: CurveTween(
+                                curve: Curves.easeInOutCirc,
+                              ).animate(animation),
+                              child: child,
+                            );
+                          },
+                    ),
+                  ),
                   GoRoute(
                     path: '/special-gift-requests',
                     pageBuilder: (context, state) => CustomTransitionPage(

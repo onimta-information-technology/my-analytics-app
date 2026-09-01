@@ -1,6 +1,7 @@
 import 'package:ballys_reservation_app/models/pendingCounts.dart';
 import 'package:ballys_reservation_app/providers/pending_count_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
@@ -23,6 +24,26 @@ class _ApproveScreenState extends ConsumerState<ApproveScreen> with Connectivity
   Future.microtask(() {
     ref.read(pendingCountProvider.notifier).fetch();
   });
+  }
+
+  /// True when the logged-in device/user is on the Ballys location, which
+  /// keeps its own Reservations list.
+  Future<bool> _isBallysLocation() async {
+    final location = await StorageUtil.getCurrentLocation();
+    if (location == null) return false;
+    return location.code.split('_').first.toUpperCase() == 'BALLYS';
+  }
+
+  /// Ballys logins get their own Reservations screen; every other location
+  /// keeps the shared one.
+  Future<void> _openReservations() async {
+    final isBallys = await _isBallysLocation();
+    if (!mounted) return;
+    context.go(
+      isBallys
+          ? '/menu/approve-reject/reservations-ballys'
+          : '/menu/approve-reject/reservations',
+    );
   }
 
   @override
@@ -68,8 +89,7 @@ class _ApproveScreenState extends ConsumerState<ApproveScreen> with Connectivity
                 Expanded(
                   child: _CardWithBadge(
                     count: counts.reservation,
-                    onTap: () =>
-                        context.go('/menu/approve-reject/reservations'),
+                    onTap: _openReservations,
                     gradient: const LinearGradient(
                       colors: [
                         Color.fromARGB(255, 255, 149, 0),

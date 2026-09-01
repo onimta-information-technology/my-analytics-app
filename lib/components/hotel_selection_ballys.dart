@@ -1520,9 +1520,9 @@ DropdownButtonFormField<String>(
   icon: const Icon(Icons.arrow_drop_down, size: 30),
   items: const [
     DropdownMenuItem(value: 'NA',        child: Text('NA')),
-    DropdownMenuItem(value: 'ECL',       child: Text('ECL')),
+    DropdownMenuItem(value: 'ECI',       child: Text('ECI')),
     DropdownMenuItem(value: 'LCO',       child: Text('LCO')),
-    DropdownMenuItem(value: 'ECL & LCO', child: Text('ECL & LCO')),
+    DropdownMenuItem(value: 'ECI & LCO', child: Text('ECI & LCO')),
   ],
   onChanged: (value) {
     setState(() => selectedEcLcoFacility = value ?? 'NA');

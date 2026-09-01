@@ -233,26 +233,26 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            _profile?['isOnline'] == true ? 'Online' : 'Offline',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: fontSettings.fontSize - 5,
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: _isUploading ? null : _changePhoto,
-            icon: const Icon(Icons.edit, size: 16, color: Colors.white),
-            label: Text(
-              'Change photo',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: fontSettings.fontSize - 4,
-              ),
-            ),
-          ),
+          // const SizedBox(height: 4),
+          // Text(
+          //   _profile?['isOnline'] == true ? 'Online' : 'Offline',
+          //   style: TextStyle(
+          //     color: Colors.white70,
+          //     fontSize: fontSettings.fontSize - 5,
+          //   ),
+          // ),
+          // const SizedBox(height: 8),
+          // TextButton.icon(
+          //   onPressed: _isUploading ? null : _changePhoto,
+          //   icon: const Icon(Icons.edit, size: 16, color: Colors.white),
+          //   label: Text(
+          //     'Change photo',
+          //     style: TextStyle(
+          //       color: Colors.white,
+          //       fontSize: fontSettings.fontSize - 4,
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );
@@ -260,12 +260,12 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
 
   Widget _buildDetails(FontSettings fontSettings) {
     final rows = <Widget>[
-      _detailRow(Icons.phone, 'Phone', _value('phoneNo'), fontSettings),
-      _detailRow(Icons.email_outlined, 'Email', _email, fontSettings),
-      _detailRow(Icons.location_on_outlined, 'Location', _location,
-          fontSettings),
-      _detailRow(Icons.badge_outlined, 'Sales code', _value('salesCode'),
-          fontSettings),
+      //_detailRow(Icons.phone, 'Phone', _value('phoneNo'), fontSettings),
+     // _detailRow(Icons.email_outlined, 'Email', _email, fontSettings),
+     // _detailRow(Icons.location_on_outlined, 'Location', _location,
+       //   fontSettings),
+      // _detailRow(Icons.badge_outlined, 'Sales code', _value('salesCode'),
+      //     fontSettings),
       _detailRow(
           Icons.card_membership, 'Member ID', _value('memberId'), fontSettings),
       _detailRow(Icons.access_time, 'Last seen', _formatDate('lastSeen'),

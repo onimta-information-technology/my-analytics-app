@@ -1,5 +1,6 @@
 import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/components/group_avatar.dart';
+import 'package:ballys_reservation_app/components/user_avatar.dart';
 import 'package:ballys_reservation_app/components/group_details_sheet.dart';
 import 'package:ballys_reservation_app/components/notification_banner.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
@@ -695,6 +696,9 @@ if (message.data['msg_type'] == '35') {
             createdAt: DateTime.now(),
             lastMessageSenderName: null,
             appType: ChatContact.parseAppType(user['appType']),
+            avatarUrl: ChatContact.parseAvatarUrl(
+              Map<String, dynamic>.from(user as Map),
+            ),
           );
         }).toList();
 
@@ -824,6 +828,7 @@ if (message.data['msg_type'] == '35') {
           createdAt: _contacts[index].createdAt,
           lastMessageSenderName: _contacts[index].lastMessageSenderName,
           appType: _contacts[index].appType,
+          avatarUrl: _contacts[index].avatarUrl,
           lastMessageRead: _contacts[index].lastMessageRead,
         );
       
@@ -879,6 +884,7 @@ if (message.data['msg_type'] == '35') {
             createdAt: contact.createdAt,
             lastMessageSenderName: contact.lastMessageSenderName,
             appType: contact.appType,
+            avatarUrl: contact.avatarUrl,
             lastMessageRead: contact.lastMessageRead,
           );
 
@@ -908,17 +914,12 @@ if (message.data['msg_type'] == '35') {
         child: ListTile(
           leading: Stack(
             children: [
-              CircleAvatar(
+              UserAvatar(
+                avatarUrl: contact.avatarUrl,
+                initials: contact.initials,
                 backgroundColor: contact.avatarColor,
                 radius: 25,
-                child: Text(
-                  contact.initials,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: fontSettings.fontSize,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                fontSize: fontSettings.fontSize,
               ),
              if (contact.isOnline)
   Positioned(
@@ -1528,12 +1529,12 @@ if (message.data['msg_type'] == '35') {
               // The header doubles as the profile entry point: tapping the
               // photo runs the same upload as the overflow menu's
               // "Change profile photo".
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: _updateMyAvatar,
-                child: _buildMyAvatar(),
-              ),
-              const SizedBox(width: 10),
+              // GestureDetector(
+              //   behavior: HitTestBehavior.opaque,
+              //  // onTap: _updateMyAvatar,
+              //   child: _buildMyAvatar(),
+              // ),
+             // const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -1546,17 +1547,17 @@ if (message.data['msg_type'] == '35') {
                         fontWeight: fontSettings.fontWeight,
                       ),
                     ),
-                    if ((_currentUserName ?? '').isNotEmpty)
-                      Text(
-                        _currentUserName!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: fontSettings.fontSize - 5,
-                          fontWeight: FontWeight.normal,
-                          color: Colors.white70,
-                        ),
-                      ),
+                    // if ((_currentUserName ?? '').isNotEmpty)
+                    //   Text(
+                    //     _currentUserName!,
+                    //     maxLines: 1,
+                    //     overflow: TextOverflow.ellipsis,
+                    //     style: TextStyle(
+                    //       fontSize: fontSettings.fontSize - 5,
+                    //       fontWeight: FontWeight.normal,
+                    //       color: Colors.white70,
+                    //     ),
+                    //   ),
                   ],
                 ),
               ),
@@ -1853,18 +1854,13 @@ if (message.data['msg_type'] == '35') {
                                               final contact =
                                                   _filteredUsers[index];
                                               return ListTile(
-                                                leading: CircleAvatar(
+                                                leading: UserAvatar(
+                                                  avatarUrl: contact.avatarUrl,
+                                                  initials: contact.initials,
                                                   backgroundColor:
                                                       contact.avatarColor,
-                                                  child: Text(
-                                                    contact.initials,
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: fontSettings
-                                                              .fontSize -
-                                                          4,
-                                                    ),
-                                                  ),
+                                                  fontSize:
+                                                      fontSettings.fontSize - 4,
                                                 ),
                                                 title: Text(
                                                   contact.name,
@@ -1984,6 +1980,8 @@ if (message.data['msg_type'] == '35') {
                                                       lastMessageSenderName: contact
                                                           .lastMessageSenderName,
                                                       appType: contact.appType,
+                                                      avatarUrl:
+                                                          contact.avatarUrl,
                                                       lastMessageRead: contact
                                                           .lastMessageRead,
                                                     );
@@ -2058,6 +2056,8 @@ if (message.data['msg_type'] == '35') {
                                                       lastMessageSenderName: contact
                                                           .lastMessageSenderName,
                                                       appType: contact.appType,
+                                                      avatarUrl:
+                                                          contact.avatarUrl,
                                                       lastMessageRead: contact
                                                           .lastMessageRead,
                                                     );
@@ -2318,15 +2318,11 @@ if (message.data['msg_type'] == '35') {
                                         }
                                       });
                                     },
-                                    secondary: CircleAvatar(
+                                    secondary: UserAvatar(
+                                      avatarUrl: contact.avatarUrl,
+                                      initials: contact.initials,
                                       backgroundColor: contact.avatarColor,
-                                      child: Text(
-                                        contact.initials,
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: fontSettings.fontSize - 4,
-                                        ),
-                                      ),
+                                      fontSize: fontSettings.fontSize - 4,
                                     ),
                                     title: Text(
                                       contact.name,

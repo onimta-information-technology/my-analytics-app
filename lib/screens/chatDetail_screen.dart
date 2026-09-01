@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:ballys_reservation_app/components/group_avatar.dart';
+import 'package:ballys_reservation_app/components/user_avatar.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:ballys_reservation_app/components/badge_service.dart';
@@ -974,16 +975,12 @@ Future<void> _markMessagesAsRead() async {
           final member = _mentionSuggestions[index];
           return ListTile(
             dense: true,
-            leading: CircleAvatar(
-              radius: 16,
+            leading: UserAvatar(
+              avatarUrl: member.avatarUrl,
+              initials: member.initials,
               backgroundColor: member.avatarColor,
-              child: Text(
-                member.initials,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: fontSettings.fontSize - 5,
-                ),
-              ),
+              radius: 16,
+              fontSize: fontSettings.fontSize - 5,
             ),
             title: Text(
               member.name,
@@ -1890,6 +1887,30 @@ Future<void> _markMessagesAsRead() async {
   /// A reaction's owner. The wire format carries only a uuid, so the name is
   /// looked up in the group roster, then among the senders of messages
   /// already loaded, then — in a 1:1 chat — the other party.
+  /// Profile picture of whoever sent [message], for the avatar beside an
+  /// incoming group bubble.
+  ///
+  /// Matches on the sender uuid first — two members can share a display name —
+  /// and falls back to the name the bubble is labelled with, which is all a
+  /// message that arrived without a sender id carries. Null when the roster
+  /// has not loaded yet or that member has no picture, and the coloured
+  /// initials stand in.
+  String? _senderAvatarUrl(ChatMessage message, String senderLabel) {
+    if (_groupMembers.isEmpty) return null;
+
+    final uuid = (message.senderId ?? '').toLowerCase();
+    if (uuid.isNotEmpty) {
+      for (final member in _groupMembers) {
+        if (member.userUuid.toLowerCase() == uuid) return member.avatarUrl;
+      }
+    }
+
+    for (final member in _groupMembers) {
+      if (member.name.trim() == senderLabel) return member.avatarUrl;
+    }
+    return null;
+  }
+
   ({String name, bool isMe}) _reactorIdentity(MessageReaction reaction) {
     if (reaction.matches(_currentUserUuid, FirebaseApiService.appType)) {
       return (name: 'You', isMe: true);
@@ -3679,22 +3700,21 @@ Future<void> _markMessagesAsRead() async {
               if (!message.isMe) ...[
                 Stack(
                   children: [
-                    CircleAvatar(
+                    UserAvatar(
                       // In a group every incoming bubble can be a different
-                      // person, so derive the avatar from that sender.
+                      // person, so derive the avatar from that sender — and
+                      // only a 1:1 chat knows the sender's picture.
+                      avatarUrl: widget.isGroup
+                          ? _senderAvatarUrl(message, senderLabel)
+                          : widget.contact.avatarUrl,
+                      initials: widget.isGroup
+                          ? ChatContact.generateInitials(senderLabel)
+                          : widget.contact.initials,
                       backgroundColor: widget.isGroup
                           ? ChatContact.generateColorFromName(senderLabel)
                           : widget.contact.avatarColor,
                       radius: 15,
-                      child: Text(
-                        widget.isGroup
-                            ? ChatContact.generateInitials(senderLabel)
-                            : widget.contact.initials,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: fontSettings.fontSize - 4,
-                        ),
-                      ),
+                      fontSize: fontSettings.fontSize - 4,
                     ),
                     if (!widget.isGroup && widget.contact.isOnline)
                       Positioned(
@@ -4172,17 +4192,12 @@ Future<void> _markMessagesAsRead() async {
                                 radius: 18,
                                 backgroundColor: widget.contact.avatarColor,
                               )
-                            : CircleAvatar(
+                            : UserAvatar(
+                                avatarUrl: widget.contact.avatarUrl,
+                                initials: widget.contact.initials,
                                 backgroundColor: widget.contact.avatarColor,
                                 radius: 18,
-                                child: Text(
-                                  widget.contact.initials,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: fontSettings.fontSize - 4,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                                fontSize: fontSettings.fontSize - 4,
                               ),
                         if (!widget.isGroup && widget.contact.isOnline)
                           Positioned(

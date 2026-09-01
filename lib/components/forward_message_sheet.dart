@@ -1,5 +1,6 @@
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/components/group_avatar.dart';
+import 'package:ballys_reservation_app/components/user_avatar.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/models/chat_group.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
@@ -155,6 +156,7 @@ class _ForwardMessageSheetState extends State<_ForwardMessageSheet> {
               createdAt: DateTime.now(),
               lastMessageSenderName: null,
               appType: ChatContact.parseAppType(user['appType']),
+              avatarUrl: ChatContact.parseAvatarUrl(user),
             );
           })
           .where((c) =>
@@ -415,12 +417,11 @@ class _ForwardMessageSheetState extends State<_ForwardMessageSheet> {
           }
         });
       },
-      secondary: CircleAvatar(
+      secondary: UserAvatar(
+        avatarUrl: contact.avatarUrl,
+        initials: contact.initials,
         backgroundColor: contact.avatarColor,
-        child: Text(
-          contact.initials,
-          style: TextStyle(color: Colors.white, fontSize: _fs.fontSize - 4),
-        ),
+        fontSize: _fs.fontSize - 4,
       ),
       title: Text(
         contact.name,

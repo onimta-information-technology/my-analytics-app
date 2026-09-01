@@ -11,6 +11,10 @@ class GroupMember {
   final Color avatarColor;
   final String initials;
 
+  /// The member's own profile picture, when they have uploaded one. Null
+  /// otherwise, which falls back to the coloured initials.
+  final String? avatarUrl;
+
   GroupMember({
     required this.userUuid,
     required this.name,
@@ -19,6 +23,7 @@ class GroupMember {
     this.appType = 1,
     required this.avatarColor,
     required this.initials,
+    this.avatarUrl,
   });
 
   bool get isAdmin => role.toLowerCase() == 'admin';
@@ -34,6 +39,7 @@ class GroupMember {
       appType: ChatContact.parseAppType(json['appType']),
       avatarColor: ChatContact.generateColorFromName(name),
       initials: ChatContact.generateInitials(name),
+      avatarUrl: ChatContact.parseAvatarUrl(json),
     );
   }
 }

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:image_picker/image_picker.dart';
 import 'package:ballys_reservation_app/components/group_avatar.dart';
+import 'package:ballys_reservation_app/components/user_avatar.dart';
 import 'package:ballys_reservation_app/components/group_photo_view.dart';
 
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
@@ -394,6 +395,7 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
               createdAt: DateTime.now(),
               lastMessageSenderName: null,
               appType: ChatContact.parseAppType(user['appType']),
+              avatarUrl: ChatContact.parseAvatarUrl(user),
             );
           })
           .where((c) => c.userUuid.isNotEmpty && !existing.contains(c.userUuid))
@@ -673,15 +675,11 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
                           final bool canRemove = isAdmin && !isMe;
 
                           return ListTile(
-                            leading: CircleAvatar(
+                            leading: UserAvatar(
+                              avatarUrl: member.avatarUrl,
+                              initials: member.initials,
                               backgroundColor: member.avatarColor,
-                              child: Text(
-                                member.initials,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: _fs.fontSize - 4,
-                                ),
-                              ),
+                              fontSize: _fs.fontSize - 4,
                             ),
                             title: Text(
                               isMe ? '${member.name} (You)' : member.name,
@@ -929,15 +927,11 @@ class _MemberPickerState extends State<_MemberPicker> {
                           }
                         });
                       },
-                      secondary: CircleAvatar(
+                      secondary: UserAvatar(
+                        avatarUrl: contact.avatarUrl,
+                        initials: contact.initials,
                         backgroundColor: contact.avatarColor,
-                        child: Text(
-                          contact.initials,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: fs.fontSize - 4,
-                          ),
-                        ),
+                        fontSize: fs.fontSize - 4,
                       ),
                       title: Text(
                         contact.name,

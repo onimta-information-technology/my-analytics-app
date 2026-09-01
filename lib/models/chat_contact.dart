@@ -20,8 +20,9 @@ class ChatContact {
   final DateTime createdAt;
   final String? lastMessageSenderName;
   final int appType;
-  /// Remote picture for this row — currently only groups have one, so it is
-  /// null for 1:1 chats, which keep falling back to coloured initials.
+  /// Remote picture for this row: the group's photo for a group, and the
+  /// other participant's profile picture for a 1:1 chat. Null when nobody has
+  /// uploaded one, which falls back to the coloured initials.
   final String? avatarUrl;
   final bool lastMessageRead;
 
@@ -53,6 +54,18 @@ class ChatContact {
     if (value == null) return fallback;
     if (value is int) return value;
     return int.tryParse(value.toString()) ?? fallback;
+  }
+
+  /// Reads a profile picture off a chat-backend payload.
+  ///
+  /// The participant entries in `/api/chats/user/:id` use snake_case while the
+  /// user and member endpoints use camelCase, so accept both, and treat an
+  /// empty string as "no picture" so callers only have to null-check.
+  static String? parseAvatarUrl(Map<String, dynamic> json) {
+    final raw = (json['profileImageUrl'] ?? json['profile_image_url'])
+        ?.toString()
+        .trim();
+    return (raw == null || raw.isEmpty) ? null : raw;
   }
 
   Map<String, dynamic> toJson() => {
@@ -142,6 +155,7 @@ class ChatContact {
     String otherParticipantUuid = '';
     String otherParticipantName = '';
     dynamic otherParticipantAppType;
+    String? otherParticipantAvatar;
 
     for (var participant in participantsData) {
       if (isCurrentUser(participant)) continue;
@@ -150,6 +164,9 @@ class ChatContact {
       otherParticipantName = participant['name'] ?? '';
       otherParticipantAppType =
           participant['appType'] ?? participant['app_type'];
+      otherParticipantAvatar = parseAvatarUrl(
+        Map<String, dynamic>.from(participant as Map),
+      );
       if (otherParticipantName.isNotEmpty) break;
     }
 
@@ -160,6 +177,9 @@ class ChatContact {
       otherParticipantName = participantsData[0]['name'] ?? 'Unknown';
       otherParticipantAppType =
           participantsData[0]['appType'] ?? participantsData[0]['app_type'];
+      otherParticipantAvatar = parseAvatarUrl(
+        Map<String, dynamic>.from(participantsData[0] as Map),
+      );
     }
 
     final String name = otherParticipantName.isNotEmpty
@@ -193,6 +213,19 @@ class ChatContact {
         .where((uuid) => uuid.isNotEmpty)
         .toList();
 
+    // The chats payload carries the picture on the participant entry; the
+    // user directory is the fallback for older rows that come back without
+    // one, the same way appType is resolved below.
+    final Map<String, dynamic>? otherUserDetails =
+        participantDetails?[otherParticipantName] is Map
+        ? Map<String, dynamic>.from(
+            participantDetails![otherParticipantName] as Map,
+          )
+        : null;
+    final String? avatarUrl =
+        otherParticipantAvatar ??
+        (otherUserDetails == null ? null : parseAvatarUrl(otherUserDetails));
+
     final int appType = parseAppType(
       otherParticipantAppType ??
           participantDetails?[otherParticipantName]?['appType'] ??
@@ -217,6 +250,7 @@ class ChatContact {
       createdAt: DateTime.parse(json['createdAt']),
       lastMessageSenderName: json['lastMessageSenderName'],
       appType: appType,
+      avatarUrl: avatarUrl,
       lastMessageRead: json['lastMessageRead'] ?? true,
     );
   }

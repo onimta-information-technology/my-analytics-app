@@ -1,5 +1,6 @@
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_cost_response.dart';
+import 'package:ballys_reservation_app/models/reservation/hotel_location.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_response.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_room_catalog_entry.dart';
 import 'package:ballys_reservation_app/models/reservation/room_category_response.dart';
@@ -60,45 +61,52 @@ class HotelRepository {
     }
   }
 
-  /// Hotels, hotel categories, room categories, room types and meal plans in
-  /// one call. Replaces the 9015 / 9016 / 9017 chain on the Ballys reservation
-  /// forms — the dropdowns filter this list in memory instead of re-fetching.
+  /// Both locations are fetched and merged into one catalog. The forms ask
+  /// which type before offering a hotel and filter this list by the answer, so
+  /// switching type does not cost another round trip.
+  /// Hotels, room categories, room types, meal plans and their rates for the
+  /// Ballys reservation forms.
+  ///
+  /// `GET HotelsGetByLocation?Location=…` per location, flattened into catalog
+  /// rows and merged — replaces the 9015 / 9016 / 9017 chain and the combined
+  /// 90155 call, so the dropdowns filter this list in memory instead of
+  /// re-fetching.
   Future<List<HotelRoomCatalogEntry>> getHotelRoomCatalog() async {
-    final deviceId = await DeviceId.get();
-    final spName = await StorageUtil.getStoredProcedureName();
-    final response = await apiService.post('CommonExecute', {
-      "HasReturnData": "T",
-      "Parameters": [
-        {
-          "Para_Data": 90155,
-          "Para_Direction": "Input",
-          "Para_Lenth": 1,
-          "Para_Name": "@Iid",
-          "Para_Type": "int"
-        },
-        {
-          "Para_Data": deviceId,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text30",
-          "Para_Type": "varchar",
-        },
-      ],
-      "SpName": spName,
-      "con": "1"
-    });
-print('API response for hotel room catalog: $response');
-    if (response['CommonResult'] != null &&
-        response['CommonResult']['Table'] is List) {
-      final tableData = response['CommonResult']['Table'] as List;
-      return tableData
-          .whereType<Map>()
-          .map((json) =>
-              HotelRoomCatalogEntry.fromJson(Map<String, dynamic>.from(json)))
-          .toList();
+    final results = await Future.wait(
+      HotelLocation.values.map((l) => _hotelCatalogForLocation(l.apiValue)),
+    );
+
+    // A location that fails takes only its own hotels with it: half a list is
+    // more use at the dropdown than none. Only a total failure throws, so the
+    // notifier can keep whatever catalog it already holds.
+    if (results.every((r) => r == null)) {
+      throw Exception('Hotel catalog API failed');
     }
 
-    throw Exception('Hotel room catalog API failed');
+    return [
+      for (final entries in results)
+        if (entries != null) ...entries,
+    ];
+  }
+
+  /// One location's slice of the catalog, or null if that call failed.
+  Future<List<HotelRoomCatalogEntry>?> _hotelCatalogForLocation(
+    String location,
+  ) async {
+    try {
+      final response =
+          await apiService.get('HotelsGetByLocation?Location=$location');
+
+      if (response['success'] == false) {
+        print('Hotel catalog for $location returned success=false: $response');
+        return null;
+      }
+
+      return HotelRoomCatalogEntry.fromLocationResponse(response);
+    } catch (e) {
+      print('Hotel catalog for $location failed: $e');
+      return null;
+    }
   }
 
   Future<List<RoomCategoryResponse>> getSelectedHotelRoomCategories(

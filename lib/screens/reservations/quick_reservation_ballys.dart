@@ -27,6 +27,8 @@ import 'package:ballys_reservation_app/models/reservation/air_ticket_class_count
 import 'package:ballys_reservation_app/models/reservation/airline_response.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_sector_entry.dart';
+import 'package:ballys_reservation_app/models/reservation/hotel_location.dart';
+import 'package:ballys_reservation_app/models/reservation/hotel_room_catalog_entry.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_response.dart';
 import 'package:ballys_reservation_app/models/reservation/quick_hotel_entry.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
@@ -158,6 +160,9 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
 
   String _h_eciLco = 'NA';
 
+  /// Asked before the hotel: the hotel dropdown only offers hotels of this
+  /// type, so a city stay is never picked off the out-of-Colombo list.
+  HotelLocation? _selectedHotelLocation;
   Map<String, dynamic>? _selectedHotel;
   String? _selectedHotelName;
   double? _selectedHotelId;
@@ -518,6 +523,31 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     }
   }
 
+  /// Answers the hotel-type question. Everything picked under the old answer
+  /// goes with it — the hotel below belongs to one list or the other, and so do
+  /// its categories and room types.
+  void _setHotelLocation(HotelLocation location) {
+    if (_selectedHotelLocation == location) return;
+    setState(() {
+      _selectedHotelLocation = location;
+      _selectedHotel = null;
+      _selectedHotelName = null;
+      _selectedHotelId = null;
+      _selectedRoomCategory = null;
+      _selectedRoomCategoryId = null;
+      _selectedRoomCategoryName = null;
+      _selectedRoomType = null;
+      _selectedRoomTypeId = null;
+      _selectedRoomTypeName = null;
+      _h_mealPlan.clear();
+      _roomCategories = [];
+      _roomTypes = [];
+      _hotelDropdownKey = UniqueKey();
+      _roomCategoryDropdownKey = UniqueKey();
+      _roomTypeDropdownKey = UniqueKey();
+    });
+  }
+
   void _loadRoomCategories(double hotelId) {
     final categories =
         ref.read(hotelCatalogProvider.notifier).categoriesFor(hotelId);
@@ -585,6 +615,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     _h_arrivalDate = null;
     _h_departureDate = null;
     _h_eciLco = 'NA';
+    _selectedHotelLocation = null;
     _selectedHotel = null;
     _selectedHotelName = null;
     _selectedHotelId = null;
@@ -696,6 +727,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       _h_arrivalDate = null;
       _h_departureDate = null;
       _h_eciLco = 'NA';
+      _selectedHotelLocation = null;
       _selectedHotel = null;
       _selectedHotelName = null;
       _selectedHotelId = null;
@@ -4084,7 +4116,10 @@ class _HotelForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const accent = _QuickReservationBallysScreenState._hotelColor;
-    final hotels = state.ref.watch(hotelCatalogHotelsProvider);
+    // Both locations arrive in the one catalog; the type picked in step ②
+    // decides which half of it the hotel dropdown offers.
+    final hotels =
+        state.ref.watch(hotelCatalogHotelsProvider(state._selectedHotelLocation));
     return Column(
       children: [
         _stepIndicator(
@@ -4237,6 +4272,115 @@ class _HotelForm extends StatelessWidget {
             onPressed: state._goToHotelBookingStep,
           ),
           const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Asked before the hotel: which of the two lists it comes from. Both arrive
+  /// in the one catalog, so the answer only filters the dropdown below —
+  /// switching type re-fetches nothing.
+  ///
+  /// A [FormField] rather than a plain row, so an unanswered type is caught by
+  /// the same `validate()` as every other required field on this step instead
+  /// of only showing up as an empty hotel dropdown.
+  Widget _hotelLocationPicker(Color accent) {
+    return FormField<HotelLocation>(
+      initialValue: state._selectedHotelLocation,
+      validator: (_) => state._selectedHotelLocation == null
+          ? 'Select a hotel type'
+          : null,
+      builder: (field) {
+        final bool hasError = field.errorText != null;
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: hasError ? Colors.red.shade400 : Colors.grey.shade300,
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Hotel Type *',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  for (final location in HotelLocation.values) ...[
+                    Expanded(child: _hotelLocationOption(location, accent, field)),
+                    if (location != HotelLocation.values.last)
+                      const SizedBox(width: 10),
+                  ],
+                ],
+              ),
+              if (hasError)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    field.errorText!,
+                    style: TextStyle(color: Colors.red.shade700, fontSize: 13),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _hotelLocationOption(
+    HotelLocation location,
+    Color accent,
+    FormFieldState<HotelLocation> field,
+  ) {
+    final bool selected = state._selectedHotelLocation == location;
+    final IconData icon = location == HotelLocation.cityHotel
+        ? Icons.location_city
+        : Icons.landscape_outlined;
+
+    return InkWell(
+      onTap: () {
+        state._setHotelLocation(location);
+        field.didChange(location);
+      },
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+        decoration: BoxDecoration(
+          color: selected ? accent.withOpacity(0.08) : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected ? accent : Colors.grey.shade300,
+            width: selected ? 1.8 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon,
+                size: 20, color: selected ? accent : Colors.grey.shade600),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                location.label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                  color: selected ? accent : Colors.black87,
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -4493,8 +4637,11 @@ class _HotelForm extends StatelessWidget {
             min: 0,
           ),
           const SizedBox(height: 12),
+          _hotelLocationPicker(accent),
+          const SizedBox(height: 12),
           DropdownSearch<Map<String, dynamic>>(
             key: state._hotelDropdownKey,
+            enabled: state._selectedHotelLocation != null,
             items: (filter, _) {
               final mapped = hotels.map((h) => h.toJson()).toList();
               if (filter.isEmpty) return mapped;
@@ -4513,7 +4660,9 @@ class _HotelForm extends StatelessWidget {
                 value == null ? 'Hotel Name is required' : null,
             decoratorProps: DropDownDecoratorProps(
               decoration: _fieldDeco(
-                'Hotel Name *',
+                state._selectedHotelLocation == null
+                    ? 'Hotel Name  (select hotel type first)'
+                    : 'Hotel Name *',
                 icon: Icons.business_rounded,
                 accent: accent,
               ),
@@ -4667,13 +4816,29 @@ class _HotelForm extends StatelessWidget {
                 accent: accent,
               ),
             ),
-            dropdownBuilder: (context, selectedItem) => Text(
-              selectedItem == null
-                  ? ''
-                  : '${selectedItem['RoomType'] ?? ''} - ${selectedItem['MealPlan'] ?? ''}',
-              style: kInputTextStyle,
-              overflow: TextOverflow.ellipsis,
-            ),
+            dropdownBuilder: (context, selectedItem) {
+              if (selectedItem == null) return const Text('');
+              final rate =
+                  HotelRoomCatalogEntry.ourRateLabelOf(selectedItem);
+              return Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${selectedItem['RoomType'] ?? ''} - ${selectedItem['MealPlan'] ?? ''}',
+                      style: kInputTextStyle,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (rate.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      rate,
+                      style: kInputTextStyle.copyWith(color: accent),
+                    ),
+                  ],
+                ],
+              );
+            },
             onChanged: (val) {
               state.setState(() {
                 state._selectedRoomType = val;
@@ -4686,26 +4851,53 @@ class _HotelForm extends StatelessWidget {
             },
             popupProps: PopupProps.dialog(
               showSearchBox: true,
-              itemBuilder: (ctx, item, isSelected, isFocused) => ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: accent.withOpacity(0.12),
-                  child:
-                      Icon(Icons.bed_outlined, color: accent, size: 18),
-                ),
-                title: Text(
-                  (item['RoomType'] ?? '') as String,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
+              itemBuilder: (ctx, item, isSelected, isFocused) {
+                final rate = HotelRoomCatalogEntry.ourRateLabelOf(item);
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: accent.withOpacity(0.12),
+                    child: Icon(Icons.bed_outlined, color: accent, size: 18),
                   ),
-                ),
-                subtitle: Text(
-                  (item['MealPlan'] ?? '') as String,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                selected: isSelected,
-                tileColor: isFocused ? Colors.grey.shade100 : null,
-              ),
+                  title: Text(
+                    (item['RoomType'] ?? '') as String,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                  ),
+                  subtitle: Text(
+                    (item['MealPlan'] ?? '') as String,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  // The rate the room type carries in the catalog, in front of
+                  // the user while they pick rather than only in the cost
+                  // calculator afterwards.
+                  trailing: rate.isEmpty
+                      ? null
+                      : Column(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            const Text(
+                              'Our Rate',
+                              style:
+                                  TextStyle(fontSize: 11, color: Colors.grey),
+                            ),
+                            Text(
+                              rate,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: accent,
+                              ),
+                            ),
+                          ],
+                        ),
+                  selected: isSelected,
+                  tileColor: isFocused ? Colors.grey.shade100 : null,
+                );
+              },
               dialogProps: DialogProps(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),

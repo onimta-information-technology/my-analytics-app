@@ -4,6 +4,7 @@ import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart
 import 'package:ballys_reservation_app/models/reservation/assigned_guest.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_cost_response.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_desc_ballys.dart';
+import 'package:ballys_reservation_app/models/reservation/hotel_location.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_room_catalog_entry.dart';
 import 'package:ballys_reservation_app/providers/hotel_catalog_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_hotel_provider_ballys.dart';
@@ -54,6 +55,12 @@ class _HotelAndRoomSelectionBallysBottomSheetState
 
   final ValueNotifier<String> costNotifier = ValueNotifier<String>("0");
 
+  /// How the cost above was arrived at, e.g. "114.00 x 3 nights x 2 rooms".
+  /// Null when no calculation stands behind the figure — an edited row carries
+  /// its cost but not the sum that made it.
+  final ValueNotifier<String?> costBreakdownNotifier =
+      ValueNotifier<String?>(null);
+
   /// Set when part of an edited row named something the catalog no longer
   /// carries, so the form can say why that dropdown came back empty. A
   /// notifier rather than plain state: it is written from the catalog listener
@@ -100,6 +107,7 @@ class _HotelAndRoomSelectionBallysBottomSheetState
     roomCategoriesNotifier.dispose();
     roomTypesNotifier.dispose();
     costNotifier.dispose();
+    costBreakdownNotifier.dispose();
     staleSelectionNotifier.dispose();
     super.dispose();
   }
@@ -110,6 +118,10 @@ class _HotelAndRoomSelectionBallysBottomSheetState
   DateTimeRange? selectedDateRange;
   DateTime? arrivalDate;
   DateTime? departureDate;
+
+  /// Asked before the hotel: the hotel dropdown only offers hotels of this
+  /// type, so a city stay is never picked off the out-of-Colombo list.
+  HotelLocation? selectedHotelLocation;
 
   double? selectedHotelId;
   String?  selectedHotelName;
@@ -140,6 +152,7 @@ String selectedByPaymnet = 'NA';
 
   // Validation error flags for required fields
   bool _dateRangeError = false;
+  bool _hotelLocationError = false;
   bool _hotelError = false;
   bool _roomCategoryError = false;
   bool _roomTypeError = false;
@@ -420,8 +433,11 @@ String selectedByPaymnet = 'NA';
     }
 
     // Still listed, but it may have been renamed since it was booked — show the
-    // catalog's wording so the field matches the list behind it.
+    // catalog's wording so the field matches the list behind it. The type comes
+    // back off the same row: an edited hotel is picked before the catalog has
+    // necessarily landed, leaving the question unanswered until now.
     selectedHotelName = forHotel.first.hotelName;
+    selectedHotelLocation = forHotel.first.location ?? selectedHotelLocation;
     selectedHotel = {
       'Hotel_IID': selectedHotelId,
       'HotelName': selectedHotelName,
@@ -496,6 +512,25 @@ String selectedByPaymnet = 'NA';
     }
   }
 
+  /// Answers the hotel-type question. Everything picked under the old answer
+  /// goes with it — the hotel below belongs to one list or the other, and so do
+  /// its categories, room types and cost.
+  void _setHotelLocation(HotelLocation location) {
+    if (selectedHotelLocation == location) return;
+    staleSelectionNotifier.value = null;
+    setState(() {
+      selectedHotelLocation = location;
+      _hotelLocationError = false;
+      _hotelError = false;
+      selectedHotel = null;
+      selectedHotelId = null;
+      selectedHotelName = null;
+      roomCategoriesNotifier.value = [];
+      _clearCategoryAndRoomType();
+    });
+    _clearSelectedCost();
+  }
+
   void _setHotel(Map<String, dynamic>? hotel) {
     // Picked from the live list, so whatever was stale has been answered.
     staleSelectionNotifier.value = null;
@@ -540,15 +575,11 @@ String selectedByPaymnet = 'NA';
     _clearSelectedCost();
   }
 
-  void _handleItemSelected(HotelCostResponse cost, int index) {
-    setState(() {
-      costIndex = index;
-      double calculation =
-          ((cost.netRate! * numberOfNights!) * cost.usRate!) *
-          numberOfAdults *
-          numberOfRooms;
-      costNotifier.value = NumberFormat().format(calculation.round());
-    });
+  /// The rate the catalog carries for the picked room type, or null when that
+  /// row carries none — there is nothing to calculate from.
+  double? get _ourRate {
+    final value = selectedRoomType?['OurRate'];
+    return value is num ? value.toDouble() : null;
   }
 
   void _editHotel(HotelDescipBallys hotel, int index) {
@@ -580,6 +611,11 @@ String selectedByPaymnet = 'NA';
       selectedHotelId = hotel.hotel;
       selectedHotelName = hotel.hotelName;
       selectedHotel = {"Hotel_IID": hotel.hotel, "HotelName": hotel.hotelName};
+      // A saved row names its hotel, not its type — read the type back off the
+      // catalog so the question shows as answered rather than sending the user
+      // to re-pick a hotel they already booked.
+      selectedHotelLocation =
+          ref.read(hotelCatalogProvider.notifier).locationOfHotel(hotel.hotel);
 
       getSelectedHotelRoomCategories(selectedHotelId!, clearSelection: false);
 
@@ -608,6 +644,8 @@ String selectedByPaymnet = 'NA';
       sMealPlanName = parts[1].trim();
       selectedCost = hotel.selectedCost;
       costNotifier.value = hotel.selectedCost;
+      // The saved row keeps the figure, not the sum behind it.
+      costBreakdownNotifier.value = null;
       costIndex = hotel.costIndex;
 
       _applyAssignedGuests(hotel.assignedGuests);
@@ -635,6 +673,7 @@ String selectedByPaymnet = 'NA';
 
   void _saveHotelSelection() {
     final bool dateMissing = selectedDateRange == null;
+    final bool hotelTypeMissing = selectedHotelLocation == null;
     final bool hotelMissing = selectedHotelId == null;
     final bool categoryMissing = selectedRoomCategoryId == null;
     final bool roomTypeMissing = selectedRoomTypeId == null;
@@ -645,12 +684,14 @@ String selectedByPaymnet = 'NA';
         _selectableGuests().isNotEmpty && _assignedGuestKeys.isEmpty;
 
     if (dateMissing ||
+        hotelTypeMissing ||
         hotelMissing ||
         categoryMissing ||
         roomTypeMissing ||
         guestsMissing) {
       setState(() {
         _dateRangeError = dateMissing;
+        _hotelLocationError = hotelTypeMissing;
         _hotelError = hotelMissing;
         _roomCategoryError = categoryMissing;
         _roomTypeError = roomTypeMissing;
@@ -711,6 +752,7 @@ String selectedByPaymnet = 'NA';
 
   void _clearSelectedCost() {
     costNotifier.value = "0";
+    costBreakdownNotifier.value = null;
     selectedCost = null;
     costIndex = null;
   }
@@ -732,6 +774,7 @@ String selectedByPaymnet = 'NA';
       numberOfNights = null;
       _dateRangeController.text = "";
 
+      selectedHotelLocation = null;
       selectedHotelId = null;
       selectedHotelName = null;
       selectedHotel = null;
@@ -750,6 +793,7 @@ String selectedByPaymnet = 'NA';
 
       selectedCost = null;
       costNotifier.value = "0";
+      costBreakdownNotifier.value = null;
       costIndex = null;
 
       editMode = false;
@@ -760,6 +804,7 @@ String selectedByPaymnet = 'NA';
 
       _useReservationDates = false;
       _dateRangeError = false;
+      _hotelLocationError = false;
       _hotelError = false;
       _roomCategoryError = false;
       _roomTypeError = false;
@@ -777,11 +822,13 @@ String selectedByPaymnet = 'NA';
     }
   }
 
-  void _showCostCalculator(BuildContext context) async {
+  /// Est. cost for the stay: the room's `OurRate` for every night, for every
+  /// room. The rate rides on the room type in the hotel catalog, so the sum is
+  /// worked out here rather than fetched.
+  void _calculateCost() {
     if (selectedHotelName == null ||
         selectedRoomCategoryName == null ||
-        sRoomTypeName == null ||
-        sMealPlanName == null ||
+        selectedRoomTypeId == null ||
         numberOfNights == null ||
         selectedDateRange == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -793,19 +840,29 @@ String selectedByPaymnet = 'NA';
       );
       return;
     }
-    final hotelCosts = await getHotelCosts();
-    showModalBottomSheet(
-      context: context,
-      isDismissible: true,
-      enableDrag: true,
-      builder: (BuildContext context) {
-        return CostCalculatorBottomSheet(
-          onBackPressed: () => Navigator.pop(context),
-          onItemSelected: _handleItemSelected,
-          hotelCosts: hotelCosts ?? [],
-        );
-      },
-    );
+
+    final rate = _ourRate;
+    if (rate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("This room type has no rate to calculate from."),
+        ),
+      );
+      return;
+    }
+
+    final money = NumberFormat('#,##0.00');
+    final total = rate * numberOfNights! * numberOfRooms;
+
+    setState(() {
+      // Nothing was picked off a list of rates, so the row keeps no index.
+      costIndex = null;
+      costBreakdownNotifier.value =
+          '${money.format(rate)} x $numberOfNights '
+          '${numberOfNights == 1 ? "night" : "nights"} x $numberOfRooms '
+          '${numberOfRooms == 1 ? "room" : "rooms"}';
+      costNotifier.value = money.format(total);
+    });
   }
 
   /// A head count. [enabled] false shows the number but takes the buttons away,
@@ -1088,11 +1145,115 @@ String selectedByPaymnet = 'NA';
     );
   }
 
+  /// The first thing asked in the hotel section: which of the two lists the
+  /// hotel comes from. Both arrive in the one catalog, so the answer only
+  /// filters the dropdown below — switching type re-fetches nothing.
+  Widget _hotelLocationPicker() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F8FA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _hotelLocationError ? Colors.red : const Color(0xFFDADDE3),
+          width: _hotelLocationError ? 1.5 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.travel_explore,
+                  size: 18, color: Constants.kPrimaryColor),
+              SizedBox(width: 6),
+              Text(
+                "Hotel Type",
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              for (final location in HotelLocation.values) ...[
+                Expanded(child: _hotelLocationOption(location)),
+                if (location != HotelLocation.values.last)
+                  const SizedBox(width: 10),
+              ],
+            ],
+          ),
+          if (_hotelLocationError)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text(
+                "Please choose a hotel type first",
+                style: TextStyle(color: Colors.red, fontSize: 13),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _hotelLocationOption(HotelLocation location) {
+    final bool selected = selectedHotelLocation == location;
+    final IconData icon = location == HotelLocation.cityHotel
+        ? Icons.location_city
+        : Icons.landscape_outlined;
+
+    return InkWell(
+      onTap: () => _setHotelLocation(location),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+        decoration: BoxDecoration(
+          color: selected
+              ? Constants.kPrimaryColor.withOpacity(0.10)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color:
+                selected ? Constants.kPrimaryColor : const Color(0xFFDADDE3),
+            width: selected ? 1.8 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: selected ? Constants.kPrimaryColor : Colors.grey.shade600,
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                location.label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                  color: selected ? Constants.kPrimaryColor : Colors.black87,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Rebuilds when the combined catalog lands so the hotel list fills in.
-    final hotelOptions =
-        HotelRoomCatalogEntry.hotelsAsMapFrom(ref.watch(hotelCatalogProvider));
+    // Both locations arrive in the one catalog; the type picked above decides
+    // which half of it this dropdown offers.
+    final hotelOptions = HotelRoomCatalogEntry.hotelsAsMapFrom(
+      ref.watch(hotelCatalogProvider),
+      location: selectedHotelLocation,
+    );
 
     // A hotel row pulled in for editing selects its hotel and category before
     // the catalog is necessarily loaded — refill those dropdowns once it is.
@@ -1283,15 +1444,22 @@ String selectedByPaymnet = 'NA';
                           },
                         ),
 
+                        // ── Hotel Type ─────────────────────────
+                        _hotelLocationPicker(),
+                        const SizedBox(height: 16),
+
                         // ── Hotel Dropdown ─────────────────────
                         DropdownSearch<Map<String, dynamic>>(
+                          enabled: selectedHotelLocation != null,
                           selectedItem: selectedHotel,
                           items: (filter, infiniteScrollProps) => hotelOptions,
                           itemAsString: (item) => item['HotelName'] ?? '',
                           compareFn: (a, b) => a['Hotel_IID'] == b['Hotel_IID'],
                           decoratorProps: DropDownDecoratorProps(
                             decoration: InputDecoration(
-                              labelText: 'Select Hotel',
+                              labelText: selectedHotelLocation == null
+                                  ? 'Select Hotel  (choose hotel type first)'
+                                  : 'Select Hotel',
                               labelStyle: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -1457,14 +1625,36 @@ String selectedByPaymnet = 'NA';
                                 ),
                               ),
                               dropdownBuilder: (context, selectedItem) {
-                                final rt = selectedItem?['RoomType'] ?? '';
-                                final mp = selectedItem?['MealPlan'] ?? '';
-                                return Text(
-                                  selectedItem == null ? '' : '$rt - $mp',
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                if (selectedItem == null) return const Text('');
+                                final rt = selectedItem['RoomType'] ?? '';
+                                final mp = selectedItem['MealPlan'] ?? '';
+                                final rate =
+                                    HotelRoomCatalogEntry.ourRateLabelOf(
+                                        selectedItem);
+                                return Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        '$rt - $mp',
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    if (rate.isNotEmpty) ...[
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        rate,
+                                        style: const TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: Constants.kPrimaryColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 );
                               },
                               onChanged: _setRoomType,
@@ -1477,6 +1667,8 @@ String selectedByPaymnet = 'NA';
                                     (context, item, isSelected, isFocused) {
                                       final rt = item['RoomType'] ?? '';
                                       final mp = item['MealPlan'] ?? '';
+                                      final rate = HotelRoomCatalogEntry
+                                          .ourRateLabelOf(item);
                                       return ListTile(
                                         title: Text(
                                           '$rt - $mp',
@@ -1485,6 +1677,34 @@ String selectedByPaymnet = 'NA';
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
+                                        trailing: rate.isEmpty
+                                            ? null
+                                            : Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.end,
+                                                children: [
+                                                  const Text(
+                                                    'Our Rate',
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      color: Colors.grey,
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    rate,
+                                                    style: const TextStyle(
+                                                      fontSize: 17,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Constants
+                                                          .kPrimaryColor,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                         selected: isSelected,
                                         tileColor: isFocused
                                             ? Colors.grey.shade200
@@ -1567,7 +1787,7 @@ const SizedBox(height: 16),
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: () => _showCostCalculator(context),
+                            onPressed: _calculateCost,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Constants.kPrimaryColor,
                               foregroundColor: Colors.white,
@@ -1604,17 +1824,45 @@ const SizedBox(height: 16),
                             final hasNoCost = cost == "0";
                             return Align(
                               alignment: Alignment.centerLeft,
-                              child: Text(
-                                hasNoCost
-                                    ? "Est. Cost: No cost calculation done"
-                                    : "Est. Cost LKR $cost",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 20,
-                                  color: hasNoCost
-                                      ? const Color.fromARGB(255, 255, 30, 0)
-                                      : Colors.black,
-                                ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    hasNoCost
+                                        ? "Est. Cost: No cost calculation done"
+                                        : "Est. Cost $cost",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 20,
+                                      color: hasNoCost
+                                          ? const Color.fromARGB(
+                                              255, 255, 30, 0)
+                                          : Colors.black,
+                                    ),
+                                  ),
+                                  // The sum behind the figure, so the rate the
+                                  // room type carries is checkable without
+                                  // re-opening the dropdown.
+                                  ValueListenableBuilder<String?>(
+                                    valueListenable: costBreakdownNotifier,
+                                    builder: (context, breakdown, _) {
+                                      if (breakdown == null || hasNoCost) {
+                                        return const SizedBox.shrink();
+                                      }
+                                      return Padding(
+                                        padding:
+                                            const EdgeInsets.only(top: 4),
+                                        child: Text(
+                                          breakdown,
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            color: Colors.grey.shade700,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
                               ),
                             );
                           },

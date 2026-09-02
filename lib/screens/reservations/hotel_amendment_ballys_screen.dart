@@ -1156,7 +1156,7 @@ class _HotelAmendmentBallysScreenState
   ) {
     final catalog = ref.watch(hotelCatalogProvider);
     final notifier = ref.read(hotelCatalogProvider.notifier);
-    final hotels = notifier.hotelsAsMap;
+    final hotels = notifier.hotelsAsMap();
     final catalogHotelId = _catalogHotelFor(draft, hotel);
 
     final categories = catalogHotelId == null

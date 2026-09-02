@@ -1,11 +1,13 @@
 import 'package:ballys_reservation_app/data/repositories/hotel_repository.dart';
+import 'package:ballys_reservation_app/models/reservation/hotel_location.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_response.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_room_catalog_entry.dart';
 import 'package:ballys_reservation_app/providers/hotels_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Holds the combined hotel / category / room type / meal plan catalog
-/// (API 90155) for the Ballys reservation forms. Held in memory so every
+/// (`HotelsGetByLocation`, both locations merged) for the Ballys reservation
+/// forms. Held in memory so every
 /// dropdown filters it without re-fetching, and re-read whenever a form is
 /// about to offer it — see [refresh].
 class HotelCatalogNotifier extends StateNotifier<List<HotelRoomCatalogEntry>> {
@@ -45,10 +47,15 @@ class HotelCatalogNotifier extends StateNotifier<List<HotelRoomCatalogEntry>> {
     }
   }
 
-  List<HotelResponse> get hotels => HotelRoomCatalogEntry.hotelsFrom(state);
+  List<HotelResponse> hotels({HotelLocation? location}) =>
+      HotelRoomCatalogEntry.hotelsFrom(state, location: location);
 
-  List<Map<String, dynamic>> get hotelsAsMap =>
-      HotelRoomCatalogEntry.hotelsAsMapFrom(state);
+  List<Map<String, dynamic>> hotelsAsMap({HotelLocation? location}) =>
+      HotelRoomCatalogEntry.hotelsAsMapFrom(state, location: location);
+
+  /// The type an already-picked hotel is listed under.
+  HotelLocation? locationOfHotel(double? hotelId) =>
+      HotelRoomCatalogEntry.locationOfHotel(state, hotelId);
 
   List<Map<String, dynamic>> categoriesFor(double hotelId) =>
       HotelRoomCatalogEntry.categoriesFrom(state, hotelId);
@@ -67,7 +74,13 @@ final hotelCatalogProvider =
 });
 
 /// Distinct hotels from the catalog, in the shape the reservation forms
-/// already consume.
-final hotelCatalogHotelsProvider = Provider<List<HotelResponse>>((ref) {
-  return HotelRoomCatalogEntry.hotelsFrom(ref.watch(hotelCatalogProvider));
+/// already consume, narrowed to the hotel type the form asked for. A null
+/// argument means the type has not been answered yet and hands back every
+/// hotel; the forms keep their hotel dropdown disabled until it is.
+final hotelCatalogHotelsProvider =
+    Provider.family<List<HotelResponse>, HotelLocation?>((ref, location) {
+  return HotelRoomCatalogEntry.hotelsFrom(
+    ref.watch(hotelCatalogProvider),
+    location: location,
+  );
 });

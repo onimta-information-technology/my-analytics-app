@@ -322,10 +322,25 @@ print('API response for hotel costs: $response');
     final response = await apiService.post('AmendmentHotel/Insert', body);
 
     return HotelAmendmentResult(
-      success: response['Status'] as bool? ?? false,
-      message: response['Message'] as String?,
+      success: _insertSucceeded(response),
+      message: _insertMessage(response),
+      masterRowId: (response['MasterRowId'] as num?)?.toInt(),
     );
   }
+
+  /// The insert endpoint answers `{success: true, MasterRowId: n}`; older
+  /// builds of it answered `Status`. Accept either, so one shape changing
+  /// does not read as a failed submit. A row id coming back is itself proof
+  /// the amendment was written.
+  static bool _insertSucceeded(Map<String, dynamic> response) {
+    if (response['success'] == true || response['Status'] == true) return true;
+    final rowId = (response['MasterRowId'] as num?)?.toInt();
+    return rowId != null && rowId > 0;
+  }
+
+  static String? _insertMessage(Map<String, dynamic> response) =>
+      (response['Message'] ?? response['message'] ?? response['statusMsg'])
+          ?.toString();
 }
 
 /// Outcome of a `Hotel_Amendment_Insert` call.
@@ -333,5 +348,12 @@ class HotelAmendmentResult {
   final bool success;
   final String? message;
 
-  const HotelAmendmentResult({required this.success, this.message});
+  /// The row the amendment was written as, when the endpoint names it.
+  final int? masterRowId;
+
+  const HotelAmendmentResult({
+    required this.success,
+    this.message,
+    this.masterRowId,
+  });
 }

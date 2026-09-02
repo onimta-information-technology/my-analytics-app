@@ -151,6 +151,17 @@ class _RoomAmendmentDraft {
     rooms = null;
   }
 
+  /// Puts the room back the way it opened: nobody picked, no category, no
+  /// detail. Used once an amendment has gone through, so what was submitted is
+  /// not left sitting on the screen ready to be sent a second time. The
+  /// controllers are kept — the widgets on screen still hold them — and only
+  /// their text goes.
+  void reset() {
+    guests.clear();
+    category = null;
+    clearCategoryDetail();
+  }
+
   void dispose() {
     extras.dispose();
   }
@@ -1722,11 +1733,17 @@ class _HotelAmendmentBallysScreenState
       if (!mounted) return;
 
       if (result.success) {
+        final message = result.message?.trim();
+        // Everything filled in goes before the screen closes: the amendment is
+        // raised, so leaving the rooms ticked and the fields typed would only
+        // invite the same amendment being sent twice.
+        _resetForm();
         _showMessage(
-          result.message ??
-              (count == 1
-                  ? "Amendment submitted for 1 room."
-                  : "Amendment submitted for $count rooms."),
+          message == null || message.isEmpty
+              ? (count == 1
+                    ? "Amendment submitted successfully for 1 room."
+                    : "Amendment submitted successfully for $count rooms.")
+              : message,
           isError: false,
         );
         context.pop();
@@ -1740,6 +1757,18 @@ class _HotelAmendmentBallysScreenState
       setState(() => _submitting = false);
       _showMessage("Failed to submit amendment: $e");
     }
+  }
+
+  /// Clears the whole form — every room's draft and the ticks that opened them.
+  void _resetForm() {
+    if (!mounted) return;
+    setState(() {
+      for (final draft in _drafts.values) {
+        draft.reset();
+      }
+      _selectedRooms.clear();
+      _submitting = false;
+    });
   }
 
   /// The button that raises the amendment. Greyed until a room is ticked, since

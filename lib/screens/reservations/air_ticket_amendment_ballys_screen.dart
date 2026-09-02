@@ -166,6 +166,18 @@ class _TicketAmendmentDraft {
     refundMethod = null;
   }
 
+  /// Puts the ticket back the way it opened: nobody picked, no category or
+  /// type, no detail. Used once an amendment has gone through, so what was
+  /// submitted is not left sitting on the screen ready to be sent a second
+  /// time. The controllers are kept — the widgets on screen still hold them —
+  /// and only their text goes.
+  void reset() {
+    guests.clear();
+    category = null;
+    type = null;
+    clearTypeDetail();
+  }
+
   void dispose() {
     reason.dispose();
     additionalRemark.dispose();
@@ -1100,11 +1112,17 @@ class _AirTicketAmendmentBallysScreenState
       if (!mounted) return;
 
       if (result.success) {
+        final message = result.message?.trim();
+        // Everything filled in goes before the screen closes: the amendment is
+        // raised, so leaving the tickets ticked and the fields typed would only
+        // invite the same amendment being sent twice.
+        _resetForm();
         _showMessage(
-          result.message ??
-              (count == 1
-                  ? "Amendment submitted for 1 ticket."
-                  : "Amendment submitted for $count tickets."),
+          message == null || message.isEmpty
+              ? (count == 1
+                    ? "Amendment submitted successfully for 1 ticket."
+                    : "Amendment submitted successfully for $count tickets.")
+              : message,
           isError: false,
         );
         context.pop();
@@ -1118,6 +1136,19 @@ class _AirTicketAmendmentBallysScreenState
       setState(() => _submitting = false);
       _showMessage("Failed to submit amendment: $e");
     }
+  }
+
+  /// Clears the whole form — every ticket's draft and the ticks that opened
+  /// them.
+  void _resetForm() {
+    if (!mounted) return;
+    setState(() {
+      for (final draft in _drafts.values) {
+        draft.reset();
+      }
+      _selectedTickets.clear();
+      _submitting = false;
+    });
   }
 
   /// The button that raises the amendment. Greyed until a ticket is ticked,

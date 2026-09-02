@@ -485,6 +485,21 @@ class _ReservationPdfButtonBallysState
                     pw.Text('Guests', style: guestLabelStyle),
                     pw.SizedBox(height: 4),
                     pw.Text('${flight.guestCount}', style: guestCountStyle),
+                    // Children / infants travel on the same ticket but are
+                    // counted apart from the adult guest count, so they only
+                    // earn a line once there is one on board.
+                    if (flight.childrenCount > 0) ...[
+                      pw.SizedBox(height: 4),
+                      pw.Text('Children', style: guestLabelStyle),
+                      pw.SizedBox(height: 2),
+                      pw.Text('${flight.childrenCount}', style: guestCountStyle),
+                    ],
+                    if (flight.infantCount > 0) ...[
+                      pw.SizedBox(height: 4),
+                      pw.Text('Infants', style: guestLabelStyle),
+                      pw.SizedBox(height: 2),
+                      pw.Text('${flight.infantCount}', style: guestCountStyle),
+                    ],
                   ],
                 ),
               ],
@@ -655,23 +670,18 @@ class _ReservationPdfButtonBallysState
           kv('Member ID', widget.reservation.mid),
           kv('Member Name', widget.reservation.mName),
           // kv('Rating', widget.reservation.gRating ?? 'N/A'),
-          kv(
-            'Requested By',
-            widget.reservation.reqBy.trim().isNotEmpty ? widget.reservation.reqBy : 'N/A',
-          ),
-          kv('Reservation Date', _fmtDate(widget.reservation.reservDate)),
           // kv(
           //   'Package Amount',
           //   widget.reservation.packageAmountDisplay.trim().isNotEmpty
           //       ? widget.reservation.packageAmountDisplay
           //       : 'N/A',
           // ),
-          kv(
-            'Air Ticket',
-            widget.reservation.airticketReservationStatus.trim().isNotEmpty
-                ? widget.reservation.airticketReservationStatus
-                : 'N/A',
-          ),
+          // kv(
+          //   'Air Ticket',
+          //   widget.reservation.airticketReservationStatus.trim().isNotEmpty
+          //       ? widget.reservation.airticketReservationStatus
+          //       : 'N/A',
+          // ),
           kv(
             'Remarks',
             widget.reservation.remarks.trim().isNotEmpty
@@ -709,6 +719,42 @@ class _ReservationPdfButtonBallysState
 
           sectionHeader('Approval Information'),
           pw.SizedBox(height: 4),
+          // The workflow reads in the order it happens: raised -> checked ->
+          // approved, so who raised it sits here rather than in the header.
+          kv(
+            'Requested By',
+            () {
+              final raisedBy =
+                  (widget.reservation.pendingBy ?? widget.reservation.reqBy).trim();
+              return raisedBy.isNotEmpty ? raisedBy : 'N/A';
+            }(),
+          ),
+          kv(
+            'Requested On',
+            // `pending_time` is the stamp for the raising stage; older rows
+            // only carry the created date.
+            _fmt(widget.reservation.pendingTime ?? widget.reservation.insertDate),
+          ),
+          // The checking stage happens before approval, so it reads first.
+          // Older reservations carry no checked audit fields at all.
+          kv(
+            'Checked By',
+            (widget.reservation.checkedBy ?? '').trim().isNotEmpty
+                ? widget.reservation.checkedBy!
+                : 'N/A',
+          ),
+          kv(
+            'Checked On',
+            widget.reservation.checkedTime != null
+                ? _fmt(widget.reservation.checkedTime!)
+                : 'N/A',
+          ),
+          kv(
+            'Checked Remarks',
+            (widget.reservation.checkedRemark ?? '').trim().isNotEmpty
+                ? widget.reservation.checkedRemark!.trim()
+                : 'N/A',
+          ),
           kv('Approved By', widget.reservation.approvedBy ?? widget.reservation.isAppBy ?? 'N/A'),
           kv(
             'Approved On',

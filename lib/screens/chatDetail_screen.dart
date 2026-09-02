@@ -1504,8 +1504,8 @@ Future<void> _markMessagesAsRead() async {
   String _quotedPreviewText(ChatMessage msg) {
     if (msg.hasGroupedAttachments) {
       final count = msg.groupedAttachments.length;
-      if (msg.isImageGroup) return count > 1 ? '\$count photos' : 'Photo';
-      return count > 1 ? '\$count attachments' : 'Attachment';
+      if (msg.isImageGroup) return count > 1 ? '$count photos' : 'Photo';
+      return count > 1 ? '$count attachments' : 'Attachment';
     }
     if (msg.fileType == 'image') return 'Photo';
     if (msg.fileType != null) return msg.fileName ?? 'Attachment';
@@ -2165,6 +2165,250 @@ Future<void> _markMessagesAsRead() async {
           child: child,
         ),
       ),
+    );
+  }
+
+
+  // ─── Message info ───────────────────────────────────────────────────────────
+
+  /// The message the Info action describes: exactly one selected, sent by
+  /// this user, and not a system notice.
+  ///
+  /// Only your own messages — who read someone else's is their business, the
+  /// same rule WhatsApp applies.
+  ChatMessage? get _infoSelection {
+    if (_selectedMessageIds.length != 1) return null;
+    final id = _selectedMessageIds.first;
+    final index = _messages.indexWhere((m) => m.id == id);
+    if (index == -1) return null;
+    final msg = _messages[index];
+    return (msg.isMe && !msg.isSystem) ? msg : null;
+  }
+
+  /// Info from the selection bar. The selection is dropped first so the panel
+  /// is not left sitting behind the sheet.
+  void _showSelectedMessageInfo() {
+    final msg = _infoSelection;
+    if (msg == null) return;
+    _clearSelection();
+    _showMessageInfo(msg);
+  }
+
+  /// A reader's name. A seenBy row usually carries one, so the roster is only
+  /// consulted for a row that arrived without it — the same order of
+  /// preference [_reactorIdentity] has to apply from the start, since a
+  /// reaction carries no name at all.
+  ({String name, bool isMe}) _readerIdentity(MessageSeen seen) {
+    if (seen.matches(_currentUserUuid, FirebaseApiService.appType)) {
+      return (name: 'You', isMe: true);
+    }
+
+    final named = seen.displayName;
+    if (named != 'Unknown') return (name: named, isMe: false);
+
+    final uuid = seen.userUuid.toLowerCase();
+
+    // The same uuid under another app is a different person, so an appType
+    // match wins; a roster row without one is only a last resort.
+    GroupMember? loose;
+    for (final member in _groupMembers) {
+      if (member.userUuid.toLowerCase() != uuid) continue;
+      if (member.appType == seen.appType) {
+        return (name: member.name, isMe: false);
+      }
+      loose ??= member;
+    }
+    if (loose != null) return (name: loose.name, isMe: false);
+
+    for (final message in _messages) {
+      if ((message.senderId ?? '').toLowerCase() == uuid &&
+          (message.senderName ?? '').isNotEmpty) {
+        return (name: message.senderName!, isMe: false);
+      }
+    }
+
+    if (!widget.isGroup && widget.contact.userUuid.toLowerCase() == uuid) {
+      return (name: widget.contact.name, isMe: false);
+    }
+    return (name: 'Unknown', isMe: false);
+  }
+
+  /// "Today 17:08" for something that happened today, the full date
+  /// otherwise — the wording the date separators in the thread already use.
+  String _formatStamp(DateTime ts) =>
+      '${_formatDateSeparator(ts)} ${_formatTime(ts)}';
+
+  /// Who has read this message, and when. In a group this is the only way to
+  /// tell: one tick under the bubble cannot say which members caught up.
+  ///
+  /// The list is whatever the last fetch returned — reads that landed since
+  /// are picked up the next time the thread refreshes, not while the sheet is
+  /// open.
+  void _showMessageInfo(ChatMessage message) {
+    final fontSettings = ref.read(fontSettingsProvider);
+    final readers = message.seenBy;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.6,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 10, bottom: 12),
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Text(
+                    'Message info',
+                    style: TextStyle(
+                      fontSize: fontSettings.fontSize,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                // Which message this is about — the thread is behind a modal
+                // by now, so the sheet has to say so itself.
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _quotedPreviewText(message),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize - 3,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Sent ${_formatStamp(message.timestamp)}',
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize - 6,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Text(
+                    readers.isEmpty ? 'Read by' : 'Read by ${readers.length}',
+                    style: TextStyle(
+                      fontSize: fontSettings.fontSize - 3,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                if (readers.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+                    child: Text(
+                      'No one has read this yet.',
+                      style: TextStyle(
+                        fontSize: fontSettings.fontSize - 4,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  )
+                else
+                  Flexible(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.only(bottom: 8),
+                      itemCount: readers.length,
+                      itemBuilder: (context, index) {
+                        final seen = readers[index];
+                        final who = _readerIdentity(seen);
+                        return ListTile(
+                          leading: CircleAvatar(
+                            radius: 20,
+                            backgroundColor: who.isMe
+                                ? Colors.grey[400]
+                                : ChatContact.generateColorFromName(who.name),
+                            child: who.isMe
+                                ? const Icon(
+                                    Icons.person,
+                                    color: Colors.white,
+                                    size: 22,
+                                  )
+                                : Text(
+                                    ChatContact.generateInitials(who.name),
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: fontSettings.fontSize - 4,
+                                    ),
+                                  ),
+                          ),
+                          title: Text(
+                            who.name,
+                            style: TextStyle(
+                              fontSize: fontSettings.fontSize - 2,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          // A row with no readAt still counts as read — the
+                          // time is all that is missing.
+                          subtitle: seen.readAt == null
+                              ? null
+                              : Text(
+                                  _formatStamp(seen.readAt!),
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize - 6,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                          trailing: Icon(
+                            Icons.done_all,
+                            size: 18,
+                            color: Colors.blue[400],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -4186,6 +4430,27 @@ Future<void> _markMessagesAsRead() async {
                     tooltip: 'Delete',
                     onPressed: _deleteSelectedMessages,
                   ),
+                  // Only your own message has readers to report, so the
+                  // overflow is there only when there is something in it.
+                  if (_infoSelection != null)
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert),
+                      tooltip: 'More',
+                      onSelected: (value) {
+                        if (value == 'info') _showSelectedMessageInfo();
+                      },
+                      itemBuilder: (context) => [
+                        PopupMenuItem(
+                          value: 'info',
+                          child: Text(
+                            'Info',
+                            style: TextStyle(
+                              fontSize: fontSettings.fontSize - 2,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               )
             : _isSearching

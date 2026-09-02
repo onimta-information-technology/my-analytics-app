@@ -143,6 +143,77 @@ class MessageReaction {
   }
 }
 
+/// One person who has read this message, as returned in `seenBy`.
+///
+/// The backend appends a row per reader as they open the chat: in a 1:1 chat
+/// that is at most the other party, in a group one row per member who has
+/// caught up. The sender is never listed. As with [MessageReaction], the uuid
+/// alone does not identify a person, so [appType] is part of the identity.
+class MessageSeen {
+  final String userUuid;
+  final int appType;
+
+  /// How the reader is titled ("Mr Pasindu") and their given name
+  /// ("Pasindu"). Either can be missing on an older row.
+  final String? name;
+  final String? firstName;
+
+  /// When they read it. Null when the backend sent no readAt or a malformed
+  /// one — the row still counts as seen, just without a time.
+  final DateTime? readAt;
+
+  const MessageSeen({
+    required this.userUuid,
+    required this.appType,
+    this.name,
+    this.firstName,
+    this.readAt,
+  });
+
+  /// What to put in a "Seen by" list: the full title when there is one, the
+  /// given name otherwise, and never an empty string.
+  String get displayName {
+    final full = name?.trim() ?? '';
+    if (full.isNotEmpty) return full;
+    final first = firstName?.trim() ?? '';
+    return first.isNotEmpty ? first : 'Unknown';
+  }
+
+  /// uuids arrive in mixed case (an Android device id versus an iOS vendor
+  /// uuid), so compare case-insensitively.
+  bool matches(String? userUuid, int appType) =>
+      userUuid != null &&
+      userUuid.toLowerCase() == this.userUuid.toLowerCase() &&
+      appType == this.appType;
+
+  Map<String, dynamic> toJson() => {
+        'userUuid': userUuid,
+        'appType': appType,
+        'name': name,
+        'firstName': firstName,
+        'readAt': readAt?.toIso8601String(),
+      };
+
+  static MessageSeen fromJson(Map<String, dynamic> json) => MessageSeen(
+        userUuid: json['userUuid']?.toString() ?? '',
+        appType: ChatContact.parseAppType(json['appType']),
+        name: json['name']?.toString(),
+        firstName: json['firstName']?.toString(),
+        readAt: ChatMessage._parseTimestamp(json['readAt']),
+      );
+
+  /// Tolerates a null, a non-list, or rows that are not objects — a malformed
+  /// seenBy field must not take out the whole message list.
+  static List<MessageSeen> listFrom(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map<String, dynamic>>()
+        .map(MessageSeen.fromJson)
+        .where((s) => s.userUuid.isNotEmpty)
+        .toList();
+  }
+}
+
 class ChatMessage {
   final String id;
   final String text;
@@ -186,6 +257,11 @@ class ChatMessage {
   // Emoji reactions, one entry per person who reacted. Empty when nobody has.
   final List<MessageReaction> reactions;
 
+  // Who has read this message, one entry per reader, in the order the backend
+  // recorded them. Empty until somebody opens the chat, and always empty on
+  // an incoming message the backend did not report readers for.
+  final List<MessageSeen> seenBy;
+
   // Edited: the sender corrected the text after sending. [editedAt] is when
   // the last edit landed, and is null on a message that was never edited.
   final bool isEdited;
@@ -222,13 +298,15 @@ class ChatMessage {
     List<AttachmentItem>? groupedAttachments,
     List<MessageMention>? mentions,
     List<MessageReaction>? reactions,
+    List<MessageSeen>? seenBy,
     this.isEdited = false,
     this.editedAt,
     this.isSystem = false,
     this.systemEvent,
   })  : groupedAttachments = groupedAttachments ?? const [],
         mentions = mentions ?? const [],
-        reactions = reactions ?? const [];
+        reactions = reactions ?? const [],
+        seenBy = seenBy ?? const [];
 
   bool get hasMentions => mentions.isNotEmpty;
 
@@ -256,6 +334,26 @@ class ChatMessage {
       counts[r.emoji] = (counts[r.emoji] ?? 0) + 1;
     }
     return counts;
+  }
+
+  bool get hasSeenBy => seenBy.isNotEmpty;
+
+  /// The readers other than [userUuid]/[appType] — i.e. everyone the sender
+  /// cares about, since your own read of your own message is not news.
+  List<MessageSeen> seenByOthers(String? userUuid, int appType) =>
+      seenBy.where((s) => !s.matches(userUuid, appType)).toList();
+
+  /// Whether [userUuid]/[appType] has read this message.
+  bool isSeenBy(String? userUuid, int appType) =>
+      seenBy.any((s) => s.matches(userUuid, appType));
+
+  /// When [userUuid]/[appType] read it, or null if they have not (or the
+  /// backend recorded no time).
+  DateTime? seenAt(String? userUuid, int appType) {
+    for (final s in seenBy) {
+      if (s.matches(userUuid, appType)) return s.readAt;
+    }
+    return null;
   }
 
   /// How long after sending the backend still accepts an edit. Rejected
@@ -313,6 +411,7 @@ class ChatMessage {
     List<AttachmentItem>? groupedAttachments,
     List<MessageMention>? mentions,
     List<MessageReaction>? reactions,
+    List<MessageSeen>? seenBy,
     bool? isEdited,
     DateTime? editedAt,
     bool? isSystem,
@@ -342,6 +441,7 @@ class ChatMessage {
         groupedAttachments: groupedAttachments ?? this.groupedAttachments,
         mentions: mentions ?? this.mentions,
         reactions: reactions ?? this.reactions,
+        seenBy: seenBy ?? this.seenBy,
         isEdited: isEdited ?? this.isEdited,
         editedAt: editedAt ?? this.editedAt,
         isSystem: isSystem ?? this.isSystem,
@@ -372,6 +472,7 @@ class ChatMessage {
             groupedAttachments.map((a) => a.toJson()).toList(),
         'mentions': mentions.map((m) => m.toJson()).toList(),
         'reactions': reactions.map((r) => r.toJson()).toList(),
+        'seenBy': seenBy.map((s) => s.toJson()).toList(),
         'isEdited': isEdited,
         'editedAt': editedAt?.millisecondsSinceEpoch,
         'isSystem': isSystem,
@@ -398,6 +499,7 @@ class ChatMessage {
         replyToMessageId: json['replyToMessageId'],
         mentions: MessageMention.listFrom(json['mentions']),
         reactions: MessageReaction.listFrom(json['reactions']),
+        seenBy: MessageSeen.listFrom(json['seenBy']),
         replyToText: json['replyToText'],
         replyToSenderName: json['replyToSenderName'],
         groupedAttachments: (json['groupedAttachments'] as List<dynamic>?)
@@ -467,6 +569,7 @@ class ChatMessage {
       replyToSenderName: json['replyToSenderName'] as String?,
       mentions: MessageMention.listFrom(json['mentions']),
       reactions: MessageReaction.listFrom(json['reactions']),
+      seenBy: MessageSeen.listFrom(json['seenBy']),
       // As with isForwarded, this arrives as 1/0 on some rows.
       isEdited: json['isEdited'] == true || json['isEdited'] == 1,
       editedAt: _parseTimestamp(json['editedAt']),
@@ -549,6 +652,7 @@ class ChatMessage {
           replyToSenderName: msg.replyToSenderName,
           mentions: msg.mentions,
           reactions: msg.reactions,
+          seenBy: msg.seenBy,
           isEdited: msg.isEdited,
           editedAt: msg.editedAt,
           groupedAttachments: group,

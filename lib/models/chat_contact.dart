@@ -26,6 +26,11 @@ class ChatContact {
   final String? avatarUrl;
   final bool lastMessageRead;
 
+  /// WhatsApp-style pin. Pinned rows are kept at the top of the list, newest
+  /// pin first; [pinnedAt] is null whenever [isPinned] is false.
+  final bool isPinned;
+  final DateTime? pinnedAt;
+
   ChatContact({
     required this.id,
     required this.chatUuid,
@@ -46,7 +51,46 @@ class ChatContact {
     this.appType = 1,
     this.avatarUrl,
     this.lastMessageRead = true,
+    this.isPinned = false,
+    this.pinnedAt,
   }) : userUuid = userUuid ?? id;
+
+  /// Copy with a few fields changed — the row is rebuilt in place whenever a
+  /// pin is toggled or a new message lands.
+  ChatContact copyWith({
+    String? lastMessage,
+    String? time,
+    DateTime? lastMessageTime,
+    String? lastMessageSender,
+    String? chatUuid,
+    String? firstName,
+    int? unreadCount,
+    bool? isPinned,
+    DateTime? pinnedAt,
+  }) => ChatContact(
+    id: id,
+    chatUuid: chatUuid ?? this.chatUuid,
+    userUuid: userUuid,
+    name: name,
+    firstName: firstName ?? this.firstName,
+    lastMessage: lastMessage ?? this.lastMessage,
+    time: time ?? this.time,
+    isOnline: isOnline,
+    avatarColor: avatarColor,
+    initials: initials,
+    unreadCount: unreadCount ?? this.unreadCount,
+    lastMessageTime: lastMessageTime ?? this.lastMessageTime,
+    lastMessageSender: lastMessageSender ?? this.lastMessageSender,
+    participants: participants,
+    createdAt: createdAt,
+    lastMessageSenderName: lastMessageSenderName,
+    appType: appType,
+    avatarUrl: avatarUrl,
+    lastMessageRead: lastMessageRead,
+    isPinned: isPinned ?? this.isPinned,
+    // Unpinning clears the timestamp, so it is not carried over.
+    pinnedAt: (isPinned ?? this.isPinned) ? (pinnedAt ?? this.pinnedAt) : null,
+  );
 
   // Backend sends appType as a string (e.g. "2") in some responses and an
   // int in others, so parse defensively rather than casting directly.
@@ -66,6 +110,13 @@ class ChatContact {
         ?.toString()
         .trim();
     return (raw == null || raw.isEmpty) ? null : raw;
+  }
+
+  /// `pinnedAt` comes back as an ISO string, and as null for an unpinned row.
+  static DateTime? parsePinnedAt(Map<String, dynamic> json) {
+    final raw = json['pinnedAt']?.toString();
+    if (raw == null || raw.isEmpty) return null;
+    return DateTime.tryParse(raw);
   }
 
   Map<String, dynamic> toJson() => {
@@ -88,6 +139,8 @@ class ChatContact {
     'appType': appType,
     'avatarUrl': avatarUrl,
     'lastMessageRead': lastMessageRead,
+    'isPinned': isPinned,
+    'pinnedAt': pinnedAt?.millisecondsSinceEpoch,
   };
 
   static ChatContact fromJson(Map<String, dynamic> json) => ChatContact(
@@ -112,6 +165,10 @@ class ChatContact {
     appType: parseAppType(json['appType']),
     avatarUrl: json['avatarUrl']?.toString(),
     lastMessageRead: json['lastMessageRead'] ?? true,
+    isPinned: json['isPinned'] == true,
+    pinnedAt: json['pinnedAt'] != null
+        ? DateTime.fromMillisecondsSinceEpoch(json['pinnedAt'])
+        : null,
   );
 
   /// Builds a 1:1 row, which is titled after the *other* participant.
@@ -252,6 +309,8 @@ class ChatContact {
       appType: appType,
       avatarUrl: avatarUrl,
       lastMessageRead: json['lastMessageRead'] ?? true,
+      isPinned: json['isPinned'] == true,
+      pinnedAt: parsePinnedAt(json),
     );
   }
 

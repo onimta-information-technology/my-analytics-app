@@ -60,6 +60,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   String? _selectedContactId;
   bool _hasProcessedNotification = false;
 
+  /// How many conversations can be pinned at once, matching WhatsApp.
+  static const int _maxPinnedChats = 3;
+
   /// Guards [_refreshGroupMentions]: chats and groups both trigger it, and the
   /// two refreshes often land together.
   bool _isScanningMentions = false;
@@ -789,47 +792,154 @@ if (message.data['msg_type'] == '35') {
       ),
     ];
 
-    items.sort((a, b) {
-      final at = a is ChatContact
-          ? a.lastMessageTime
-          : _lastActivityForGroup(a as ChatGroup);
-      final bt = b is ChatContact
-          ? b.lastMessageTime
-          : _lastActivityForGroup(b as ChatGroup);
-      if (at == null && bt == null) return 0;
-      // Conversations without a message yet sink to the bottom.
-      if (at == null) return 1;
-      if (bt == null) return -1;
-      return bt.compareTo(at);
-    });
+    items.sort(_compareRows);
 
     return items;
+  }
+
+  /// Order of the merged list: pinned conversations first (newest pin on top,
+  /// the way WhatsApp orders them), then everything else by last activity.
+  int _compareRows(Object a, Object b) {
+    final aPinned = _isRowPinned(a);
+    final bPinned = _isRowPinned(b);
+    if (aPinned != bPinned) return aPinned ? -1 : 1;
+
+    if (aPinned && bPinned) {
+      final ap = _pinnedAtOfRow(a);
+      final bp = _pinnedAtOfRow(b);
+      // A pin the backend gave no timestamp for falls through to the
+      // last-activity comparison below rather than jumping the queue.
+      if (ap != null && bp != null && ap != bp) return bp.compareTo(ap);
+    }
+
+    final at = a is ChatContact
+        ? a.lastMessageTime
+        : _lastActivityForGroup(a as ChatGroup);
+    final bt = b is ChatContact
+        ? b.lastMessageTime
+        : _lastActivityForGroup(b as ChatGroup);
+    if (at == null && bt == null) return 0;
+    // Conversations without a message yet sink to the bottom.
+    if (at == null) return 1;
+    if (bt == null) return -1;
+    return bt.compareTo(at);
+  }
+
+  bool _isRowPinned(Object row) =>
+      row is ChatContact ? row.isPinned : (row as ChatGroup).isPinned;
+
+  DateTime? _pinnedAtOfRow(Object row) =>
+      row is ChatContact ? row.pinnedAt : (row as ChatGroup).pinnedAt;
+
+  /// Conversations pinned right now, counted once each: the chats API also
+  /// returns a row per group, and those copies are dropped from the list.
+  int get _pinnedCount =>
+      _contacts.where((c) => !_isGroupChat(c) && c.isPinned).length +
+      _groups.where((g) => g.isPinned).length;
+
+  /// Pins or unpins a row and re-sorts the list straight away, then tells the
+  /// backend. A rejected call is rolled back so the list keeps matching the
+  /// server.
+  Future<void> _togglePin(Object row) async {
+    final bool pin = !_isRowPinned(row);
+    final String chatId = row is ChatContact
+        ? (row.chatUuid.isNotEmpty ? row.chatUuid : row.id)
+        : (row as ChatGroup).groupId;
+    if (chatId.isEmpty) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+
+    if (pin && _pinnedCount >= _maxPinnedChats) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'You can only pin $_maxPinnedChats chats. Unpin one first.',
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _selectedContactId = null;
+      _applyPinnedLocally(chatId, pin);
+    });
+
+    final result = await FirebaseApiService.setChatPinned(
+      chatId: chatId,
+      pinned: pin,
+    );
+
+    if (!mounted) return;
+
+    if (result['success'] != true) {
+      setState(() => _applyPinnedLocally(chatId, !pin));
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(pin ? 'Failed to pin chat' : 'Failed to unpin chat'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    unawaited(_saveChats());
+  }
+
+  /// Flips the pin flag on every in-memory copy of a conversation — the chat
+  /// row, its filtered copy, and the group row when it is a group.
+  void _applyPinnedLocally(String chatId, bool pinned) {
+    final DateTime? pinnedAt = pinned ? DateTime.now() : null;
+
+    ChatContact mapContact(ChatContact c) =>
+        (c.chatUuid == chatId || c.id == chatId)
+            ? c.copyWith(isPinned: pinned, pinnedAt: pinnedAt)
+            : c;
+
+    _contacts = _contacts.map(mapContact).toList();
+    _filteredContacts = _filteredContacts.map(mapContact).toList();
+    _groups = _groups
+        .map(
+          (g) => (g.groupId == chatId || g.id == chatId)
+              ? g.copyWith(isPinned: pinned, pinnedAt: pinnedAt)
+              : g,
+        )
+        .toList();
+  }
+
+  /// The small pushpin shown on a pinned row, as WhatsApp does.
+  Widget _pinnedMarker() => Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Transform.rotate(
+          angle: 0.6,
+          child: Icon(Icons.push_pin, size: 14, color: Colors.grey[600]),
+        ),
+      );
+
+  /// Pin/unpin button shown next to the other actions on a selected row.
+  Widget _pinActionButton(Object row) {
+    final bool pinned = _isRowPinned(row);
+    return IconButton(
+      icon: Icon(
+        pinned ? Icons.push_pin : Icons.push_pin_outlined,
+        color: Colors.green,
+      ),
+      onPressed: () => _togglePin(row),
+      tooltip: pinned ? 'Unpin chat' : 'Pin chat',
+    );
   }
 
   void _updateContactLastMessage(String contactId, String lastMessage) {
     setState(() {
       final index = _contacts.indexWhere((c) => c.id == contactId);
       if (index != -1) {
-        _contacts[index] = ChatContact(
-          id: _contacts[index].id,
-          chatUuid: _contacts[index].chatUuid,
-          userUuid: _contacts[index].userUuid,
-          name: _contacts[index].name,
-          firstName: _contacts[index].firstName,
+        _contacts[index] = _contacts[index].copyWith(
           lastMessage: lastMessage,
           time: 'now',
-          isOnline: _contacts[index].isOnline,
-          avatarColor: _contacts[index].avatarColor,
-          initials: _contacts[index].initials,
-          unreadCount: _contacts[index].unreadCount,
           lastMessageTime: DateTime.now(),
           lastMessageSender: _currentUserName,
-          participants: _contacts[index].participants,
-          createdAt: _contacts[index].createdAt,
-          lastMessageSenderName: _contacts[index].lastMessageSenderName,
-          appType: _contacts[index].appType,
-          avatarUrl: _contacts[index].avatarUrl,
-          lastMessageRead: _contacts[index].lastMessageRead,
         );
       
         final filteredIndex = _filteredContacts.indexWhere(
@@ -867,28 +977,11 @@ if (message.data['msg_type'] == '35') {
             userAppType: contact.appType,
           );
 
-          final contactWithChatId = ChatContact(
-            id: contact.id,
+          final contactWithChatId = contact.copyWith(
             chatUuid: chatId ?? contact.chatUuid,
-            userUuid: contact.userUuid,
-            name: contact.name,
             firstName: contact.firstName.isNotEmpty
                 ? contact.firstName
                 : contact.name,
-            lastMessage: contact.lastMessage,
-            time: contact.time,
-            isOnline: contact.isOnline,
-            avatarColor: contact.avatarColor,
-            initials: contact.initials,
-            unreadCount: contact.unreadCount,
-            lastMessageTime: contact.lastMessageTime,
-            lastMessageSender: contact.lastMessageSender,
-            participants: contact.participants,
-            createdAt: contact.createdAt,
-            lastMessageSenderName: contact.lastMessageSenderName,
-            appType: contact.appType,
-            avatarUrl: contact.avatarUrl,
-            lastMessageRead: contact.lastMessageRead,
           );
 
           Navigator.of(context)
@@ -985,6 +1078,7 @@ if (message.data['msg_type'] == '35') {
               ? Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    _pinActionButton(contact),
                     IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
                       onPressed: () => _showDeleteConfirmation(contact),
@@ -1039,6 +1133,7 @@ if (message.data['msg_type'] == '35') {
                             : Colors.grey,
                         size: 16,
                       ),
+                    if (contact.isPinned) _pinnedMarker(),
                   ],
                 ),
         ),
@@ -1057,6 +1152,11 @@ if (message.data['msg_type'] == '35') {
         )
         .toList();
   }
+
+  /// The Groups tab orders rows the same way the merged list does, so a
+  /// pinned group sits on top there too.
+  List<ChatGroup> _sortedGroups() =>
+      _filteredGroups.toList()..sort((a, b) => _compareRows(a, b));
 
   /// The groups API carries no unread count, but the same conversation comes
   /// back from the chats API — borrow the count from there.
@@ -1116,11 +1216,14 @@ if (message.data['msg_type'] == '35') {
     // Unread messages in here name the user: the row gets the "@" marker,
     // which opens the conversation at the mention rather than at the end.
     final bool hasMentions = MentionTracker.hasMentions(group.groupId);
+    // Long-pressing a group selects it the same way a 1:1 chat row does, so
+    // the pin button appears in the same place for both kinds of row.
+    final bool isSelected = _selectedContactId == group.groupId;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      elevation: 0,
-      color: Colors.transparent,
+      elevation: isSelected ? 4 : 0,
+      color: isSelected ? Colors.red.withOpacity(0.1) : Colors.transparent,
       child: ListTile(
         leading: GroupAvatar(
           avatarUrl: group.groupAvatarUrl,
@@ -1182,77 +1285,108 @@ if (message.data['msg_type'] == '35') {
             ),
           ],
         ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              group.time,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: fontSettings.fontSize - 4,
-              ),
-            ),
-            if (hasMentions || unreadCount > 0)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (hasMentions) ...[
+        trailing: isSelected
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _pinActionButton(group),
+                  IconButton(
+                    icon: const Icon(Icons.info_outline, color: Colors.grey),
+                    onPressed: () => _openGroupDetails(group, fontSettings),
+                    tooltip: 'Group info',
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.grey),
+                    onPressed: () =>
+                        setState(() => _selectedContactId = null),
+                    tooltip: 'Cancel',
+                  ),
+                ],
+              )
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    group.time,
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: fontSettings.fontSize - 4,
+                    ),
+                  ),
+                  if (hasMentions || unreadCount > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (hasMentions) ...[
+                            InkWell(
+                              onTap: () => _openGroupChat(group, jumpToMentions: true),
+                              customBorder: const CircleBorder(),
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Colors.green,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.alternate_email,
+                                  color: Colors.white,
+                                  size: fontSettings.fontSize - 2,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                          ],
+                          if (unreadCount > 0)
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: const BoxDecoration(
+                                color: Colors.green,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                '$unreadCount',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: fontSettings.fontSize - 4,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (group.isPinned) _pinnedMarker(),
                       InkWell(
-                        onTap: () => _openGroupChat(group, jumpToMentions: true),
+                        onTap: () => _openGroupDetails(group, fontSettings),
                         customBorder: const CircleBorder(),
-                        child: Container(
+                        child: Padding(
                           padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.green,
-                            shape: BoxShape.circle,
-                          ),
                           child: Icon(
-                            Icons.alternate_email,
-                            color: Colors.white,
-                            size: fontSettings.fontSize - 2,
+                            Icons.info_outline,
+                            size: 18,
+                            color: Colors.grey[500],
                           ),
                         ),
                       ),
-                      const SizedBox(width: 6),
                     ],
-                    if (unreadCount > 0)
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: const BoxDecoration(
-                          color: Colors.green,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          '$unreadCount',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: fontSettings.fontSize - 4,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            InkWell(
-              onTap: () => _openGroupDetails(group, fontSettings),
-              customBorder: const CircleBorder(),
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Icon(
-                  Icons.info_outline,
-                  size: 18,
-                  color: Colors.grey[500],
-                ),
-              ),
-            ),
-          ],
-        ),
-        onTap: () => _openGroupChat(group),
-        onLongPress: () => _openGroupDetails(group, fontSettings),
+        onTap: () {
+          if (isSelected) {
+            setState(() => _selectedContactId = null);
+            return;
+          }
+          _openGroupChat(group);
+        },
+        onLongPress: () =>
+            setState(() => _selectedContactId = group.groupId),
       ),
     );
   }
@@ -1364,7 +1498,7 @@ if (message.data['msg_type'] == '35') {
       );
     }
 
-    final groups = _filteredGroups;
+    final groups = _sortedGroups();
 
     if (groups.isEmpty) {
       return RefreshIndicator(

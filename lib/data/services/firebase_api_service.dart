@@ -39,6 +39,7 @@ class FirebaseApiService {
     'forwardMessage': '/api/chats', // base; full path: /api/chats/{chatId}/messages/{messageId}/forward
     'reactToMessage': '/api/chats', // base; full path: /api/chats/{chatId}/messages/{messageId}/react
     'uploadFiles': '/api/chats', // base; full path: /api/chats/{chatId}/upload/multiple
+    'pinChat': '/api/chats', // base; full path: /api/chats/{chatId}/pin | /unpin
     'createGroup': '/api/groups/create',
     'fetchUserGroups': '/api/groups/user',
     'groups': '/api/groups', // base; full path: /api/groups/{groupId}
@@ -1018,6 +1019,36 @@ static Future<Map<String, dynamic>> forwardMessage({
     return result;
   } catch (e) {
     print('forwardMessage ✖ exception: $e');
+    return {'success': false, 'error': e.toString()};
+  }
+}
+
+/// Pins or unpins a conversation for this user, WhatsApp style.
+///
+/// The same pair of endpoints covers 1:1 chats and groups — a group is
+/// addressed by its groupId, which is also its chatId. Both are idempotent:
+/// pinning an already pinned chat answers 200 without changing `pinnedAt`.
+/// The pin is per-user, so it never moves the row for anyone else, and it
+/// comes back on the list payloads as `isPinned`/`pinnedAt`.
+static Future<Map<String, dynamic>> setChatPinned({
+  required String chatId,
+  required bool pinned,
+}) async {
+  try {
+    final domain = await resolveDomain();
+    final deviceId = await DeviceId.get();
+    final url = '$domain/api/chats/$chatId/${pinned ? 'pin' : 'unpin'}';
+    final body = {'userId': deviceId, 'appType': appType};
+
+    _logLong('setChatPinned ▶ POST $url');
+    _logLong('setChatPinned ▶ body: ${jsonEncode(body)}');
+
+    final result = await postRequest(url, body);
+
+    _logLong('setChatPinned ◀ response: ${jsonEncode(result)}');
+    return result;
+  } catch (e) {
+    print('setChatPinned ✖ exception: $e');
     return {'success': false, 'error': e.toString()};
   }
 }

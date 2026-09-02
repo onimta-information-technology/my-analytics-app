@@ -111,6 +111,11 @@ class ChatGroup {
   final Color avatarColor;
   final String initials;
 
+  /// WhatsApp-style pin, shared with 1:1 chats: a pinned group sits at the
+  /// top of the list, newest pin first. [pinnedAt] is null when not pinned.
+  final bool isPinned;
+  final DateTime? pinnedAt;
+
   ChatGroup({
     required this.id,
     required this.groupId,
@@ -124,7 +129,28 @@ class ChatGroup {
     this.memberCount = 0,
     required this.avatarColor,
     required this.initials,
+    this.isPinned = false,
+    this.pinnedAt,
   });
+
+  ChatGroup copyWith({bool? isPinned, DateTime? pinnedAt}) => ChatGroup(
+        id: id,
+        groupId: groupId,
+        groupName: groupName,
+        groupAvatarUrl: groupAvatarUrl,
+        adminOnlyMessaging: adminOnlyMessaging,
+        lastMessage: lastMessage,
+        lastMessageTime: lastMessageTime,
+        lastMessageSender: lastMessageSender,
+        role: role,
+        memberCount: memberCount,
+        avatarColor: avatarColor,
+        initials: initials,
+        isPinned: isPinned ?? this.isPinned,
+        // Unpinning clears the timestamp rather than carrying the old one.
+        pinnedAt:
+            (isPinned ?? this.isPinned) ? (pinnedAt ?? this.pinnedAt) : null,
+      );
 
   bool get isAdmin => role.toLowerCase() == 'admin';
 
@@ -166,6 +192,8 @@ class ChatGroup {
       memberCount: _parseInt(json['memberCount']),
       avatarColor: ChatContact.generateColorFromName(name),
       initials: ChatContact.generateInitials(name),
+      isPinned: json['isPinned'] == true,
+      pinnedAt: ChatContact.parsePinnedAt(json),
     );
   }
 
@@ -180,5 +208,7 @@ class ChatGroup {
         'lastMessageSender': lastMessageSender,
         'role': role,
         'memberCount': memberCount,
+        'isPinned': isPinned,
+        'pinnedAt': pinnedAt?.toIso8601String(),
       };
 }

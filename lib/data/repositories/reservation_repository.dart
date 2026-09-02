@@ -88,7 +88,7 @@ class ReservationRepository {
   }
  Future<Map<String, List<ReservationBallys>>> getBallysReservations() async {
     final response = await apiService.get('Reservation_GetAllReservations');
-    print('Response from getReservations API: $response');
+   // print('Response from getBallysReservations API: $response');
 
     final Map<String, List<ReservationBallys>> classifiedReservations = {
       'Pending': [],

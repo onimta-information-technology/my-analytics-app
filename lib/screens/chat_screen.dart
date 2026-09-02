@@ -29,6 +29,11 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 
 List<ChatContact> _filteredUsers = [];
 
+/// Row tint for a long-pressed chat or group row. WhatsApp washes the whole
+/// row edge to edge instead of lifting a rounded card out of the list, so the
+/// selected row is a flat full-width block of colour.
+const Color _kChatSelectionColor = Color(0xFFE8F5E9);
+
 class ChatScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic>? notificationData;
   const ChatScreen({super.key, this.notificationData});
@@ -953,16 +958,30 @@ if (message.data['msg_type'] == '35') {
     _saveChats();
   }
 
+  /// The check mark WhatsApp stamps over the avatar of a selected row.
+  Widget _selectionCheckBadge() => Positioned(
+    bottom: 0,
+    right: 0,
+    child: Container(
+      width: 20,
+      height: 20,
+      decoration: BoxDecoration(
+        color: Colors.green,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 2),
+      ),
+      child: const Icon(Icons.check, size: 12, color: Colors.white),
+    ),
+  );
+
   Widget _buildContactCard(ChatContact contact, FontSettings fontSettings) {
     final bool hasLastMessage =
         contact.lastMessage.isNotEmpty &&
         contact.lastMessage != 'No messages yet';
     final bool isSelected = _selectedContactId == contact.id;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      elevation: isSelected ? 4 : 0,
-      color: isSelected ? Colors.red.withOpacity(0.1) : Colors.transparent,
+    return Material(
+      color: isSelected ? _kChatSelectionColor : Colors.transparent,
       child: InkWell(
         onTap: () async {
           if (isSelected) {
@@ -1031,6 +1050,7 @@ if (message.data['msg_type'] == '35') {
       ),
     ),
   ),
+              if (isSelected) _selectionCheckBadge(),
             ],
           ),
           title: Text(
@@ -1220,15 +1240,18 @@ if (message.data['msg_type'] == '35') {
     // the pin button appears in the same place for both kinds of row.
     final bool isSelected = _selectedContactId == group.groupId;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      elevation: isSelected ? 4 : 0,
-      color: isSelected ? Colors.red.withOpacity(0.1) : Colors.transparent,
+    return Material(
+      color: isSelected ? _kChatSelectionColor : Colors.transparent,
       child: ListTile(
-        leading: GroupAvatar(
-          avatarUrl: group.groupAvatarUrl,
-          radius: 25,
-          backgroundColor: group.avatarColor,
+        leading: Stack(
+          children: [
+            GroupAvatar(
+              avatarUrl: group.groupAvatarUrl,
+              radius: 25,
+              backgroundColor: group.avatarColor,
+            ),
+            if (isSelected) _selectionCheckBadge(),
+          ],
         ),
         title: Row(
           children: [

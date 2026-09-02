@@ -51,6 +51,9 @@ import 'package:ballys_reservation_app/screens/profile/profile_screen.dart';
 import 'package:ballys_reservation_app/screens/menu_screen.dart';
 import 'package:ballys_reservation_app/screens/profile/trip_history_screen.dart';
 import 'package:ballys_reservation_app/screens/report_screen.dart';
+import 'package:ballys_reservation_app/models/amendment_ballys.dart';
+import 'package:ballys_reservation_app/screens/reservations/amendment_view_ballys_screen.dart';
+import 'package:ballys_reservation_app/screens/reservations/amendments_ballys_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/air_tickets_selection_ballys_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/air_tickets_selection_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/group_reservation_ballys_screen.dart';
@@ -609,6 +612,43 @@ class AppNavigation {
           );
         },
       ),
+    ),
+
+    // Amendments (Ballys only) — everything raised from the hotel / air ticket
+    // amendment screens, in the same four-tab check → approve workflow the
+    // reservation list uses. The detail screen takes the row itself as `extra`,
+    // since the list has already parsed and joined it.
+    GoRoute(
+      path: 'amendments-ballys',
+      pageBuilder: (context, state) => CustomTransitionPage(
+        fullscreenDialog: false,
+        key: state.pageKey,
+        child: const AmendmentsBallysScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+            child: child,
+          );
+        },
+      ),
+      routes: [
+        GoRoute(
+          path: 'amendment-view-ballys',
+          pageBuilder: (context, state) => CustomTransitionPage(
+            fullscreenDialog: false,
+            key: state.pageKey,
+            child: AmendmentViewBallysScreen(
+              amendment: state.extra as AmendmentBallys,
+            ),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(
+                opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+                child: child,
+              );
+            },
+          ),
+        ),
+      ],
     ),
 
     // Quick Reservation — shared screen for every non-Ballys location

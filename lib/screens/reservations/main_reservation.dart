@@ -199,8 +199,41 @@ class _ReservationMainScreenState extends ConsumerState<ReservationMainScreen>
                           ),
                         ),
                       ),
-                      // Keeps the card the same width as the cards above.
-                      const Expanded(child: SizedBox()),
+                      // ── Amendments (Ballys only) ──────────────────
+                      // Everything raised off a confirmed reservation —
+                      // hotel and air ticket changes — waiting to be
+                      // checked and approved.
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            context.go('/reservationMain/amendments-ballys');
+                          },
+                          child: Card(
+                            color: const Color.fromARGB(255, 0, 121, 107),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              child: Column(
+                                children: const [
+                                  Icon(
+                                    Icons.edit_note,
+                                    size: 80,
+                                    color: Colors.white,
+                                  ),
+                                  Text(
+                                    'Amendments',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 16.0,
+                                      fontWeight: FontWeight.normal,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
 

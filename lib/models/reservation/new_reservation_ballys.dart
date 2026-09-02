@@ -19,6 +19,14 @@ class NewReservationBallys {
   /// longer has to stand in for it — a shared package may still carry one.
   bool isSharedAmount;
   String? selectedMarketingPerson;
+
+  /// The approver this reservation is being sent to, picked from
+  /// `GetAuthorizationLevels`. Null when the user left the dropdown empty.
+  int? authorizationId;
+  String? authorizationPerson;
+  int? authorizationLevelNo;
+  String? authorizationCategory;
+
   List<Map<String, dynamic>>? guests;
   List<Map<String, dynamic>>? passportImages;
 
@@ -38,6 +46,10 @@ class NewReservationBallys {
     this.packageAmount,
     this.isSharedAmount = false,
     this.selectedMarketingPerson,
+    this.authorizationId,
+    this.authorizationPerson,
+    this.authorizationLevelNo,
+    this.authorizationCategory,
     this.guests,
     this.passportImages,
   });
@@ -59,8 +71,21 @@ class NewReservationBallys {
       'package_amount': packageAmount,
       'is_shared_amount': isSharedAmount,
       'selected_marketing_person': selectedMarketingPerson,
+      'approve_person': approvePersonJson(),
       'guests': guests,
       'passport_images': passportImages,
+    };
+  }
+
+  /// The approver block sent to `Reservation_InsertReservation`. Empty when no
+  /// approver was picked, so the key is always present in the body.
+  Map<String, dynamic> approvePersonJson() {
+    if (authorizationId == null) return <String, dynamic>{};
+    return {
+      'authorization_id': authorizationId,
+      'authorization_person': authorizationPerson ?? '',
+      'authorization_level': authorizationLevelNo,
+      'authorization_category': authorizationCategory ?? '',
     };
   }
 

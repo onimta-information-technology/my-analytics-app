@@ -7,10 +7,12 @@ import 'package:ballys_reservation_app/components/hotel_selection_ballys.dart';
 import 'package:ballys_reservation_app/components/package_amount_field_ballys.dart';
 import 'package:ballys_reservation_app/components/passport_upload_widget_ballys.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
+import 'package:ballys_reservation_app/data/repositories/authorization_level_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/hotel_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/reservation_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
+import 'package:ballys_reservation_app/models/authorization_level.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart';
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
@@ -108,6 +110,14 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
   // next Add Guest / Add New Guest tap.
   int? _editingGuestIndex;
 
+  // ── Approval routing ──────────────────────────────────────────────────
+  // Who this reservation is being sent to for approval, from
+  // `GetAuthorizationLevels`. Empty until the fetch lands; a failed fetch just
+  // leaves the dropdown disabled rather than blocking the form.
+  List<AuthorizationLevel> _authorizationLevels = [];
+  AuthorizationLevel? _selectedAuthorization;
+  bool _isLoadingAuthorizationLevels = false;
+
   // Extra members travelling on the SAME package as the member currently in the
   // form: they share its hotels, air tickets and dates, so they never add rooms
   // or tickets of their own — only who they are and their family members.
@@ -118,6 +128,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
     super.initState();
     _getHotels();
     _loadLocationPrefix();
+    _loadAuthorizationLevels();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       FocusScope.of(context).requestFocus(FocusNode());
       final selectedReservation = ref.watch(selectedReservationBallysProvider);
@@ -160,6 +171,164 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
       row.dispose();
     }
     super.dispose();
+  }
+
+  /// Pulls the approvers for the "Request Approval From" dropdown. A failure
+  /// only clears the list — the reservation still saves without an approver.
+  Future<void> _loadAuthorizationLevels() async {
+    // Assigned rather than setState'd: initState calls this while the element
+    // is still building, and markNeedsBuild there asserts. The awaits below
+    // land after the first frame, so the spinner still shows.
+    _isLoadingAuthorizationLevels = true;
+    try {
+      final levels = await AuthorizationLevelRepository(
+        ApiService(SecureStorage.instance),
+      ).getAuthorizationLevels();
+      if (!mounted) return;
+      setState(() {
+        _authorizationLevels = levels;
+        // A reservation loaded for editing may already name an approver that
+        // is no longer in the list; drop the selection rather than letting the
+        // dropdown assert on a value it cannot show.
+        if (_selectedAuthorization != null &&
+            !levels.contains(_selectedAuthorization)) {
+          _selectedAuthorization = null;
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _authorizationLevels = []);
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingAuthorizationLevels = false);
+      }
+    }
+  }
+
+  /// The "Request Approval From" dropdown. Each menu row shows the approver and
+  /// their level on one line with the (long) job title underneath, while the
+  /// closed field shows just the name and level so it never overflows.
+  ///
+  /// An InputDecorator wrapping a plain DropdownButton rather than a
+  /// DropdownButtonFormField: the field is fully controlled — the clear button
+  /// resets it and a reloaded list can drop the selection — which the
+  /// FormField's initialValue no longer supports.
+  Widget _buildAuthorizationDropdown(FontSettings fontSettings) {
+    return InputDecorator(
+      isEmpty: _selectedAuthorization == null,
+      decoration: InputDecoration(
+        labelText: "Request Approval From",
+        labelStyle: TextStyle(
+          fontSize: fontSettings.fontSize,
+          fontWeight: fontSettings.fontWeight,
+        ),
+        border: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12.0,
+          vertical: 8.0,
+        ),
+        suffixIcon: _isLoadingAuthorizationLevels
+            ? const Padding(
+                padding: EdgeInsets.all(14.0),
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            : (_selectedAuthorization != null
+                ? IconButton(
+                    icon: const Icon(Icons.clear),
+                    tooltip: "Clear",
+                    onPressed: () =>
+                        setState(() => _selectedAuthorization = null),
+                  )
+                : null),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<AuthorizationLevel>(
+          value: _selectedAuthorization,
+          isExpanded: true,
+          // Null lets each row size to its own two lines; the 48px default
+          // would clip the job title under the approver's name.
+          itemHeight: null,
+          // hint: Text(
+          //   _isLoadingAuthorizationLevels
+          //       ? "Loading approvers..."
+          //       : "Select an approver",
+          //   style: TextStyle(
+          //     fontSize: fontSettings.fontSize,
+          //     fontWeight: fontSettings.fontWeight,
+          //     color: Colors.grey,
+          //   ),
+          // ),
+          style: TextStyle(
+            fontSize: fontSettings.fontSize,
+            fontWeight: fontSettings.fontWeight,
+            color: Colors.black,
+          ),
+          // Without this the two-line menu rows would be painted into the
+          // single-line closed field and overflow it.
+          selectedItemBuilder: (context) => _authorizationLevels
+              .map(
+                (level) => Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    level.displayLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: fontSettings.fontSize,
+                      fontWeight: fontSettings.fontWeight,
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
+          items: _authorizationLevels
+              .map(
+                (level) => DropdownMenuItem<AuthorizationLevel>(
+                  value: level,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          level.displayLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (level.category.isNotEmpty)
+                          Text(
+                            level.category,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: fontSettings.fontSize * 0.8,
+                              fontWeight: fontSettings.fontWeight,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: _authorizationLevels.isEmpty
+              ? null
+              : (value) => setState(() => _selectedAuthorization = value),
+        ),
+      ),
+    );
   }
 
   void _updateMemberIdFields(String fullMemberId) {
@@ -1380,6 +1549,10 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
       reservationnewnumber: _reservationnewnumberController.text,
       packageAmount: _packageAmountController.text,
       isSharedAmount: _sharedPackage,
+      authorizationId: _selectedAuthorization?.idNo,
+      authorizationPerson: _selectedAuthorization?.name,
+      authorizationLevelNo: _selectedAuthorization?.levelNo,
+      authorizationCategory: _selectedAuthorization?.category,
       // Each guest expands to itself plus anyone sharing its package, so two
       // members on one package travel as two `guests` rows against one set of
       // rooms / air tickets.
@@ -1425,6 +1598,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
         _reservationNoController.clear();
         _hasFamilyMembers = false;
         _sharedPackage = false;
+        _selectedAuthorization = null;
         _clearExtraMembers();
         _arrivalDate = null;
         _departureDate = null;
@@ -3050,6 +3224,10 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
                                 }).toList(),
                               ),
                        
+                        const SizedBox(height: 10.0),
+
+                        // ── Request Approval From ──────────────
+                        _buildAuthorizationDropdown(fontSettings),
                         const SizedBox(height: 10.0),
 
                         // ── Remarks ────────────────────────────

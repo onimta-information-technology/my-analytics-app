@@ -204,6 +204,10 @@ Future<Map<String, dynamic>> _buildReservationBodyBallys(
       'device_id': deviceId,
       'selected_marketing_person':
           newReservation.selectedMarketingPerson ?? '',
+      // Approver picked from `GetAuthorizationLevels` — who the reservation is
+      // being sent to for approval. Always present; an untouched dropdown
+      // sends it as an empty object.
+      'approve_person': newReservation.approvePersonJson(),
       'reservation_status': 'Pending',
       'guests': newReservation.guests,
       'room_details': newReservation.roomDetails,

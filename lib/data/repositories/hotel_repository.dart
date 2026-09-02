@@ -307,10 +307,11 @@ print('API response for hotel costs: $response');
       ...payload,
       'user_name': userName,
       'device_id': deviceId,
+      'status': 'Pending',
     };
 
     print('submitAmendment payload: $body');
-    final response = await apiService.post('Hotel_Amendment_Insert', body);
+    final response = await apiService.post('AmendmentHotel/Insert', body);
 
     return HotelAmendmentResult(
       success: response['Status'] as bool? ?? false,

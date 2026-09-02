@@ -79,14 +79,15 @@ class AirTicketRepository {
       ...payload,
       'user_name': userName,
       'device_id': deviceId,
+      'status': 'Pending',
     };
 
-    print('submitAmendment payload: $body');
+    //print('submitAmendment payload: $body');
     final response = await apiService.post(
-      'Air_Ticket_Amendment_Insert',
+      'AmendmentAir/Insert',
       body,
     );
-
+print('submitAmendment response: $response');
     return AirTicketAmendmentResult(
       success: response['Status'] as bool? ?? false,
       message: response['Message'] as String?,

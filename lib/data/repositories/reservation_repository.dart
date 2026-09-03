@@ -152,7 +152,7 @@ class ReservationRepository {
     required String masterId,
   }) async {
     final salesCode = await StorageUtil.getSalesCode();
-    final userName = await StorageUtil.getUserName();
+    final userName = await StorageUtil.getUName();
     final deviceId = await DeviceId.get();
 
     return {
@@ -269,7 +269,7 @@ Future<Map<String, dynamic>> _buildReservationBodyBallys(
     required String remarks,
   }) async {
     final salesCode = await StorageUtil.getSalesCode();
-    final userName = await StorageUtil.getUserName();
+    final userName = await StorageUtil.getUName();
     final deviceId = await DeviceId.get();
 
     final guests = reservation.guests;

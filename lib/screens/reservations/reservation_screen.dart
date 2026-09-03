@@ -78,7 +78,7 @@ bool _isSearching = false;
   if (resChk == true || resApp == true) {
     return reservations;
   }
-   final currentUserName = await StorageUtil.getUserName();
+   final currentUserName = await StorageUtil.getUName();
     if (currentUserName == null) return [];
     return reservations.where((reservation) {
       return reservation.reqBy.trim().toLowerCase() ==
@@ -109,7 +109,7 @@ Future<bool> _canAccessReservationDetails(
     return true;
   }
 
-  final currentUserName = await StorageUtil.getUserName();
+  final currentUserName = await StorageUtil.getUName();
   if (currentUserName == null) return false;
 
   final normalizedUser   = currentUserName.trim().toLowerCase();

@@ -1925,7 +1925,7 @@ Remarks              : ${m['remarks']}''';
 
     final primary = allMembers.first;
     final salesCode = await StorageUtil.getSalesCode();
-    final userName = await StorageUtil.getUserName();
+    final userName = await StorageUtil.getUName();
     final deviceId = await DeviceId.get();
     final masterId = DateTime.now().millisecondsSinceEpoch.toString();
 final phoneNumber = await StorageUtil.getMobileNumber();
@@ -2087,7 +2087,7 @@ final phoneNumber = await StorageUtil.getMobileNumber();
     final firstHotel = primaryHotels.isNotEmpty ? primaryHotels.first : null;
 
     final salesCode = await StorageUtil.getSalesCode();
-    final userName = await StorageUtil.getUserName();
+    final userName = await StorageUtil.getUName();
     final deviceId = await DeviceId.get();
     final masterId = DateTime.now().millisecondsSinceEpoch.toString();
     final body = <String, dynamic>{
@@ -2196,7 +2196,7 @@ print(" rrr : $body");
 
     final primary = allMembers.first;
     final salesCode = await StorageUtil.getSalesCode();
-    final userName = await StorageUtil.getUserName();
+    final userName = await StorageUtil.getUName();
     final deviceId = await DeviceId.get();
     final masterId = DateTime.now().millisecondsSinceEpoch.toString();
 print(" rrr : $airTicketDetails");

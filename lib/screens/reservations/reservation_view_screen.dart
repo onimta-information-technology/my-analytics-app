@@ -99,7 +99,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
     final salesCode = await StorageUtil.getSalesCode();
     final resChk = await StorageUtil.getResChk();
     final resApp = await StorageUtil.getResApp();
-    final userName = await StorageUtil.getUserName();
+    final userName = await StorageUtil.getUName();
 
     if (mounted) {
       setState(() {
@@ -1065,7 +1065,7 @@ class _NewReservationScreenState extends ConsumerState<ReservationViewScreen> wi
     final hasPermission = isPending
         ? _canCheckOrReject
         : _canApproveOrRejectChecked;
-    final currentUserName = await StorageUtil.getUserName();
+    final currentUserName = await StorageUtil.getUName();
     final isRequester = (currentUserName ?? '').trim().toLowerCase() ==
         selectedReservation.reqBy.trim().toLowerCase();
        

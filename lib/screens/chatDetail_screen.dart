@@ -8,6 +8,7 @@ import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/components/forward_message_sheet.dart';
 import 'package:ballys_reservation_app/components/group_details_sheet.dart';
 import 'package:ballys_reservation_app/components/voice_message_bubble.dart';
+import 'package:ballys_reservation_app/components/voice_recorder_widgets.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/models/chat_group.dart';
@@ -43,6 +44,23 @@ const Duration _kMinVoiceNote = Duration(seconds: 1);
 // How far the finger has to travel left of the mic before releasing cancels
 // the recording instead of sending it.
 const double _kVoiceCancelSlide = 80;
+
+// How far the finger has to travel up the lock rail before the recording keeps
+// running on its own — WhatsApp's hands-free lock.
+const double _kVoiceLockSlide = 70;
+
+// Levels are sampled this often while recording, and each sample is one bar of
+// the waveform.
+const Duration _kAmplitudeInterval = Duration(milliseconds: 90);
+
+// Ceiling on how many level samples are kept. Past it the list is halved by
+// averaging neighbours, which keeps the whole clip represented — the bars just
+// each stand for twice as much audio — instead of losing its opening.
+const int _kMaxAmplitudeSamples = 900;
+
+// The dBFS floor the level meter is scaled against. Speech on a phone mic sits
+// between roughly -45dB and 0dB, so anything quieter is drawn as silence.
+const double _kAmplitudeFloorDb = 45;
 
 // Colour the composer paints an "@Name" in once it has been picked from the
 // suggestion list.
@@ -229,7 +247,37 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
   /// [_startRecording] that there is nobody left holding it.
   bool _voicePressActive = false;
 
+  /// Set while [_startRecording] is on its way up. Bringing the recorder up is
+  /// asynchronous, so without this a second tap on the mic in that window would
+  /// start a second recording over the first.
+  bool _isStartingRecording = false;
+
+  /// True once the recording has been locked hands-free: the finger is gone,
+  /// the recorder keeps running, and the bar grows its own stop, delete and
+  /// send buttons.
+  bool _isVoiceLocked = false;
+
+  /// How far the finger has slid up from the mic, 0..1 of [_kVoiceLockSlide].
+  /// Drives the lock rail that appears above the mic while it is held.
+  double _lockProgress = 0;
+
+  /// Levels reported by the recorder, 0..1, oldest first. Drawn as the live
+  /// waveform, and kept afterwards so the review step shows the real shape of
+  /// the clip rather than a made-up one.
+  List<double> _amplitudes = <double>[];
+  StreamSubscription<Amplitude>? _amplitudeSub;
+
+  /// A finished clip waiting to be reviewed: recorded, stopped, not sent. The
+  /// composer shows the player instead of the text field while it is set.
+  String? _previewPath;
+  Duration _previewDuration = Duration.zero;
+  List<double> _previewAmplitudes = const <double>[];
+
   bool get _isRecording => _recordingPath != null;
+
+  /// Whether the composer is given over to a voice note in any of its states —
+  /// held, locked, or waiting to be reviewed.
+  bool get _isVoiceComposing => _isRecording || _previewPath != null;
 
   /// Whether the composer has anything in it, which is what decides between
   /// the send button and the mic. Tracked rather than read off the controller
@@ -309,10 +357,14 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     _searchController.dispose();
     _searchFocusNode.dispose();
     _recordingTicker?.cancel();
+    _amplitudeSub?.cancel();
     // Leaving the chat must not leave the microphone open, nor a clip playing
     // over whatever screen comes next.
     _recorder?.dispose();
     VoicePlayerHub.instance.stop();
+    // A clip that was recorded but never sent goes with the screen.
+    final pendingPreview = _previewPath;
+    if (pendingPreview != null) _deleteRecording(pendingPreview);
     for (final recognizer in _linkRecognizers.values) {
       recognizer.dispose();
     }
@@ -325,9 +377,15 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
-      // Leaving the app mid-recording is not a send: drop the clip rather than
-      // holding the microphone open in the background.
-      _discardRecording();
+      // Leaving the app mid-recording is not a send, and the microphone must
+      // not be left open in the background. A hands-free recording is kept —
+      // nobody is holding it, so losing it to an incoming call would be a
+      // surprise — while a held one goes, since the finger has gone too.
+      if (_isVoiceLocked) {
+        _stopRecordingForPreview();
+      } else {
+        _discardRecording();
+      }
     }
     if (state == AppLifecycleState.resumed) {
       _fetchMessagesFromApi(silent: true);
@@ -1345,11 +1403,19 @@ Future<void> _markMessagesAsRead() async {
   ///
   /// The clip is written to a temp file; it is only worth keeping for as long
   /// as it takes to upload it, and the OS clears the directory afterwards.
-  Future<void> _startRecording() async {
-    if (_isRecording || _isUploading) return;
+  /// [locked] starts the recording hands-free, for the paths where nothing is
+  /// holding the mic down — a tap on it rather than a press.
+  Future<void> _startRecording({bool locked = false}) async {
+    if (_isRecording || _isUploading || _isStartingRecording) return;
+    _isStartingRecording = true;
 
     final recorder = _recorder ??= AudioRecorder();
     try {
+      // Starting a new one replaces whatever was waiting to be reviewed; the
+      // old file would otherwise sit in the temp directory with nothing
+      // pointing at it.
+      if (_previewPath != null) await _discardPreview();
+
       if (!await recorder.hasPermission()) {
         _showErrorSnack('Microphone permission is needed to record a voice message.');
         return;
@@ -1384,7 +1450,15 @@ Future<void> _markMessagesAsRead() async {
         _recordingStartedAt = DateTime.now();
         _recordingElapsed = Duration.zero;
         _isCancellingRecording = false;
+        _isVoiceLocked = locked;
+        _lockProgress = 0;
+        _amplitudes = <double>[];
       });
+      // Nothing is on the mic in the locked case, so the "was it let go?"
+      // check below must not treat it as an abandoned press.
+      if (locked) _voicePressActive = false;
+
+      _listenToAmplitude(recorder);
 
       // Elapsed time is taken from the start stamp rather than counted up, so
       // a dropped tick cannot make the counter drift from the real length.
@@ -1397,7 +1471,7 @@ Future<void> _markMessagesAsRead() async {
 
       // Let go before the recorder was up: there is nothing worth sending, and
       // the microphone must not be left running with nobody holding it.
-      if (!_voicePressActive) await _discardRecording();
+      if (!locked && !_voicePressActive) await _discardRecording();
     } catch (e) {
       // The failure can come before or after the recorder was up, so clean up
       // unconditionally rather than through _discardRecording, which only acts
@@ -1409,15 +1483,21 @@ Future<void> _markMessagesAsRead() async {
       } catch (_) {
         // Nothing was running to cancel.
       }
+      await _amplitudeSub?.cancel();
+      _amplitudeSub = null;
       if (mounted) {
         setState(() {
           _recordingPath = null;
           _recordingStartedAt = null;
           _recordingElapsed = Duration.zero;
           _isCancellingRecording = false;
+          _isVoiceLocked = false;
+          _lockProgress = 0;
         });
       }
       _showErrorSnack('Could not start recording: $e');
+    } finally {
+      _isStartingRecording = false;
     }
   }
 
@@ -1460,6 +1540,8 @@ Future<void> _markMessagesAsRead() async {
   Future<String?> _finishRecording() async {
     _recordingTicker?.cancel();
     _recordingTicker = null;
+    await _amplitudeSub?.cancel();
+    _amplitudeSub = null;
     final path = _recordingPath;
 
     String? written;
@@ -1476,11 +1558,14 @@ Future<void> _markMessagesAsRead() async {
         _recordingStartedAt = null;
         _recordingElapsed = Duration.zero;
         _isCancellingRecording = false;
+        _isVoiceLocked = false;
+        _lockProgress = 0;
       });
     } else {
       _recordingPath = null;
       _recordingStartedAt = null;
       _isCancellingRecording = false;
+      _isVoiceLocked = false;
     }
 
     return written ?? path;
@@ -1493,6 +1578,130 @@ Future<void> _markMessagesAsRead() async {
     } catch (_) {
       // A leftover temp file is harmless; the OS clears the directory.
     }
+  }
+
+  /// Feeds the live waveform. The recorder reports dBFS — 0 is as loud as the
+  /// mic goes, and anything below [_kAmplitudeFloorDb] is treated as silence —
+  /// so the readings are mapped onto 0..1 before they become bar heights.
+  void _listenToAmplitude(AudioRecorder recorder) {
+    _amplitudeSub?.cancel();
+    _amplitudeSub =
+        recorder.onAmplitudeChanged(_kAmplitudeInterval).listen((amplitude) {
+      if (!mounted || !_isRecording) return;
+      final db = amplitude.current;
+      final level = db.isFinite
+          ? ((db + _kAmplitudeFloorDb) / _kAmplitudeFloorDb).clamp(0.0, 1.0)
+          : 0.0;
+
+      setState(() {
+        _amplitudes = [..._amplitudes, level.toDouble()];
+        if (_amplitudes.length > _kMaxAmplitudeSamples) {
+          _amplitudes = _halveSamples(_amplitudes);
+        }
+      });
+    }, onError: (_) {
+      // Levels are decoration: a platform that will not report them still
+      // records perfectly well, it just draws a flat line.
+    });
+  }
+
+  /// Averages neighbouring samples, so a long recording keeps its whole shape
+  /// at half the resolution instead of dropping its beginning.
+  static List<double> _halveSamples(List<double> samples) {
+    final halved = <double>[];
+    for (int i = 0; i + 1 < samples.length; i += 2) {
+      halved.add((samples[i] + samples[i + 1]) / 2);
+    }
+    if (samples.length.isOdd) halved.add(samples.last);
+    return halved;
+  }
+
+  /// A tap on the mic instead of a press: there is no finger to keep on it, so
+  /// the recording comes up already locked — the same hands-free state a slide
+  /// up the lock rail reaches, with its own delete, stop and send.
+  Future<void> _startTappedRecording() async {
+    if (_isRecording || _isUploading) return;
+    await _startRecording(locked: true);
+  }
+
+  /// Hands-free: the finger slid up to the lock, so the recorder keeps running
+  /// without it and the bar takes over with its own delete, stop and send.
+  void _lockRecording() {
+    if (!_isRecording || _isVoiceLocked) return;
+    HapticFeedback.mediumImpact();
+    _voicePressActive = false;
+    setState(() {
+      _isVoiceLocked = true;
+      _isCancellingRecording = false;
+      _lockProgress = 0;
+    });
+  }
+
+  /// Stops a locked recording and holds it for review rather than sending it —
+  /// the step where the clip can be listened back to, thrown away, or sent.
+  Future<void> _stopRecordingForPreview() async {
+    if (!_isRecording) return;
+
+    final startedAt = _recordingStartedAt;
+    final elapsed = startedAt == null
+        ? _recordingElapsed
+        : DateTime.now().difference(startedAt);
+    final samples = _amplitudes;
+    final path = await _finishRecording();
+    if (path == null) return;
+
+    // Too short to be a message: the same mis-tap rule the hold-to-send path
+    // applies, so a stray stop does not leave an empty clip on screen.
+    if (elapsed < _kMinVoiceNote) {
+      await _deleteRecording(path);
+      return;
+    }
+
+    HapticFeedback.lightImpact();
+    if (!mounted) {
+      await _deleteRecording(path);
+      return;
+    }
+    setState(() {
+      _previewPath = path;
+      _previewDuration = elapsed;
+      _previewAmplitudes = samples;
+    });
+  }
+
+  /// Throws away a clip that was recorded but never sent.
+  Future<void> _discardPreview() async {
+    final path = _previewPath;
+    if (path == null) return;
+    if (mounted) {
+      setState(() {
+        _previewPath = null;
+        _previewDuration = Duration.zero;
+        _previewAmplitudes = const <double>[];
+      });
+    } else {
+      _previewPath = null;
+      _previewDuration = Duration.zero;
+      _previewAmplitudes = const <double>[];
+    }
+    await _deleteRecording(path);
+  }
+
+  /// Sends the reviewed clip. The bar is cleared first so the composer is back
+  /// before the upload starts, the way it is for a typed message.
+  Future<void> _sendPreview() async {
+    final path = _previewPath;
+    if (path == null) return;
+    final seconds = _previewDuration.inMilliseconds / 1000;
+
+    setState(() {
+      _previewPath = null;
+      _previewDuration = Duration.zero;
+      _previewAmplitudes = const <double>[];
+    });
+
+    await VoicePlayerHub.instance.stop();
+    await _uploadVoiceNote(path, seconds);
   }
 
   /// Uploads a recorded clip through POST /api/chats/:chatId/voice, showing it
@@ -4683,13 +4892,189 @@ Future<void> _markMessagesAsRead() async {
 
   // ─── Composer: mic and recording bar ────────────────────────────────────────
 
-  /// What sits at the right of the composer: send once something is typed, the
-  /// mic otherwise — the swap every chat app makes.
+  /// The bar along the bottom of the conversation, in whichever of its four
+  /// states applies: typing, a clip being held, a clip recording hands-free,
+  /// and a recorded clip waiting to be reviewed.
+  ///
+  /// The lock rail is drawn outside the bar, above the mic, so it has to sit in
+  /// a [Stack] that does not clip — it is a hint only, and never takes a touch.
+  Widget _buildComposerBar(FontSettings fontSettings) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.3),
+                spreadRadius: 1,
+                blurRadius: 5,
+                offset: const Offset(0, -3),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              if (_previewPath != null)
+                Expanded(child: _buildVoicePreviewBar(fontSettings))
+              else if (_isVoiceLocked)
+                Expanded(child: _buildLockedRecordingBar(fontSettings))
+              // While the mic is held the elapsed counter takes the place of
+              // the camera and the text field — the mic itself stays put,
+              // since the finger is still on it.
+              else if (_isRecording)
+                Expanded(child: _buildRecordingIndicator(fontSettings))
+              else ...[
+                IconButton(
+                  icon: const Icon(Icons.camera_alt, color: Colors.grey),
+                  onPressed: _onCameraPressed,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  // Capped so a pasted wall of text scrolls inside the field
+                  // instead of growing the bar past the screen.
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.25,
+                    ),
+                    child: TextField(
+                      controller: _messageController,
+                      focusNode: _messageFocusNode,
+                      style: TextStyle(fontSize: fontSettings.fontSize),
+                      decoration: InputDecoration(
+                        hintText: 'Type a message',
+                        hintStyle: TextStyle(
+                          fontSize: fontSettings.fontSize,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(25),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[200],
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
+                        suffixIcon: IconButton(
+                          icon: const Icon(
+                            Icons.attach_file,
+                            color: Colors.grey,
+                          ),
+                          onPressed: _onAttachFilePressed,
+                        ),
+                      ),
+                      minLines: 1,
+                      maxLines: 6,
+                      textInputAction: TextInputAction.newline,
+                      onChanged: _onComposerChanged,
+                      onSubmitted: (_) => _sendMessage(),
+                      onTap: () {
+                        Future.delayed(
+                          const Duration(milliseconds: 300),
+                          () {
+                            if (mounted) _scrollToBottom();
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(width: 8),
+              _buildComposerActionButton(fontSettings),
+            ],
+          ),
+        ),
+        if (_isRecording && !_isVoiceLocked)
+          // Floats clear of the bar, over the conversation, so it does not
+          // fight the mic for the space under the finger.
+          Positioned(
+            right: 22,
+            bottom: 92,
+            child: IgnorePointer(child: _buildLockRail()),
+          ),
+      ],
+    );
+  }
+
+  /// The rail above the mic while it is held: slide the finger up it and the
+  /// recording carries on without the finger.
+  ///
+  /// It rises and tightens as the finger climbs, so the gesture shows its own
+  /// progress instead of locking out of nowhere.
+  Widget _buildLockRail() {
+    final progress = _lockProgress;
+    return Opacity(
+      opacity: _isCancellingRecording ? 0.35 : 1,
+      child: Transform.translate(
+        offset: Offset(0, 12 * (1 - progress)),
+        child: Container(
+          width: 40,
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.lock_outline,
+                size: 20,
+                // Greens up as the lock comes within reach.
+                color: Color.lerp(Colors.grey[600], Colors.green, progress),
+              ),
+              const SizedBox(height: 4),
+              Icon(
+                Icons.keyboard_arrow_up,
+                size: 18,
+                color: Colors.grey[500]?.withOpacity(0.4 + progress * 0.6),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// What sits at the right of the composer: send once something is typed or
+  /// recorded, the mic otherwise — the swap every chat app makes.
   ///
   /// The mic is held down to record: releasing sends, sliding left past
-  /// [_kVoiceCancelSlide] first throws the recording away. It stays in the same
+  /// [_kVoiceCancelSlide] first throws the recording away, and sliding up past
+  /// [_kVoiceLockSlide] leaves it running hands-free. It stays in the same
   /// place while recording so the press is never interrupted.
   Widget _buildComposerActionButton(FontSettings fontSettings) {
+    // A locked recording is sent straight from the bar, and so is a clip that
+    // has been stopped for review — neither has a finger on the mic any more.
+    if (_previewPath != null) {
+      return FloatingActionButton(
+        backgroundColor: Colors.green,
+        mini: true,
+        onPressed: _sendPreview,
+        child: const Icon(Icons.send, color: Colors.white),
+      );
+    }
+
+    if (_isVoiceLocked) {
+      return FloatingActionButton(
+        backgroundColor: Colors.green,
+        mini: true,
+        onPressed: _stopAndSendRecording,
+        child: const Icon(Icons.send, color: Colors.white),
+      );
+    }
+
     if (_hasComposerText && !_isRecording) {
       return FloatingActionButton(
         backgroundColor: Colors.green,
@@ -4703,20 +5088,42 @@ Future<void> _markMessagesAsRead() async {
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-   //   onTap: () => _showErrorSnack('Hold the mic to record a voice message.'),
+      // Tap to start hands-free, hold to record for as long as it is held:
+      // both open the recorder, and neither gets in the other's way — the
+      // gesture arena hands a press to the long-press recogniser and a quick
+      // tap to this one.
+      onTap: _isRecording ? null : _startTappedRecording,
       onLongPressStart: (_) {
         _voicePressActive = true;
         _startRecording();
       },
       onLongPressMoveUpdate: (details) {
-        if (!_isRecording) return;
-        final cancel = details.localOffsetFromOrigin.dx < -_kVoiceCancelSlide;
-        if (cancel != _isCancellingRecording) {
-          setState(() => _isCancellingRecording = cancel);
+        if (!_isRecording || _isVoiceLocked) return;
+        final dx = details.localOffsetFromOrigin.dx;
+        final dy = details.localOffsetFromOrigin.dy;
+
+        // Up wins over left: a finger heading for the lock often drifts a
+        // little sideways, and that must not read as a cancel.
+        if (dy <= -_kVoiceLockSlide && dx > -_kVoiceCancelSlide) {
+          _lockRecording();
+          return;
+        }
+
+        final cancel = dx < -_kVoiceCancelSlide;
+        final lock = (-dy / _kVoiceLockSlide).clamp(0.0, 1.0);
+        if (cancel != _isCancellingRecording ||
+            (lock - _lockProgress).abs() > 0.02) {
+          setState(() {
+            _isCancellingRecording = cancel;
+            _lockProgress = lock;
+          });
         }
       },
       onLongPressEnd: (_) {
         _voicePressActive = false;
+        // Locked: the finger lifting is not the end of anything, the bar is
+        // driving the recording now.
+        if (_isVoiceLocked) return;
         if (_isCancellingRecording) {
           _discardRecording();
         } else {
@@ -4724,9 +5131,10 @@ Future<void> _markMessagesAsRead() async {
         }
       },
       // The system taking the gesture away (a scroll, a route change) is not
-      // a send either.
+      // a send either — unless it was already locked, which survives it.
       onLongPressCancel: () {
         _voicePressActive = false;
+        if (_isVoiceLocked) return;
         _discardRecording();
       },
       child: AnimatedContainer(
@@ -4756,46 +5164,129 @@ Future<void> _markMessagesAsRead() async {
     );
   }
 
-  /// Replaces the text field while a clip is being recorded: how long it has
-  /// been running, and what releasing will do.
+  /// Replaces the text field while the mic is held: how long the clip has been
+  /// running, what it sounds like, and what releasing will do.
   Widget _buildRecordingIndicator(FontSettings fontSettings) {
-    final minutes = _recordingElapsed.inMinutes;
-    final seconds = _recordingElapsed.inSeconds % 60;
+    final cancelling = _isCancellingRecording;
 
     return Row(
       children: [
         // Blinks, so a recording that is running is never mistaken for one
         // that has stalled.
-        _BlinkingDot(color: _isCancellingRecording ? Colors.grey : Colors.red),
+        _BlinkingDot(color: cancelling ? Colors.grey : Colors.red),
         const SizedBox(width: 10),
         Text(
-          '$minutes:${seconds.toString().padLeft(2, '0')}',
+          _formatRecordingTime(_recordingElapsed),
           style: TextStyle(
             fontSize: fontSettings.fontSize - 2,
             fontWeight: FontWeight.w600,
             color: Colors.black87,
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
+        // The waveform gives way once the finger is far enough left that
+        // releasing would cancel: at that point the only thing worth saying is
+        // what letting go does.
+        if (!cancelling)
+          Expanded(
+            flex: 3,
+            child: SizedBox(
+              height: 24,
+              child: VoiceWaveform(
+                amplitudes: _amplitudes,
+                live: true,
+                barCount: 22,
+                playedColor: Colors.red.shade300,
+                unplayedColor: Colors.red.shade300,
+              ),
+            ),
+          ),
         Expanded(
+          flex: 4,
           child: Text(
-            _isCancellingRecording
-                ? 'Release to cancel'
-                : '‹ Slide to cancel',
+            cancelling ? 'Release to cancel' : '‹ Slide to cancel',
             textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: fontSettings.fontSize - 4,
-              color: _isCancellingRecording ? Colors.red : Colors.grey[600],
-              fontWeight: _isCancellingRecording
-                  ? FontWeight.w600
-                  : FontWeight.normal,
+              color: cancelling ? Colors.red : Colors.grey[600],
+              fontWeight: cancelling ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
         ),
       ],
     );
   }
+
+  /// The hands-free bar: the recording is running with nobody holding the mic,
+  /// so it carries its own bin, its own stop — which hands the clip on to be
+  /// reviewed — and the counter, with send sitting at the right of the row.
+  Widget _buildLockedRecordingBar(FontSettings fontSettings) {
+    return Row(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.delete_outline, color: Colors.red),
+          tooltip: 'Delete recording',
+          onPressed: _discardRecording,
+        ),
+        _BlinkingDot(color: Colors.red),
+        const SizedBox(width: 8),
+        Text(
+          _formatRecordingTime(_recordingElapsed),
+          style: TextStyle(
+            fontSize: fontSettings.fontSize - 2,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: SizedBox(
+            height: 26,
+            child: VoiceWaveform(
+              amplitudes: _amplitudes,
+              live: true,
+              playedColor: Colors.red.shade300,
+              unplayedColor: Colors.red.shade300,
+            ),
+          ),
+        ),
+        IconButton(
+          icon: Icon(Icons.stop_circle, color: Colors.red[700], size: 30),
+          tooltip: 'Stop and review',
+          onPressed: _stopRecordingForPreview,
+        ),
+      ],
+    );
+  }
+
+  /// The review bar: a stopped clip that has not been sent. It can be listened
+  /// back to, scrubbed, binned, or sent with the button at the right of the row.
+  Widget _buildVoicePreviewBar(FontSettings fontSettings) {
+    return Row(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.delete_outline, color: Colors.red),
+          tooltip: 'Delete recording',
+          onPressed: _discardPreview,
+        ),
+        Expanded(
+          child: VoicePreviewPlayer(
+            // Keyed by the file so a second recording gets a fresh player
+            // rather than inheriting the first one's loaded clip.
+            key: ValueKey(_previewPath),
+            path: _previewPath!,
+            amplitudes: _previewAmplitudes,
+            duration: _previewDuration,
+            fontSize: fontSettings.fontSize,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatRecordingTime(Duration d) =>
+      '${d.inMinutes}:${(d.inSeconds % 60).toString().padLeft(2, '0')}';
 
   // ─── Build ───────────────────────────────────────────────────────────────────
 
@@ -4815,6 +5306,16 @@ Future<void> _markMessagesAsRead() async {
 
     return WillPopScope(
       onWillPop: () async {
+        // Back out of the voice note before backing out of the chat: the clip
+        // is what the bar is showing, so it is what "back" is aimed at.
+        if (_isVoiceComposing) {
+          if (_previewPath != null) {
+            _discardPreview();
+          } else {
+            _discardRecording();
+          }
+          return false;
+        }
         if (_isSelectionMode) {
           _clearSelection();
           return false;
@@ -5150,95 +5651,7 @@ Future<void> _markMessagesAsRead() async {
                   _buildMentionSuggestions(fontSettings),
                 if (_replyingTo != null)
                   _buildReplyPreview(_replyingTo!, fontSettings),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.3),
-                        spreadRadius: 1,
-                        blurRadius: 5,
-                        offset: const Offset(0, -3),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      // While recording, the elapsed counter takes the place
-                      // of the camera and the text field — the mic itself
-                      // stays put, since the finger is still on it.
-                      if (_isRecording)
-                        Expanded(
-                          child: _buildRecordingIndicator(fontSettings),
-                        )
-                      else ...[
-                        IconButton(
-                          icon: const Icon(
-                            Icons.camera_alt,
-                            color: Colors.grey,
-                          ),
-                          onPressed: _onCameraPressed,
-                        ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          // Capped so a pasted wall of text scrolls inside the
-                          // field instead of growing the bar past the screen.
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxHeight:
-                                  MediaQuery.of(context).size.height * 0.25,
-                            ),
-                            child: TextField(
-                              controller: _messageController,
-                              focusNode: _messageFocusNode,
-                              style: TextStyle(fontSize: fontSettings.fontSize),
-                              decoration: InputDecoration(
-                                hintText: 'Type a message',
-                                hintStyle: TextStyle(
-                                  fontSize: fontSettings.fontSize,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(25),
-                                  borderSide: BorderSide.none,
-                                ),
-                                filled: true,
-                                fillColor: Colors.grey[200],
-                                contentPadding:
-                                    const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 10,
-                                ),
-                                suffixIcon: IconButton(
-                                  icon: const Icon(
-                                    Icons.attach_file,
-                                    color: Colors.grey,
-                                  ),
-                                  onPressed: _onAttachFilePressed,
-                                ),
-                              ),
-                              minLines: 1,
-                              maxLines: 6,
-                              textInputAction: TextInputAction.newline,
-                              onChanged: _onComposerChanged,
-                              onSubmitted: (_) => _sendMessage(),
-                              onTap: () {
-                                Future.delayed(
-                                  const Duration(milliseconds: 300),
-                                  () {
-                                    if (mounted) _scrollToBottom();
-                                  },
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
-                      const SizedBox(width: 8),
-                      _buildComposerActionButton(fontSettings),
-                    ],
-                  ),
-                ),
+                _buildComposerBar(fontSettings),
               ],
             ],
           ),

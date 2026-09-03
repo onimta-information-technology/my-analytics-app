@@ -28,7 +28,6 @@ import 'package:ballys_reservation_app/models/reservation/airline_response.dart'
 import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_sector_entry.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_location.dart';
-import 'package:ballys_reservation_app/models/reservation/hotel_room_catalog_entry.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_response.dart';
 import 'package:ballys_reservation_app/models/reservation/quick_hotel_entry.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
@@ -4818,25 +4817,10 @@ class _HotelForm extends StatelessWidget {
             ),
             dropdownBuilder: (context, selectedItem) {
               if (selectedItem == null) return const Text('');
-              final rate =
-                  HotelRoomCatalogEntry.ourRateLabelOf(selectedItem);
-              return Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '${selectedItem['RoomType'] ?? ''} - ${selectedItem['MealPlan'] ?? ''}',
-                      style: kInputTextStyle,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (rate.isNotEmpty) ...[
-                    const SizedBox(width: 8),
-                    Text(
-                      rate,
-                      style: kInputTextStyle.copyWith(color: accent),
-                    ),
-                  ],
-                ],
+              return Text(
+                '${selectedItem['RoomType'] ?? ''} - ${selectedItem['MealPlan'] ?? ''}',
+                style: kInputTextStyle,
+                overflow: TextOverflow.ellipsis,
               );
             },
             onChanged: (val) {
@@ -4852,7 +4836,6 @@ class _HotelForm extends StatelessWidget {
             popupProps: PopupProps.dialog(
               showSearchBox: true,
               itemBuilder: (ctx, item, isSelected, isFocused) {
-                final rate = HotelRoomCatalogEntry.ourRateLabelOf(item);
                 return ListTile(
                   leading: CircleAvatar(
                     backgroundColor: accent.withOpacity(0.12),
@@ -4869,31 +4852,6 @@ class _HotelForm extends StatelessWidget {
                     (item['MealPlan'] ?? '') as String,
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
-                  // The rate the room type carries in the catalog, in front of
-                  // the user while they pick rather than only in the cost
-                  // calculator afterwards.
-                  trailing: rate.isEmpty
-                      ? null
-                      : Column(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            const Text(
-                              'Our Rate',
-                              style:
-                                  TextStyle(fontSize: 11, color: Colors.grey),
-                            ),
-                            Text(
-                              rate,
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: accent,
-                              ),
-                            ),
-                          ],
-                        ),
                   selected: isSelected,
                   tileColor: isFocused ? Colors.grey.shade100 : null,
                 );

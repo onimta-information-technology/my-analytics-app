@@ -576,9 +576,10 @@ String selectedByPaymnet = 'NA';
   }
 
   /// The rate the catalog carries for the picked room type, or null when that
-  /// row carries none — there is nothing to calculate from.
-  double? get _ourRate {
-    final value = selectedRoomType?['OurRate'];
+  /// row carries none — there is nothing to calculate from. The cost is worked
+  /// out off `NetRate`, not `OurRate`.
+  double? get _netRate {
+    final value = selectedRoomType?['NetRate'];
     return value is num ? value.toDouble() : null;
   }
 
@@ -822,7 +823,7 @@ String selectedByPaymnet = 'NA';
     }
   }
 
-  /// Est. cost for the stay: the room's `OurRate` for every night, for every
+  /// Est. cost for the stay: the room's `NetRate` for every night, for every
   /// room. The rate rides on the room type in the hotel catalog, so the sum is
   /// worked out here rather than fetched.
   void _calculateCost() {
@@ -841,7 +842,7 @@ String selectedByPaymnet = 'NA';
       return;
     }
 
-    final rate = _ourRate;
+    final rate = _netRate;
     if (rate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1628,33 +1629,13 @@ String selectedByPaymnet = 'NA';
                                 if (selectedItem == null) return const Text('');
                                 final rt = selectedItem['RoomType'] ?? '';
                                 final mp = selectedItem['MealPlan'] ?? '';
-                                final rate =
-                                    HotelRoomCatalogEntry.ourRateLabelOf(
-                                        selectedItem);
-                                return Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        '$rt - $mp',
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                    if (rate.isNotEmpty) ...[
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        rate,
-                                        style: const TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                          color: Constants.kPrimaryColor,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
+                                return Text(
+                                  '$rt - $mp',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 );
                               },
                               onChanged: _setRoomType,
@@ -1667,8 +1648,6 @@ String selectedByPaymnet = 'NA';
                                     (context, item, isSelected, isFocused) {
                                       final rt = item['RoomType'] ?? '';
                                       final mp = item['MealPlan'] ?? '';
-                                      final rate = HotelRoomCatalogEntry
-                                          .ourRateLabelOf(item);
                                       return ListTile(
                                         title: Text(
                                           '$rt - $mp',
@@ -1677,34 +1656,6 @@ String selectedByPaymnet = 'NA';
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
-                                        trailing: rate.isEmpty
-                                            ? null
-                                            : Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.end,
-                                                children: [
-                                                  const Text(
-                                                    'Our Rate',
-                                                    style: TextStyle(
-                                                      fontSize: 11,
-                                                      color: Colors.grey,
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    rate,
-                                                    style: const TextStyle(
-                                                      fontSize: 17,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color: Constants
-                                                          .kPrimaryColor,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
                                         selected: isSelected,
                                         tileColor: isFocused
                                             ? Colors.grey.shade200

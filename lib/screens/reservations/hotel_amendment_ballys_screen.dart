@@ -961,14 +961,6 @@ class _HotelAmendmentBallysScreenState
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  "Estimated Cost: ${hotel.selectedCost}",
-                  style: TextStyle(
-                    fontSize: fontSettings.fontSize + 2,
-                    fontWeight: fontSettings.fontWeight,
-                  ),
-                ),
                 if (hotel.ecLcoFacility != null &&
                     hotel.ecLcoFacility!.trim().isNotEmpty) ...[
                   const SizedBox(height: 5),

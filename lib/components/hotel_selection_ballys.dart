@@ -720,7 +720,9 @@ String selectedByPaymnet = 'NA';
       childrenCount: numberOfChildren,
       roomCount: numberOfRooms,
       noOfNights: numberOfNights,
-      selectedCost: costNotifier.value,
+      // The est. cost is worked out on screen for the user's benefit only —
+      // the back office keeps its own costing, so the saved field goes as 0.
+      selectedCost: 0,
       costIndex: costIndex,
       ecLcoFacility: selectedEcLcoFacility,
       paymentBy: selectedByPaymnet,
@@ -2131,32 +2133,6 @@ const SizedBox(height: 16),
                                                       ),
                                                     ],
                                                   ),
-                                                  const SizedBox(height: 8),
-
-                                                  // ── Cost display with soft warning ──
-                                                  Builder(
-                                                    builder: (context) {
-                                                      final hasNoCost =
-                                                          hotel.selectedCost ==
-                                                              null ||
-                                                          hotel.selectedCost ==
-                                                              "0";
-                                                      return Text(
-                                                        hasNoCost
-                                                            ? "Estimated Cost: No cost calculation done"
-                                                            : "Estimated Cost: LKR ${hotel.selectedCost}",
-                                                        style: TextStyle(
-                                                          fontSize: 16,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          color: hasNoCost
-                                                              ? const Color.fromARGB(255, 255, 30, 0)
-                                                              : Colors.black,
-                                                        ),
-                                                      );
-                                                    },
-                                                  ),
-
                                                   const SizedBox(height: 24),
                                                   const Text(
                                                     "Double-tap to edit",

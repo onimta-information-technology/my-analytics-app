@@ -2072,14 +2072,6 @@ class _ReservationViewScreenBallysState
                                           ),
                                         ),
                                       ],
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        "Estimated Cost: ${hotel.selectedCost}",
-                                        style: TextStyle(
-                                          fontSize: fontSettings.fontSize + 2,
-                                          fontWeight: fontSettings.fontWeight,
-                                        ),
-                                      ),
                                       if (hotel.ecLcoFacility != null &&
                                           hotel.ecLcoFacility!
                                               .trim()

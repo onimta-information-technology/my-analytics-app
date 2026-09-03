@@ -3205,17 +3205,6 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
                                                 ),
                                               ],
                                             ),
-                                            const SizedBox(height: 8),
-                                            Text(
-                                              "Estimated Cost: ${hotel.selectedCost}",
-                                              style: TextStyle(
-                                                fontSize:
-                                                    fontSettings.fontSize,
-                                                fontWeight: FontWeight.bold,
-                                                color: const Color(
-                                                    0xFFB07A1E),
-                                              ),
-                                            ),
                                           ],
                                         ),
                                       ),

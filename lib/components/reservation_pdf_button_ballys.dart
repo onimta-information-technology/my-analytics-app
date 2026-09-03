@@ -179,7 +179,6 @@ class _ReservationPdfButtonBallysState
     final cardTitleStyle = pw.TextStyle(font: ttfBold, fontSize: 12, color: textDark);
     final cardLabelStyle = pw.TextStyle(font: ttfBold, fontSize: 10, color: textDark);
     final cardValueStyle = pw.TextStyle(font: ttf, fontSize: 10, color: textDark);
-    final cardCostStyle = pw.TextStyle(font: ttfBold, fontSize: 11, color: textDark);
     final flightRouteStyle = pw.TextStyle(font: ttfBold, fontSize: 13, color: textDark);
     final flightLabelStyle = pw.TextStyle(font: ttfBold, fontSize: 10, color: textDark);
     final flightValueStyle = pw.TextStyle(font: ttf, fontSize: 10, color: textGrey);
@@ -287,11 +286,6 @@ class _ReservationPdfButtonBallysState
                   pw.SizedBox(height: 5),
                   cardRichRow('Stay', roomStay),
                 ],
-                pw.SizedBox(height: 6),
-                pw.Text(
-                  'Estimated Cost: ${hotel.selectedCost ?? 'N/A'}',
-                  style: cardCostStyle,
-                ),
               ],
             ),
           );

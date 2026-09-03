@@ -68,6 +68,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   /// How many conversations can be pinned at once, matching WhatsApp.
   static const int _maxPinnedChats = 3;
 
+  /// appType of the Premier Rewards app. A chat whose other participant
+  /// carries it is a member chat rather than a staff one.
+  static const int _rewardsAppType = 1;
+
+  /// Position of the Rewards tab in [_tabController].
+  static const int _rewardsTabIndex = 4;
+
   /// Guards [_refreshGroupMentions]: chats and groups both trigger it, and the
   /// two refreshes often land together.
   bool _isScanningMentions = false;
@@ -79,7 +86,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _initializeData();
     _setupNotificationListener();
     _syncBadgeCount();
@@ -798,8 +805,16 @@ if (message.data['msg_type'] == '35') {
   /// copies that the chats API also returns are dropped by [_oneToOneChats] so
   /// each conversation appears exactly once.
   List<Object> _getItemsForTab(int tabIndex) {
-    // Tab 2 (Groups) is served by _buildGroupList from the groups API.
+    // Tab 2 (Groups) is served by _buildGroupList from the groups API, and
+    // Favorites has nothing behind it yet.
     if (tabIndex == 3) return const [];
+
+    // Rewards: 1:1 conversations with a Premier Rewards app user (appType 1).
+    // They also stay in All/Unread — this tab is only a filtered view of them.
+    if (tabIndex == _rewardsTabIndex) {
+      return _oneToOneChats().where((c) => c.appType == _rewardsAppType).toList()
+        ..sort(_compareRows);
+    }
 
     final bool unreadOnly = tabIndex == 1;
 
@@ -1641,7 +1656,7 @@ if (message.data['msg_type'] == '35') {
             Text(
               tabIndex == 0
                   ? "No chats found"
-                  : "No ${['all', 'unread', 'groups', 'favorites'][tabIndex]} chats",
+                  : "No ${['all', 'unread', 'groups', 'favorites', 'rewards'][tabIndex]} chats",
               style: TextStyle(
                 fontSize: fontSettings.fontSize,
                 color: Colors.black54,
@@ -1811,6 +1826,8 @@ if (message.data['msg_type'] == '35') {
                   ),
                   TabBar(
                     controller: _tabController,
+                    isScrollable: true,
+                    tabAlignment: TabAlignment.start,
                     indicatorColor: Colors.green,
                     labelColor: Colors.green,
                     unselectedLabelColor: Colors.black54,
@@ -1826,6 +1843,7 @@ if (message.data['msg_type'] == '35') {
                       Tab(text: "Unread"),
                       Tab(text: "Groups"),
                       Tab(text: "Favorites"),
+                      Tab(text: "Rewards"),
                     ],
                   ),
                 ],
@@ -1844,6 +1862,7 @@ if (message.data['msg_type'] == '35') {
                   _buildChatList(1, fontSettings),
                   _buildGroupList(fontSettings),
                   _buildChatList(3, fontSettings),
+                  _buildChatList(_rewardsTabIndex, fontSettings),
                 ],
               ),
             ),

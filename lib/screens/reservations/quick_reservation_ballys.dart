@@ -5106,9 +5106,10 @@ class _HotelForm extends StatelessWidget {
   }
 
   /// Est. cost for the stay, worked out from the room type's `NetRate` in the
-  /// hotel catalog: rate x nights x rooms. Display only — nothing about it is
-  /// saved with the reservation, it is there so the user sees what the rooms
-  /// come to while they pick.
+  /// hotel catalog: rate x nights x rooms. Only the total is shown — the
+  /// rate breakdown behind it stays out of the UI. Display only: nothing
+  /// about it is saved with the reservation, it is there so the user sees
+  /// what the rooms come to while they pick.
   Widget _estimatedCost(Color accent) {
     final rateValue = state._selectedRoomType?['NetRate'];
     final rate = rateValue is num ? rateValue.toDouble() : null;
@@ -5134,25 +5135,13 @@ class _HotelForm extends StatelessWidget {
           child: _LabeledCard(
             label: 'Estimated Cost',
             accent: accent,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${money.format(rate)} x $nights '
-                  '${nights == 1 ? "night" : "nights"} x $rooms '
-                  '${rooms == 1 ? "room" : "rooms"}',
-                  style: const TextStyle(fontSize: 13, color: Colors.grey),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  money.format(total),
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: accent,
-                  ),
-                ),
-              ],
+            child: Text(
+              money.format(total),
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: accent,
+              ),
             ),
           ),
         );

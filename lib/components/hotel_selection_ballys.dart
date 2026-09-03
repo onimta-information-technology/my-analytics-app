@@ -55,12 +55,6 @@ class _HotelAndRoomSelectionBallysBottomSheetState
 
   final ValueNotifier<String> costNotifier = ValueNotifier<String>("0");
 
-  /// How the cost above was arrived at, e.g. "114.00 x 3 nights x 2 rooms".
-  /// Null when no calculation stands behind the figure — an edited row carries
-  /// its cost but not the sum that made it.
-  final ValueNotifier<String?> costBreakdownNotifier =
-      ValueNotifier<String?>(null);
-
   /// Set when part of an edited row named something the catalog no longer
   /// carries, so the form can say why that dropdown came back empty. A
   /// notifier rather than plain state: it is written from the catalog listener
@@ -107,7 +101,6 @@ class _HotelAndRoomSelectionBallysBottomSheetState
     roomCategoriesNotifier.dispose();
     roomTypesNotifier.dispose();
     costNotifier.dispose();
-    costBreakdownNotifier.dispose();
     staleSelectionNotifier.dispose();
     super.dispose();
   }
@@ -645,8 +638,6 @@ String selectedByPaymnet = 'NA';
       sMealPlanName = parts[1].trim();
       selectedCost = hotel.selectedCost;
       costNotifier.value = hotel.selectedCost;
-      // The saved row keeps the figure, not the sum behind it.
-      costBreakdownNotifier.value = null;
       costIndex = hotel.costIndex;
 
       _applyAssignedGuests(hotel.assignedGuests);
@@ -755,7 +746,6 @@ String selectedByPaymnet = 'NA';
 
   void _clearSelectedCost() {
     costNotifier.value = "0";
-    costBreakdownNotifier.value = null;
     selectedCost = null;
     costIndex = null;
   }
@@ -796,7 +786,6 @@ String selectedByPaymnet = 'NA';
 
       selectedCost = null;
       costNotifier.value = "0";
-      costBreakdownNotifier.value = null;
       costIndex = null;
 
       editMode = false;
@@ -860,10 +849,6 @@ String selectedByPaymnet = 'NA';
     setState(() {
       // Nothing was picked off a list of rates, so the row keeps no index.
       costIndex = null;
-      costBreakdownNotifier.value =
-          '${money.format(rate)} x $numberOfNights '
-          '${numberOfNights == 1 ? "night" : "nights"} x $numberOfRooms '
-          '${numberOfRooms == 1 ? "room" : "rooms"}';
       costNotifier.value = money.format(total);
     });
   }
@@ -1777,45 +1762,17 @@ const SizedBox(height: 16),
                             final hasNoCost = cost == "0";
                             return Align(
                               alignment: Alignment.centerLeft,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    hasNoCost
-                                        ? "Est. Cost: No cost calculation done"
-                                        : "Est. Cost $cost",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 20,
-                                      color: hasNoCost
-                                          ? const Color.fromARGB(
-                                              255, 255, 30, 0)
-                                          : Colors.black,
-                                    ),
-                                  ),
-                                  // The sum behind the figure, so the rate the
-                                  // room type carries is checkable without
-                                  // re-opening the dropdown.
-                                  ValueListenableBuilder<String?>(
-                                    valueListenable: costBreakdownNotifier,
-                                    builder: (context, breakdown, _) {
-                                      if (breakdown == null || hasNoCost) {
-                                        return const SizedBox.shrink();
-                                      }
-                                      return Padding(
-                                        padding:
-                                            const EdgeInsets.only(top: 4),
-                                        child: Text(
-                                          breakdown,
-                                          style: TextStyle(
-                                            fontSize: 15,
-                                            color: Colors.grey.shade700,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ],
+                              child: Text(
+                                hasNoCost
+                                    ? "Est. Cost: No cost calculation done"
+                                    : "Est. Cost $cost",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                  color: hasNoCost
+                                      ? const Color.fromARGB(255, 255, 30, 0)
+                                      : Colors.black,
+                                ),
                               ),
                             );
                           },

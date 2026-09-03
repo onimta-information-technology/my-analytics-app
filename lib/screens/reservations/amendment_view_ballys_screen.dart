@@ -27,6 +27,9 @@ class _AmendmentViewBallysScreenState
   static final DateFormat _dateFormat = DateFormat('dd MMM yyyy');
   static final DateFormat _dateTimeFormat = DateFormat('dd MMM yyyy  hh:mm a');
 
+  // Text zoom level for this screen only (1x / 1.2x / 1.3x).
+  double _textScale = 1.0;
+
   /// Amendments follow the reservation permissions: `ResChk` checks and
   /// rejects a pending request, `ResApp` approves or rejects a checked one.
   bool _hasResChk = false;
@@ -72,23 +75,36 @@ class _AmendmentViewBallysScreenState
       ),
       body: Stack(
         children: [
-          ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-            children: [
-              _buildHeaderCard(),
-              const SizedBox(height: 12),
-              if (_amendment.isHotel)
-                ..._amendment.rooms.map(_buildRoomCard)
-              else
-                ..._amendment.tickets.map(_buildTicketCard),
-              if (_amendment.actionRemark != null ||
-                  _amendment.actionBy != null) ...[
-                const SizedBox(height: 4),
-                _buildActionCard(),
+          MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(_textScale)),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+              children: [
+                // ── Text size selector (1x / 1.2x / 1.3x) ────────────────
+                MediaQuery(
+                  data: MediaQuery.of(
+                    context,
+                  ).copyWith(textScaler: TextScaler.noScaling),
+                  child: _buildTextScaleSelector(),
+                ),
+                const SizedBox(height: 12),
+                _buildHeaderCard(),
+                const SizedBox(height: 12),
+                if (_amendment.isHotel)
+                  ..._amendment.rooms.map(_buildRoomCard)
+                else
+                  ..._amendment.tickets.map(_buildTicketCard),
+                if (_amendment.actionRemark != null ||
+                    _amendment.actionBy != null) ...[
+                  const SizedBox(height: 4),
+                  _buildActionCard(),
+                ],
+                const SizedBox(height: 12),
+                _buildActionButtons(),
               ],
-              const SizedBox(height: 12),
-              _buildActionButtons(),
-            ],
+            ),
           ),
           if (_isSubmitting)
             Positioned.fill(
@@ -142,7 +158,10 @@ class _AmendmentViewBallysScreenState
           const Divider(height: 20),
           _row('Requested by ', _amendment.userName),
           if (_amendment.createdDate != null)
-            _row('Requested on ', _dateTimeFormat.format(_amendment.createdDate!)),
+            _row(
+              'Requested on ',
+              _dateTimeFormat.format(_amendment.createdDate!),
+            ),
           _row(
             _amendment.isHotel ? 'Rooms amended' : 'Tickets amended',
             '${_amendment.lineCount}',
@@ -289,7 +308,7 @@ class _AmendmentViewBallysScreenState
           title,
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: _fonts.fontSize ,
+            fontSize: _fonts.fontSize,
           ),
         ),
         const SizedBox(height: 4),
@@ -361,8 +380,11 @@ class _AmendmentViewBallysScreenState
           if (room.newHotelName.isNotEmpty)
             _row('New hotel', room.newHotelName, highlight: true),
           if (room.newRoomCategoryName.isNotEmpty)
-            _row('New room category', room.newRoomCategoryName,
-                highlight: true),
+            _row(
+              'New room category',
+              room.newRoomCategoryName,
+              highlight: true,
+            ),
           if (room.newRoomTypeName.isNotEmpty)
             _row('New room type', room.newRoomTypeName, highlight: true),
           if (room.newGuestCount != null ||
@@ -659,7 +681,7 @@ class _AmendmentViewBallysScreenState
               Text(
                 type,
                 style: TextStyle(
-                  fontSize: _fonts.fontSize ,
+                  fontSize: _fonts.fontSize,
                   color: Colors.black,
                   fontWeight: FontWeight.w600,
                 ),
@@ -703,6 +725,54 @@ class _AmendmentViewBallysScreenState
           ),
         ],
       ),
+    );
+  }
+
+  // ── Text scale (1x / 1.2x / 1.3x) selector ────────────────────────────────
+  Widget _buildTextScaleSelector() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        const Text(
+          "Text Size",
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+            color: Colors.grey,
+          ),
+        ),
+        const SizedBox(width: 10),
+        ...[1.0, 1.2, 1.3].map((scale) {
+          final bool selected = _textScale == scale;
+          return Padding(
+            padding: const EdgeInsets.only(left: 6.0),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => setState(() => _textScale = scale),
+              child: Container(
+                width: 44,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? Constants.kSecondaryColor
+                      : Colors.transparent,
+                  border: Border.all(color: Constants.kSecondaryColor),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  "${scale.toDouble()}x",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: selected ? Colors.white : Constants.kSecondaryColor,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
     );
   }
 

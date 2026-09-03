@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/components/forward_message_sheet.dart';
 import 'package:ballys_reservation_app/components/group_details_sheet.dart';
+import 'package:ballys_reservation_app/components/voice_message_bubble.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/models/chat_group.dart';
@@ -23,6 +24,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:intl/intl.dart';
@@ -32,6 +35,14 @@ import 'package:url_launcher/url_launcher.dart';
 // attachments small.
 const int _kImageQuality = 50;
 const double _kImageMaxDimension = 1280;
+
+// A recording shorter than this is treated as a mis-tap on the mic rather than
+// a message, and is thrown away instead of sent.
+const Duration _kMinVoiceNote = Duration(seconds: 1);
+
+// How far the finger has to travel left of the mic before releasing cancels
+// the recording instead of sending it.
+const double _kVoiceCancelSlide = 80;
 
 // Colour the composer paints an "@Name" in once it has been picked from the
 // suggestion list.
@@ -191,6 +202,40 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
   bool _isLoadingMessages = false;
   bool _isUploading = false;
 
+  /// What the upload banner says while [_isUploading] — attachments and voice
+  /// notes share the banner but are not the same thing to wait for.
+  String _uploadLabel = 'Uploading file(s)...';
+
+  // ── Voice notes ──
+  /// Built on first use, so a conversation nobody records in never touches the
+  /// microphone plugin.
+  AudioRecorder? _recorder;
+
+  /// Where the clip being recorded is being written. Null when idle.
+  String? _recordingPath;
+
+  /// When the current recording started, which is what the elapsed counter and
+  /// the duration sent with the upload are both measured from.
+  DateTime? _recordingStartedAt;
+  Timer? _recordingTicker;
+  Duration _recordingElapsed = Duration.zero;
+
+  /// True once the finger has slid far enough left that releasing will throw
+  /// the recording away — the "slide to cancel" state.
+  bool _isCancellingRecording = false;
+
+  /// Whether the mic is still held. Starting the recorder is asynchronous, so
+  /// a quick press can be over before it comes up — this is what tells
+  /// [_startRecording] that there is nobody left holding it.
+  bool _voicePressActive = false;
+
+  bool get _isRecording => _recordingPath != null;
+
+  /// Whether the composer has anything in it, which is what decides between
+  /// the send button and the mic. Tracked rather than read off the controller
+  /// so the swap only rebuilds when it actually changes.
+  bool _hasComposerText = false;
+
   // ── Multi-select ──
   final Set<String> _selectedMessageIds = {};
   bool get _isSelectionMode => _selectedMessageIds.isNotEmpty;
@@ -263,6 +308,11 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     _messageFocusNode.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
+    _recordingTicker?.cancel();
+    // Leaving the chat must not leave the microphone open, nor a clip playing
+    // over whatever screen comes next.
+    _recorder?.dispose();
+    VoicePlayerHub.instance.stop();
     for (final recognizer in _linkRecognizers.values) {
       recognizer.dispose();
     }
@@ -273,6 +323,12 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      // Leaving the app mid-recording is not a send: drop the clip rather than
+      // holding the microphone open in the background.
+      _discardRecording();
+    }
     if (state == AppLifecycleState.resumed) {
       _fetchMessagesFromApi(silent: true);
       BadgeService().clearBadge();
@@ -547,6 +603,13 @@ Future<void> _markMessagesAsRead() async {
   /// Works out whether the caret sits inside an "@..." token and, if so, which
   /// members match what has been typed so far.
   void _onComposerChanged(String value) {
+    // Drives the mic/send swap, for every chat — the mention handling below
+    // only concerns groups.
+    final hasText = value.trim().isNotEmpty;
+    if (hasText != _hasComposerText) {
+      setState(() => _hasComposerText = hasText);
+    }
+
     if (!widget.isGroup || _groupMembers.isEmpty) return;
 
     final selection = _messageController.selection;
@@ -610,6 +673,10 @@ Future<void> _markMessagesAsRead() async {
       _pickedMentions[member.userUuid] = member;
       _mentionAnchor = null;
       _mentionSuggestions = [];
+      // The text was set on the controller rather than typed, so onChanged
+      // never ran — the composer now has content, and the mic gives way to
+      // the send button.
+      _hasComposerText = _messageController.text.trim().isNotEmpty;
     });
     _syncMentionHighlights();
   }
@@ -1065,6 +1132,7 @@ Future<void> _markMessagesAsRead() async {
       _replyingTo = null;
     });
     _messageController.clear();
+    setState(() => _hasComposerText = false);
     _pickedMentions.clear();
     _syncMentionHighlights();
     _hideMentionSuggestions();
@@ -1148,6 +1216,7 @@ Future<void> _markMessagesAsRead() async {
 
     setState(() {
       _isUploading = true;
+      _uploadLabel = 'Uploading file(s)...';
       if (allImages && localItems.length > 1) {
         _messages.add(
           ChatMessage(
@@ -1267,6 +1336,248 @@ Future<void> _markMessagesAsRead() async {
     } catch (e) {
       setState(() => _isUploading = false);
       _showErrorSnack('Upload error: $e');
+    }
+  }
+
+  // ─── Voice notes ────────────────────────────────────────────────────────────
+
+  /// Starts recording, once the microphone has been granted.
+  ///
+  /// The clip is written to a temp file; it is only worth keeping for as long
+  /// as it takes to upload it, and the OS clears the directory afterwards.
+  Future<void> _startRecording() async {
+    if (_isRecording || _isUploading) return;
+
+    final recorder = _recorder ??= AudioRecorder();
+    try {
+      if (!await recorder.hasPermission()) {
+        _showErrorSnack('Microphone permission is needed to record a voice message.');
+        return;
+      }
+
+      final dir = await getTemporaryDirectory();
+      final path =
+          '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+      // AAC in an m4a container: one of the formats the /voice endpoint takes,
+      // and small enough at 64kbps mono to stay well inside its 10MB limit.
+      await recorder.start(
+        const RecordConfig(
+          encoder: AudioEncoder.aacLc,
+          bitRate: 64000,
+          sampleRate: 44100,
+          numChannels: 1,
+        ),
+        path: path,
+      );
+
+      // A clip cannot play over its own recording.
+      await VoicePlayerHub.instance.stop();
+      HapticFeedback.mediumImpact();
+
+      if (!mounted) {
+        await recorder.stop();
+        return;
+      }
+      setState(() {
+        _recordingPath = path;
+        _recordingStartedAt = DateTime.now();
+        _recordingElapsed = Duration.zero;
+        _isCancellingRecording = false;
+      });
+
+      // Elapsed time is taken from the start stamp rather than counted up, so
+      // a dropped tick cannot make the counter drift from the real length.
+      _recordingTicker =
+          Timer.periodic(const Duration(milliseconds: 200), (_) {
+        final startedAt = _recordingStartedAt;
+        if (!mounted || startedAt == null) return;
+        setState(() => _recordingElapsed = DateTime.now().difference(startedAt));
+      });
+
+      // Let go before the recorder was up: there is nothing worth sending, and
+      // the microphone must not be left running with nobody holding it.
+      if (!_voicePressActive) await _discardRecording();
+    } catch (e) {
+      // The failure can come before or after the recorder was up, so clean up
+      // unconditionally rather than through _discardRecording, which only acts
+      // on a recording that is known to be running.
+      _recordingTicker?.cancel();
+      _recordingTicker = null;
+      try {
+        await recorder.cancel();
+      } catch (_) {
+        // Nothing was running to cancel.
+      }
+      if (mounted) {
+        setState(() {
+          _recordingPath = null;
+          _recordingStartedAt = null;
+          _recordingElapsed = Duration.zero;
+          _isCancellingRecording = false;
+        });
+      }
+      _showErrorSnack('Could not start recording: $e');
+    }
+  }
+
+  /// Stops the recorder and sends what was recorded. A clip under
+  /// [_kMinVoiceNote] is a mis-tap, not a message, so it is dropped with a hint.
+  Future<void> _stopAndSendRecording() async {
+    if (!_isRecording) return;
+
+    // Taken from the start stamp rather than the counter, which only moves
+    // every 200ms and would round the length down.
+    final startedAt = _recordingStartedAt;
+    final elapsed = startedAt == null
+        ? _recordingElapsed
+        : DateTime.now().difference(startedAt);
+    final path = await _finishRecording();
+    if (path == null) return;
+
+    if (elapsed < _kMinVoiceNote) {
+      await _deleteRecording(path);
+      _showErrorSnack('Hold the mic to record a voice message.');
+      return;
+    }
+
+    HapticFeedback.lightImpact();
+    // The endpoint takes whole seconds, and rounding up keeps a 2.6s clip from
+    // being reported as a second shorter than it plays.
+    await _uploadVoiceNote(path, elapsed.inMilliseconds / 1000);
+  }
+
+  /// Stops the recorder and throws the clip away — the slide-to-cancel path,
+  /// and whatever else has to abandon a recording.
+  Future<void> _discardRecording() async {
+    if (!_isRecording) return;
+    final path = await _finishRecording();
+    if (path != null) await _deleteRecording(path);
+  }
+
+  /// Shared shutdown for both endings: stops the ticker and the recorder and
+  /// clears the recording state, answering with the file that was written.
+  Future<String?> _finishRecording() async {
+    _recordingTicker?.cancel();
+    _recordingTicker = null;
+    final path = _recordingPath;
+
+    String? written;
+    try {
+      written = await _recorder?.stop();
+    } catch (_) {
+      // Already stopped, or the plugin failed on the way down — either way
+      // the file it was writing is the best thing to fall back on.
+    }
+
+    if (mounted) {
+      setState(() {
+        _recordingPath = null;
+        _recordingStartedAt = null;
+        _recordingElapsed = Duration.zero;
+        _isCancellingRecording = false;
+      });
+    } else {
+      _recordingPath = null;
+      _recordingStartedAt = null;
+      _isCancellingRecording = false;
+    }
+
+    return written ?? path;
+  }
+
+  Future<void> _deleteRecording(String path) async {
+    try {
+      final file = File(path);
+      if (await file.exists()) await file.delete();
+    } catch (_) {
+      // A leftover temp file is harmless; the OS clears the directory.
+    }
+  }
+
+  /// Uploads a recorded clip through POST /api/chats/:chatId/voice, showing it
+  /// in the conversation straight away the way an uploaded file is.
+  Future<void> _uploadVoiceNote(String path, double seconds) async {
+    // The server rejects anything under a second, so a clip that rounds down
+    // to nothing still goes across as one.
+    final duration = seconds.ceil().clamp(1, 1 << 30);
+    final now = DateTime.now();
+    final localId = now.millisecondsSinceEpoch.toString();
+
+    setState(() {
+      _isUploading = true;
+      _uploadLabel = 'Sending voice message...';
+      _messages.add(
+        ChatMessage(
+          id: localId,
+          text: '',
+          isMe: true,
+          timestamp: now,
+          isRead: false,
+          filePath: path,
+          fileType: 'voice',
+          fileName: path.split('/').last,
+          isVoiceNote: true,
+          voiceDurationSeconds: duration,
+        ),
+      );
+    });
+    _scrollToBottom();
+
+    try {
+      final result = await FirebaseApiService.sendVoiceMessage(
+        chatId: widget.contact.chatUuid,
+        filePath: path,
+        durationSeconds: duration,
+      );
+
+      if (!mounted) return;
+
+      if (result['success'] == true) {
+        final data = (result['data'] as Map<String, dynamic>?) ?? {};
+        setState(() {
+          final idx = _messages.indexWhere((m) => m.id == localId);
+          if (idx != -1) {
+            _messages[idx] = _messages[idx].copyWith(
+              apiMessageId: data['messageId'] as String?,
+              apiChatId: widget.contact.chatUuid,
+              attachmentUrl: data['url'] as String?,
+              attachmentType: data['type'] as String?,
+              voiceDurationSeconds:
+                  AttachmentItem.parseDurationSeconds(data['duration']) ??
+                      duration,
+              isRead: false,
+            );
+          }
+          _isUploading = false;
+        });
+
+        if (widget.onMessageSent != null) {
+          widget.onMessageSent!('🎤 Voice message');
+        }
+
+        // Same as a file upload: give the server a moment to index the new
+        // message, then pull it so the local copy is replaced by the real one.
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) _fetchMessagesFromApi(silent: true);
+        });
+      } else {
+        setState(() {
+          _messages.removeWhere((m) => m.id == localId);
+          _isUploading = false;
+        });
+        await _deleteRecording(path);
+        _showErrorSnack(
+          'Voice message failed: ${result['error'] ?? 'Unknown error'}',
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _messages.removeWhere((m) => m.id == localId);
+        _isUploading = false;
+      });
+      _showErrorSnack('Voice message error: $e');
     }
   }
 
@@ -1508,6 +1819,7 @@ Future<void> _markMessagesAsRead() async {
       return count > 1 ? '$count attachments' : 'Attachment';
     }
     if (msg.fileType == 'image') return 'Photo';
+    if (msg.isVoiceNote) return '🎤 Voice message';
     if (msg.fileType != null) return msg.fileName ?? 'Attachment';
     return _quoteTextOrAttachmentLabel(msg.text);
   }
@@ -3806,6 +4118,21 @@ Future<void> _markMessagesAsRead() async {
     ChatMessage message,
     FontSettings fontSettings,
   ) {
+    // A recorded clip gets the player, not the file card — there is nothing
+    // to download and open, and its length is already known.
+    if (message.isVoiceNote) {
+      return VoiceMessageBubble(
+        messageKey: message.apiMessageId ?? message.id,
+        url: message.attachmentUrl,
+        localPath: message.filePath,
+        duration: message.voiceDuration,
+        isMe: message.isMe,
+        fontSize: fontSettings.fontSize,
+        // While messages are being selected a tap belongs to the selection.
+        enabled: !_isSelectionMode,
+      );
+    }
+
     if (message.fileType == 'image') {
       final item = AttachmentItem(
         url: message.attachmentUrl,
@@ -3881,6 +4208,9 @@ Future<void> _markMessagesAsRead() async {
         message.text.isNotEmpty &&
         message.fileType != 'image' &&
         message.fileType != 'document' &&
+        // The backend labels a voice note "🎤 Voice message"; the player says
+        // that already.
+        !message.isVoiceNote &&
         !hasGrouped;
     final isImageBubble =
         hasGrouped ? message.isImageGroup : message.fileType == 'image';
@@ -4351,7 +4681,124 @@ Future<void> _markMessagesAsRead() async {
     );
   }
 
+  // ─── Composer: mic and recording bar ────────────────────────────────────────
+
+  /// What sits at the right of the composer: send once something is typed, the
+  /// mic otherwise — the swap every chat app makes.
+  ///
+  /// The mic is held down to record: releasing sends, sliding left past
+  /// [_kVoiceCancelSlide] first throws the recording away. It stays in the same
+  /// place while recording so the press is never interrupted.
+  Widget _buildComposerActionButton(FontSettings fontSettings) {
+    if (_hasComposerText && !_isRecording) {
+      return FloatingActionButton(
+        backgroundColor: Colors.green,
+        mini: true,
+        onPressed: _sendMessage,
+        child: const Icon(Icons.send, color: Colors.white),
+      );
+    }
+
+    final cancelling = _isRecording && _isCancellingRecording;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _showErrorSnack('Hold the mic to record a voice message.'),
+      onLongPressStart: (_) {
+        _voicePressActive = true;
+        _startRecording();
+      },
+      onLongPressMoveUpdate: (details) {
+        if (!_isRecording) return;
+        final cancel = details.localOffsetFromOrigin.dx < -_kVoiceCancelSlide;
+        if (cancel != _isCancellingRecording) {
+          setState(() => _isCancellingRecording = cancel);
+        }
+      },
+      onLongPressEnd: (_) {
+        _voicePressActive = false;
+        if (_isCancellingRecording) {
+          _discardRecording();
+        } else {
+          _stopAndSendRecording();
+        }
+      },
+      // The system taking the gesture away (a scroll, a route change) is not
+      // a send either.
+      onLongPressCancel: () {
+        _voicePressActive = false;
+        _discardRecording();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: _isRecording ? 56 : 40,
+        height: _isRecording ? 56 : 40,
+        decoration: BoxDecoration(
+          color: cancelling ? Colors.red : Colors.green,
+          shape: BoxShape.circle,
+          boxShadow: _isRecording
+              ? [
+                  BoxShadow(
+                    color: (cancelling ? Colors.red : Colors.green)
+                        .withOpacity(0.4),
+                    blurRadius: 12,
+                    spreadRadius: 4,
+                  ),
+                ]
+              : null,
+        ),
+        child: Icon(
+          cancelling ? Icons.delete : Icons.mic,
+          color: Colors.white,
+          size: _isRecording ? 28 : 22,
+        ),
+      ),
+    );
+  }
+
+  /// Replaces the text field while a clip is being recorded: how long it has
+  /// been running, and what releasing will do.
+  Widget _buildRecordingIndicator(FontSettings fontSettings) {
+    final minutes = _recordingElapsed.inMinutes;
+    final seconds = _recordingElapsed.inSeconds % 60;
+
+    return Row(
+      children: [
+        // Blinks, so a recording that is running is never mistaken for one
+        // that has stalled.
+        _BlinkingDot(color: _isCancellingRecording ? Colors.grey : Colors.red),
+        const SizedBox(width: 10),
+        Text(
+          '$minutes:${seconds.toString().padLeft(2, '0')}',
+          style: TextStyle(
+            fontSize: fontSettings.fontSize - 2,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            _isCancellingRecording
+                ? 'Release to cancel'
+                : '‹ Slide to cancel',
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: fontSettings.fontSize - 4,
+              color: _isCancellingRecording ? Colors.red : Colors.grey[600],
+              fontWeight: _isCancellingRecording
+                  ? FontWeight.w600
+                  : FontWeight.normal,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   // ─── Build ───────────────────────────────────────────────────────────────────
+
 
   @override
   Widget build(BuildContext context) {
@@ -4602,7 +5049,7 @@ Future<void> _markMessagesAsRead() async {
                       ),
                       const SizedBox(width: 10),
                       Text(
-                        'Uploading file(s)...',
+                        _uploadLabel,
                         style: TextStyle(
                           fontSize: fontSettings.fontSize - 4,
                           color: Colors.green,
@@ -4718,67 +5165,68 @@ Future<void> _markMessagesAsRead() async {
                   ),
                   child: Row(
                     children: [
-                      IconButton(
-                        icon: const Icon(
-                          Icons.camera_alt,
-                          color: Colors.grey,
-                        ),
-                        onPressed: _onCameraPressed,
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: TextField(
-                          controller: _messageController,
-                          focusNode: _messageFocusNode,
-                          style: TextStyle(fontSize: fontSettings.fontSize),
-                          decoration: InputDecoration(
-                            hintText: 'Type a message',
-                            hintStyle: TextStyle(
-                              fontSize: fontSettings.fontSize,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(25),
-                              borderSide: BorderSide.none,
-                            ),
-                            filled: true,
-                            fillColor: Colors.grey[200],
-                            contentPadding:
-                                const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 10,
-                            ),
-                            suffixIcon: IconButton(
-                              icon: const Icon(
-                                Icons.attach_file,
-                                color: Colors.grey,
-                              ),
-                              onPressed: _onAttachFilePressed,
-                            ),
+                      // While recording, the elapsed counter takes the place
+                      // of the camera and the text field — the mic itself
+                      // stays put, since the finger is still on it.
+                      if (_isRecording)
+                        Expanded(
+                          child: _buildRecordingIndicator(fontSettings),
+                        )
+                      else ...[
+                        IconButton(
+                          icon: const Icon(
+                            Icons.camera_alt,
+                            color: Colors.grey,
                           ),
-                          maxLines: null,
-                          textInputAction: TextInputAction.newline,
-                          onChanged: _onComposerChanged,
-                          onSubmitted: (_) => _sendMessage(),
-                          onTap: () {
-                            Future.delayed(
-                              const Duration(milliseconds: 300),
-                              () {
-                                if (mounted) _scrollToBottom();
-                              },
-                            );
-                          },
+                          onPressed: _onCameraPressed,
                         ),
-                      ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: TextField(
+                            controller: _messageController,
+                            focusNode: _messageFocusNode,
+                            style: TextStyle(fontSize: fontSettings.fontSize),
+                            decoration: InputDecoration(
+                              hintText: 'Type a message',
+                              hintStyle: TextStyle(
+                                fontSize: fontSettings.fontSize,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(25),
+                                borderSide: BorderSide.none,
+                              ),
+                              filled: true,
+                              fillColor: Colors.grey[200],
+                              contentPadding:
+                                  const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 10,
+                              ),
+                              suffixIcon: IconButton(
+                                icon: const Icon(
+                                  Icons.attach_file,
+                                  color: Colors.grey,
+                                ),
+                                onPressed: _onAttachFilePressed,
+                              ),
+                            ),
+                            maxLines: null,
+                            textInputAction: TextInputAction.newline,
+                            onChanged: _onComposerChanged,
+                            onSubmitted: (_) => _sendMessage(),
+                            onTap: () {
+                              Future.delayed(
+                                const Duration(milliseconds: 300),
+                                () {
+                                  if (mounted) _scrollToBottom();
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                       const SizedBox(width: 8),
-                      FloatingActionButton(
-                        backgroundColor: Colors.green,
-                        mini: true,
-                        onPressed: _sendMessage,
-                        child: const Icon(
-                          Icons.send,
-                          color: Colors.white,
-                        ),
-                      ),
+                      _buildComposerActionButton(fontSettings),
                     ],
                   ),
                 ),
@@ -4789,6 +5237,40 @@ Future<void> _markMessagesAsRead() async {
       ),
     );
   }
+}
+
+/// The recording indicator's dot, blinking once a second.
+class _BlinkingDot extends StatefulWidget {
+  final Color color;
+
+  const _BlinkingDot({required this.color});
+
+  @override
+  State<_BlinkingDot> createState() => _BlinkingDotState();
+}
+
+class _BlinkingDotState extends State<_BlinkingDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 700),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => FadeTransition(
+        opacity: _controller.drive(Tween(begin: 0.3, end: 1.0)),
+        child: Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: widget.color, shape: BoxShape.circle),
+        ),
+      );
 }
 
 // ─── Full-screen gallery viewer ────────────────────────────────────────────────

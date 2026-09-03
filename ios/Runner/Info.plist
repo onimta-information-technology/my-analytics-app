@@ -51,6 +51,8 @@
 	<string>This app uses biometric authentication for secure login</string>
 	<key>NSCameraUsageDescription</key>
 	<string>We need camera access to take photos</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>We need microphone access to record voice messages</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>This app uses Face ID to authenticate you for secure login</string>
 	<key>NSPhotoLibraryUsageDescription</key>

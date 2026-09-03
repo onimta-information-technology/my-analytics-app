@@ -39,6 +39,7 @@ class FirebaseApiService {
     'forwardMessage': '/api/chats', // base; full path: /api/chats/{chatId}/messages/{messageId}/forward
     'reactToMessage': '/api/chats', // base; full path: /api/chats/{chatId}/messages/{messageId}/react
     'uploadFiles': '/api/chats', // base; full path: /api/chats/{chatId}/upload/multiple
+    'sendVoice': '/api/chats', // base; full path: /api/chats/{chatId}/voice
     'pinChat': '/api/chats', // base; full path: /api/chats/{chatId}/pin | /unpin
     'createGroup': '/api/groups/create',
     'fetchUserGroups': '/api/groups/user',
@@ -255,6 +256,77 @@ class FirebaseApiService {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Send a voice message  (POST /api/chats/{chatId}/voice)
+  //
+  // A recorded clip, as opposed to an audio file someone attached: the backend
+  // tags the attachment `isVoiceNote` and stores [durationSeconds], so clients
+  // render a voice bubble with a known length instead of a generic file card.
+  // The server cannot read the length out of the file, so the recorder has to
+  // measure it and pass it here.
+  //
+  // Returns { messageId, attachmentId, url, duration, size, type }.
+  // ---------------------------------------------------------------------------
+
+  static Future<Map<String, dynamic>> sendVoiceMessage({
+    required String chatId,
+    required String filePath,
+    required int durationSeconds,
+  }) async {
+    try {
+      final file = File(filePath);
+      if (!file.existsSync()) {
+        return {'success': false, 'error': 'Recording not found'};
+      }
+      // The endpoint requires a positive whole number of seconds, so a clip
+      // that rounded down to nothing still goes across as one second.
+      final duration = durationSeconds < 1 ? 1 : durationSeconds;
+
+      final domain = await resolveDomain();
+      final token = await _getToken();
+      final deviceId = await DeviceId.get();
+      final senderName = await StorageUtil.getUserName() ?? '';
+
+      final url = Uri.parse('$domain/api/chats/$chatId/voice');
+
+      final ext = filePath.split('.').last.toLowerCase();
+      final mimeParts = _mimeFromExtension(ext).split('/');
+
+      final request = http.MultipartRequest('POST', url)
+        ..headers['Authorization'] = 'Bearer $token'
+        ..fields['senderId'] = deviceId ?? ''
+        ..fields['senderName'] = senderName
+        ..fields['senderAppType'] = '$appType'
+        ..fields['duration'] = '$duration'
+        ..files.add(
+          await http.MultipartFile.fromPath(
+            'file',
+            filePath,
+            contentType: MediaType(mimeParts[0], mimeParts[1]),
+          ),
+        );
+
+      final streamedResponse = await request.send();
+      final responseBody = await streamedResponse.stream.bytesToString();
+
+      if (streamedResponse.statusCode == 200) {
+        return {
+          'success': true,
+          'data': jsonDecode(responseBody) as Map<String, dynamic>,
+        };
+      }
+      return {
+        'success': false,
+        'error':
+            'Voice upload failed with status: ${streamedResponse.statusCode}',
+        'statusCode': streamedResponse.statusCode,
+        'responseBody': responseBody,
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   static String _mimeFromExtension(String ext) {
     const map = {
       'jpg': 'image/jpeg',
@@ -270,6 +342,17 @@ class FirebaseApiService {
       'xlsx':
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'txt': 'text/plain',
+      // Recorder output and the audio files the chat accepts. m4a is what the
+      // composer records; the rest cover a file picked from storage.
+      'm4a': 'audio/m4a',
+      'mp4a': 'audio/mp4',
+      'aac': 'audio/aac',
+      'mp3': 'audio/mpeg',
+      'wav': 'audio/wav',
+      'ogg': 'audio/ogg',
+      'opus': 'audio/ogg',
+      'amr': 'audio/amr',
+      '3gp': 'audio/3gpp',
     };
     return map[ext] ?? 'application/octet-stream';
   }

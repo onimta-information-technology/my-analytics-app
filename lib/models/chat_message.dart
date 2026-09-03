@@ -9,12 +9,22 @@ class AttachmentItem {
   final String? mimeType;   // e.g. 'image/jpeg'
   final String? messageId;  // server-assigned messageId after upload
 
+  /// A clip recorded in the composer rather than an audio file someone picked
+  /// — the backend tags it `isVoiceNote` so it renders as a voice bubble.
+  final bool isVoiceNote;
+
+  /// Playback length in whole seconds, as measured while recording and sent
+  /// with the upload. Only set on a voice note.
+  final int? durationSeconds;
+
   const AttachmentItem({
     this.url,
     this.localPath,
     this.fileName,
     this.mimeType,
     this.messageId,
+    this.isVoiceNote = false,
+    this.durationSeconds,
   });
 
   bool get isImage =>
@@ -32,6 +42,8 @@ class AttachmentItem {
     String? fileName,
     String? mimeType,
     String? messageId,
+    bool? isVoiceNote,
+    int? durationSeconds,
   }) =>
       AttachmentItem(
         url: url ?? this.url,
@@ -39,6 +51,8 @@ class AttachmentItem {
         fileName: fileName ?? this.fileName,
         mimeType: mimeType ?? this.mimeType,
         messageId: messageId ?? this.messageId,
+        isVoiceNote: isVoiceNote ?? this.isVoiceNote,
+        durationSeconds: durationSeconds ?? this.durationSeconds,
       );
 
   Map<String, dynamic> toJson() => {
@@ -47,6 +61,8 @@ class AttachmentItem {
         'fileName': fileName,
         'mimeType': mimeType,
         'messageId': messageId,
+        'isVoiceNote': isVoiceNote,
+        'durationSeconds': durationSeconds,
       };
 
   static AttachmentItem fromJson(Map<String, dynamic> j) => AttachmentItem(
@@ -55,7 +71,20 @@ class AttachmentItem {
         fileName: j['fileName'],
         mimeType: j['mimeType'],
         messageId: j['messageId'],
+        isVoiceNote: parseVoiceNoteFlag(j['isVoiceNote']),
+        durationSeconds: parseDurationSeconds(j['durationSeconds']),
       );
+
+  /// The backend sends this as true/false on some rows and 1/0 on others,
+  /// matching how it sends `isForwarded` and `isEdited`.
+  static bool parseVoiceNoteFlag(dynamic raw) => raw == true || raw == 1;
+
+  /// Whole seconds, tolerating the number arriving as a string. A zero or
+  /// negative length is no length at all, so it reads as absent.
+  static int? parseDurationSeconds(dynamic raw) {
+    final value = raw is num ? raw.round() : int.tryParse(raw?.toString() ?? '');
+    return (value == null || value <= 0) ? null : value;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -235,6 +264,12 @@ class ChatMessage {
   final String? attachmentUrl;
   final String? attachmentType;
 
+  // Voice note: a clip recorded in the composer, as opposed to an audio file
+  // someone attached. Carries its playback length so the bubble can show it
+  // before the audio is loaded. [fileType] is 'voice' on these.
+  final bool isVoiceNote;
+  final int? voiceDurationSeconds;
+
   // Forwarded: set by the backend on messages produced by
   // POST /api/chats/:chatId/messages/:messageId/forward, so the bubble can
   // show a "Forwarded" tag naming whoever sent the original.
@@ -288,6 +323,8 @@ class ChatMessage {
     this.isRead,
     this.attachmentUrl,
     this.attachmentType,
+    this.isVoiceNote = false,
+    this.voiceDurationSeconds,
     this.senderId,
     this.senderName,
     this.isForwarded = false,
@@ -385,6 +422,12 @@ class ChatMessage {
 
   bool get hasGroupedAttachments => groupedAttachments.isNotEmpty;
 
+  /// The recorded length, or null on anything that is not a voice note (and
+  /// on one the backend gave no duration for).
+  Duration? get voiceDuration => isVoiceNote && voiceDurationSeconds != null
+      ? Duration(seconds: voiceDurationSeconds!)
+      : null;
+
   bool get isImageGroup =>
       hasGroupedAttachments && groupedAttachments.every((a) => a.isImage);
 
@@ -401,6 +444,8 @@ class ChatMessage {
     bool? isRead,
     String? attachmentUrl,
     String? attachmentType,
+    bool? isVoiceNote,
+    int? voiceDurationSeconds,
     String? senderId,
     String? senderName,
     bool? isForwarded,
@@ -430,6 +475,9 @@ class ChatMessage {
         isRead: isRead ?? this.isRead,
         attachmentUrl: attachmentUrl ?? this.attachmentUrl,
         attachmentType: attachmentType ?? this.attachmentType,
+        isVoiceNote: isVoiceNote ?? this.isVoiceNote,
+        voiceDurationSeconds:
+            voiceDurationSeconds ?? this.voiceDurationSeconds,
         senderId: senderId ?? this.senderId,
         senderName: senderName ?? this.senderName,
         isForwarded: isForwarded ?? this.isForwarded,
@@ -461,6 +509,8 @@ class ChatMessage {
         'isRead': isRead,
         'attachmentUrl': attachmentUrl,
         'attachmentType': attachmentType,
+        'isVoiceNote': isVoiceNote,
+        'voiceDurationSeconds': voiceDurationSeconds,
         'senderId': senderId,
         'senderName': senderName,
         'isForwarded': isForwarded,
@@ -492,6 +542,9 @@ class ChatMessage {
         isRead: json['isRead'],
         attachmentUrl: json['attachmentUrl'],
         attachmentType: json['attachmentType'],
+        isVoiceNote: AttachmentItem.parseVoiceNoteFlag(json['isVoiceNote']),
+        voiceDurationSeconds:
+            AttachmentItem.parseDurationSeconds(json['voiceDurationSeconds']),
         senderId: json['senderId'],
         senderName: json['senderName'],
         isForwarded: json['isForwarded'] == true,
@@ -536,14 +589,26 @@ class ChatMessage {
     String? attachmentType;
     String? fileType;
     String? fileName;
+    bool isVoiceNote = false;
+    int? voiceDurationSeconds;
 
     final attachment = json['attachment'] as Map<String, dynamic>?;
     if (attachment != null) {
       attachmentUrl = attachment['url'] as String?;
       attachmentType = attachment['type'] as String?;
       fileName = attachment['filename'] as String?;
+      // A clip recorded in the composer, which the backend tags so it can be
+      // told apart from an audio file someone attached. `duration` is the
+      // length the recorder measured and sent with the upload.
+      isVoiceNote = AttachmentItem.parseVoiceNoteFlag(attachment['isVoiceNote']);
+      voiceDurationSeconds =
+          AttachmentItem.parseDurationSeconds(attachment['duration']);
       final mime = attachmentType ?? '';
-      fileType = mime.startsWith('image/') ? 'image' : 'document';
+      fileType = isVoiceNote
+          ? 'voice'
+          : mime.startsWith('image/')
+              ? 'image'
+              : 'document';
     }
 
     return ChatMessage(
@@ -556,6 +621,8 @@ class ChatMessage {
       isRead: json['read'] == 1,
       attachmentUrl: attachmentUrl,
       attachmentType: attachmentType,
+      isVoiceNote: isVoiceNote,
+      voiceDurationSeconds: voiceDurationSeconds,
       fileType: fileType,
       fileName: fileName,
       senderId: senderID.toString().isEmpty ? null : senderID.toString(),

@@ -7,9 +7,11 @@ import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/data/services/notification_store.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/models/chat_group.dart';
+import 'package:ballys_reservation_app/providers/chat_font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/guest_booking_provider.dart';
 import 'package:ballys_reservation_app/screens/chatDetail_screen.dart';
+import 'package:ballys_reservation_app/screens/chat_settings_screen.dart';
 import 'package:ballys_reservation_app/screens/profile/chat_profile_screen.dart';
 import 'package:ballys_reservation_app/utils/chat_text_format.dart';
 import 'package:ballys_reservation_app/utils/badge_sync_helper.dart';
@@ -45,6 +47,13 @@ class ChatScreen extends ConsumerStatefulWidget {
 class _ChatScreenState extends ConsumerState<ChatScreen>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver,ConnectivityMixin {
   late TabController _tabController;
+
+  /// Marks a point inside [ChatFontScope], so sheets and dialogs opened from
+  /// here inherit the chat font instead of the app-wide one — they get their
+  /// own route, and only the themes above the context they are given travel
+  /// with them.
+  final GlobalKey _chatScopeKey = GlobalKey();
+  BuildContext get _chatModalContext => _chatScopeKey.currentContext ?? context;
   List<ChatContact> _contacts = [];
   List<ChatContact> _filteredContacts = [];
   List<ChatContact> _allUsers = [];
@@ -488,10 +497,10 @@ if (message.data['msg_type'] == '35') {
   }
 
   void _showDeleteConfirmation(ChatContact contact) {
-    final fontSettings = ref.read(fontSettingsProvider);
+    final fontSettings = ref.read(chatFontSettingsProvider);
 
     showDialog(
-      context: context,
+      context: _chatModalContext,
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text(
@@ -1444,7 +1453,7 @@ if (message.data['msg_type'] == '35') {
 
   void _openGroupDetails(ChatGroup group, FontSettings fontSettings) {
     showGroupDetailsSheet(
-      context: context,
+      context: _chatModalContext,
       groupId: group.groupId,
       avatarColor: group.avatarColor,
       fontSettings: fontSettings,
@@ -1703,196 +1712,218 @@ if (message.data['msg_type'] == '35') {
 
   @override
   Widget build(BuildContext context) {
-    final fontSettings = ref.watch(fontSettingsProvider);
+    final fontSettings = ref.watch(chatFontSettingsProvider);
 
-    return GestureDetector(
-      onTap: () {
-        FocusScope.of(context).unfocus();
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          titleSpacing: 8,
-          title: Row(
-            children: [
-              // The header doubles as the profile entry point: tapping the
-              // photo runs the same upload as the overflow menu's
-              // "Change profile photo".
-              // GestureDetector(
-              //   behavior: HitTestBehavior.opaque,
-              //  // onTap: _updateMyAvatar,
-              //   child: _buildMyAvatar(),
-              // ),
-             // const SizedBox(width: 10),
-              Expanded(
+    return ChatFontScope(
+      child: KeyedSubtree(
+        key: _chatScopeKey,
+        child: GestureDetector(
+        onTap: () {
+          FocusScope.of(context).unfocus();
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            titleSpacing: 8,
+            title: Row(
+              children: [
+                // The header doubles as the profile entry point: tapping the
+                // photo runs the same upload as the overflow menu's
+                // "Change profile photo".
+                // GestureDetector(
+                //   behavior: HitTestBehavior.opaque,
+                //  // onTap: _updateMyAvatar,
+                //   child: _buildMyAvatar(),
+                // ),
+               // const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Chats",
+                        style: TextStyle(
+                          fontSize: fontSettings.fontSize + 2,
+                          fontWeight: fontSettings.fontWeight,
+                        ),
+                      ),
+                      // if ((_currentUserName ?? '').isNotEmpty)
+                      //   Text(
+                      //     _currentUserName!,
+                      //     maxLines: 1,
+                      //     overflow: TextOverflow.ellipsis,
+                      //     style: TextStyle(
+                      //       fontSize: fontSettings.fontSize - 5,
+                      //       fontWeight: FontWeight.normal,
+                      //       color: Colors.white70,
+                      //     ),
+                      //   ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            // backgroundColor: _selectedContactId != null
+            //     ? Colors.red
+            //     : Colors.green,
+            backgroundColor: Colors.green,
+            foregroundColor: Colors.white,
+            // leading: _selectedContactId != null
+            //     ? IconButton(
+            //         icon: const Icon(Icons.close),
+            //         onPressed: () {
+            //           setState(() {
+            //             _selectedContactId = null;
+            //           });
+            //         },
+            //       )
+            //     : null,
+            // actions: _selectedContactId != null
+            //     ? [
+            //         IconButton(
+            //           icon: const Icon(Icons.delete),
+            //           onPressed: () {
+            //             final contact = _contacts.firstWhere(
+            //               (c) => c.id == _selectedContactId,
+            //             );
+            //             _showDeleteConfirmation(contact);
+            //           },
+            //         ),
+            //       ]
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.menu),
+                onPressed: () {
+                  context.push('/menu');
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: () {
+                  _fetchChatsFromApi();
+                  _fetchGroups();
+                },
+              ),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert),
+                tooltip: 'More',
+                onSelected: (value) {
+                  switch (value) {
+                    case 'profile':
+                      _openMyProfile();
+                      break;
+                    case 'chat_settings':
+                      _openChatSettings();
+                      break;
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(value: 'profile', child: Text('My profile')),
+                  PopupMenuItem(
+                    value: 'chat_settings',
+                    child: Text('Chat settings'),
+                  ),
+                ],
+              ),
+            ],
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(100),
+              child: Container(
+                color: Colors.white,
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      "Chats",
-                      style: TextStyle(
-                        fontSize: fontSettings.fontSize + 2,
-                        fontWeight: fontSettings.fontWeight,
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: TextField(
+                        onChanged: _filterContacts,
+                        style: TextStyle(fontSize: fontSettings.fontSize - 2),
+                        decoration: InputDecoration(
+                          hintText: "Search chats...",
+                          hintStyle: TextStyle(
+                            fontSize: fontSettings.fontSize - 2,
+                          ),
+                          prefixIcon: const Icon(Icons.search),
+                          filled: true,
+                          fillColor: Colors.grey.shade200,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(25),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
                       ),
                     ),
-                    // if ((_currentUserName ?? '').isNotEmpty)
-                    //   Text(
-                    //     _currentUserName!,
-                    //     maxLines: 1,
-                    //     overflow: TextOverflow.ellipsis,
-                    //     style: TextStyle(
-                    //       fontSize: fontSettings.fontSize - 5,
-                    //       fontWeight: FontWeight.normal,
-                    //       color: Colors.white70,
-                    //     ),
-                    //   ),
+                    TabBar(
+                      controller: _tabController,
+                      isScrollable: true,
+                      tabAlignment: TabAlignment.start,
+                      indicatorColor: Colors.green,
+                      labelColor: Colors.green,
+                      unselectedLabelColor: Colors.black54,
+                      labelStyle: TextStyle(
+                        fontSize: fontSettings.fontSize - 4,
+                        fontWeight: fontSettings.fontWeight,
+                      ),
+                      unselectedLabelStyle: TextStyle(
+                        fontSize: fontSettings.fontSize - 4,
+                      ),
+                      tabs: const [
+                        Tab(text: "All"),
+                        Tab(text: "Unread"),
+                        Tab(text: "Groups"),
+                        Tab(text: "Favorites"),
+                        Tab(text: "Rewards"),
+                      ],
+                    ),
                   ],
                 ),
               ),
-            ],
-          ),
-          // backgroundColor: _selectedContactId != null
-          //     ? Colors.red
-          //     : Colors.green,
-          backgroundColor: Colors.green,
-          foregroundColor: Colors.white,
-          // leading: _selectedContactId != null
-          //     ? IconButton(
-          //         icon: const Icon(Icons.close),
-          //         onPressed: () {
-          //           setState(() {
-          //             _selectedContactId = null;
-          //           });
-          //         },
-          //       )
-          //     : null,
-          // actions: _selectedContactId != null
-          //     ? [
-          //         IconButton(
-          //           icon: const Icon(Icons.delete),
-          //           onPressed: () {
-          //             final contact = _contacts.firstWhere(
-          //               (c) => c.id == _selectedContactId,
-          //             );
-          //             _showDeleteConfirmation(contact);
-          //           },
-          //         ),
-          //       ]
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.menu),
-              onPressed: () {
-                context.push('/menu');
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: () {
-                _fetchChatsFromApi();
-                _fetchGroups();
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.more_vert),
-              onPressed: _openMyProfile,
-            ),
-          ],
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(100),
-            child: Container(
-              color: Colors.white,
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: TextField(
-                      onChanged: _filterContacts,
-                      style: TextStyle(fontSize: fontSettings.fontSize - 2),
-                      decoration: InputDecoration(
-                        hintText: "Search chats...",
-                        hintStyle: TextStyle(
-                          fontSize: fontSettings.fontSize - 2,
-                        ),
-                        prefixIcon: const Icon(Icons.search),
-                        filled: true,
-                        fillColor: Colors.grey.shade200,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(25),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                  ),
-                  TabBar(
-                    controller: _tabController,
-                    isScrollable: true,
-                    tabAlignment: TabAlignment.start,
-                    indicatorColor: Colors.green,
-                    labelColor: Colors.green,
-                    unselectedLabelColor: Colors.black54,
-                    labelStyle: TextStyle(
-                      fontSize: fontSettings.fontSize - 4,
-                      fontWeight: fontSettings.fontWeight,
-                    ),
-                    unselectedLabelStyle: TextStyle(
-                      fontSize: fontSettings.fontSize - 4,
-                    ),
-                    tabs: const [
-                      Tab(text: "All"),
-                      Tab(text: "Unread"),
-                      Tab(text: "Groups"),
-                      Tab(text: "Favorites"),
-                      Tab(text: "Rewards"),
-                    ],
-                  ),
-                ],
-              ),
             ),
           ),
-        ),
-        body: Column(
-          children: [
-            const NotificationBanner(),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildChatList(0, fontSettings),
-                  _buildChatList(1, fontSettings),
-                  _buildGroupList(fontSettings),
-                  _buildChatList(3, fontSettings),
-                  _buildChatList(_rewardsTabIndex, fontSettings),
-                ],
-              ),
-            ),
-            if (_errorMessage != null && _contacts.isNotEmpty)
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  color: Colors.orange.withOpacity(0.9),
-                  child: Text(
-                    'Warning: ${_errorMessage!}',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: fontSettings.fontSize - 4,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
+          body: Column(
+            children: [
+              const NotificationBanner(),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildChatList(0, fontSettings),
+                    _buildChatList(1, fontSettings),
+                    _buildGroupList(fontSettings),
+                    _buildChatList(3, fontSettings),
+                    _buildChatList(_rewardsTabIndex, fontSettings),
+                  ],
                 ),
               ),
-          ],
+              if (_errorMessage != null && _contacts.isNotEmpty)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    color: Colors.orange.withOpacity(0.9),
+                    child: Text(
+                      'Warning: ${_errorMessage!}',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: fontSettings.fontSize - 4,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          floatingActionButton: _selectedContactId == null
+              ? FloatingActionButton(
+                  backgroundColor: Colors.green,
+                  onPressed: () => _showNewConversationOptions(fontSettings),
+                  child: const Icon(Icons.chat, color: Colors.white),
+                )
+              : null,
         ),
-        floatingActionButton: _selectedContactId == null
-            ? FloatingActionButton(
-                backgroundColor: Colors.green,
-                onPressed: () => _showNewConversationOptions(fontSettings),
-                child: const Icon(Icons.chat, color: Colors.white),
-              )
-            : null,
+        ),
       ),
     );
   }
@@ -1900,7 +1931,7 @@ if (message.data['msg_type'] == '35') {
   /// Lets the user pick between a 1:1 chat and a group before loading contacts.
   void _showNewConversationOptions(FontSettings fontSettings) {
     showModalBottomSheet(
-      context: context,
+      context: _chatModalContext,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1958,7 +1989,7 @@ if (message.data['msg_type'] == '35') {
     if (!mounted) return;
 
     showModalBottomSheet(
-                    context: context,
+                    context: _chatModalContext,
                     isScrollControlled: true,
                     shape: const RoundedRectangleBorder(
                       borderRadius: BorderRadius.vertical(
@@ -2303,7 +2334,7 @@ if (message.data['msg_type'] == '35') {
     File? avatarFile;
 
     await showModalBottomSheet(
-      context: context,
+      context: _chatModalContext,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -2606,6 +2637,15 @@ if (message.data['msg_type'] == '35') {
     );
 
     nameController.dispose();
+  }
+
+  /// Chat carries its own font size, so the screen that changes it lives here
+  /// rather than in the app-wide Settings screen.
+  void _openChatSettings() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ChatSettingsScreen()),
+    );
   }
 
   /// Opens the signed-in user's chat profile. It pops `true` when the photo

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
+import 'package:ballys_reservation_app/providers/chat_font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -96,37 +97,39 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final fontSettings = ref.watch(fontSettingsProvider);
+    final fontSettings = ref.watch(chatFontSettingsProvider);
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) Navigator.pop(context, _avatarChanged);
-      },
-      child: Scaffold(
-        backgroundColor: Colors.grey.shade100,
-        appBar: AppBar(
-          title: Text(
-            'My Profile',
-            style: TextStyle(
-              fontSize: fontSettings.fontSize + 2,
-              fontWeight: fontSettings.fontWeight,
+    return ChatFontScope(
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (!didPop) Navigator.pop(context, _avatarChanged);
+        },
+        child: Scaffold(
+          backgroundColor: Colors.grey.shade100,
+          appBar: AppBar(
+            title: Text(
+              'My Profile',
+              style: TextStyle(
+                fontSize: fontSettings.fontSize + 2,
+                fontWeight: fontSettings.fontWeight,
+              ),
             ),
-          ),
-          backgroundColor: Colors.green,
-          foregroundColor: Colors.white,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.pop(context, _avatarChanged),
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: _isLoading ? null : _loadProfile,
+            backgroundColor: Colors.green,
+            foregroundColor: Colors.white,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => Navigator.pop(context, _avatarChanged),
             ),
-          ],
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: _isLoading ? null : _loadProfile,
+              ),
+            ],
+          ),
+          body: _buildBody(fontSettings),
         ),
-        body: _buildBody(fontSettings),
       ),
     );
   }

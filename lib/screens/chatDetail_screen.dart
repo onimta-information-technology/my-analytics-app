@@ -13,6 +13,8 @@ import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/models/chat_group.dart';
 import 'package:ballys_reservation_app/models/chat_message.dart';
+import 'package:ballys_reservation_app/providers/chat_font_settings_provider.dart';
+import 'package:ballys_reservation_app/screens/chat_settings_screen.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/utils/chat_text_format.dart';
 import 'package:ballys_reservation_app/utils/current_chat_state.dart';
@@ -190,6 +192,13 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
 
   final _MentionTextEditingController _messageController =
       _MentionTextEditingController();
+
+  /// Marks a point inside [ChatFontScope], so sheets and dialogs opened from
+  /// here inherit the chat font instead of the app-wide one — they get their
+  /// own route, and only the themes above the context they are given travel
+  /// with them.
+  final GlobalKey _chatScopeKey = GlobalKey();
+  BuildContext get _chatModalContext => _chatScopeKey.currentContext ?? context;
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _imagePicker = ImagePicker();
   final FocusNode _messageFocusNode = FocusNode();
@@ -478,12 +487,21 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     }
   }
 
+  /// Chat carries its own font size, so the screen that changes it lives here
+  /// rather than in the app-wide Settings screen.
+  void _openChatSettings() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ChatSettingsScreen()),
+    );
+  }
+
   void _openGroupInfo() {
     showGroupDetailsSheet(
-      context: context,
+      context: _chatModalContext,
       groupId: widget.contact.chatUuid,
       avatarColor: widget.contact.avatarColor,
-      fontSettings: ref.read(fontSettingsProvider),
+      fontSettings: ref.read(chatFontSettingsProvider),
       currentUserUuid: _currentUserUuid,
       // Avatar/name edits in the sheet reflect back into the app bar.
       onGroupChanged: _loadGroupInfo,
@@ -1812,14 +1830,14 @@ Future<void> _markMessagesAsRead() async {
     final bool clipboardHasImage = await ImageClipboard.hasImage();
     if (!mounted) return;
 
-    final fontSettings = ref.read(fontSettingsProvider);
+    final fontSettings = ref.read(chatFontSettingsProvider);
     final optionStyle = TextStyle(
       fontSize: fontSettings.fontSize - 2,
       fontWeight: fontSettings.fontWeight,
     );
 
     showModalBottomSheet(
-      context: context,
+      context: _chatModalContext,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -2477,13 +2495,13 @@ Future<void> _markMessagesAsRead() async {
   /// list, and a row per person. This user's own row says so — tapping it
   /// takes the reaction back, the same toggle the picker applies.
   void _showReactionDetails(ChatMessage message) {
-    final fontSettings = ref.read(fontSettingsProvider);
+    final fontSettings = ref.read(chatFontSettingsProvider);
     final reactions = _orderedReactions(message);
     if (reactions.isEmpty) return;
     final counts = message.reactionCounts;
 
     showModalBottomSheet(
-      context: context,
+      context: _chatModalContext,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -2766,11 +2784,11 @@ Future<void> _markMessagesAsRead() async {
   /// are picked up the next time the thread refreshes, not while the sheet is
   /// open.
   void _showMessageInfo(ChatMessage message) {
-    final fontSettings = ref.read(fontSettingsProvider);
+    final fontSettings = ref.read(chatFontSettingsProvider);
     final readers = message.seenBy;
 
     showModalBottomSheet(
-      context: context,
+      context: _chatModalContext,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -3241,7 +3259,7 @@ Future<void> _markMessagesAsRead() async {
 
     final targets = await showForwardMessageSheet(
       context: context,
-      fontSettings: ref.read(fontSettingsProvider),
+      fontSettings: ref.read(chatFontSettingsProvider),
       messageCount: sendable.length,
       excludeChatId: widget.contact.chatUuid,
       excludeUserUuid: widget.isGroup ? null : widget.contact.userUuid,
@@ -3394,11 +3412,11 @@ Future<void> _markMessagesAsRead() async {
   /// time left in the window spelled out so a rejected save is no surprise.
   Future<void> _showEditDialog(ChatMessage message) async {
     final newText = await showDialog<String>(
-      context: context,
+      context: _chatModalContext,
       builder: (ctx) => _EditMessageDialog(
         initialText: message.text,
         windowNote: _editWindowNote(message),
-        fontSettings: ref.read(fontSettingsProvider),
+        fontSettings: ref.read(chatFontSettingsProvider),
       ),
     );
 
@@ -3507,10 +3525,10 @@ Future<void> _markMessagesAsRead() async {
     final selectedMsgs =
         _messages.where((m) => selectedIds.contains(m.id)).toList();
     final allMine = selectedMsgs.every((m) => m.isMe);
-    final fontSettings = ref.read(fontSettingsProvider);
+    final fontSettings = ref.read(chatFontSettingsProvider);
 
     showModalBottomSheet(
-      context: context,
+      context: _chatModalContext,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -5294,7 +5312,7 @@ Future<void> _markMessagesAsRead() async {
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final fontSettings = ref.watch(fontSettingsProvider);
+    final fontSettings = ref.watch(chatFontSettingsProvider);
 
     // Derived from _messages, so recomputed here: a message arriving or being
     // deleted while the bar is open must not leave a hit pointing at something
@@ -5304,357 +5322,371 @@ Future<void> _markMessagesAsRead() async {
       _searchIndex = _searchHits.isEmpty ? 0 : _searchHits.length - 1;
     }
 
-    return WillPopScope(
-      onWillPop: () async {
-        // Back out of the voice note before backing out of the chat: the clip
-        // is what the bar is showing, so it is what "back" is aimed at.
-        if (_isVoiceComposing) {
-          if (_previewPath != null) {
-            _discardPreview();
-          } else {
-            _discardRecording();
+    return ChatFontScope(
+      child: KeyedSubtree(
+        key: _chatScopeKey,
+        child: WillPopScope(
+        onWillPop: () async {
+          // Back out of the voice note before backing out of the chat: the clip
+          // is what the bar is showing, so it is what "back" is aimed at.
+          if (_isVoiceComposing) {
+            if (_previewPath != null) {
+              _discardPreview();
+            } else {
+              _discardRecording();
+            }
+            return false;
           }
-          return false;
-        }
-        if (_isSelectionMode) {
-          _clearSelection();
-          return false;
-        }
-        if (_isSearching) {
-          _closeSearch();
-          return false;
-        }
-        FocusManager.instance.primaryFocus?.unfocus();
-        return true;
-      },
-      child: Scaffold(
-        appBar: _isSelectionMode
-            ? AppBar(
-                backgroundColor: Colors.green[700],
-                foregroundColor: Colors.white,
-                leading: IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: _clearSelection,
-                ),
-                title: Text(
-                  '${_selectedMessageIds.length} selected',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: fontSettings.fontSize + 2,
+          if (_isSelectionMode) {
+            _clearSelection();
+            return false;
+          }
+          if (_isSearching) {
+            _closeSearch();
+            return false;
+          }
+          FocusManager.instance.primaryFocus?.unfocus();
+          return true;
+        },
+        child: Scaffold(
+          appBar: _isSelectionMode
+              ? AppBar(
+                  backgroundColor: Colors.green[700],
+                  foregroundColor: Colors.white,
+                  leading: IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: _clearSelection,
                   ),
-                ),
-                actions: [
-                  // IconButton(
-                  //   icon: const Icon(Icons.select_all),
-                  //   tooltip: 'Select All',
-                  //   onPressed: _selectAll,
-                  // ),
-                  if (_selectedMessageIds.length == 1)
+                  title: Text(
+                    '${_selectedMessageIds.length} selected',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: fontSettings.fontSize + 2,
+                    ),
+                  ),
+                  actions: [
+                    // IconButton(
+                    //   icon: const Icon(Icons.select_all),
+                    //   tooltip: 'Select All',
+                    //   onPressed: _selectAll,
+                    // ),
+                    if (_selectedMessageIds.length == 1)
+                      IconButton(
+                        icon: const Icon(Icons.reply),
+                        tooltip: 'Reply',
+                        onPressed: _replyToSelectedMessage,
+                      ),
+                    // Own text messages only, and only while the 15-minute
+                    // window the backend enforces is still open.
+                    if (_editableSelection != null)
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        tooltip: 'Edit',
+                        onPressed: _editSelectedMessage,
+                      ),
                     IconButton(
-                      icon: const Icon(Icons.reply),
-                      tooltip: 'Reply',
-                      onPressed: _replyToSelectedMessage,
+                      icon: const Icon(Icons.copy),
+                      tooltip: 'Copy',
+                      onPressed: _copySelectedMessages,
                     ),
-                  // Own text messages only, and only while the 15-minute
-                  // window the backend enforces is still open.
-                  if (_editableSelection != null)
                     IconButton(
-                      icon: const Icon(Icons.edit),
-                      tooltip: 'Edit',
-                      onPressed: _editSelectedMessage,
+                      icon: const Icon(Icons.forward),
+                      tooltip: 'Forward',
+                      onPressed: _forwardSelectedMessages,
                     ),
-                  IconButton(
-                    icon: const Icon(Icons.copy),
-                    tooltip: 'Copy',
-                    onPressed: _copySelectedMessages,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.forward),
-                    tooltip: 'Forward',
-                    onPressed: _forwardSelectedMessages,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete),
-                    tooltip: 'Delete',
-                    onPressed: _deleteSelectedMessages,
-                  ),
-                  // Only your own message has readers to report, so the
-                  // overflow is there only when there is something in it.
-                  if (_infoSelection != null)
-                    PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert),
-                      tooltip: 'More',
-                      onSelected: (value) {
-                        if (value == 'info') _showSelectedMessageInfo();
-                      },
-                      itemBuilder: (context) => [
-                        PopupMenuItem(
-                          value: 'info',
-                          child: Text(
-                            'Info',
-                            style: TextStyle(
-                              fontSize: fontSettings.fontSize - 2,
-                            ),
-                          ),
-                        ),
-                      ],
+                    IconButton(
+                      icon: const Icon(Icons.delete),
+                      tooltip: 'Delete',
+                      onPressed: _deleteSelectedMessages,
                     ),
-                ],
-              )
-            : _isSearching
-            ? _buildSearchAppBar(fontSettings)
-            : AppBar(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                leading: IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () {
-                    FocusManager.instance.primaryFocus?.unfocus();
-                    _readStatusPollTimer?.cancel();
-                    _foregroundMessageSubscription?.cancel();
-                    CurrentChatState().clearCurrentChat();
-                    Navigator.pop(context);
-                  },
-                ),
-                title: GestureDetector(
-                  onTap: widget.isGroup ? _openGroupInfo : null,
-                  behavior: HitTestBehavior.opaque,
-                  child: Row(
-                  children: [
-                    Stack(
-                      children: [
-                        // Groups get the picture (or the group glyph); 1:1
-                        // chats keep their coloured initials.
-                        //
-                        // Tapping the picture opens it full screen. Without
-                        // one there is nothing to enlarge, so the tap falls
-                        // through to the row's own handler (group info).
-                        GestureDetector(
-                          onTap: _headerAvatarUrl == null
-                              ? (widget.isGroup ? _openGroupInfo : null)
-                              : () => showAvatarPhoto(
-                                  context,
-                                  url: _headerAvatarUrl,
-                                  title: widget.contact.name,
-                                ),
-                          child: widget.isGroup
-                            ? GroupAvatar(
-                                avatarUrl: _avatarUrl,
-                                radius: 18,
-                                backgroundColor: widget.contact.avatarColor,
-                              )
-                            : UserAvatar(
-                                avatarUrl: widget.contact.avatarUrl,
-                                initials: widget.contact.initials,
-                                backgroundColor: widget.contact.avatarColor,
-                                radius: 18,
-                                fontSize: fontSettings.fontSize - 4,
+                    // Only your own message has readers to report, so the
+                    // overflow is there only when there is something in it.
+                    if (_infoSelection != null)
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert),
+                        tooltip: 'More',
+                        onSelected: (value) {
+                          if (value == 'info') _showSelectedMessageInfo();
+                        },
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: 'info',
+                            child: Text(
+                              'Info',
+                              style: TextStyle(
+                                fontSize: fontSettings.fontSize - 2,
                               ),
-                        ),
-                        if (!widget.isGroup && widget.contact.isOnline)
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Container(
-                              width: 12,
-                              height: 12,
-                              decoration: BoxDecoration(
-                                color: Colors.greenAccent,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 2,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(width: 2),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.contact.name,
-                            style: TextStyle(
-                              fontSize: fontSettings.fontSize,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            widget.isGroup
-                                ? (widget.groupMemberCount > 0
-                                      ? '${widget.groupMemberCount} member${widget.groupMemberCount == 1 ? '' : 's'}'
-                                      : 'Tap for group info')
-                                : (widget.contact.isOnline
-                                      ? 'Online'
-                                      : 'Last seen recently'),
-                            style: TextStyle(
-                              fontSize: fontSettings.fontSize - 4,
-                              fontWeight: FontWeight.normal,
                             ),
                           ),
                         ],
                       ),
-                    ),
                   ],
+                )
+              : _isSearching
+              ? _buildSearchAppBar(fontSettings)
+              : AppBar(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () {
+                      FocusManager.instance.primaryFocus?.unfocus();
+                      _readStatusPollTimer?.cancel();
+                      _foregroundMessageSubscription?.cancel();
+                      CurrentChatState().clearCurrentChat();
+                      Navigator.pop(context);
+                    },
                   ),
-                ),
-                actions: [
-                  if (widget.isGroup)
-                    IconButton(
-                      icon: const Icon(Icons.info_outline),
-                      tooltip: 'Group info',
-                      onPressed: _openGroupInfo,
-                    ),
-                  IconButton(
-                    icon: const Icon(Icons.search),
-                    tooltip: 'Search messages',
-                    onPressed: _openSearch,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: () => _fetchMessagesFromApi(silent: false),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.more_vert),
-                    onPressed: () {},
-                  ),
-                ],
-              ),
-        body: SafeArea(
-          child: Column(
-            children: [
-              if (_isLoadingMessages)
-                const LinearProgressIndicator(
-                  backgroundColor: Colors.grey,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
-                ),
-              if (_isUploading)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 6,
-                  ),
-                  color: Colors.green.shade50,
-                  child: Row(
+                  title: GestureDetector(
+                    onTap: widget.isGroup ? _openGroupInfo : null,
+                    behavior: HitTestBehavior.opaque,
+                    child: Row(
                     children: [
-                      const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.green,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        _uploadLabel,
-                        style: TextStyle(
-                          fontSize: fontSettings.fontSize - 4,
-                          color: Colors.green,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              Expanded(
-                child: Container(
-                  color: const Color.fromARGB(255, 245, 245, 230),
-                  child: _messages.isEmpty
-                      ? Center(
-                          child: Text(
-                            'No messages yet',
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: fontSettings.fontSize,
-                            ),
+                      Stack(
+                        children: [
+                          // Groups get the picture (or the group glyph); 1:1
+                          // chats keep their coloured initials.
+                          //
+                          // Tapping the picture opens it full screen. Without
+                          // one there is nothing to enlarge, so the tap falls
+                          // through to the row's own handler (group info).
+                          GestureDetector(
+                            onTap: _headerAvatarUrl == null
+                                ? (widget.isGroup ? _openGroupInfo : null)
+                                : () => showAvatarPhoto(
+                                    context,
+                                    url: _headerAvatarUrl,
+                                    title: widget.contact.name,
+                                  ),
+                            child: widget.isGroup
+                              ? GroupAvatar(
+                                  avatarUrl: _avatarUrl,
+                                  radius: 18,
+                                  backgroundColor: widget.contact.avatarColor,
+                                )
+                              : UserAvatar(
+                                  avatarUrl: widget.contact.avatarUrl,
+                                  initials: widget.contact.initials,
+                                  backgroundColor: widget.contact.avatarColor,
+                                  radius: 18,
+                                  fontSize: fontSettings.fontSize - 4,
+                                ),
                           ),
-                        )
-                      : Stack(
-                          children: [
-                            ListView.builder(
-                              controller: _scrollController,
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 8),
-                              reverse: true,
-                              itemCount: _messages.length,
-                              itemBuilder: (ctx, index) {
-                                final ri = _messages.length - 1 - index;
-                                final msg = _messages[ri];
-                                return Column(
-                                  children: [
-                                    if (_shouldShowDateSeparator(ri))
-                                      _buildDateSeparator(
-                                        msg.timestamp,
-                                        fontSettings,
-                                      ),
-                                    // Keyed so a mention can be scrolled to.
-                                    KeyedSubtree(
-                                      key: _keyForMessage(msg.id),
-                                      child: _buildMessage(msg, fontSettings),
-                                    ),
-                                  ],
-                                );
-                              },
-                            ),
-                            if (_reachableMentions.isNotEmpty &&
-                                !_isSearching)
-                              Positioned(
-                                right: 0,
-                                bottom: 0,
-                                child:
-                                    _buildMentionJumpButton(fontSettings),
+                          if (!widget.isGroup && widget.contact.isOnline)
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                width: 12,
+                                height: 12,
+                                decoration: BoxDecoration(
+                                  color: Colors.greenAccent,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
+                                ),
                               ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(width: 2),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.contact.name,
+                              style: TextStyle(
+                                fontSize: fontSettings.fontSize,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              widget.isGroup
+                                  ? (widget.groupMemberCount > 0
+                                        ? '${widget.groupMemberCount} member${widget.groupMemberCount == 1 ? '' : 's'}'
+                                        : 'Tap for group info')
+                                  : (widget.contact.isOnline
+                                        ? 'Online'
+                                        : 'Last seen recently'),
+                              style: TextStyle(
+                                fontSize: fontSettings.fontSize - 4,
+                                fontWeight: FontWeight.normal,
+                              ),
+                            ),
                           ],
                         ),
-                ),
-              ),
-              if (_isSearching) _buildSearchNavBar(fontSettings),
-
-              // ── Read-only notice (admin-only group) ──
-              if (!_isSelectionMode && !_isSearching && !widget.canSendMessages)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                  color: Colors.grey[200],
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.lock_outline, size: 16, color: Colors.grey[600]),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          'Only admins can send messages in this group',
-                          style: TextStyle(
-                            color: Colors.grey[700],
-                            fontSize: fontSettings.fontSize - 3,
-                          ),
-                        ),
                       ),
                     ],
+                    ),
+                  ),
+                  actions: [
+                    if (widget.isGroup)
+                      IconButton(
+                        icon: const Icon(Icons.info_outline),
+                        tooltip: 'Group info',
+                        onPressed: _openGroupInfo,
+                      ),
+                    IconButton(
+                      icon: const Icon(Icons.search),
+                      tooltip: 'Search messages',
+                      onPressed: _openSearch,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: () => _fetchMessagesFromApi(silent: false),
+                    ),
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert),
+                      tooltip: 'More',
+                      onSelected: (value) {
+                        if (value == 'chat_settings') _openChatSettings();
+                      },
+                      itemBuilder: (context) => const [
+                        PopupMenuItem(
+                          value: 'chat_settings',
+                          child: Text('Chat settings'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+          body: SafeArea(
+            child: Column(
+              children: [
+                if (_isLoadingMessages)
+                  const LinearProgressIndicator(
+                    backgroundColor: Colors.grey,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                  ),
+                if (_isUploading)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 6,
+                    ),
+                    color: Colors.green.shade50,
+                    child: Row(
+                      children: [
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.green,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          _uploadLabel,
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize - 4,
+                            color: Colors.green,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                Expanded(
+                  child: Container(
+                    color: const Color.fromARGB(255, 245, 245, 230),
+                    child: _messages.isEmpty
+                        ? Center(
+                            child: Text(
+                              'No messages yet',
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: fontSettings.fontSize,
+                              ),
+                            ),
+                          )
+                        : Stack(
+                            children: [
+                              ListView.builder(
+                                controller: _scrollController,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8),
+                                reverse: true,
+                                itemCount: _messages.length,
+                                itemBuilder: (ctx, index) {
+                                  final ri = _messages.length - 1 - index;
+                                  final msg = _messages[ri];
+                                  return Column(
+                                    children: [
+                                      if (_shouldShowDateSeparator(ri))
+                                        _buildDateSeparator(
+                                          msg.timestamp,
+                                          fontSettings,
+                                        ),
+                                      // Keyed so a mention can be scrolled to.
+                                      KeyedSubtree(
+                                        key: _keyForMessage(msg.id),
+                                        child: _buildMessage(msg, fontSettings),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                              if (_reachableMentions.isNotEmpty &&
+                                  !_isSearching)
+                                Positioned(
+                                  right: 0,
+                                  bottom: 0,
+                                  child:
+                                      _buildMentionJumpButton(fontSettings),
+                                ),
+                            ],
+                          ),
                   ),
                 ),
+                if (_isSearching) _buildSearchNavBar(fontSettings),
 
-              // ── Bottom action panel (emoji row + selection actions) ──
-              // Sits on whatever is below it: nothing while selecting (the
-              // composer is hidden then), the composer otherwise.
-              if (!_isSearching) _buildBottomActionPanel(fontSettings),
+                // ── Read-only notice (admin-only group) ──
+                if (!_isSelectionMode && !_isSearching && !widget.canSendMessages)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    color: Colors.grey[200],
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.lock_outline, size: 16, color: Colors.grey[600]),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            'Only admins can send messages in this group',
+                            style: TextStyle(
+                              color: Colors.grey[700],
+                              fontSize: fontSettings.fontSize - 3,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
 
-              // ── Input bar (hidden in selection and search mode) ──
-              if (!_isSelectionMode && !_isSearching && widget.canSendMessages) ...[
-                if (_mentionSuggestions.isNotEmpty)
-                  _buildMentionSuggestions(fontSettings),
-                if (_replyingTo != null)
-                  _buildReplyPreview(_replyingTo!, fontSettings),
-                _buildComposerBar(fontSettings),
+                // ── Bottom action panel (emoji row + selection actions) ──
+                // Sits on whatever is below it: nothing while selecting (the
+                // composer is hidden then), the composer otherwise.
+                if (!_isSearching) _buildBottomActionPanel(fontSettings),
+
+                // ── Input bar (hidden in selection and search mode) ──
+                if (!_isSelectionMode && !_isSearching && widget.canSendMessages) ...[
+                  if (_mentionSuggestions.isNotEmpty)
+                    _buildMentionSuggestions(fontSettings),
+                  if (_replyingTo != null)
+                    _buildReplyPreview(_replyingTo!, fontSettings),
+                  _buildComposerBar(fontSettings),
+                ],
               ],
-            ],
+            ),
           ),
+        ),
         ),
       ),
     );
@@ -5726,77 +5758,79 @@ class _GalleryViewState extends ConsumerState<_GalleryView> {
 
   @override
   Widget build(BuildContext context) {
-    final fontSettings = ref.watch(fontSettingsProvider);
+    final fontSettings = ref.watch(chatFontSettingsProvider);
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
+    return ChatFontScope(
+      child: Scaffold(
         backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        title: Text(
-          '${_currentIndex + 1} / ${widget.items.length}',
-          style: TextStyle(
-            fontSize: fontSettings.fontSize,
-            fontWeight: fontSettings.fontWeight,
+        appBar: AppBar(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+          title: Text(
+            '${_currentIndex + 1} / ${widget.items.length}',
+            style: TextStyle(
+              fontSize: fontSettings.fontSize,
+              fontWeight: fontSettings.fontWeight,
+            ),
           ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.copy),
+              tooltip: 'Copy image',
+              onPressed: () {
+                final item = widget.items[_currentIndex];
+                ImageClipboard.copyImage(
+                  context,
+                  url: item.url,
+                  localPath: item.localPath,
+                  fileName: item.fileName,
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.download),
+              tooltip: 'Download',
+              onPressed: () {
+                final item = widget.items[_currentIndex];
+                final url = item.url;
+                final name = item.fileName ??
+                    'image_${DateTime.now().millisecondsSinceEpoch}.jpg';
+                if (url != null) {
+                  DownloadHelper.downloadAndOpen(context, url, name);
+                }
+              },
+            ),
+          ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.copy),
-            tooltip: 'Copy image',
-            onPressed: () {
-              final item = widget.items[_currentIndex];
-              ImageClipboard.copyImage(
-                context,
-                url: item.url,
-                localPath: item.localPath,
-                fileName: item.fileName,
+        body: PageView.builder(
+          controller: _pageController,
+          itemCount: widget.items.length,
+          onPageChanged: (i) => setState(() => _currentIndex = i),
+          itemBuilder: (ctx, i) {
+            final item = widget.items[i];
+            Widget img;
+            if (item.url != null && item.url!.isNotEmpty) {
+              img = Image.network(
+                item.url!,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.broken_image,
+                  color: Colors.white,
+                  size: 80,
+                ),
               );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.download),
-            tooltip: 'Download',
-            onPressed: () {
-              final item = widget.items[_currentIndex];
-              final url = item.url;
-              final name = item.fileName ??
-                  'image_${DateTime.now().millisecondsSinceEpoch}.jpg';
-              if (url != null) {
-                DownloadHelper.downloadAndOpen(context, url, name);
-              }
-            },
-          ),
-        ],
-      ),
-      body: PageView.builder(
-        controller: _pageController,
-        itemCount: widget.items.length,
-        onPageChanged: (i) => setState(() => _currentIndex = i),
-        itemBuilder: (ctx, i) {
-          final item = widget.items[i];
-          Widget img;
-          if (item.url != null && item.url!.isNotEmpty) {
-            img = Image.network(
-              item.url!,
-              fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => const Icon(
-                Icons.broken_image,
-                color: Colors.white,
-                size: 80,
-              ),
-            );
-          } else if (item.localPath != null &&
-              File(item.localPath!).existsSync()) {
-            img = Image.file(
-              File(item.localPath!),
-              fit: BoxFit.contain,
-            );
-          } else {
-            img = const Icon(Icons.image, color: Colors.white, size: 80);
-          }
-          return InteractiveViewer(child: Center(child: img));
-        },
+            } else if (item.localPath != null &&
+                File(item.localPath!).existsSync()) {
+              img = Image.file(
+                File(item.localPath!),
+                fit: BoxFit.contain,
+              );
+            } else {
+              img = const Icon(Icons.image, color: Colors.white, size: 80);
+            }
+            return InteractiveViewer(child: Center(child: img));
+          },
+        ),
       ),
     );
   }

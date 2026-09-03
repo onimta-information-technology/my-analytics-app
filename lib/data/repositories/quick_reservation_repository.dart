@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:ballys_reservation_app/components/passport_upload_widget_ballys.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/airport_search_response.dart';
+import 'package:ballys_reservation_app/models/authorization_level.dart';
 import 'package:ballys_reservation_app/models/reservation/air_ticket_class_count.dart';
 import 'package:ballys_reservation_app/models/reservation/assigned_guest.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.dart';
@@ -48,6 +49,7 @@ class QuickReservationRepository {
     required List<Map<String, dynamic>> extraMembers,
     required String liveRemarks,
     required bool hasFamilyMembers,
+    AuthorizationLevel? approver,
     void Function(String label, Object? payload)? log,
   }) async {
     final body = await buildHotelBody(
@@ -55,6 +57,7 @@ class QuickReservationRepository {
       extraMembers: extraMembers,
       liveRemarks: liveRemarks,
       hasFamilyMembers: hasFamilyMembers,
+      approver: approver,
     );
     log?.call('Saving hotel reservation', body);
     final response = await apiService.post(_reservationEndpoint, body);
@@ -67,6 +70,7 @@ class QuickReservationRepository {
     required List<Map<String, dynamic>> extraMembers,
     required String liveRemarks,
     required bool hasFamilyMembers,
+    AuthorizationLevel? approver,
   }) async {
     // Flatten all hotel entries from all members into room_details. Each room
     // is sent once and names the guests it was ticked for inside its own
@@ -145,11 +149,25 @@ class QuickReservationRepository {
       'has_air_ticket_reservation': false,
       'remarks': _hotelRemarks(primary, liveRemarks),
       'selected_marketing_person': '',
+      'approve_person': approvePersonJson(approver),
       'reservation_status': 'Pending',
       'room_details': roomDetails,
       'air_ticket_details': <Map<String, dynamic>>[],
       'guests': guests,
       'passport_images': <Map<String, dynamic>>[],
+    };
+  }
+
+  /// The approver block sent to `Reservation_InsertReservation` — the same
+  /// shape `NewReservationBallys.approvePersonJson()` sends. Empty when the
+  /// dropdown was left alone, so the key is always present in the body.
+  Map<String, dynamic> approvePersonJson(AuthorizationLevel? approver) {
+    if (approver == null) return <String, dynamic>{};
+    return {
+      'authorization_id': approver.idNo,
+      'authorization_person': approver.name,
+      'authorization_level': approver.levelNo,
+      'authorization_category': approver.category,
     };
   }
 
@@ -180,6 +198,7 @@ class QuickReservationRepository {
     required List<Map<String, dynamic>> extraMembers,
     required String liveRemarks,
     required bool hasFamilyMembers,
+    AuthorizationLevel? approver,
     void Function(String label, Object? payload)? log,
   }) async {
     final body = await buildAirBody(
@@ -188,6 +207,7 @@ class QuickReservationRepository {
       extraMembers: extraMembers,
       liveRemarks: liveRemarks,
       hasFamilyMembers: hasFamilyMembers,
+      approver: approver,
     );
     log?.call('Saving air ticket reservation', body);
     final response = await apiService.post(_reservationEndpoint, body);
@@ -201,6 +221,7 @@ class QuickReservationRepository {
     required List<Map<String, dynamic>> extraMembers,
     required String liveRemarks,
     required bool hasFamilyMembers,
+    AuthorizationLevel? approver,
   }) async {
     final primary = members.first;
     final primaryMemberId = primary['memberId'];
@@ -276,6 +297,7 @@ class QuickReservationRepository {
           ? liveRemarks.trim()
           : (firstTicket['remarks'] ?? ''),
       'selected_marketing_person': '',
+      'approve_person': approvePersonJson(approver),
       'reservation_status': 'Pending',
       'room_details': <Map<String, dynamic>>[],
       'air_ticket_details': airTicketDetails,

@@ -2,10 +2,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:ballys_reservation_app/data/repositories/airport_repository.dart';
+import 'package:ballys_reservation_app/data/repositories/authorization_level_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/contact_person_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/quick_reservation_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
+import 'package:ballys_reservation_app/models/authorization_level.dart';
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
 import 'package:ballys_reservation_app/models/reservation/airline_response.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -28,6 +30,13 @@ class QuickReservationBallysState {
   final List<AirlineResponse> airlines;
   final bool airlinesLoading;
 
+  /// Approvers for the "Request Approval From" dropdown
+  /// (`GetAuthorizationLevels`), the same list the new reservation screen runs
+  /// on. Empty until the fetch lands; a failed fetch leaves it empty rather
+  /// than blocking the form.
+  final List<AuthorizationLevel> authorizationLevels;
+  final bool authorizationLevelsLoading;
+
   /// Bellagio runs on its own API host and uses "N/A" as the payment default
   /// instead of "NA".
   final bool isBellagio;
@@ -43,6 +52,8 @@ class QuickReservationBallysState {
     this.contactPersons = const [],
     this.airlines = const [],
     this.airlinesLoading = false,
+    this.authorizationLevels = const [],
+    this.authorizationLevelsLoading = false,
     this.isBellagio = false,
     this.isNumericOnlyLocation = false,
     this.prefixes = const ['BM', 'BL', 'BN'],
@@ -54,6 +65,8 @@ class QuickReservationBallysState {
     List<String>? contactPersons,
     List<AirlineResponse>? airlines,
     bool? airlinesLoading,
+    List<AuthorizationLevel>? authorizationLevels,
+    bool? authorizationLevelsLoading,
     bool? isBellagio,
     bool? isNumericOnlyLocation,
     List<String>? prefixes,
@@ -64,6 +77,9 @@ class QuickReservationBallysState {
       contactPersons: contactPersons ?? this.contactPersons,
       airlines: airlines ?? this.airlines,
       airlinesLoading: airlinesLoading ?? this.airlinesLoading,
+      authorizationLevels: authorizationLevels ?? this.authorizationLevels,
+      authorizationLevelsLoading:
+          authorizationLevelsLoading ?? this.authorizationLevelsLoading,
       isBellagio: isBellagio ?? this.isBellagio,
       isNumericOnlyLocation: isNumericOnlyLocation ?? this.isNumericOnlyLocation,
       prefixes: prefixes ?? this.prefixes,
@@ -81,12 +97,14 @@ class QuickReservationBallysNotifier
   final ContactPersonRepository contactPersonRepository;
   final AirportRepository airportRepository;
   final GuestRepository guestRepository;
+  final AuthorizationLevelRepository authorizationLevelRepository;
 
   QuickReservationBallysNotifier({
     required this.reservationRepository,
     required this.contactPersonRepository,
     required this.airportRepository,
     required this.guestRepository,
+    required this.authorizationLevelRepository,
   }) : super(const QuickReservationBallysState());
 
   /// The current state, for callers holding the notifier rather than watching
@@ -153,6 +171,22 @@ class QuickReservationBallysNotifier
     }
   }
 
+  /// The approvers the reservation can be sent to. A failure empties the list —
+  /// the dropdown is then disabled and the reservation still saves without an
+  /// approver, the same as on the new reservation screen.
+  Future<void> loadAuthorizationLevels() async {
+    try {
+      state = state.copyWith(authorizationLevelsLoading: true);
+      final levels = await authorizationLevelRepository.getAuthorizationLevels();
+      state = state.copyWith(
+          authorizationLevels: levels, authorizationLevelsLoading: false);
+    } catch (_) {
+      state = state.copyWith(
+          authorizationLevels: const <AuthorizationLevel>[],
+          authorizationLevelsLoading: false);
+    }
+  }
+
   // ── Guest lookup ────────────────────────────────────────────────────────────
 
   /// Member search behind the search sheet. Returns an empty list rather than
@@ -196,6 +230,7 @@ class QuickReservationBallysNotifier
     required List<Map<String, dynamic>> extraMembers,
     required String liveRemarks,
     required bool hasFamilyMembers,
+    AuthorizationLevel? approver,
     void Function(String label, Object? payload)? log,
   }) {
     return _guarded(() => reservationRepository.saveHotelReservation(
@@ -203,6 +238,7 @@ class QuickReservationBallysNotifier
           extraMembers: extraMembers,
           liveRemarks: liveRemarks,
           hasFamilyMembers: hasFamilyMembers,
+          approver: approver,
           log: log,
         ));
   }
@@ -213,6 +249,7 @@ class QuickReservationBallysNotifier
     required List<Map<String, dynamic>> extraMembers,
     required String liveRemarks,
     required bool hasFamilyMembers,
+    AuthorizationLevel? approver,
     void Function(String label, Object? payload)? log,
   }) {
     return _guarded(() => reservationRepository.saveAirReservation(
@@ -221,6 +258,7 @@ class QuickReservationBallysNotifier
           extraMembers: extraMembers,
           liveRemarks: liveRemarks,
           hasFamilyMembers: hasFamilyMembers,
+          approver: approver,
           log: log,
         ));
   }
@@ -273,5 +311,6 @@ final quickReservationBallysProvider = StateNotifierProvider<
     contactPersonRepository: ContactPersonRepository(api),
     airportRepository: AirportRepository(api),
     guestRepository: GuestRepository(api),
+    authorizationLevelRepository: AuthorizationLevelRepository(api),
   );
 });

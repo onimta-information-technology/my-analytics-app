@@ -19,6 +19,7 @@ import 'package:ballys_reservation_app/components/guest_deatils_view_spGift.dart
 import 'package:ballys_reservation_app/components/location_search_field.dart';
 import 'package:ballys_reservation_app/data/repositories/quick_reservation_repository.dart';
 import 'package:ballys_reservation_app/models/airport_search_response.dart';
+import 'package:ballys_reservation_app/models/authorization_level.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart';
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
@@ -154,6 +155,14 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   final _h_approvedBy = TextEditingController();
   final _h_arrivalCtrl = TextEditingController();
   final _h_departureCtrl = TextEditingController();
+
+  // ── Approval routing ────────────────────────────────────────────────────
+  // Who the reservation is being sent to for approval, from
+  // `GetAuthorizationLevels` — the same dropdown the new reservation screen
+  // carries. Held per tab because each tab saves its own reservation, the way
+  // the remarks field is.
+  AuthorizationLevel? _h_approver;
+  AuthorizationLevel? _a_approver;
 
   DateTime? _h_arrivalDate;
   DateTime? _h_departureDate;
@@ -414,6 +423,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       _loadLocationPrefix();
       _loadContactPersons();
       _loadAirlines();
+      _loadAuthorizationLevels();
     });
   }
 
@@ -583,6 +593,24 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   /// The list is the same whatever route is picked, so it is fetched once.
   /// Only the dropdown's rebuild key is the widget's — the list itself and its
   /// loading flag come off the provider.
+  /// Pulls the approvers for the "Request Approval From" dropdown. A failure
+  /// only empties the list — the reservation still saves without an approver.
+  Future<void> _loadAuthorizationLevels() async {
+    await _quickNotifier.loadAuthorizationLevels();
+    if (!mounted) return;
+    setState(() {
+      // A list that came back without the approver already picked would leave
+      // the dropdown asserting on a value it cannot show.
+      final levels = _quick.authorizationLevels;
+      if (_h_approver != null && !levels.contains(_h_approver)) {
+        _h_approver = null;
+      }
+      if (_a_approver != null && !levels.contains(_a_approver)) {
+        _a_approver = null;
+      }
+    });
+  }
+
   Future<void> _loadAirlines() async {
     await _quickNotifier.loadAirlines();
     if (!mounted) return;
@@ -2201,6 +2229,8 @@ Remarks              : ${m['remarks']}''';
       _clearExtraMembers(_h_extraMembers);
       _resetSharedGuest();
       _resetHotelFields();
+      // The reservation is saved, so its approver goes with it.
+      _h_approver = null;
       // An emptied form starts over at the guest again.
       _hotelStep = 0;
     });
@@ -2216,8 +2246,9 @@ Remarks              : ${m['remarks']}''';
       _sharedPackageShared = false;
       // _sharedReservationNo.clear();
       _resetAirTicketFields();
-      // The reservation is saved, so its remark goes with it.
+      // The reservation is saved, so its remark and approver go with it.
       _a_remarksCtrl.clear();
+      _a_approver = null;
       _a_assignedGuestKeys.clear();
       _a_guestAssignError = false;
       // An emptied form starts over at the guest again.
@@ -2440,6 +2471,7 @@ Remarks              : ${m['remarks']}''';
       extraMembers: _captureExtraMembers(_h_extraMembers),
       liveRemarks: _h_remarks.text,
       hasFamilyMembers: _sharedHasFamilyMembers,
+      approver: _h_approver,
       log: _logLong,
     );
     _handleSaveResult(
@@ -2511,6 +2543,7 @@ Remarks              : ${m['remarks']}''';
       extraMembers: _captureExtraMembers(_a_extraMembers),
       liveRemarks: _a_remarksCtrl.text,
       hasFamilyMembers: _sharedHasFamilyMembers,
+      approver: _a_approver,
       log: _logLong,
     );
     _handleSaveResult(
@@ -2650,6 +2683,108 @@ Remarks              : ${m['remarks']}''';
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared helper functions
 // ─────────────────────────────────────────────────────────────────────────────
+/// The "Request Approval From" dropdown — who the reservation is being sent to
+/// for approval, from `GetAuthorizationLevels`. Same list and same payload as
+/// the new reservation screen; leaving it alone saves without an approver.
+///
+/// An InputDecorator around a plain DropdownButton rather than a
+/// DropdownButtonFormField, so the clear button can reset the field and a
+/// reloaded list can drop the selection.
+Widget _approverDropdown({
+  required AuthorizationLevel? value,
+  required List<AuthorizationLevel> levels,
+  required bool loading,
+  required ValueChanged<AuthorizationLevel?> onChanged,
+  required Color accent,
+}) {
+  return InputDecorator(
+    isEmpty: value == null,
+    decoration: _fieldDeco(
+      'Request Approval From',
+      icon: Icons.verified_user_outlined,
+      accent: accent,
+    ).copyWith(
+      suffixIcon: loading
+          ? const Padding(
+              padding: EdgeInsets.all(14.0),
+              child: SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          : (value != null
+              ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  tooltip: 'Clear',
+                  onPressed: () => onChanged(null),
+                )
+              : null),
+    ),
+    child: DropdownButtonHideUnderline(
+      child: DropdownButton<AuthorizationLevel>(
+        value: value,
+        isExpanded: true,
+        // Null lets each row size to its own two lines; the 48px default would
+        // clip the job title under the approver's name.
+        itemHeight: null,
+        style: kInputTextStyle,
+        // Without this the two-line menu rows would be painted into the
+        // single-line closed field and overflow it.
+        selectedItemBuilder: (context) => levels
+            .map(
+              (level) => Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  level.displayLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: kInputTextStyle,
+                ),
+              ),
+            )
+            .toList(),
+        items: levels
+            .map(
+              (level) => DropdownMenuItem<AuthorizationLevel>(
+                value: level,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        level.displayLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                      if (level.category.isNotEmpty)
+                        Text(
+                          level.category,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+            .toList(),
+        onChanged: levels.isEmpty ? null : onChanged,
+      ),
+    ),
+  );
+}
+
 InputDecoration _fieldDeco(
   String label, {
   IconData? icon,
@@ -4928,6 +5063,16 @@ class _HotelForm extends StatelessWidget {
             onPressed: state._addAnotherHotel,
           ),
           const SizedBox(height: 12),
+
+          // ── Request Approval From ────────────────────────────────────────────
+          _approverDropdown(
+            value: state._h_approver,
+            levels: state._quick.authorizationLevels,
+            loading: state._quick.authorizationLevelsLoading,
+            accent: accent,
+            onChanged: (v) => state.setState(() => state._h_approver = v),
+          ),
+          const SizedBox(height: 12),
           TextFormField(
             controller: state._h_remarks,
             style: kInputTextStyle,
@@ -5790,6 +5935,16 @@ class _AirForm extends StatelessWidget {
             icon: Icons.flight_takeoff_rounded,
             label: 'Add Another Air Ticket for This Guest',
             onPressed: state._addAnotherAirTicket,
+          ),
+          const SizedBox(height: 12),
+
+          // ── Request Approval From ────────────────────────────────────────────
+          _approverDropdown(
+            value: state._a_approver,
+            levels: state._quick.authorizationLevels,
+            loading: state._quick.authorizationLevelsLoading,
+            accent: accent,
+            onChanged: (v) => state.setState(() => state._a_approver = v),
           ),
           const SizedBox(height: 12),
 

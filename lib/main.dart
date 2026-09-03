@@ -329,6 +329,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         Future.delayed(const Duration(milliseconds: 500), () {
           final context = navigatorKey.currentContext;
           if (context != null && context.mounted) {
+            NotificationService.popPagelessRoutes();
             context.go(AppNavigation.transportLocation(masterId));
           }
         });
@@ -342,6 +343,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         Future.delayed(const Duration(milliseconds: 500), () {
           final context = navigatorKey.currentContext;
           if (context != null && context.mounted) {
+            NotificationService.popPagelessRoutes();
             final booking = GuestBooking(
               idNo: 0,
               mid: message.data['MID'] ?? '',
@@ -395,6 +397,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       Future.delayed(const Duration(milliseconds: 500), () {
         final context = navigatorKey.currentContext;
         if (context != null && context.mounted) {
+          NotificationService.popPagelessRoutes();
           if (chatData != null && chatData['chatId'] != '') {
             context.go('/menu/chats', extra: chatData);
           } else {

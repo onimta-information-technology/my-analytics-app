@@ -86,6 +86,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   @override
+  void didUpdateWidget(covariant ChatScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A notification tap while this screen is already open re-runs the route
+    // builder with fresh `extra` on the same state — initState never fires
+    // again, so the tap has to be picked up here or it goes nowhere.
+    if (!identical(widget.notificationData, oldWidget.notificationData)) {
+      _hasProcessedNotification = false;
+      _checkAndOpenNotificationChat();
+    }
+  }
+
+  @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
@@ -376,6 +388,7 @@ if (message.data['msg_type'] == '35') {
       );
 
       _fetchChatsFromApi().then((_) {
+        if (!mounted) return;
         if (_contacts.isNotEmpty) {
           final refreshedContact = _contacts.cast<ChatContact?>().firstWhere(
             (contact) =>

@@ -256,6 +256,15 @@ class NotificationService {
     }
   }
 
+  /// GoRouter only owns the pages it built. A chat detail screen is opened
+  /// with `Navigator.push`, so it is a pageless route sitting on top of them:
+  /// a `go` swaps the pages underneath it and the user keeps looking at the
+  /// same conversation. Drop those routes first so a notification tap really
+  /// lands on the screen it points at.
+  static void popPagelessRoutes() {
+    navigatorKey.currentState?.popUntil((route) => route.settings is Page);
+  }
+
   @pragma("vm:entry-point")
   static Future<void> onActionReceivedMethod(
     ReceivedAction receivedAction,
@@ -278,6 +287,7 @@ class NotificationService {
           final context = navigatorKey.currentContext;
           if (context != null && context.mounted) {
             await Future.delayed(Duration(milliseconds: 500));
+            popPagelessRoutes();
             final booking = GuestBooking(
               idNo: 0,
               mid: payload['MID'] ?? '',
@@ -300,6 +310,7 @@ class NotificationService {
             // TransportScreen reloads from the API in its initState, so simply
             // landing on it gives the user fresh data. `masterId` tells it
             // which request to reveal and highlight.
+            popPagelessRoutes();
             context.go(AppNavigation.transportLocation(payload['MasterId']));
           }
           return;
@@ -316,6 +327,7 @@ class NotificationService {
           final context = navigatorKey.currentContext;
           if (context != null && context.mounted) {
             await Future.delayed(Duration(milliseconds: 500));
+            popPagelessRoutes();
 
             context.go(
               '/menu/chats',
@@ -374,6 +386,7 @@ class NotificationService {
 
       final context = navigatorKey.currentContext;
       if (context != null && context.mounted) {
+        popPagelessRoutes();
         context.go(
           '/menu/chats',
           extra: {

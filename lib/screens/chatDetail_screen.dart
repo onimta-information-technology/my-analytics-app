@@ -1437,7 +1437,7 @@ Future<void> _markMessagesAsRead() async {
 
     if (elapsed < _kMinVoiceNote) {
       await _deleteRecording(path);
-      _showErrorSnack('Hold the mic to record a voice message.');
+    //  _showErrorSnack('Hold the mic to record a voice message.');
       return;
     }
 
@@ -4703,7 +4703,7 @@ Future<void> _markMessagesAsRead() async {
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () => _showErrorSnack('Hold the mic to record a voice message.'),
+   //   onTap: () => _showErrorSnack('Hold the mic to record a voice message.'),
       onLongPressStart: (_) {
         _voicePressActive = true;
         _startRecording();
@@ -5182,46 +5182,55 @@ Future<void> _markMessagesAsRead() async {
                         ),
                         const SizedBox(width: 4),
                         Expanded(
-                          child: TextField(
-                            controller: _messageController,
-                            focusNode: _messageFocusNode,
-                            style: TextStyle(fontSize: fontSettings.fontSize),
-                            decoration: InputDecoration(
-                              hintText: 'Type a message',
-                              hintStyle: TextStyle(
-                                fontSize: fontSettings.fontSize,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(25),
-                                borderSide: BorderSide.none,
-                              ),
-                              filled: true,
-                              fillColor: Colors.grey[200],
-                              contentPadding:
-                                  const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 10,
-                              ),
-                              suffixIcon: IconButton(
-                                icon: const Icon(
-                                  Icons.attach_file,
-                                  color: Colors.grey,
-                                ),
-                                onPressed: _onAttachFilePressed,
-                              ),
+                          // Capped so a pasted wall of text scrolls inside the
+                          // field instead of growing the bar past the screen.
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight:
+                                  MediaQuery.of(context).size.height * 0.25,
                             ),
-                            maxLines: null,
-                            textInputAction: TextInputAction.newline,
-                            onChanged: _onComposerChanged,
-                            onSubmitted: (_) => _sendMessage(),
-                            onTap: () {
-                              Future.delayed(
-                                const Duration(milliseconds: 300),
-                                () {
-                                  if (mounted) _scrollToBottom();
-                                },
-                              );
-                            },
+                            child: TextField(
+                              controller: _messageController,
+                              focusNode: _messageFocusNode,
+                              style: TextStyle(fontSize: fontSettings.fontSize),
+                              decoration: InputDecoration(
+                                hintText: 'Type a message',
+                                hintStyle: TextStyle(
+                                  fontSize: fontSettings.fontSize,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(25),
+                                  borderSide: BorderSide.none,
+                                ),
+                                filled: true,
+                                fillColor: Colors.grey[200],
+                                contentPadding:
+                                    const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 10,
+                                ),
+                                suffixIcon: IconButton(
+                                  icon: const Icon(
+                                    Icons.attach_file,
+                                    color: Colors.grey,
+                                  ),
+                                  onPressed: _onAttachFilePressed,
+                                ),
+                              ),
+                              minLines: 1,
+                              maxLines: 6,
+                              textInputAction: TextInputAction.newline,
+                              onChanged: _onComposerChanged,
+                              onSubmitted: (_) => _sendMessage(),
+                              onTap: () {
+                                Future.delayed(
+                                  const Duration(milliseconds: 300),
+                                  () {
+                                    if (mounted) _scrollToBottom();
+                                  },
+                                );
+                              },
+                            ),
                           ),
                         ),
                       ],

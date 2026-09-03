@@ -37,6 +37,7 @@ import 'package:ballys_reservation_app/providers/quick_reservation_provider_ball
 // import 'package:ballys_reservation_app/providers/new_reservation_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
+import 'package:intl/intl.dart';
 
 enum _Section { airTicket, hotel, transport }
 
@@ -4863,6 +4864,7 @@ class _HotelForm extends StatelessWidget {
               ),
             ),
           ),
+          _estimatedCost(accent),
           // const SizedBox(height: 12),
           // _rowPair(
           //   _StepperField(
@@ -4955,6 +4957,61 @@ class _HotelForm extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  /// Est. cost for the stay, worked out from the room type's `NetRate` in the
+  /// hotel catalog: rate x nights x rooms. Display only — nothing about it is
+  /// saved with the reservation, it is there so the user sees what the rooms
+  /// come to while they pick.
+  Widget _estimatedCost(Color accent) {
+    final rateValue = state._selectedRoomType?['NetRate'];
+    final rate = rateValue is num ? rateValue.toDouble() : null;
+    final arrival = state._h_arrivalDate;
+    final departure = state._h_departureDate;
+    if (rate == null || arrival == null || departure == null) {
+      return const SizedBox.shrink();
+    }
+    final nights = departure.difference(arrival).inDays;
+    if (nights <= 0) return const SizedBox.shrink();
+
+    // The room count lives in a controller, so the total has to follow it as
+    // the user steps it up and down.
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: state._h_noOfRooms,
+      builder: (context, value, _) {
+        final rooms = int.tryParse(value.text.trim()) ?? 1;
+        if (rooms <= 0) return const SizedBox.shrink();
+        final money = NumberFormat('#,##0.00');
+        final total = rate * nights * rooms;
+        return Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: _LabeledCard(
+            label: 'Estimated Cost',
+            accent: accent,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${money.format(rate)} x $nights '
+                  '${nights == 1 ? "night" : "nights"} x $rooms '
+                  '${rooms == 1 ? "room" : "rooms"}',
+                  style: const TextStyle(fontSize: 13, color: Colors.grey),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  money.format(total),
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: accent,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

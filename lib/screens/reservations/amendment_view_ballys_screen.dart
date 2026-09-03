@@ -140,9 +140,9 @@ class _AmendmentViewBallysScreenState
             ],
           ),
           const Divider(height: 20),
-          _row('Requested by', _amendment.userName),
+          _row('Requested by ', _amendment.userName),
           if (_amendment.createdDate != null)
-            _row('Requested on', _dateTimeFormat.format(_amendment.createdDate!)),
+            _row('Requested on ', _dateTimeFormat.format(_amendment.createdDate!)),
           _row(
             _amendment.isHotel ? 'Rooms amended' : 'Tickets amended',
             '${_amendment.lineCount}',
@@ -203,7 +203,7 @@ class _AmendmentViewBallysScreenState
 
           // The routes as they stand today.
           if (ticket.departureRoute.isNotEmpty)
-            _row('Departure route', ticket.departureRoute),
+            _row('Departure route ', ticket.departureRoute),
           if (ticket.returnRoute.isNotEmpty)
             _row('Return route', ticket.returnRoute),
 
@@ -289,7 +289,7 @@ class _AmendmentViewBallysScreenState
           title,
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: _fonts.fontSize - 3,
+            fontSize: _fonts.fontSize ,
           ),
         ),
         const SizedBox(height: 4),
@@ -627,7 +627,7 @@ class _AmendmentViewBallysScreenState
           child: Text(
             title,
             style: TextStyle(
-              fontSize: _fonts.fontSize - 1,
+              fontSize: _fonts.fontSize,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -649,7 +649,7 @@ class _AmendmentViewBallysScreenState
                   category,
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: _fonts.fontSize - 5,
+                    fontSize: _fonts.fontSize,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -659,7 +659,7 @@ class _AmendmentViewBallysScreenState
               Text(
                 type,
                 style: TextStyle(
-                  fontSize: _fonts.fontSize - 5,
+                  fontSize: _fonts.fontSize ,
                   color: Colors.black,
                   fontWeight: FontWeight.w600,
                 ),
@@ -685,8 +685,9 @@ class _AmendmentViewBallysScreenState
             child: Text(
               label,
               style: TextStyle(
-                fontSize: _fonts.fontSize - 4,
-                color: Colors.black,
+                fontSize: _fonts.fontSize,
+                fontWeight: _fonts.fontWeight,
+                color: const Color.fromARGB(255, 147, 8, 112),
               ),
             ),
           ),

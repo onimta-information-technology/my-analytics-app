@@ -251,9 +251,6 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
         child: DropdownButton<AuthorizationLevel>(
           value: _selectedAuthorization,
           isExpanded: true,
-          // Null lets each row size to its own two lines; the 48px default
-          // would clip the job title under the approver's name.
-          itemHeight: null,
           // hint: Text(
           //   _isLoadingAuthorizationLevels
           //       ? "Loading approvers..."
@@ -269,14 +266,14 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
             fontWeight: fontSettings.fontWeight,
             color: Colors.black,
           ),
-          // Without this the two-line menu rows would be painted into the
-          // single-line closed field and overflow it.
+          // The approver's name is all the row carries, so the closed field
+          // can paint the same single line the menu does.
           selectedItemBuilder: (context) => _authorizationLevels
               .map(
                 (level) => Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    level.displayLabel,
+                    level.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -291,33 +288,13 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
               .map(
                 (level) => DropdownMenuItem<AuthorizationLevel>(
                   value: level,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          level.displayLabel,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        if (level.category.isNotEmpty)
-                          Text(
-                            level.category,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: fontSettings.fontSize * 0.8,
-                              fontWeight: fontSettings.fontWeight,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                      ],
+                  child: Text(
+                    level.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: fontSettings.fontSize,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),

@@ -2725,18 +2725,15 @@ Widget _approverDropdown({
       child: DropdownButton<AuthorizationLevel>(
         value: value,
         isExpanded: true,
-        // Null lets each row size to its own two lines; the 48px default would
-        // clip the job title under the approver's name.
-        itemHeight: null,
         style: kInputTextStyle,
-        // Without this the two-line menu rows would be painted into the
-        // single-line closed field and overflow it.
+        // The approver's name is all the row carries, so the closed field can
+        // paint the same single line the menu does.
         selectedItemBuilder: (context) => levels
             .map(
               (level) => Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  level.displayLabel,
+                  level.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: kInputTextStyle,
@@ -2748,32 +2745,13 @@ Widget _approverDropdown({
             .map(
               (level) => DropdownMenuItem<AuthorizationLevel>(
                 value: level,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        level.displayLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
-                        ),
-                      ),
-                      if (level.category.isNotEmpty)
-                        Text(
-                          level.category,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                    ],
+                child: Text(
+                  level.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
                   ),
                 ),
               ),

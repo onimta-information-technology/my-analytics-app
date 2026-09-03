@@ -28,10 +28,6 @@ class AuthorizationLevel {
     );
   }
 
-  /// What the dropdown shows once an approver is picked.
-  String get displayLabel =>
-      levelLabel.isEmpty ? name : '$name — $levelLabel';
-
   // The dropdown compares the selected value against the freshly parsed list,
   // so equality has to be by id rather than by identity.
   @override

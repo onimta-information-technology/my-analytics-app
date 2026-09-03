@@ -237,6 +237,50 @@ class _ReservationMainScreenState extends ConsumerState<ReservationMainScreen>
                     ],
                   ),
 
+                // ── Coordinator Request (Ballys only) ────────────────────
+                // For executives who would rather hand the booking to a
+                // coordinator than key the reservation in themselves.
+                if (_isBallys)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            context.go(
+                              '/reservationMain/coordinator-request-ballys',
+                            );
+                          },
+                          child: Card(
+                            color: const Color.fromARGB(255, 63, 81, 181),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              child: Column(
+                                children: const [
+                                  Icon(
+                                    Icons.support_agent,
+                                    size: 80,
+                                    color: Colors.white,
+                                  ),
+                                  Text(
+                                    'Coordinator Request',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 16.0,
+                                      fontWeight: FontWeight.normal,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Keeps the card the same width as the cards above.
+                      const Expanded(child: SizedBox()),
+                    ],
+                  ),
+
                 // ── Transport (Bellagio only) ────────────────────────────
                 if (_isBellagio)
                   Row(

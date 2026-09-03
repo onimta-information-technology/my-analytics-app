@@ -56,6 +56,7 @@ import 'package:ballys_reservation_app/screens/reservations/amendment_view_bally
 import 'package:ballys_reservation_app/screens/reservations/amendments_ballys_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/air_tickets_selection_ballys_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/air_tickets_selection_screen.dart';
+import 'package:ballys_reservation_app/screens/reservations/coordinator_request_ballys_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/group_reservation_ballys_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/main_reservation.dart';
 import 'package:ballys_reservation_app/screens/reservations/air_ticket_amendment_ballys_screen.dart';
@@ -691,6 +692,23 @@ class AppNavigation {
         fullscreenDialog: false,
         key: state.pageKey,
         child: const GroupReservationBallysScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+            child: child,
+          );
+        },
+      ),
+    ),
+
+    // Coordinator Request (Ballys only) — an executive hands the reservation
+    // to a coordinator instead of keying it in themselves.
+    GoRoute(
+      path: 'coordinator-request-ballys',
+      pageBuilder: (context, state) => CustomTransitionPage(
+        fullscreenDialog: false,
+        key: state.pageKey,
+        child: const CoordinatorRequestBallysScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(
             opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),

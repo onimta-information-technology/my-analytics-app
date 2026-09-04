@@ -1,5 +1,6 @@
 import 'package:ballys_reservation_app/core/chat_colors.dart';
 import 'package:ballys_reservation_app/components/badge_service.dart';
+import 'package:ballys_reservation_app/components/contact_picker.dart';
 import 'package:ballys_reservation_app/components/group_avatar.dart';
 import 'package:ballys_reservation_app/components/user_avatar.dart';
 import 'package:ballys_reservation_app/components/group_details_sheet.dart';
@@ -13,6 +14,8 @@ import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/guest_booking_provider.dart';
 import 'package:ballys_reservation_app/screens/chatDetail_screen.dart';
 import 'package:ballys_reservation_app/screens/chat_settings_screen.dart';
+import 'package:ballys_reservation_app/screens/new_chat_screen.dart';
+import 'package:ballys_reservation_app/screens/new_group_screen.dart';
 import 'package:ballys_reservation_app/screens/profile/chat_profile_screen.dart';
 import 'package:ballys_reservation_app/utils/chat_text_format.dart';
 import 'package:ballys_reservation_app/utils/badge_sync_helper.dart';
@@ -24,13 +27,9 @@ import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import 'dart:async';
-import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
-
-List<ChatContact> _filteredUsers = [];
 
 /// Row tint for a long-pressed chat or group row. WhatsApp washes the whole
 /// row edge to edge instead of lifting a rounded card out of the list, so the
@@ -742,7 +741,6 @@ if (message.data['msg_type'] == '35') {
 
         setState(() {
           _allUsers = userContacts;
-          _filteredUsers = List.from(userContacts);
         });
       }
     } catch (e) {
@@ -1580,7 +1578,7 @@ if (message.data['msg_type'] == '35') {
             const SizedBox(height: 8),
             Center(
               child: TextButton(
-                onPressed: () => _showNewGroupSheet(fontSettings),
+                onPressed: () => _openNewGroupScreen(),
                 child: Text(
                   'Create a group',
                   style: TextStyle(
@@ -1920,7 +1918,7 @@ if (message.data['msg_type'] == '35') {
               ? FloatingActionButton(
                   // The FAB is the brighter green in WhatsApp, not the header's.
                   backgroundColor: ChatColors.accent,
-                  onPressed: () => _showNewConversationOptions(fontSettings),
+                  onPressed: () => _openNewChatScreen(),
                   child: const Icon(Icons.chat, color: Colors.white),
                 )
               : null,
@@ -1930,715 +1928,124 @@ if (message.data['msg_type'] == '35') {
     );
   }
 
-  /// Lets the user pick between a 1:1 chat and a group before loading contacts.
-  void _showNewConversationOptions(FontSettings fontSettings) {
-    showModalBottomSheet(
-      context: _chatModalContext,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  // ── New conversations ─────────────────────────────────────────────────────
+  // Both pickers are full screens rather than sheets, the way WhatsApp does
+  // it: they own an app bar with its own search, and they hand a result back
+  // here because this is where the chat list and its refreshes live.
+
+  Future<void> _openNewChatScreen() async {
+    await _fetchAllUsersForNewChat();
+
+    if (!mounted) return;
+
+    final result = await Navigator.push<NewChatResult>(
+      context,
+      MaterialPageRoute(builder: (_) => NewChatScreen(contacts: _allUsers)),
+    );
+
+    if (!mounted || result == null) return;
+
+    if (result.startGroup) {
+      // The contact list was just loaded for the chat picker, so don't pull it
+      // down a second time on the way into the group flow.
+      await _openNewGroupScreen(fetchContacts: false);
+    } else if (result.contact != null) {
+      await _startChatWith(result.contact!);
+    }
+  }
+
+  Future<void> _openNewGroupScreen({bool fetchContacts = true}) async {
+    if (fetchContacts) await _fetchAllUsersForNewChat();
+
+    if (!mounted) return;
+
+    final draft = await Navigator.push<NewGroupDraft>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => NewGroupMembersScreen(contacts: _allUsers),
       ),
-      builder: (sheetContext) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 8),
-              ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: ChatColors.primary,
-                  child: Icon(Icons.person_add, color: Colors.white),
-                ),
-                title: Text(
-                  'New Chat',
-                  style: TextStyle(
-                    fontSize: fontSettings.fontSize,
-                    fontWeight: fontSettings.fontWeight,
-                  ),
-                ),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  _showNewChatSheet(fontSettings);
-                },
+    );
+
+    if (!mounted || draft == null) return;
+
+    await _createGroup(
+      draft.name,
+      draft.members,
+      avatarPath: draft.avatarPath,
+    );
+  }
+
+  /// Creates (or reuses) the 1:1 chat and opens it. On a backend failure it
+  /// still opens the conversation, so the tap is not simply lost.
+  Future<void> _startChatWith(ChatContact contact) async {
+    final navigator = Navigator.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    scaffoldMessenger.showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
               ),
-              ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: ChatColors.primary,
-                  child: Icon(Icons.group_add, color: Colors.white),
-                ),
-                title: Text(
-                  'New Group',
-                  style: TextStyle(
-                    fontSize: fontSettings.fontSize,
-                    fontWeight: fontSettings.fontWeight,
-                  ),
-                ),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  _showNewGroupSheet(fontSettings);
-                },
-              ),
-              const SizedBox(height: 8),
-            ],
+            ),
+            SizedBox(width: 16),
+            Text('Creating chat...'),
+          ],
+        ),
+        duration: Duration(seconds: 30),
+        backgroundColor: Colors.blue,
+      ),
+    );
+
+    final String fallbackFirstName = contact.firstName.isNotEmpty
+        ? contact.firstName
+        : contact.name;
+
+    try {
+      final chatId = await FirebaseApiService.createChat(
+        contact.userUuid,
+        userAppType: contact.appType,
+      );
+
+      scaffoldMessenger.hideCurrentSnackBar();
+
+      await navigator.push(
+        MaterialPageRoute(
+          builder: (context) => IndividualChatScreen(
+            contact: contact.copyWith(
+              chatUuid: chatId,
+              firstName: fallbackFirstName,
+            ),
+            onMessageSent: (String lastMessage) {
+              _updateContactLastMessage(contact.id, lastMessage);
+            },
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
 
-  Future<void> _showNewChatSheet(FontSettings fontSettings) async {
-    await _fetchAllUsersForNewChat();
+      _refreshChatsAndGroups();
+    } catch (e) {
+      scaffoldMessenger.hideCurrentSnackBar();
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Error creating chat: $e'),
+          backgroundColor: Colors.orange,
+        ),
+      );
 
-    if (!mounted) return;
-
-    showModalBottomSheet(
-                    context: _chatModalContext,
-                    isScrollControlled: true,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(20),
-                      ),
-                    ),
-                    builder: (context) {
-                      return StatefulBuilder(
-                        builder: (BuildContext context, StateSetter setModalState) {
-                          return GestureDetector(
-                            onTap: () {
-                              FocusScope.of(context).unfocus();
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              height: MediaQuery.of(context).size.height * 0.8,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  TextField(
-                                    style: TextStyle(
-                                      fontSize: fontSettings.fontSize - 2,
-                                    ),
-                                    decoration: InputDecoration(
-                                      hintText: "Search contacts...",
-                                      hintStyle: TextStyle(
-                                        fontSize: fontSettings.fontSize - 2,
-                                      ),
-                                      prefixIcon: const Icon(Icons.search),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                          ),
-                                    ),
-                                    onChanged: (query) {
-                                      setModalState(() {
-                                        if (query.isEmpty) {
-                                          _filteredUsers = List.from(_allUsers);
-                                        } else {
-                                          _filteredUsers = _allUsers
-                                              .where(
-                                                (user) =>
-                                                    user.name
-                                                        .toLowerCase()
-                                                        .contains(
-                                                          query.toLowerCase(),
-                                                        ) ||
-                                                    user.firstName
-                                                        .toLowerCase()
-                                                        .contains(
-                                                          query.toLowerCase(),
-                                                        ),
-                                              )
-                                              .toList();
-                                        }
-                                      });
-                                    },
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    "Start New Chat",
-                                    style: TextStyle(
-                                      fontSize: fontSettings.fontSize + 2,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Expanded(
-                                    child: _allUsers.isEmpty
-                                        ? Center(
-                                            child: Text(
-                                              'No contacts available',
-                                              style: TextStyle(
-                                                fontSize:
-                                                    fontSettings.fontSize - 2,
-                                              ),
-                                            ),
-                                          )
-                                        : ListView.builder(
-                                            itemCount: _filteredUsers.length,
-                                            itemBuilder: (context, index) {
-                                              final contact =
-                                                  _filteredUsers[index];
-                                              return ListTile(
-                                                leading: UserAvatar(
-                                                  avatarUrl: contact.avatarUrl,
-                                                  initials: contact.initials,
-                                                  backgroundColor:
-                                                      contact.avatarColor,
-                                                  fontSize:
-                                                      fontSettings.fontSize - 4,
-                                                ),
-                                                title: Text(
-                                                  contact.name,
-                                                  style: TextStyle(
-                                                    fontSize:
-                                                        fontSettings.fontSize,
-                                                    fontWeight:
-                                                        fontSettings.fontWeight,
-                                                  ),
-                                                ),
-                                                subtitle: Row(
-  children: [
-    Container(
-      width: 8,
-      height: 8,
-      decoration: BoxDecoration(
-        color: contact.isOnline
-            ? ChatColors.accent
-            : Colors.grey,
-        shape: BoxShape.circle,
-      ),
-    ),
-    const SizedBox(width: 6),
-    Text(
-      contact.isOnline ? "Online" : "Offline",
-      style: TextStyle(
-        color: contact.isOnline ? ChatColors.primaryDark : Colors.grey,
-        fontSize: fontSettings.fontSize - 4,
-      ),
-    ),
-  ],
-),
-                                                onTap: () async {
-                                                  final navigator =
-                                                      Navigator.of(context);
-                                                  final scaffoldMessenger =
-                                                      ScaffoldMessenger.of(
-                                                        context,
-                                                      );
-
-                                                  navigator.pop();
-
-                                                  scaffoldMessenger.showSnackBar(
-                                                    const SnackBar(
-                                                      content: Row(
-                                                        children: [
-                                                          SizedBox(
-                                                            width: 20,
-                                                            height: 20,
-                                                            child: CircularProgressIndicator(
-                                                              strokeWidth: 2,
-                                                              valueColor:
-                                                                  AlwaysStoppedAnimation<
-                                                                    Color
-                                                                  >(
-                                                                    Colors
-                                                                        .white,
-                                                                  ),
-                                                            ),
-                                                          ),
-                                                          SizedBox(width: 16),
-                                                          Text(
-                                                            'Creating chat...',
-                                                          ),
-                                                        ],
-                                                      ),
-                                                      duration: Duration(
-                                                        seconds: 30,
-                                                      ),
-                                                      backgroundColor:
-                                                          Colors.blue,
-                                                    ),
-                                                  );
-
-                                                  try {
-                                                    final chatId =
-                                                        await FirebaseApiService.createChat(
-                                                          contact.userUuid,
-                                                          userAppType:
-                                                              contact.appType,
-                                                        );
-
-                                                    scaffoldMessenger
-                                                        .hideCurrentSnackBar();
-
-                                                    final contactWithChatId = ChatContact(
-                                                      id: contact.id,
-                                                      chatUuid:
-                                                          chatId ??
-                                                          contact.chatUuid,
-                                                      userUuid:
-                                                          contact.userUuid,
-                                                      name: contact.name,
-                                                      firstName:
-                                                          contact
-                                                              .firstName
-                                                              .isNotEmpty
-                                                          ? contact.firstName
-                                                          : contact.name,
-                                                      lastMessage:
-                                                          contact.lastMessage,
-                                                      time: contact.time,
-                                                      isOnline:
-                                                          contact.isOnline,
-                                                      avatarColor:
-                                                          contact.avatarColor,
-                                                      initials:
-                                                          contact.initials,
-                                                      unreadCount:
-                                                          contact.unreadCount,
-                                                      lastMessageTime: contact
-                                                          .lastMessageTime,
-                                                      lastMessageSender: contact
-                                                          .lastMessageSender,
-                                                      participants:
-                                                          contact.participants,
-                                                      createdAt:
-                                                          contact.createdAt,
-                                                      lastMessageSenderName: contact
-                                                          .lastMessageSenderName,
-                                                      appType: contact.appType,
-                                                      avatarUrl:
-                                                          contact.avatarUrl,
-                                                      lastMessageRead: contact
-                                                          .lastMessageRead,
-                                                    );
-
-                                                    await navigator.push(
-                                                      MaterialPageRoute(
-                                                        builder: (context) =>
-                                                            IndividualChatScreen(
-                                                              contact:
-                                                                  contactWithChatId,
-                                                              onMessageSent:
-                                                                  (
-                                                                    String
-                                                                    lastMessage,
-                                                                  ) {
-                                                                    _updateContactLastMessage(
-                                                                      contact
-                                                                          .id,
-                                                                      lastMessage,
-                                                                    );
-                                                                  },
-                                                            ),
-                                                      ),
-                                                    );
-
-                                                    _refreshChatsAndGroups();
-                                                  } catch (e) {
-                                                    scaffoldMessenger
-                                                        .hideCurrentSnackBar();
-                                                    scaffoldMessenger.showSnackBar(
-                                                      SnackBar(
-                                                        content: Text(
-                                                          'Error creating chat: $e',
-                                                        ),
-                                                        backgroundColor:
-                                                            Colors.orange,
-                                                      ),
-                                                    );
-
-                                                    final contactWithChatId = ChatContact(
-                                                      id: contact.id,
-                                                      chatUuid:
-                                                          contact.chatUuid,
-                                                      userUuid:
-                                                          contact.userUuid,
-                                                      name: contact.name,
-                                                      firstName:
-                                                          contact
-                                                              .firstName
-                                                              .isNotEmpty
-                                                          ? contact.firstName
-                                                          : contact.name,
-                                                      lastMessage:
-                                                          contact.lastMessage,
-                                                      time: contact.time,
-                                                      isOnline:
-                                                          contact.isOnline,
-                                                      avatarColor:
-                                                          contact.avatarColor,
-                                                      initials:
-                                                          contact.initials,
-                                                      unreadCount:
-                                                          contact.unreadCount,
-                                                      lastMessageTime: contact
-                                                          .lastMessageTime,
-                                                      lastMessageSender: contact
-                                                          .lastMessageSender,
-                                                      participants:
-                                                          contact.participants,
-                                                      createdAt:
-                                                          contact.createdAt,
-                                                      lastMessageSenderName: contact
-                                                          .lastMessageSenderName,
-                                                      appType: contact.appType,
-                                                      avatarUrl:
-                                                          contact.avatarUrl,
-                                                      lastMessageRead: contact
-                                                          .lastMessageRead,
-                                                    );
-
-                                                    await navigator.push(
-                                                      MaterialPageRoute(
-                                                        builder: (context) =>
-                                                            IndividualChatScreen(
-                                                              contact:
-                                                                  contactWithChatId,
-                                                            ),
-                                                      ),
-                                                    );
-                                                  }
-                                                },
-                                              );
-                                            },
-                                          ),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: Text(
-                                      "Close",
-                                      style: TextStyle(
-                                        fontSize: fontSettings.fontSize - 2,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  );
-  }
-
-  Future<void> _showNewGroupSheet(FontSettings fontSettings) async {
-    await _fetchAllUsersForNewChat();
-
-    if (!mounted) return;
-
-    final nameController = TextEditingController();
-    // Keyed by userUuid so the selection survives search filtering.
-    final Map<String, ChatContact> selectedMembers = {};
-    List<ChatContact> visibleUsers = List.from(_allUsers);
-    // Optional group avatar, uploaded in the same multipart create call.
-    File? avatarFile;
-
-    await showModalBottomSheet(
-      context: _chatModalContext,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
-            final bool canCreate =
-                nameController.text.trim().isNotEmpty &&
-                selectedMembers.isNotEmpty;
-
-            return GestureDetector(
-              onTap: () => FocusScope.of(context).unfocus(),
-              child: Padding(
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).viewInsets.bottom,
-                ),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  height: MediaQuery.of(context).size.height * 0.85,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "New Group",
-                        style: TextStyle(
-                          fontSize: fontSettings.fontSize + 2,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Center(
-                        child: GestureDetector(
-                          onTap: () async {
-                            final picked = await _pickAvatarImage(sheetContext);
-                            if (picked != null) {
-                              setModalState(() => avatarFile = picked);
-                            }
-                          },
-                          child: Stack(
-                            children: [
-                              CircleAvatar(
-                                radius: 40,
-                                backgroundColor: Colors.grey[300],
-                                backgroundImage: avatarFile != null
-                                    ? FileImage(avatarFile!)
-                                    : null,
-                                child: avatarFile == null
-                                    ? Icon(
-                                        Icons.group,
-                                        size: 44,
-                                        color: Colors.grey[600],
-                                      )
-                                    : null,
-                              ),
-                              Positioned(
-                                right: 0,
-                                bottom: 0,
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
-                                    color: ChatColors.primary,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.camera_alt,
-                                    size: 14,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: nameController,
-                        style: TextStyle(fontSize: fontSettings.fontSize - 2),
-                        textCapitalization: TextCapitalization.words,
-                        decoration: InputDecoration(
-                          hintText: "Group name",
-                          hintStyle: TextStyle(
-                            fontSize: fontSettings.fontSize - 2,
-                          ),
-                          prefixIcon: const Icon(Icons.group),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                          ),
-                        ),
-                        // Rebuild so the create button enables as soon as the
-                        // name stops being blank.
-                        onChanged: (_) => setModalState(() {}),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        style: TextStyle(fontSize: fontSettings.fontSize - 2),
-                        decoration: InputDecoration(
-                          hintText: "Search contacts...",
-                          hintStyle: TextStyle(
-                            fontSize: fontSettings.fontSize - 2,
-                          ),
-                          prefixIcon: const Icon(Icons.search),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                          ),
-                        ),
-                        onChanged: (query) {
-                          setModalState(() {
-                            if (query.isEmpty) {
-                              visibleUsers = List.from(_allUsers);
-                            } else {
-                              visibleUsers = _allUsers
-                                  .where(
-                                    (user) =>
-                                        user.name.toLowerCase().contains(
-                                          query.toLowerCase(),
-                                        ) ||
-                                        user.firstName.toLowerCase().contains(
-                                          query.toLowerCase(),
-                                        ),
-                                  )
-                                  .toList();
-                            }
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        selectedMembers.isEmpty
-                            ? "Select members"
-                            : "${selectedMembers.length} member${selectedMembers.length == 1 ? '' : 's'} selected",
-                        style: TextStyle(
-                          fontSize: fontSettings.fontSize - 3,
-                          color: Colors.grey[700],
-                        ),
-                      ),
-                      if (selectedMembers.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          height: 36,
-                          child: ListView(
-                            scrollDirection: Axis.horizontal,
-                            children: selectedMembers.values
-                                .map(
-                                  (member) => Padding(
-                                    padding: const EdgeInsets.only(right: 6),
-                                    child: Chip(
-                                      backgroundColor: ChatColors.primary.withOpacity(
-                                        0.1,
-                                      ),
-                                      label: Text(
-                                        member.name,
-                                        style: TextStyle(
-                                          fontSize: fontSettings.fontSize - 5,
-                                        ),
-                                      ),
-                                      onDeleted: () => setModalState(() {
-                                        selectedMembers.remove(member.userUuid);
-                                      }),
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 8),
-                      Expanded(
-                        child: _allUsers.isEmpty
-                            ? Center(
-                                child: Text(
-                                  'No contacts available',
-                                  style: TextStyle(
-                                    fontSize: fontSettings.fontSize - 2,
-                                  ),
-                                ),
-                              )
-                            : ListView.builder(
-                                itemCount: visibleUsers.length,
-                                itemBuilder: (context, index) {
-                                  final contact = visibleUsers[index];
-                                  final bool isSelected = selectedMembers
-                                      .containsKey(contact.userUuid);
-
-                                  return CheckboxListTile(
-                                    value: isSelected,
-                                    activeColor: ChatColors.primary,
-                                    controlAffinity:
-                                        ListTileControlAffinity.trailing,
-                                    onChanged: (checked) {
-                                      setModalState(() {
-                                        if (checked == true) {
-                                          selectedMembers[contact.userUuid] =
-                                              contact;
-                                        } else {
-                                          selectedMembers.remove(
-                                            contact.userUuid,
-                                          );
-                                        }
-                                      });
-                                    },
-                                    secondary: UserAvatar(
-                                      avatarUrl: contact.avatarUrl,
-                                      initials: contact.initials,
-                                      backgroundColor: contact.avatarColor,
-                                      fontSize: fontSettings.fontSize - 4,
-                                    ),
-                                    title: Text(
-                                      contact.name,
-                                      style: TextStyle(
-                                        fontSize: fontSettings.fontSize,
-                                        fontWeight: fontSettings.fontWeight,
-                                      ),
-                                    ),
-                                    subtitle: Row(
-                                      children: [
-                                        Container(
-                                          width: 8,
-                                          height: 8,
-                                          decoration: BoxDecoration(
-                                            color: contact.isOnline
-                                                ? ChatColors.accent
-                                                : Colors.grey,
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          contact.isOnline
-                                              ? "Online"
-                                              : "Offline",
-                                          style: TextStyle(
-                                            color: contact.isOnline
-                                                ? ChatColors.primaryDark
-                                                : Colors.grey,
-                                            fontSize: fontSettings.fontSize - 4,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
-                      ),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextButton(
-                              onPressed: () => Navigator.pop(sheetContext),
-                              child: Text(
-                                "Cancel",
-                                style: TextStyle(
-                                  fontSize: fontSettings.fontSize - 2,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: ChatColors.primary,
-                                foregroundColor: Colors.white,
-                              ),
-                              onPressed: canCreate
-                                  ? () {
-                                      Navigator.pop(sheetContext);
-                                      _createGroup(
-                                        nameController.text.trim(),
-                                        selectedMembers.values.toList(),
-                                        avatarPath: avatarFile?.path,
-                                      );
-                                    }
-                                  : null,
-                              child: Text(
-                                "Create Group",
-                                style: TextStyle(
-                                  fontSize: fontSettings.fontSize - 2,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-
-    nameController.dispose();
+      await navigator.push(
+        MaterialPageRoute(
+          builder: (context) => IndividualChatScreen(
+            contact: contact.copyWith(firstName: fallbackFirstName),
+          ),
+        ),
+      );
+    }
   }
 
   /// Chat carries its own font size, so the screen that changes it lives here
@@ -2716,7 +2123,7 @@ if (message.data['msg_type'] == '35') {
 
   /// Picks an image and uploads it as the signed-in user's chat avatar.
   Future<void> _updateMyAvatar() async {
-    final picked = await _pickAvatarImage(context);
+    final picked = await pickChatAvatarImage(context);
     if (picked == null || !mounted) return;
 
     final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -2757,52 +2164,6 @@ if (message.data['msg_type'] == '35') {
 
   /// Lets the user pick an avatar image from the camera or gallery — used for
   /// both the group photo and the signed-in user's own chat profile photo.
-  Future<File?> _pickAvatarImage(BuildContext sheetContext) async {
-    final source = await showModalBottomSheet<ImageSource>(
-      context: sheetContext,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Wrap(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_camera),
-              title: const Text('Take a photo'),
-              onTap: () => Navigator.pop(ctx, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Choose from gallery'),
-              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (source == null) return null;
-
-    try {
-      // Downscaled before upload — the backend caps the avatar at 5MB.
-      final picked = await ImagePicker().pickImage(
-        source: source,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 80,
-      );
-      return picked == null ? null : File(picked.path);
-    } catch (e) {
-      if (!mounted) return null;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Could not pick image: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return null;
-    }
-  }
-
   Future<void> _createGroup(
     String name,
     List<ChatContact> members, {

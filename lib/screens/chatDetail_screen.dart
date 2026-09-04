@@ -72,7 +72,7 @@ const Color _kMentionColor = Color.fromARGB(255, 12, 59, 121);
 
 /// The same blue lightened for the green outgoing bubble, where [_kMentionColor]
 /// on green would be too dark to read.
-const Color _kMentionColorOnGreen =Color.fromARGB(255, 12, 59, 121);
+const Color _kMentionColorOnGreen = Color.fromARGB(255, 12, 59, 121);
 
 /// Links in an incoming bubble read as the usual web blue; on the green
 /// outgoing bubble that blue goes muddy, so links there stay white and lean
@@ -122,7 +122,9 @@ class _MentionTextEditingController extends TextEditingController {
         final token = '@$name';
         final at = text.indexOf(token, index);
         if (at == -1) continue;
-        if (start == -1 || at < start || (at == start && token.length > length)) {
+        if (start == -1 ||
+            at < start ||
+            (at == start && token.length > length)) {
           start = at;
           length = token.length;
         }
@@ -132,10 +134,12 @@ class _MentionTextEditingController extends TextEditingController {
       if (start > index) {
         spans.add(TextSpan(text: text.substring(index, start), style: style));
       }
-      spans.add(TextSpan(
-        text: text.substring(start, start + length),
-        style: mentionStyle,
-      ));
+      spans.add(
+        TextSpan(
+          text: text.substring(start, start + length),
+          style: mentionStyle,
+        ),
+      );
       index = start + length;
     }
 
@@ -629,35 +633,35 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
   //     await FirebaseApiService.markMessagesAsRead(widget.contact.chatUuid, ids);
   //   } catch (_) {}
   // }
-Future<void> _markMessagesAsRead() async {
-  try {
-    if (_currentUserName == null || _messages.isEmpty) return;
+  Future<void> _markMessagesAsRead() async {
+    try {
+      if (_currentUserName == null || _messages.isEmpty) return;
 
-    final ids = <String>[];
+      final ids = <String>[];
 
-    for (final m in _messages) {
-      if (m.isMe) continue;
+      for (final m in _messages) {
+        if (m.isMe) continue;
 
-      // Add the top-level message ID
-      if (m.apiMessageId != null) {
-        ids.add(m.apiMessageId!);
-      }
+        // Add the top-level message ID
+        if (m.apiMessageId != null) {
+          ids.add(m.apiMessageId!);
+        }
 
-      // ── FIX: Also add each individual image's messageId from grouped attachments ──
-      // Grouped images are collapsed into one ChatMessage but each has its own
-      // server messageId stored in AttachmentItem.messageId — those were being skipped.
-      for (final attachment in m.groupedAttachments) {
-        if (attachment.messageId != null &&
-            attachment.messageId != m.apiMessageId) {
-          ids.add(attachment.messageId!);
+        // ── FIX: Also add each individual image's messageId from grouped attachments ──
+        // Grouped images are collapsed into one ChatMessage but each has its own
+        // server messageId stored in AttachmentItem.messageId — those were being skipped.
+        for (final attachment in m.groupedAttachments) {
+          if (attachment.messageId != null &&
+              attachment.messageId != m.apiMessageId) {
+            ids.add(attachment.messageId!);
+          }
         }
       }
-    }
 
-    if (ids.isEmpty) return;
-    await FirebaseApiService.markMessagesAsRead(widget.contact.chatUuid, ids);
-  } catch (_) {}
-}
+      if (ids.isEmpty) return;
+      await FirebaseApiService.markMessagesAsRead(widget.contact.chatUuid, ids);
+    } catch (_) {}
+  }
   // ─── @mentions ──────────────────────────────────────────────────────────────
 
   /// Longest names first, so "@John Smith" wins over a member also called
@@ -763,7 +767,9 @@ Future<void> _markMessagesAsRead() async {
   void _syncMentionHighlights() {
     _messageController.mentionNames
       ..clear()
-      ..addAll(_pickedMentions.values.map((m) => m.name).where((n) => n.isNotEmpty));
+      ..addAll(
+        _pickedMentions.values.map((m) => m.name).where((n) => n.isNotEmpty),
+      );
     _messageController.refreshHighlights();
   }
 
@@ -834,7 +840,8 @@ Future<void> _markMessagesAsRead() async {
       fontWeight: FontWeight.bold,
     );
 
-    final isMe = _currentUserUuid != null &&
+    final isMe =
+        _currentUserUuid != null &&
         userUuid.toLowerCase() == _currentUserUuid!.toLowerCase();
     if (!isMe) return TextSpan(text: label, style: style);
 
@@ -1012,8 +1019,10 @@ Future<void> _markMessagesAsRead() async {
     }
     if (text.isNotEmpty) {
       spans.add(TextSpan(text: ' ', style: baseStyle));
-      spans.addAll(_inlineMentionSpans(text, baseStyle, onGreen: onGreen) ??
-          _linkAwareSpans(text, baseStyle, onGreen: onGreen));
+      spans.addAll(
+        _inlineMentionSpans(text, baseStyle, onGreen: onGreen) ??
+            _linkAwareSpans(text, baseStyle, onGreen: onGreen),
+      );
     }
     return RichText(text: TextSpan(children: spans));
   }
@@ -1437,7 +1446,9 @@ Future<void> _markMessagesAsRead() async {
       if (_previewPath != null) await _discardPreview();
 
       if (!await recorder.hasPermission()) {
-        _showErrorSnack('Microphone permission is needed to record a voice message.');
+        _showErrorSnack(
+          'Microphone permission is needed to record a voice message.',
+        );
         return;
       }
 
@@ -1482,11 +1493,12 @@ Future<void> _markMessagesAsRead() async {
 
       // Elapsed time is taken from the start stamp rather than counted up, so
       // a dropped tick cannot make the counter drift from the real length.
-      _recordingTicker =
-          Timer.periodic(const Duration(milliseconds: 200), (_) {
+      _recordingTicker = Timer.periodic(const Duration(milliseconds: 200), (_) {
         final startedAt = _recordingStartedAt;
         if (!mounted || startedAt == null) return;
-        setState(() => _recordingElapsed = DateTime.now().difference(startedAt));
+        setState(
+          () => _recordingElapsed = DateTime.now().difference(startedAt),
+        );
       });
 
       // Let go before the recorder was up: there is nothing worth sending, and
@@ -1537,7 +1549,7 @@ Future<void> _markMessagesAsRead() async {
 
     if (elapsed < _kMinVoiceNote) {
       await _deleteRecording(path);
-    //  _showErrorSnack('Hold the mic to record a voice message.');
+      //  _showErrorSnack('Hold the mic to record a voice message.');
       return;
     }
 
@@ -1605,24 +1617,31 @@ Future<void> _markMessagesAsRead() async {
   /// so the readings are mapped onto 0..1 before they become bar heights.
   void _listenToAmplitude(AudioRecorder recorder) {
     _amplitudeSub?.cancel();
-    _amplitudeSub =
-        recorder.onAmplitudeChanged(_kAmplitudeInterval).listen((amplitude) {
-      if (!mounted || !_isRecording) return;
-      final db = amplitude.current;
-      final level = db.isFinite
-          ? ((db + _kAmplitudeFloorDb) / _kAmplitudeFloorDb).clamp(0.0, 1.0)
-          : 0.0;
+    _amplitudeSub = recorder
+        .onAmplitudeChanged(_kAmplitudeInterval)
+        .listen(
+          (amplitude) {
+            if (!mounted || !_isRecording) return;
+            final db = amplitude.current;
+            final level = db.isFinite
+                ? ((db + _kAmplitudeFloorDb) / _kAmplitudeFloorDb).clamp(
+                    0.0,
+                    1.0,
+                  )
+                : 0.0;
 
-      setState(() {
-        _amplitudes = [..._amplitudes, level.toDouble()];
-        if (_amplitudes.length > _kMaxAmplitudeSamples) {
-          _amplitudes = _halveSamples(_amplitudes);
-        }
-      });
-    }, onError: (_) {
-      // Levels are decoration: a platform that will not report them still
-      // records perfectly well, it just draws a flat line.
-    });
+            setState(() {
+              _amplitudes = [..._amplitudes, level.toDouble()];
+              if (_amplitudes.length > _kMaxAmplitudeSamples) {
+                _amplitudes = _halveSamples(_amplitudes);
+              }
+            });
+          },
+          onError: (_) {
+            // Levels are decoration: a platform that will not report them still
+            // records perfectly well, it just draws a flat line.
+          },
+        );
   }
 
   /// Averages neighbouring samples, so a long recording keeps its whole shape
@@ -1774,7 +1793,7 @@ Future<void> _markMessagesAsRead() async {
               attachmentType: data['type'] as String?,
               voiceDurationSeconds:
                   AttachmentItem.parseDurationSeconds(data['duration']) ??
-                      duration,
+                  duration,
               isRead: false,
             );
           }
@@ -1846,9 +1865,12 @@ Future<void> _markMessagesAsRead() async {
       builder: (ctx) => SafeArea(
         child: Wrap(
           children: [
-             if (clipboardHasImage)
+            if (clipboardHasImage)
               ListTile(
-                leading: const Icon(Icons.content_paste, color: ChatColors.primary),
+                leading: const Icon(
+                  Icons.content_paste,
+                  color: ChatColors.primary,
+                ),
                 title: Text('Paste image', style: optionStyle),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -1880,7 +1902,7 @@ Future<void> _markMessagesAsRead() async {
                 _pickDocuments();
               },
             ),
-           
+
             ListTile(
               leading: const Icon(Icons.cancel, color: Colors.red),
               title: Text('Cancel', style: optionStyle),
@@ -2079,7 +2101,8 @@ Future<void> _markMessagesAsRead() async {
 
   /// Only messages the server already knows about can be quoted — the backend
   /// rejects a replyToMessageId it cannot find in this chat.
-  bool _canReplyTo(ChatMessage msg) => !msg.isSystem && msg.apiMessageId != null;
+  bool _canReplyTo(ChatMessage msg) =>
+      !msg.isSystem && msg.apiMessageId != null;
 
   // ─── Reactions ──────────────────────────────────────────────────────────────
 
@@ -2295,11 +2318,13 @@ Future<void> _markMessagesAsRead() async {
         .where((r) => !r.matches(_currentUserUuid, FirebaseApiService.appType))
         .toList();
     if (mine != emoji && (_currentUserUuid ?? '').isNotEmpty) {
-      next.add(MessageReaction(
-        userUuid: _currentUserUuid!,
-        appType: FirebaseApiService.appType,
-        emoji: emoji,
-      ));
+      next.add(
+        MessageReaction(
+          userUuid: _currentUserUuid!,
+          appType: FirebaseApiService.appType,
+          emoji: emoji,
+        ),
+      );
     }
 
     setState(() {
@@ -2326,8 +2351,9 @@ Future<void> _markMessagesAsRead() async {
     final revertIndex = _messages.indexWhere((m) => m.id == message.id);
     if (revertIndex != -1) {
       setState(() {
-        _messages[revertIndex] =
-            _messages[revertIndex].copyWith(reactions: previous);
+        _messages[revertIndex] = _messages[revertIndex].copyWith(
+          reactions: previous,
+        );
       });
     }
     _showErrorSnack(
@@ -2363,8 +2389,9 @@ Future<void> _markMessagesAsRead() async {
             right: message.isMe ? 12 : 4,
           ),
           child: GestureDetector(
-            onTap:
-                _isSelectionMode ? null : () => _showReactionDetails(message),
+            onTap: _isSelectionMode
+                ? null
+                : () => _showReactionDetails(message),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
@@ -2489,8 +2516,7 @@ Future<void> _markMessagesAsRead() async {
       }
     }
 
-    if (!widget.isGroup &&
-        widget.contact.userUuid.toLowerCase() == uuid) {
+    if (!widget.isGroup && widget.contact.userUuid.toLowerCase() == uuid) {
       return (name: widget.contact.name, isMe: false);
     }
     return (name: 'Unknown', isMe: false);
@@ -2579,8 +2605,9 @@ Future<void> _markMessagesAsRead() async {
                             (entry) => _reactionFilterChip(
                               selected: filter == entry.key,
                               onTap: () => setSheetState(
-                                () => filter =
-                                    filter == entry.key ? null : entry.key,
+                                () => filter = filter == entry.key
+                                    ? null
+                                    : entry.key,
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -2621,9 +2648,7 @@ Future<void> _markMessagesAsRead() async {
                               radius: 20,
                               backgroundColor: who.isMe
                                   ? Colors.grey[400]
-                                  : ChatContact.generateColorFromName(
-                                      who.name,
-                                    ),
+                                  : ChatContact.generateColorFromName(who.name),
                               child: who.isMe
                                   ? const Icon(
                                       Icons.person,
@@ -2711,7 +2736,6 @@ Future<void> _markMessagesAsRead() async {
       ),
     );
   }
-
 
   // ─── Message info ───────────────────────────────────────────────────────────
 
@@ -2956,7 +2980,6 @@ Future<void> _markMessagesAsRead() async {
     );
   }
 
-
   void _startReply(ChatMessage msg) {
     setState(() {
       _replyingTo = msg;
@@ -3022,8 +3045,14 @@ Future<void> _markMessagesAsRead() async {
     final mime = item.mimeType?.toLowerCase();
     if (mime != null && mime.isNotEmpty) return mime.startsWith('image');
     final source = (item.fileName ?? item.url ?? '').toLowerCase();
-    return const ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp']
-        .any(source.split('?').first.endsWith);
+    return const [
+      '.png',
+      '.jpg',
+      '.jpeg',
+      '.gif',
+      '.webp',
+      '.bmp',
+    ].any(source.split('?').first.endsWith);
   }
 
   /// Copies the selected messages to the clipboard. One message goes across as
@@ -3077,8 +3106,11 @@ Future<void> _markMessagesAsRead() async {
       payload = _copyableText(copyable.first)!;
     } else {
       payload = copyable
-          .map((m) => '[${_formatTime(m.timestamp)}] ${_senderLabel(m)}: '
-              '${_copyableText(m)}')
+          .map(
+            (m) =>
+                '[${_formatTime(m.timestamp)}] ${_senderLabel(m)}: '
+                '${_copyableText(m)}',
+          )
           .join('\n');
     }
 
@@ -3098,7 +3130,9 @@ Future<void> _markMessagesAsRead() async {
               ? 'Message copied'
               : '${copyable.length} messages copied',
         ),
-        backgroundColor: skipped > 0 ? Colors.orange[800] : ChatColors.primaryDark,
+        backgroundColor: skipped > 0
+            ? Colors.orange[800]
+            : ChatColors.primaryDark,
         duration: const Duration(seconds: 2),
       ),
     );
@@ -3251,11 +3285,13 @@ Future<void> _markMessagesAsRead() async {
   Future<void> _forwardSelectedMessages() async {
     final selectedIds = Set<String>.from(_selectedMessageIds);
     // Oldest first, so a multi-message forward lands in the reading order.
-    final selectedMsgs =
-        _messages.where((m) => selectedIds.contains(m.id)).toList();
+    final selectedMsgs = _messages
+        .where((m) => selectedIds.contains(m.id))
+        .toList();
 
-    final sendable =
-        selectedMsgs.where((m) => _forwardableIds(m).isNotEmpty).toList();
+    final sendable = selectedMsgs
+        .where((m) => _forwardableIds(m).isNotEmpty)
+        .toList();
 
     if (sendable.isEmpty) {
       _showErrorSnack('These messages cannot be forwarded yet.');
@@ -3285,8 +3321,10 @@ Future<void> _markMessagesAsRead() async {
               ),
             ),
             const SizedBox(width: 12),
-            Text('Forwarding to ${targets.length} '
-                'chat${targets.length > 1 ? 's' : ''}...'),
+            Text(
+              'Forwarding to ${targets.length} '
+              'chat${targets.length > 1 ? 's' : ''}...',
+            ),
           ],
         ),
         duration: const Duration(seconds: 30),
@@ -3348,7 +3386,8 @@ Future<void> _markMessagesAsRead() async {
           ? 'Forwarded to ${targets.names.first}'
           : 'Forwarded to ${targets.length} chats';
     } else {
-      message = 'Forwarded, but $failed did not go through'
+      message =
+          'Forwarded, but $failed did not go through'
           '${firstError == null ? '' : ': $firstError'}';
     }
 
@@ -3444,7 +3483,8 @@ Future<void> _markMessagesAsRead() async {
   /// "1 minute left" rather than "0".
   String _editWindowNote(ChatMessage message) {
     final left = message.editWindowRemaining();
-    if (left == Duration.zero) return 'The time to edit this message has run out.';
+    if (left == Duration.zero)
+      return 'The time to edit this message has run out.';
     final minutes = (left.inSeconds / 60).ceil();
     return '$minutes minute${minutes == 1 ? '' : 's'} left to edit this message.';
   }
@@ -3527,8 +3567,9 @@ Future<void> _markMessagesAsRead() async {
 
   void _deleteSelectedMessages() {
     final selectedIds = List<String>.from(_selectedMessageIds);
-    final selectedMsgs =
-        _messages.where((m) => selectedIds.contains(m.id)).toList();
+    final selectedMsgs = _messages
+        .where((m) => selectedIds.contains(m.id))
+        .toList();
     final allMine = selectedMsgs.every((m) => m.isMe);
     final fontSettings = ref.read(chatFontSettingsProvider);
 
@@ -3542,8 +3583,7 @@ Future<void> _markMessagesAsRead() async {
           children: [
             // ── Header ──
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
                   const Icon(Icons.delete_outline, color: Colors.grey),
@@ -3563,8 +3603,7 @@ Future<void> _markMessagesAsRead() async {
             // ── Delete for Everyone (only if ALL selected are mine) ──
             if (allMine)
               ListTile(
-                leading:
-                    const Icon(Icons.delete_forever, color: Colors.red),
+                leading: const Icon(Icons.delete_forever, color: Colors.red),
                 title: Text(
                   'Delete for Everyone',
                   style: TextStyle(
@@ -3589,8 +3628,7 @@ Future<void> _markMessagesAsRead() async {
 
             // ── Delete for Me ──
             ListTile(
-              leading:
-                  const Icon(Icons.delete_outline, color: Colors.orange),
+              leading: const Icon(Icons.delete_outline, color: Colors.orange),
               title: Text(
                 'Delete for Me',
                 style: TextStyle(
@@ -3693,8 +3731,8 @@ Future<void> _markMessagesAsRead() async {
           hasError
               ? 'Some messages could not be deleted.'
               : forEveryone
-                  ? '${selectedIds.length} message${selectedIds.length > 1 ? 's' : ''} deleted for everyone'
-                  : '${selectedIds.length} message${selectedIds.length > 1 ? 's' : ''} deleted',
+              ? '${selectedIds.length} message${selectedIds.length > 1 ? 's' : ''} deleted for everyone'
+              : '${selectedIds.length} message${selectedIds.length > 1 ? 's' : ''} deleted',
         ),
         backgroundColor: hasError ? Colors.red : ChatColors.primaryDark,
         duration: const Duration(seconds: 2),
@@ -3706,9 +3744,9 @@ Future<void> _markMessagesAsRead() async {
 
   void _showErrorSnack(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
   }
 
   void _scrollToBottom() {
@@ -3732,8 +3770,8 @@ Future<void> _markMessagesAsRead() async {
   /// The row for [messageId], matched on either id the server may have used
   /// for it, or -1 when this conversation has no such message.
   int _indexOfMessage(String messageId) => _messages.indexWhere(
-        (m) => m.id == messageId || m.apiMessageId == messageId,
-      );
+    (m) => m.id == messageId || m.apiMessageId == messageId,
+  );
 
   /// Mentions that are still ahead of the reader and actually in the loaded
   /// conversation — what the "@" button offers to jump to.
@@ -4025,10 +4063,7 @@ Future<void> _markMessagesAsRead() async {
         onChanged: _onSearchChanged,
         textInputAction: TextInputAction.search,
         cursorColor: Colors.white,
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: fontSettings.fontSize,
-        ),
+        style: TextStyle(color: Colors.white, fontSize: fontSettings.fontSize),
         decoration: InputDecoration(
           hintText: 'Search messages...',
           hintStyle: TextStyle(
@@ -4060,8 +4095,8 @@ Future<void> _markMessagesAsRead() async {
     final label = _searchQuery.isEmpty
         ? 'Type to search this chat'
         : total == 0
-            ? 'No messages found'
-            : '${_searchIndex + 1} of $total';
+        ? 'No messages found'
+        : '${_searchIndex + 1} of $total';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -4118,11 +4153,7 @@ Future<void> _markMessagesAsRead() async {
           cur.timestamp.month,
           cur.timestamp.day,
         ) !=
-        DateTime(
-          prev.timestamp.year,
-          prev.timestamp.month,
-          prev.timestamp.day,
-        );
+        DateTime(prev.timestamp.year, prev.timestamp.month, prev.timestamp.day);
   }
 
   // ─── Image grid widget ──────────────────────────────────────────────────────
@@ -4168,12 +4199,10 @@ Future<void> _markMessagesAsRead() async {
             width: cellSize,
             height: cellSize,
             color: Colors.grey[300],
-            child:
-                const Icon(Icons.broken_image, color: Colors.grey, size: 32),
+            child: const Icon(Icons.broken_image, color: Colors.grey, size: 32),
           ),
         );
-      } else if (item.localPath != null &&
-          File(item.localPath!).existsSync()) {
+      } else if (item.localPath != null && File(item.localPath!).existsSync()) {
         img = Image.file(
           File(item.localPath!),
           width: cellSize,
@@ -4274,22 +4303,18 @@ Future<void> _markMessagesAsRead() async {
                   ),
                 )
               : items[0].localPath != null
-                  ? Image.file(
-                      File(items[0].localPath!),
-                      width: gridSize,
-                      height: gridSize,
-                      fit: BoxFit.cover,
-                    )
-                  : Container(
-                      width: gridSize,
-                      height: gridSize,
-                      color: Colors.grey[300],
-                      child: const Icon(
-                        Icons.image,
-                        color: Colors.grey,
-                        size: 48,
-                      ),
-                    ),
+              ? Image.file(
+                  File(items[0].localPath!),
+                  width: gridSize,
+                  height: gridSize,
+                  fit: BoxFit.cover,
+                )
+              : Container(
+                  width: gridSize,
+                  height: gridSize,
+                  color: Colors.grey[300],
+                  child: const Icon(Icons.image, color: Colors.grey, size: 48),
+                ),
         ),
       );
     }
@@ -4338,8 +4363,7 @@ Future<void> _markMessagesAsRead() async {
   void _openGallery(List<AttachmentItem> items, int initialIndex) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) =>
-            _GalleryView(items: items, initialIndex: initialIndex),
+        builder: (_) => _GalleryView(items: items, initialIndex: initialIndex),
       ),
     );
   }
@@ -4381,11 +4405,7 @@ Future<void> _markMessagesAsRead() async {
         if (_isSelectionMode) {
           _toggleSelection(message.id);
         } else if (message.attachmentUrl != null) {
-          DownloadHelper.downloadAndOpen(
-            context,
-            message.attachmentUrl!,
-            name,
-          );
+          DownloadHelper.downloadAndOpen(context, message.attachmentUrl!, name);
         }
       },
       child: Container(
@@ -4415,11 +4435,7 @@ Future<void> _markMessagesAsRead() async {
               ),
             ),
             const SizedBox(width: 8),
-            Icon(
-              Icons.download,
-              color: ChatColors.bubbleMeta,
-              size: 20,
-            ),
+            Icon(Icons.download, color: ChatColors.bubbleMeta, size: 20),
           ],
         ),
       ),
@@ -4446,8 +4462,9 @@ Future<void> _markMessagesAsRead() async {
         // that already.
         !message.isVoiceNote &&
         !hasGrouped;
-    final isImageBubble =
-        hasGrouped ? message.isImageGroup : message.fileType == 'image';
+    final isImageBubble = hasGrouped
+        ? message.isImageGroup
+        : message.fileType == 'image';
     final senderLabel = (message.senderName?.trim().isNotEmpty ?? false)
         ? message.senderName!.trim()
         : 'Unknown';
@@ -4472,6 +4489,9 @@ Future<void> _markMessagesAsRead() async {
         if (opensPicker) _showReactionPicker(message);
       },
       onTap: () {
+        // The row spans the full width, so it — not the list behind it — gets
+        // most taps in the thread. It closes the keyboard itself.
+        FocusManager.instance.primaryFocus?.unfocus();
         if (_isSelectionMode) {
           _toggleSelection(message.id);
         } else {
@@ -4486,8 +4506,8 @@ Future<void> _markMessagesAsRead() async {
         color: isSelected
             ? ChatColors.selectionOverlay
             : isHighlighted
-                ? Colors.amber.withOpacity(0.35)
-                : Colors.transparent,
+            ? Colors.amber.withOpacity(0.35)
+            : Colors.transparent,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Row(
@@ -4507,7 +4527,10 @@ Future<void> _markMessagesAsRead() async {
                       value: isSelected,
                       activeColor: ChatColors.primary,
                       shape: const CircleBorder(),
-                      side: const BorderSide(color: ChatColors.primary, width: 2),
+                      side: const BorderSide(
+                        color: ChatColors.primary,
+                        width: 2,
+                      ),
                       onChanged: (_) => _toggleSelection(message.id),
                     ),
                   ),
@@ -4587,11 +4610,11 @@ Future<void> _markMessagesAsRead() async {
                       decoration: BoxDecoration(
                         color: message.isMe
                             ? (isSelected
-                                ? ChatColors.outgoingBubbleSelected
-                                : ChatColors.outgoingBubble)
+                                  ? ChatColors.outgoingBubbleSelected
+                                  : ChatColors.outgoingBubble)
                             : (isSelected
-                                ? ChatColors.incomingBubbleSelected
-                                : ChatColors.incomingBubble),
+                                  ? ChatColors.incomingBubbleSelected
+                                  : ChatColors.incomingBubble),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Column(
@@ -4654,7 +4677,7 @@ Future<void> _markMessagesAsRead() async {
                                                   .isNotEmpty ??
                                               false)
                                           ? 'Forwarded from '
-                                              '${message.forwardedFromSenderName!.trim()}'
+                                                '${message.forwardedFromSenderName!.trim()}'
                                           : 'Forwarded',
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
@@ -4887,8 +4910,7 @@ Future<void> _markMessagesAsRead() async {
     return Center(
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 12),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         decoration: BoxDecoration(
           color: ChatColors.systemPill,
           borderRadius: BorderRadius.circular(8),
@@ -4960,9 +4982,7 @@ Future<void> _markMessagesAsRead() async {
                       style: TextStyle(fontSize: fontSettings.fontSize),
                       decoration: InputDecoration(
                         hintText: 'Type a message',
-                        hintStyle: TextStyle(
-                          fontSize: fontSettings.fontSize,
-                        ),
+                        hintStyle: TextStyle(fontSize: fontSettings.fontSize),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(25),
                           borderSide: BorderSide.none,
@@ -4987,12 +5007,9 @@ Future<void> _markMessagesAsRead() async {
                       onChanged: _onComposerChanged,
                       onSubmitted: (_) => _sendMessage(),
                       onTap: () {
-                        Future.delayed(
-                          const Duration(milliseconds: 300),
-                          () {
-                            if (mounted) _scrollToBottom();
-                          },
-                        );
+                        Future.delayed(const Duration(milliseconds: 300), () {
+                          if (mounted) _scrollToBottom();
+                        });
                       },
                     ),
                   ),
@@ -5047,7 +5064,11 @@ Future<void> _markMessagesAsRead() async {
                 Icons.lock_outline,
                 size: 20,
                 // Greens up as the lock comes within reach.
-                color: Color.lerp(Colors.grey[600], ChatColors.primary, progress),
+                color: Color.lerp(
+                  Colors.grey[600],
+                  ChatColors.primary,
+                  progress,
+                ),
               ),
               const SizedBox(height: 4),
               Icon(
@@ -5305,7 +5326,6 @@ Future<void> _markMessagesAsRead() async {
 
   // ─── Build ───────────────────────────────────────────────────────────────────
 
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -5323,367 +5343,390 @@ Future<void> _markMessagesAsRead() async {
       child: KeyedSubtree(
         key: _chatScopeKey,
         child: WillPopScope(
-        onWillPop: () async {
-          // Back out of the voice note before backing out of the chat: the clip
-          // is what the bar is showing, so it is what "back" is aimed at.
-          if (_isVoiceComposing) {
-            if (_previewPath != null) {
-              _discardPreview();
-            } else {
-              _discardRecording();
+          onWillPop: () async {
+            // Back out of the voice note before backing out of the chat: the clip
+            // is what the bar is showing, so it is what "back" is aimed at.
+            if (_isVoiceComposing) {
+              if (_previewPath != null) {
+                _discardPreview();
+              } else {
+                _discardRecording();
+              }
+              return false;
             }
-            return false;
-          }
-          if (_isSelectionMode) {
-            _clearSelection();
-            return false;
-          }
-          if (_isSearching) {
-            _closeSearch();
-            return false;
-          }
-          FocusManager.instance.primaryFocus?.unfocus();
-          return true;
-        },
-        child: Scaffold(
-          backgroundColor: ChatColors.chatBackground,
-          appBar: _isSelectionMode
-              ? AppBar(
-                  backgroundColor: ChatColors.primary,
-                  foregroundColor: Colors.white,
-                  leading: IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: _clearSelection,
-                  ),
-                  title: Text(
-                    '${_selectedMessageIds.length} selected',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: fontSettings.fontSize + 2,
+            if (_isSelectionMode) {
+              _clearSelection();
+              return false;
+            }
+            if (_isSearching) {
+              _closeSearch();
+              return false;
+            }
+            FocusManager.instance.primaryFocus?.unfocus();
+            return true;
+          },
+          child: Scaffold(
+            backgroundColor: ChatColors.chatBackground,
+            appBar: _isSelectionMode
+                ? AppBar(
+                    backgroundColor: ChatColors.primary,
+                    foregroundColor: Colors.white,
+                    leading: IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: _clearSelection,
                     ),
-                  ),
-                  actions: [
-                    // IconButton(
-                    //   icon: const Icon(Icons.select_all),
-                    //   tooltip: 'Select All',
-                    //   onPressed: _selectAll,
-                    // ),
-                    if (_selectedMessageIds.length == 1)
+                    title: Text(
+                      '${_selectedMessageIds.length} selected',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: fontSettings.fontSize + 2,
+                      ),
+                    ),
+                    actions: [
+                      // IconButton(
+                      //   icon: const Icon(Icons.select_all),
+                      //   tooltip: 'Select All',
+                      //   onPressed: _selectAll,
+                      // ),
+                      if (_selectedMessageIds.length == 1)
+                        IconButton(
+                          icon: const Icon(Icons.reply),
+                          tooltip: 'Reply',
+                          onPressed: _replyToSelectedMessage,
+                        ),
+                      // Own text messages only, and only while the 15-minute
+                      // window the backend enforces is still open.
+                      if (_editableSelection != null)
+                        IconButton(
+                          icon: const Icon(Icons.edit),
+                          tooltip: 'Edit',
+                          onPressed: _editSelectedMessage,
+                        ),
                       IconButton(
-                        icon: const Icon(Icons.reply),
-                        tooltip: 'Reply',
-                        onPressed: _replyToSelectedMessage,
+                        icon: const Icon(Icons.copy),
+                        tooltip: 'Copy',
+                        onPressed: _copySelectedMessages,
                       ),
-                    // Own text messages only, and only while the 15-minute
-                    // window the backend enforces is still open.
-                    if (_editableSelection != null)
                       IconButton(
-                        icon: const Icon(Icons.edit),
-                        tooltip: 'Edit',
-                        onPressed: _editSelectedMessage,
+                        icon: const Icon(Icons.forward),
+                        tooltip: 'Forward',
+                        onPressed: _forwardSelectedMessages,
                       ),
-                    IconButton(
-                      icon: const Icon(Icons.copy),
-                      tooltip: 'Copy',
-                      onPressed: _copySelectedMessages,
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.forward),
-                      tooltip: 'Forward',
-                      onPressed: _forwardSelectedMessages,
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete),
-                      tooltip: 'Delete',
-                      onPressed: _deleteSelectedMessages,
-                    ),
-                    // Only your own message has readers to report, so the
-                    // overflow is there only when there is something in it.
-                    if (_infoSelection != null)
-                      PopupMenuButton<String>(
-                        icon: const Icon(Icons.more_vert),
-                        tooltip: 'More',
-                        onSelected: (value) {
-                          if (value == 'info') _showSelectedMessageInfo();
-                        },
-                        itemBuilder: (context) => [
-                          PopupMenuItem(
-                            value: 'info',
-                            child: Text(
-                              'Info',
-                              style: TextStyle(
-                                fontSize: fontSettings.fontSize - 2,
-                              ),
-                            ),
-                          ),
-                        ],
+                      IconButton(
+                        icon: const Icon(Icons.delete),
+                        tooltip: 'Delete',
+                        onPressed: _deleteSelectedMessages,
                       ),
-                  ],
-                )
-              : _isSearching
-              ? _buildSearchAppBar(fontSettings)
-              : AppBar(
-                  backgroundColor: ChatColors.primary,
-                  foregroundColor: Colors.white,
-                  leading: IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () {
-                      FocusManager.instance.primaryFocus?.unfocus();
-                      _readStatusPollTimer?.cancel();
-                      _foregroundMessageSubscription?.cancel();
-                      CurrentChatState().clearCurrentChat();
-                      Navigator.pop(context);
-                    },
-                  ),
-                  title: GestureDetector(
-                    onTap: widget.isGroup ? _openGroupInfo : null,
-                    behavior: HitTestBehavior.opaque,
-                    child: Row(
-                    children: [
-                      Stack(
-                        children: [
-                          // Groups get the picture (or the group glyph); 1:1
-                          // chats keep their coloured initials.
-                          //
-                          // Tapping the picture opens it full screen. Without
-                          // one there is nothing to enlarge, so the tap falls
-                          // through to the row's own handler (group info).
-                          GestureDetector(
-                            onTap: _headerAvatarUrl == null
-                                ? (widget.isGroup ? _openGroupInfo : null)
-                                : () => showAvatarPhoto(
-                                    context,
-                                    url: _headerAvatarUrl,
-                                    title: widget.contact.name,
-                                  ),
-                            child: widget.isGroup
-                              ? GroupAvatar(
-                                  avatarUrl: _avatarUrl,
-                                  radius: 18,
-                                  backgroundColor: widget.contact.avatarColor,
-                                )
-                              : UserAvatar(
-                                  avatarUrl: widget.contact.avatarUrl,
-                                  initials: widget.contact.initials,
-                                  backgroundColor: widget.contact.avatarColor,
-                                  radius: 18,
-                                  fontSize: fontSettings.fontSize - 4,
+                      // Only your own message has readers to report, so the
+                      // overflow is there only when there is something in it.
+                      if (_infoSelection != null)
+                        PopupMenuButton<String>(
+                          icon: const Icon(Icons.more_vert),
+                          tooltip: 'More',
+                          onSelected: (value) {
+                            if (value == 'info') _showSelectedMessageInfo();
+                          },
+                          itemBuilder: (context) => [
+                            PopupMenuItem(
+                              value: 'info',
+                              child: Text(
+                                'Info',
+                                style: TextStyle(
+                                  fontSize: fontSettings.fontSize - 2,
                                 ),
-                          ),
-                          if (!widget.isGroup && widget.contact.isOnline)
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: Container(
-                                width: 12,
-                                height: 12,
-                                decoration: BoxDecoration(
-                                  color: ChatColors.accent,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 2,
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(width: 2),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.contact.name,
-                              style: TextStyle(
-                                fontSize: fontSettings.fontSize,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              widget.isGroup
-                                  ? (widget.groupMemberCount > 0
-                                        ? '${widget.groupMemberCount} member${widget.groupMemberCount == 1 ? '' : 's'}'
-                                        : 'Tap for group info')
-                                  : (widget.contact.isOnline
-                                        ? 'Online'
-                                        : 'Last seen recently'),
-                              style: TextStyle(
-                                fontSize: fontSettings.fontSize - 4,
-                                fontWeight: FontWeight.normal,
                               ),
                             ),
                           ],
                         ),
-                      ),
                     ],
-                    ),
-                  ),
-                  actions: [
-                    if (widget.isGroup)
-                      IconButton(
-                        icon: const Icon(Icons.info_outline),
-                        tooltip: 'Group info',
-                        onPressed: _openGroupInfo,
-                      ),
-                    IconButton(
-                      icon: const Icon(Icons.search),
-                      tooltip: 'Search messages',
-                      onPressed: _openSearch,
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.refresh),
-                      onPressed: () => _fetchMessagesFromApi(silent: false),
-                    ),
-                    PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert),
-                      tooltip: 'More',
-                      onSelected: (value) {
-                        if (value == 'chat_settings') _openChatSettings();
+                  )
+                : _isSearching
+                ? _buildSearchAppBar(fontSettings)
+                : AppBar(
+                    backgroundColor: ChatColors.primary,
+                    foregroundColor: Colors.white,
+                    leading: IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: () {
+                        FocusManager.instance.primaryFocus?.unfocus();
+                        _readStatusPollTimer?.cancel();
+                        _foregroundMessageSubscription?.cancel();
+                        CurrentChatState().clearCurrentChat();
+                        Navigator.pop(context);
                       },
-                      itemBuilder: (context) => const [
-                        PopupMenuItem(
-                          value: 'chat_settings',
-                          child: Text('Chat settings'),
-                        ),
-                      ],
                     ),
-                  ],
-                ),
-          body: SafeArea(
-            child: Column(
-              children: [
-                if (_isLoadingMessages)
-                  const LinearProgressIndicator(
-                    backgroundColor: Colors.grey,
-                    valueColor: AlwaysStoppedAnimation<Color>(ChatColors.primary),
-                  ),
-                if (_isUploading)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 6,
-                    ),
-                    color: ChatColors.systemPill,
-                    child: Row(
-                      children: [
-                        const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: ChatColors.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          _uploadLabel,
-                          style: TextStyle(
-                            fontSize: fontSettings.fontSize - 4,
-                            color: ChatColors.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                Expanded(
-                  child: ChatWallpaper(
-                    child: _messages.isEmpty
-                        ? Center(
-                            child: Text(
-                              'No messages yet',
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontSize: fontSettings.fontSize,
-                              ),
-                            ),
-                          )
-                        : Stack(
+                    title: GestureDetector(
+                      onTap: widget.isGroup ? _openGroupInfo : null,
+                      behavior: HitTestBehavior.opaque,
+                      child: Row(
+                        children: [
+                          Stack(
                             children: [
-                              ListView.builder(
-                                controller: _scrollController,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 8),
-                                reverse: true,
-                                itemCount: _messages.length,
-                                itemBuilder: (ctx, index) {
-                                  final ri = _messages.length - 1 - index;
-                                  final msg = _messages[ri];
-                                  return Column(
-                                    children: [
-                                      if (_shouldShowDateSeparator(ri))
-                                        _buildDateSeparator(
-                                          msg.timestamp,
-                                          fontSettings,
-                                        ),
-                                      // Keyed so a mention can be scrolled to.
-                                      KeyedSubtree(
-                                        key: _keyForMessage(msg.id),
-                                        child: _buildMessage(msg, fontSettings),
+                              // Groups get the picture (or the group glyph); 1:1
+                              // chats keep their coloured initials.
+                              //
+                              // Tapping the picture opens it full screen. Without
+                              // one there is nothing to enlarge, so the tap falls
+                              // through to the row's own handler (group info).
+                              GestureDetector(
+                                onTap: _headerAvatarUrl == null
+                                    ? (widget.isGroup ? _openGroupInfo : null)
+                                    : () => showAvatarPhoto(
+                                        context,
+                                        url: _headerAvatarUrl,
+                                        title: widget.contact.name,
                                       ),
-                                    ],
-                                  );
-                                },
+                                child: widget.isGroup
+                                    ? GroupAvatar(
+                                        avatarUrl: _avatarUrl,
+                                        radius: 18,
+                                        backgroundColor:
+                                            widget.contact.avatarColor,
+                                      )
+                                    : UserAvatar(
+                                        avatarUrl: widget.contact.avatarUrl,
+                                        initials: widget.contact.initials,
+                                        backgroundColor:
+                                            widget.contact.avatarColor,
+                                        radius: 18,
+                                        fontSize: fontSettings.fontSize - 4,
+                                      ),
                               ),
-                              if (_reachableMentions.isNotEmpty &&
-                                  !_isSearching)
+                              if (!widget.isGroup && widget.contact.isOnline)
                                 Positioned(
-                                  right: 0,
                                   bottom: 0,
-                                  child:
-                                      _buildMentionJumpButton(fontSettings),
+                                  right: 0,
+                                  child: Container(
+                                    width: 12,
+                                    height: 12,
+                                    decoration: BoxDecoration(
+                                      color: ChatColors.accent,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.white,
+                                        width: 2,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                             ],
                           ),
-                  ),
-                ),
-                if (_isSearching) _buildSearchNavBar(fontSettings),
-
-                // ── Read-only notice (admin-only group) ──
-                if (!_isSelectionMode && !_isSearching && !widget.canSendMessages)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                    color: Colors.grey[200],
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.lock_outline, size: 16, color: Colors.grey[600]),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            'Only admins can send messages in this group',
-                            style: TextStyle(
-                              color: Colors.grey[700],
-                              fontSize: fontSettings.fontSize - 3,
+                          const SizedBox(width: 2),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.contact.name,
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  widget.isGroup
+                                      ? (widget.groupMemberCount > 0
+                                            ? '${widget.groupMemberCount} member${widget.groupMemberCount == 1 ? '' : 's'}'
+                                            : 'Tap for group info')
+                                      : (widget.contact.isOnline
+                                            ? 'Online'
+                                            : 'Last seen recently'),
+                                  style: TextStyle(
+                                    fontSize: fontSettings.fontSize - 4,
+                                    fontWeight: FontWeight.normal,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                        ],
+                      ),
+                    ),
+                    actions: [
+                      if (widget.isGroup)
+                        IconButton(
+                          icon: const Icon(Icons.info_outline),
+                          tooltip: 'Group info',
+                          onPressed: _openGroupInfo,
                         ),
-                      ],
+                      IconButton(
+                        icon: const Icon(Icons.search),
+                        tooltip: 'Search messages',
+                        onPressed: _openSearch,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.refresh),
+                        onPressed: () => _fetchMessagesFromApi(silent: false),
+                      ),
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert),
+                        tooltip: 'More',
+                        onSelected: (value) {
+                          if (value == 'chat_settings') _openChatSettings();
+                        },
+                        itemBuilder: (context) => const [
+                          PopupMenuItem(
+                            value: 'chat_settings',
+                            child: Text('Chat settings'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+            body: SafeArea(
+              child: Column(
+                children: [
+                  if (_isLoadingMessages)
+                    const LinearProgressIndicator(
+                      backgroundColor: Colors.grey,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        ChatColors.primary,
+                      ),
+                    ),
+                  if (_isUploading)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 6,
+                      ),
+                      color: ChatColors.systemPill,
+                      child: Row(
+                        children: [
+                          const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: ChatColors.primary,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            _uploadLabel,
+                            style: TextStyle(
+                              fontSize: fontSettings.fontSize - 4,
+                              color: ChatColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  Expanded(
+                    // Tapping anywhere on the message area dismisses the keyboard.
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onTap: () =>
+                          FocusManager.instance.primaryFocus?.unfocus(),
+                      child: ChatWallpaper(
+                        child: _messages.isEmpty
+                            ? Center(
+                                child: Text(
+                                  'No messages yet',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: fontSettings.fontSize,
+                                  ),
+                                ),
+                              )
+                            : Stack(
+                                children: [
+                                  ListView.builder(
+                                    controller: _scrollController,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8,
+                                    ),
+                                    reverse: true,
+                                    itemCount: _messages.length,
+                                    itemBuilder: (ctx, index) {
+                                      final ri = _messages.length - 1 - index;
+                                      final msg = _messages[ri];
+                                      return Column(
+                                        children: [
+                                          if (_shouldShowDateSeparator(ri))
+                                            _buildDateSeparator(
+                                              msg.timestamp,
+                                              fontSettings,
+                                            ),
+                                          // Keyed so a mention can be scrolled to.
+                                          KeyedSubtree(
+                                            key: _keyForMessage(msg.id),
+                                            child: _buildMessage(
+                                              msg,
+                                              fontSettings,
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                  if (_reachableMentions.isNotEmpty &&
+                                      !_isSearching)
+                                    Positioned(
+                                      right: 0,
+                                      bottom: 0,
+                                      child: _buildMentionJumpButton(
+                                        fontSettings,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                      ),
                     ),
                   ),
+                  if (_isSearching) _buildSearchNavBar(fontSettings),
 
-                // ── Bottom action panel (emoji row + selection actions) ──
-                // Sits on whatever is below it: nothing while selecting (the
-                // composer is hidden then), the composer otherwise.
-                if (!_isSearching) _buildBottomActionPanel(fontSettings),
+                  // ── Read-only notice (admin-only group) ──
+                  if (!_isSelectionMode &&
+                      !_isSearching &&
+                      !widget.canSendMessages)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      color: Colors.grey[200],
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.lock_outline,
+                            size: 16,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              'Only admins can send messages in this group',
+                              style: TextStyle(
+                                color: Colors.grey[700],
+                                fontSize: fontSettings.fontSize - 3,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
 
-                // ── Input bar (hidden in selection and search mode) ──
-                if (!_isSelectionMode && !_isSearching && widget.canSendMessages) ...[
-                  if (_mentionSuggestions.isNotEmpty)
-                    _buildMentionSuggestions(fontSettings),
-                  if (_replyingTo != null)
-                    _buildReplyPreview(_replyingTo!, fontSettings),
-                  _buildComposerBar(fontSettings),
+                  // ── Bottom action panel (emoji row + selection actions) ──
+                  // Sits on whatever is below it: nothing while selecting (the
+                  // composer is hidden then), the composer otherwise.
+                  if (!_isSearching) _buildBottomActionPanel(fontSettings),
+
+                  // ── Input bar (hidden in selection and search mode) ──
+                  if (!_isSelectionMode &&
+                      !_isSearching &&
+                      widget.canSendMessages) ...[
+                    if (_mentionSuggestions.isNotEmpty)
+                      _buildMentionSuggestions(fontSettings),
+                    if (_replyingTo != null)
+                      _buildReplyPreview(_replyingTo!, fontSettings),
+                    _buildComposerBar(fontSettings),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
-        ),
         ),
       ),
     );
@@ -5715,13 +5758,13 @@ class _BlinkingDotState extends State<_BlinkingDot>
 
   @override
   Widget build(BuildContext context) => FadeTransition(
-        opacity: _controller.drive(Tween(begin: 0.3, end: 1.0)),
-        child: Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(color: widget.color, shape: BoxShape.circle),
-        ),
-      );
+    opacity: _controller.drive(Tween(begin: 0.3, end: 1.0)),
+    child: Container(
+      width: 10,
+      height: 10,
+      decoration: BoxDecoration(color: widget.color, shape: BoxShape.circle),
+    ),
+  );
 }
 
 // ─── Full-screen gallery viewer ────────────────────────────────────────────────
@@ -5790,7 +5833,8 @@ class _GalleryViewState extends ConsumerState<_GalleryView> {
               onPressed: () {
                 final item = widget.items[_currentIndex];
                 final url = item.url;
-                final name = item.fileName ??
+                final name =
+                    item.fileName ??
                     'image_${DateTime.now().millisecondsSinceEpoch}.jpg';
                 if (url != null) {
                   DownloadHelper.downloadAndOpen(context, url, name);
@@ -5818,10 +5862,7 @@ class _GalleryViewState extends ConsumerState<_GalleryView> {
               );
             } else if (item.localPath != null &&
                 File(item.localPath!).existsSync()) {
-              img = Image.file(
-                File(item.localPath!),
-                fit: BoxFit.contain,
-              );
+              img = Image.file(File(item.localPath!), fit: BoxFit.contain);
             } else {
               img = const Icon(Icons.image, color: Colors.white, size: 80);
             }
@@ -5832,7 +5873,6 @@ class _GalleryViewState extends ConsumerState<_GalleryView> {
     );
   }
 }
-
 
 /// The edit sheet owns its own controller so the field is disposed with the
 /// dialog's element, not while the route is still animating away — disposing
@@ -5860,8 +5900,9 @@ class _EditMessageDialogState extends State<_EditMessageDialog> {
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialText);
-    _controller.selection =
-        TextSelection.collapsed(offset: _controller.text.length);
+    _controller.selection = TextSelection.collapsed(
+      offset: _controller.text.length,
+    );
   }
 
   @override

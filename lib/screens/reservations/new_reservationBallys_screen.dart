@@ -1060,8 +1060,18 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
     return !hasError;
   }
 
+  /// Midnight today — the earliest day an arrival can be booked for.
+  DateTime get _today {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day);
+  }
+
   Future<void> _selectArrivalDate(BuildContext context) async {
-    DateTime selectedDate = _arrivalDate ?? DateTime.now();
+    // Past days are not bookable, so the wheel starts at today and a stale
+    // arrival from before today is pulled forward to keep the picker valid.
+    final DateTime minimumDate = _today;
+    DateTime selectedDate = _arrivalDate ?? minimumDate;
+    if (selectedDate.isBefore(minimumDate)) selectedDate = minimumDate;
 
     await showModalBottomSheet(
       context: context,
@@ -1088,7 +1098,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
               child: CupertinoDatePicker(
                 mode: CupertinoDatePickerMode.date,
                 initialDateTime: selectedDate,
-                minimumDate: DateTime(2000),
+                minimumDate: minimumDate,
                 maximumDate: DateTime(2101),
                 onDateTimeChanged: (DateTime newDate) {
                   selectedDate = newDate;
@@ -1131,7 +1141,12 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
   }
 
   Future<void> _selectDepartureDate(BuildContext context) async {
-    DateTime selectedDate = _departureDate ?? _arrivalDate ?? DateTime.now();
+    // A departure is always at least one night after the arrival it belongs to,
+    // and never in the past when no arrival has been picked yet.
+    final DateTime minimumDate =
+        (_arrivalDate ?? _today).add(const Duration(days: 1));
+    DateTime selectedDate = _departureDate ?? minimumDate;
+    if (selectedDate.isBefore(minimumDate)) selectedDate = minimumDate;
 
     await showModalBottomSheet(
       context: context,
@@ -1158,7 +1173,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
               child: CupertinoDatePicker(
                 mode: CupertinoDatePickerMode.date,
                 initialDateTime: selectedDate,
-                minimumDate: _arrivalDate ?? DateTime(2000),
+                minimumDate: minimumDate,
                 maximumDate: DateTime(2101),
                 onDateTimeChanged: (DateTime newDate) {
                   selectedDate = newDate;

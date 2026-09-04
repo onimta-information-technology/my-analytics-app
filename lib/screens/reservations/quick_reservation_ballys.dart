@@ -1719,6 +1719,9 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     DateTime? minDate,
   }) async {
     DateTime picked = initial ?? minDate ?? DateTime.now();
+    // The picker asserts its initial value sits inside the allowed range, so a
+    // stale value from before the minimum (e.g. yesterday) is pulled forward.
+    if (minDate != null && picked.isBefore(minDate)) picked = minDate;
     DateTime? result;
     await showModalBottomSheet(
       context: context,
@@ -1914,6 +1917,17 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
 
   String _fmt(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  /// Midnight today — the earliest day any arrival can be booked for.
+  DateTime get _today {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day);
+  }
+
+  /// A departure is always at least one night after the arrival it belongs to,
+  /// and never in the past when no arrival has been picked yet.
+  DateTime _minDeparture(DateTime? arrival) =>
+      (arrival ?? _today).add(const Duration(days: 1));
 
   String _fmtTime(TimeOfDay t) {
     final period = t.hour >= 12 ? 'PM' : 'AM';
@@ -4662,6 +4676,7 @@ class _HotelForm extends StatelessWidget {
                 context,
                 label: 'Select Arrival Date',
                 initial: state._h_arrivalDate,
+                minDate: state._today,
               );
               if (d != null) {
                 state._h_arrivalDate = d;
@@ -4701,9 +4716,7 @@ class _HotelForm extends StatelessWidget {
                 context,
                 label: 'Select Departure Date',
                 initial: state._h_departureDate,
-                minDate: state._h_arrivalDate != null
-                    ? state._h_arrivalDate!.add(const Duration(days: 1))
-                    : null,
+                minDate: state._minDeparture(state._h_arrivalDate),
               );
               if (d != null) {
                 state._h_departureDate = d;
@@ -5458,6 +5471,7 @@ class _AirForm extends StatelessWidget {
                 context,
                 label: 'Select Arrival Date',
                 initial: state._a_arrDate,
+                minDate: state._today,
               );
               if (d != null) {
                 state._a_arrDate = d;
@@ -5491,9 +5505,7 @@ class _AirForm extends StatelessWidget {
                 context,
                 label: 'Select Departure Date',
                 initial: state._a_depDate,
-                minDate: state._a_arrDate != null
-                    ? state._a_arrDate!.add(const Duration(days: 1))
-                    : null,
+                minDate: state._minDeparture(state._a_arrDate),
               );
               if (d != null) {
                 state._a_depDate = d;

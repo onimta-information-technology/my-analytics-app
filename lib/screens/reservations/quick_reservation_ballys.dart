@@ -29,6 +29,7 @@ import 'package:ballys_reservation_app/models/reservation/airline_response.dart'
 import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_sector_entry.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_location.dart';
+import 'package:ballys_reservation_app/models/reservation/hotel_room_catalog_entry.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_response.dart';
 import 'package:ballys_reservation_app/models/reservation/quick_hotel_entry.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
@@ -4917,7 +4918,7 @@ class _HotelForm extends StatelessWidget {
                 .toList(),
             itemAsString: (item) =>
                 '${(item['RoomType'] ?? '')} - ${(item['MealPlan'] ?? '')}',
-            compareFn: (a, b) => a['ID'] == b['ID'],
+            compareFn: HotelRoomCatalogEntry.sameRoomType,
             selectedItem: state._selectedRoomType,
             enabled: state._roomTypes.isNotEmpty,
             decoratorProps: DropDownDecoratorProps(

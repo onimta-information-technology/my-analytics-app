@@ -67,10 +67,11 @@ class HotelRepository {
   /// Hotels, room categories, room types, meal plans and their rates for the
   /// Ballys reservation forms.
   ///
-  /// `GET HotelsGetByLocation?Location=…` per location, flattened into catalog
-  /// rows and merged — replaces the 9015 / 9016 / 9017 chain and the combined
-  /// 90155 call, so the dropdowns filter this list in memory instead of
-  /// re-fetching.
+  /// `GET Hotels/GetByLocationFlat?Location=…` per location, merged — replaces
+  /// the 9015 / 9016 / 9017 chain, the combined 90155 call and the nested
+  /// `HotelsGetByLocation`, so the dropdowns filter this list in memory instead
+  /// of re-fetching. Only rows the back office still has marked active come
+  /// through.
   Future<List<HotelRoomCatalogEntry>> getHotelRoomCatalog() async {
     final results = await Future.wait(
       HotelLocation.values.map((l) => _hotelCatalogForLocation(l.apiValue)),
@@ -95,14 +96,14 @@ class HotelRepository {
   ) async {
     try {
       final response =
-          await apiService.get('HotelsGetByLocation?Location=$location');
+          await apiService.get('Hotels/GetByLocationFlat?Location=$location');
 
       if (response['success'] == false) {
         print('Hotel catalog for $location returned success=false: $response');
         return null;
       }
 
-      return HotelRoomCatalogEntry.fromLocationResponse(response);
+      return HotelRoomCatalogEntry.fromFlatLocationResponse(response);
     } catch (e) {
       print('Hotel catalog for $location failed: $e');
       return null;

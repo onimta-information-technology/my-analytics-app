@@ -445,10 +445,14 @@ String selectedByPaymnet = 'NA';
       return;
     }
 
-    if (selectedRoomTypeId != null &&
+    // Matched on name + meal plan: the catalog endpoint sends no room id, and
+    // that pair is what a saved row carries anyway.
+    final selectedRoomTypeKey =
+        HotelRoomCatalogEntry.roomTypeKeyOf(selectedRoomType);
+    if (selectedRoomType != null &&
         !forHotel.any((e) =>
             e.roomCategoryId == selectedRoomCategoryId &&
-            e.roomTypeId == selectedRoomTypeId)) {
+            e.roomTypeKey == selectedRoomTypeKey)) {
       staleSelectionNotifier.value =
           '"${selectedRoomTypeName ?? 'The saved room type'}" is no longer '
           'offered for $selectedRoomCategoryName. Please choose a room type.';
@@ -668,7 +672,7 @@ String selectedByPaymnet = 'NA';
     final bool hotelTypeMissing = selectedHotelLocation == null;
     final bool hotelMissing = selectedHotelId == null;
     final bool categoryMissing = selectedRoomCategoryId == null;
-    final bool roomTypeMissing = selectedRoomTypeId == null;
+    final bool roomTypeMissing = selectedRoomType == null;
     // A room has to name who it is for, but only once there is somebody left to
     // name — the very first guest is still being filled in, everyone else is a
     // shared member or already holds a room of their own.
@@ -1600,7 +1604,7 @@ String selectedByPaymnet = 'NA';
                                 final mp = item['MealPlan'] ?? '';
                                 return '$rt - $mp';
                               },
-                              compareFn: (a, b) => a['ID'] == b['ID'],
+                              compareFn: HotelRoomCatalogEntry.sameRoomType,
                               decoratorProps: DropDownDecoratorProps(
                                 decoration: InputDecoration(
                                   labelText: 'Select Room Type',

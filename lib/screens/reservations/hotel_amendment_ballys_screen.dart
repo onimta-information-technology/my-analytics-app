@@ -7,6 +7,7 @@ import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart
 import 'package:ballys_reservation_app/models/reervationBallys.dart';
 import 'package:ballys_reservation_app/models/reservation/assigned_guest.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_desc_ballys.dart';
+import 'package:ballys_reservation_app/models/reservation/hotel_room_catalog_entry.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/hotel_catalog_provider.dart';
 import 'package:ballys_reservation_app/providers/selectedReservationforBallys_provider.dart';
@@ -66,6 +67,11 @@ class _RoomAmendmentDraft {
   int? newRoomTypeId;
   String? newRoomTypeName;
 
+  /// Which room type is picked, as "ROOMTYPE|MEALPLAN" — the catalog endpoint
+  /// sends no room id, so this is what the dropdown selects on and what says a
+  /// room type was chosen at all.
+  String? newRoomTypeKey;
+
   /// What the room is asked to carry on top of what was booked — extra bed,
   /// airport transfer, and so on. Extras only.
   final TextEditingController extras = TextEditingController();
@@ -117,13 +123,13 @@ class _RoomAmendmentDraft {
     if (isExtras) return extras.text.trim().isNotEmpty;
     if (isHotelChange) return newHotelId != null;
     if (isRoomCategory) {
-      return newRoomCategoryId != null || newRoomTypeId != null;
+      return newRoomCategoryId != null || newRoomTypeKey != null;
     }
     if (isOccupancy) {
       return adults != null ||
           children != null ||
           rooms != null ||
-          newRoomTypeId != null;
+          newRoomTypeKey != null;
     }
     return false;
   }
@@ -145,6 +151,7 @@ class _RoomAmendmentDraft {
     newRoomCategoryName = null;
     newRoomTypeId = null;
     newRoomTypeName = null;
+    newRoomTypeKey = null;
     extras.clear();
     adults = null;
     children = null;
@@ -412,6 +419,7 @@ class _HotelAmendmentBallysScreenState
       draft.newRoomCategoryName = null;
       draft.newRoomTypeId = null;
       draft.newRoomTypeName = null;
+      draft.newRoomTypeKey = null;
     });
   }
 
@@ -432,18 +440,24 @@ class _HotelAmendmentBallysScreenState
       draft.newRoomCategoryName = category?['CatName'] as String?;
       draft.newRoomTypeId = null;
       draft.newRoomTypeName = null;
+      draft.newRoomTypeKey = null;
     });
   }
 
   void _onNewRoomTypeChanged(
     int roomIndex,
-    int? roomTypeId,
+    String? roomTypeKey,
     List<Map<String, dynamic>> roomTypes,
   ) {
     final draft = _draftFor(roomIndex);
-    final roomType = roomTypes.where((t) => t['ID'] == roomTypeId).firstOrNull;
+    final roomType = roomTypes
+        .where((t) => HotelRoomCatalogEntry.roomTypeKeyOf(t) == roomTypeKey)
+        .firstOrNull;
     setState(() {
-      draft.newRoomTypeId = roomTypeId;
+      draft.newRoomTypeKey = roomType == null ? null : roomTypeKey;
+      // 0 on everything the catalog endpoint returns — the room's own id is no
+      // longer sent, so the name is what names the room to the back office.
+      draft.newRoomTypeId = roomType?['ID'] as int?;
       draft.newRoomTypeName = roomType == null
           ? null
           : "${roomType['RoomType']} - ${roomType['MealPlan']}";
@@ -1313,16 +1327,16 @@ class _HotelAmendmentBallysScreenState
       helper = null;
     }
 
-    return _dropdownField<int>(
+    return _dropdownField<String>(
       label: "New Room Type",
-      value: draft.newRoomTypeId,
+      value: draft.newRoomTypeKey,
       hint: "Select room type",
       helperText: helper,
       fontSettings: fontSettings,
       items: roomTypes
           .map(
-            (t) => DropdownMenuItem<int>(
-              value: t['ID'] as int,
+            (t) => DropdownMenuItem<String>(
+              value: HotelRoomCatalogEntry.roomTypeKeyOf(t),
               child: Text(
                 "${t['RoomType']} - ${t['MealPlan']}",
                 overflow: TextOverflow.ellipsis,
@@ -1578,7 +1592,7 @@ class _HotelAmendmentBallysScreenState
 
       if (draft.isRoomCategory &&
           draft.newRoomCategoryId == null &&
-          draft.newRoomTypeId == null) {
+          draft.newRoomTypeKey == null) {
         return "$label: select the new room category or room type.";
       }
 

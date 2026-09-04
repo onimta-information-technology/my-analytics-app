@@ -1,38 +1,39 @@
 import 'package:ballys_reservation_app/models/reservation/hotel_location.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_response.dart';
 
-/// One hotel → room category → room type combination, flattened out of
-/// `HotelsGetByLocation?Location=…`.
+/// One hotel → room category → room type → meal plan combination, as
+/// `Hotels/GetByLocationFlat?Location=…` returns it.
 ///
 /// The Ballys reservation forms used to chain three calls (hotels 9015,
-/// categories 9016, room types 9017), then a single combined one (90155).
-/// `HotelsGetByLocation` returns the same data nested — hotels, each with its
-/// categories, each with its rooms — so it is flattened into these rows and the
-/// dropdowns keep deriving themselves in memory from one list.
-///
-/// The nesting allows branches the flat APIs could not express: a hotel with no
-/// categories, or a category with no rooms. Those still have to reach the hotel
-/// and category dropdowns, so they are kept as placeholder rows — see
-/// [hasRoomCategory] / [hasRoomType].
+/// categories 9016, room types 9017), then a single combined one (90155), then
+/// the nested `HotelsGetByLocation`. The flat endpoint already returns one row
+/// per hotel/category/room/meal plan — the shape this class holds — so rows map
+/// across one for one and the dropdowns keep deriving themselves in memory from
+/// the single list.
 class HotelRoomCatalogEntry {
   final double hotelId;
   final String hotelName;
 
   /// `CityHotel` or `OutsideColombo` — which call the row came back from.
   final String hotelLocation;
-  final String hotelAddress;
-  final String hotelPhone;
   final int roomCategoryId;
   final String roomCategoryName;
 
   /// Grading of the room category, e.g. "(Standard)" / "(Executive Room)".
   ///
-  /// `HotelsGetByLocation` carries no grading, so this stays empty and the
-  /// suffix simply drops off the category labels. Kept so the forms that show
-  /// it need no change if the API starts returning one.
+  /// The flat endpoint carries no grading, so this stays empty and the suffix
+  /// simply drops off the category labels. Kept so the forms that show it need
+  /// no change if the API starts returning one.
   final String hotelCategory;
 
   final String mealPlan;
+
+  /// The room row's own id.
+  ///
+  /// `GetByLocationFlat` does not return one, so this is 0 on everything read
+  /// off the API and rooms are identified by [roomTypeKey] instead. It stays on
+  /// the model because a saved reservation still carries the id it was booked
+  /// with, and re-opening that row must not lose it.
   final int roomTypeId;
   final String roomTypeName;
 
@@ -48,8 +49,6 @@ class HotelRoomCatalogEntry {
     required this.hotelId,
     required this.hotelName,
     this.hotelLocation = '',
-    this.hotelAddress = '',
-    this.hotelPhone = '',
     this.roomCategoryId = 0,
     this.roomCategoryName = '',
     this.hotelCategory = '',
@@ -70,7 +69,14 @@ class HotelRoomCatalogEntry {
 
   /// True when this row names a real room type rather than standing in for a
   /// category that lists no rooms.
-  bool get hasRoomType => roomTypeId != 0 || roomTypeName.isNotEmpty;
+  bool get hasRoomType => roomTypeName.isNotEmpty;
+
+  /// What identifies a room row now that the API sends no id: its name and
+  /// meal plan, which is also exactly what a saved reservation stores in
+  /// `room_type_name` ("SINGLE - BED & BREAKFAST"). Matching on this keeps a
+  /// booked room recognisable across the change of endpoint, where matching on
+  /// an id the API no longer sends would not.
+  String get roomTypeKey => roomTypeKeyFrom(roomTypeName, mealPlan);
 
   /// Which of the two lists this hotel belongs to, or null when [hotelLocation]
   /// names neither.
@@ -78,114 +84,67 @@ class HotelRoomCatalogEntry {
 
   // ── Parsing ───────────────────────────────────────────────────────────────
 
-  /// Flattens one `HotelsGetByLocation` response into catalog rows.
+  /// Turns one `Hotels/GetByLocationFlat` response into catalog rows.
   ///
-  /// Shape: `{ success, location, groups: [ { location, hotels: [ { …hotel,
-  /// categories: [ { …category, rooms: [ … ] } ] } ] } ] }`.
-  static List<HotelRoomCatalogEntry> fromLocationResponse(
+  /// Shape: `{ success, location, count, data: [ { HCode, HotelName, CatCode,
+  /// CatName, RoomType, MealPlan, RoomRate, Tax, NetRate, Comm, OurRate,
+  /// ExtraBed, Active, HotelLocation } ] }`.
+  static List<HotelRoomCatalogEntry> fromFlatLocationResponse(
     Map<String, dynamic> json,
   ) {
+    final rows = json['data'];
+    if (rows is! List) return const [];
+
+    // Each row carries its own HotelLocation; the response's is the fallback
+    // for the rare row that comes back without one.
+    final responseLocation = _text(json['location']);
     final entries = <HotelRoomCatalogEntry>[];
-    final groups = json['groups'];
-    if (groups is! List) return entries;
 
-    for (final group in groups.whereType<Map>()) {
-      // Each hotel carries its own HotelLocation; the group's is the fallback
-      // for the rare row that comes back without one.
-      final groupLocation = _text(group['location']);
-      final hotels = group['hotels'];
-      if (hotels is! List) continue;
+    for (final row in rows.whereType<Map>()) {
+      // Retired rates stay out of the dropdowns entirely: the back office marks
+      // a room / meal plan combination inactive when it must not be booked, and
+      // a hotel whose every row is inactive drops out with them.
+      if (!_isActive(row['Active'])) continue;
 
-      for (final hotel in hotels.whereType<Map>()) {
-        entries.addAll(_rowsForHotel(
-          Map<String, dynamic>.from(hotel),
-          groupLocation,
-        ));
-      }
+      final rowLocation = _text(row['HotelLocation']);
+
+      entries.add(HotelRoomCatalogEntry(
+        hotelId: _toDouble(row['HCode']),
+        hotelName: _text(row['HotelName']),
+        hotelLocation: rowLocation.isEmpty ? responseLocation : rowLocation,
+        roomCategoryId: _toInt(row['CatCode']),
+        roomCategoryName: _text(row['CatName']),
+        mealPlan: _text(row['MealPlan']),
+        // Read anyway, so the id comes back through on its own if the endpoint
+        // starts sending one; 0 until then.
+        roomTypeId: _toInt(row['ID']),
+        roomTypeName: _text(row['RoomType']),
+        roomRate: _toDouble(row['RoomRate']),
+        tax: _toDouble(row['Tax']),
+        netRate: _toDouble(row['NetRate']),
+        comm: _toDouble(row['Comm']),
+        ourRate: _toDouble(row['OurRate']),
+        extraBed: _toDouble(row['ExtraBed']),
+      ));
     }
+
     return entries;
   }
 
-  static List<HotelRoomCatalogEntry> _rowsForHotel(
-    Map<String, dynamic> hotel,
-    String groupLocation,
-  ) {
-    final hotelId = _toDouble(hotel['Hotel_IID']);
-    final hotelName = _text(hotel['HotelName']);
-    final location = _text(hotel['HotelLocation']).isEmpty
-        ? groupLocation
-        : _text(hotel['HotelLocation']);
-    final address = _text(hotel['Address']);
-    final phone = _text(hotel['Phone']);
-
-    HotelRoomCatalogEntry base({
-      int roomCategoryId = 0,
-      String roomCategoryName = '',
-      Map<String, dynamic>? room,
-    }) =>
-        HotelRoomCatalogEntry(
-          hotelId: hotelId,
-          hotelName: hotelName,
-          hotelLocation: location,
-          hotelAddress: address,
-          hotelPhone: phone,
-          roomCategoryId: roomCategoryId,
-          roomCategoryName: roomCategoryName,
-          mealPlan: _text(room?['MealPlan']),
-          roomTypeId: _toInt(room?['ID']),
-          roomTypeName: _text(room?['RoomType']),
-          roomRate: _toDouble(room?['RoomRate']),
-          tax: _toDouble(room?['Tax']),
-          netRate: _toDouble(room?['NetRate']),
-          comm: _toDouble(room?['Comm']),
-          ourRate: _toDouble(room?['OurRate']),
-          extraBed: _toDouble(room?['ExtraBed']),
-        );
-
-    final rows = <HotelRoomCatalogEntry>[];
-    final categories = hotel['categories'];
-
-    if (categories is List) {
-      for (final category in categories.whereType<Map>()) {
-        // Only a category the API explicitly retires is dropped; anything
-        // without a flag stays, so an unset column cannot empty a dropdown.
-        if (_isRetired(category['IsActive'])) continue;
-
-        final categoryId = _toInt(category['CatCode']);
-        final categoryName = _text(category['CatName']);
-        final rooms = category['rooms'];
-
-        if (rooms is List && rooms.whereType<Map>().isNotEmpty) {
-          for (final room in rooms.whereType<Map>()) {
-            rows.add(base(
-              roomCategoryId: categoryId,
-              roomCategoryName: categoryName,
-              room: Map<String, dynamic>.from(room),
-            ));
-          }
-        } else {
-          // Rates for this category are not loaded yet. The category is still
-          // offered — its room type dropdown just comes back empty — rather
-          // than the hotel silently losing it.
-          rows.add(base(
-            roomCategoryId: categoryId,
-            roomCategoryName: categoryName,
-          ));
-        }
-      }
-    }
-
-    // A hotel with no categories at all still belongs in the hotel dropdown.
-    if (rows.isEmpty) rows.add(base());
-
-    return rows;
-  }
-
-  /// True only for a flag that explicitly says inactive (`"F"` / `false`).
-  static bool _isRetired(dynamic value) {
-    if (value is bool) return !value;
-    final text = value?.toString().trim().toUpperCase() ?? '';
-    return text == 'F' || text == 'FALSE' || text == 'N' || text == '0';
+  /// True unless the row is explicitly retired. `Active` reads "Active" /
+  /// "Inactive"; earlier shapes of this column sent "T"/"F" or a bool. A row
+  /// carrying no flag at all counts as active, so an unset column cannot empty
+  /// a dropdown.
+  static bool _isActive(dynamic value) {
+    if (value == null) return true;
+    if (value is bool) return value;
+    final text = value.toString().trim().toUpperCase();
+    if (text.isEmpty) return true;
+    return text == 'ACTIVE' ||
+        text == 'T' ||
+        text == 'TRUE' ||
+        text == 'Y' ||
+        text == '1';
   }
 
   /// Every name off this API is trimmed. The columns behind it are fixed-width
@@ -213,6 +172,29 @@ class HotelRoomCatalogEntry {
   /// Room type label with its meal plan, e.g. "Double - BB" — the wording the
   /// reservation forms already store and display.
   String get roomTypeLabel => '$roomTypeName - $mealPlan';
+
+  // ── Room type identity ────────────────────────────────────────────────────
+
+  /// [roomTypeKey] built from a name and meal plan held apart from a row.
+  static String roomTypeKeyFrom(String? roomType, String? mealPlan) =>
+      '${roomType?.trim().toUpperCase() ?? ''}|'
+      '${mealPlan?.trim().toUpperCase() ?? ''}';
+
+  /// [roomTypeKey] of one of the room type maps below — or of a map a form
+  /// rebuilt from a saved reservation, which carries the same two fields.
+  static String roomTypeKeyOf(Map<String, dynamic>? roomType) =>
+      roomTypeKeyFrom(
+        roomType?['RoomType'] as String?,
+        roomType?['MealPlan'] as String?,
+      );
+
+  /// Whether two room type maps name the same room — what the dropdowns
+  /// compare on, in place of the id the API no longer sends.
+  static bool sameRoomType(
+    Map<String, dynamic>? a,
+    Map<String, dynamic>? b,
+  ) =>
+      roomTypeKeyOf(a) == roomTypeKeyOf(b);
 
   // ── Derivations for the dropdowns ─────────────────────────────────────────
   // The map shapes below are the ones the reservation forms and the hotel cost
@@ -286,17 +268,19 @@ class HotelRoomCatalogEntry {
     double hotelId,
     int categoryId,
   ) {
+    // Keyed on name + meal plan, not on the id: the flat endpoint sends none,
+    // so keying on it would collapse every room type of a category into one.
     final byKey = <String, Map<String, dynamic>>{};
     for (final e in entries.where(
       (e) => e.hotelId == hotelId && e.roomCategoryId == categoryId && e.hasRoomType,
     )) {
       byKey.putIfAbsent(
-        '${e.roomTypeId}|${e.mealPlan}',
+        e.roomTypeKey,
         () => {
           'ID': e.roomTypeId,
           'RoomType': e.roomTypeName,
           'MealPlan': e.mealPlan,
-          // Rates ride along: HotelsGetByLocation returns them with the room,
+          // Rates ride along: the location endpoint returns them with the room,
           // where the flat APIs needed a separate cost call (9022).
           'RoomRate': e.roomRate,
           'Tax': e.tax,
@@ -341,11 +325,9 @@ class HotelRoomCatalogEntry {
 
   Map<String, dynamic> toJson() {
     return {
-      'Hotel_IID': hotelId,
+      'HCode': hotelId,
       'HotelName': hotelName,
       'HotelLocation': hotelLocation,
-      'Address': hotelAddress,
-      'Phone': hotelPhone,
       'CatCode': roomCategoryId,
       'CatName': roomCategoryName,
       'HotelCategory': hotelCategory,

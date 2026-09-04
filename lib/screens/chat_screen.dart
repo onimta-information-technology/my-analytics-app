@@ -476,7 +476,7 @@ if (message.data['msg_type'] == '35') {
   ///
   /// A push can trigger a refresh before [_getName] has run, and an identifier
   /// that matches no participant makes every row fall back to the first
-  /// participant — often the current user, so the row showed the user's own
+  /// participant — often the current user,  so the row showed the user's own
   /// name until a re-login refreshed the cache.
   Future<String> _resolveCurrentUserId() async {
     final cached = _currentUserUuid;

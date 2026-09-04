@@ -8,7 +8,6 @@ import 'package:ballys_reservation_app/models/reservation/hotel_location.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_room_catalog_entry.dart';
 import 'package:ballys_reservation_app/providers/hotel_catalog_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_hotel_provider_ballys.dart';
-import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -62,36 +61,18 @@ class _HotelAndRoomSelectionBallysBottomSheetState
   final ValueNotifier<String?> staleSelectionNotifier =
       ValueNotifier<String?>(null);
 
-  /// Bellagio (bty.world) swaps the "Payment By" options to the Beyond
-  /// Borders wording.
-  bool _isBellagio = false;
-
   @override
   void initState() {
     super.initState();
     hotelList = List.from(ref.read(selectedHotelBallysProvider));
     _preselectSoleGuest();
     _syncRoomCountToGuests();
-    _loadBrand();
     // Hotels, categories, room types and meal plans all arrive in one call.
     // Re-read rather than reuse the cached list: this sheet is where a hotel
     // gets picked, so it has to offer what the API holds now, not what it held
     // when the app started. The cached list paints immediately meanwhile and
     // the listener in build() refills the dependent dropdowns when it lands.
     ref.read(hotelCatalogProvider.notifier).refresh();
-  }
-
-  Future<void> _loadBrand() async {
-    final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
-    if (!mounted) return;
-    setState(() {
-      _isBellagio = apiUrl.contains('bty.world');
-      // Bellagio uses "N/A" as the payment default instead of "NA".
-      if (_isBellagio &&
-          (selectedByPaymnet.isEmpty || selectedByPaymnet == 'NA')) {
-        selectedByPaymnet = 'N/A';
-      }
-    });
   }
 
   @override
@@ -141,7 +122,6 @@ class _HotelAndRoomSelectionBallysBottomSheetState
 
   List<HotelDescipBallys> hotelList = [];
 String selectedEcLcoFacility = 'NA';
-String selectedByPaymnet = 'NA';
 
   // Validation error flags for required fields
   bool _dateRangeError = false;
@@ -720,7 +700,6 @@ String selectedByPaymnet = 'NA';
       selectedCost: 0,
       costIndex: costIndex,
       ecLcoFacility: selectedEcLcoFacility,
-      paymentBy: selectedByPaymnet,
       assignedGuests: _selectedAssignedGuests(),
     );
 
@@ -796,7 +775,6 @@ String selectedByPaymnet = 'NA';
       editIndex = null;
       staleSelectionNotifier.value = null;
       selectedEcLcoFacility = 'NA';
-      selectedByPaymnet = _isBellagio ? 'N/A' : 'NA';
 
       _useReservationDates = false;
       _dateRangeError = false;
@@ -1690,40 +1668,8 @@ DropdownButtonFormField<String>(
     setState(() => selectedEcLcoFacility = value ?? 'NA');
   },
 ),
-const SizedBox(height: 16),
-DropdownButtonFormField<String>(
-  value: selectedByPaymnet,
-  decoration: const InputDecoration(
-    labelText: 'Payment By',
-    labelStyle: TextStyle(
-      fontSize: 20,
-      fontWeight: FontWeight.bold,
-    ),
-    border: OutlineInputBorder(),
-  ),
-  style: const TextStyle(
-    fontSize: 20,
-    fontWeight: FontWeight.bold,
-    color: Colors.black,
-  ),
-  icon: const Icon(Icons.arrow_drop_down, size: 30),
-  items: _isBellagio
-      ? const [
-          DropdownMenuItem(value: 'N/A',               child: Text('N/A')),
-          DropdownMenuItem(value: 'By Guest',          child: Text('By Guest')),
-          DropdownMenuItem(value: 'By Beyond Borders', child: Text('By Beyond Borders')),
-          DropdownMenuItem(value: 'By Guest & Beyond', child: Text('By Guest & Beyond Borders')),
-        ]
-      : const [
-          DropdownMenuItem(value: 'NA',                child: Text('NA')),
-          DropdownMenuItem(value: 'By Guest',          child: Text('By Guest')),
-          DropdownMenuItem(value: 'By Hamoos ',        child: Text('By Hamoos')),
-          DropdownMenuItem(value: 'By Guest & Hamoos', child: Text('By Guest & Hamoos')),
-        ],
-  onChanged: (value) {
-    setState(() => selectedByPaymnet = value ?? (_isBellagio ? 'N/A' : 'NA'));
-  },
-),
+// Payment By is picked once on the reservation form now — it describes the
+// reservation, not the individual room, so it is no longer asked for here.
 const SizedBox(height: 16),
                         // ── Cost Calculator Button ─────────────
                         SizedBox(

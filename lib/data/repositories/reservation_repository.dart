@@ -199,6 +199,10 @@ Future<Map<String, dynamic>> _buildReservationBodyBallys(
       'remarks': newReservation.remarks,
       // Package amount is per guest and travels inside `guests` — every member
       // is billed their own package, so there is no reservation-level amount.
+      // Payment By and the Hamoos contact person, on the other hand, are picked
+      // once for the whole reservation rather than per room / per ticket.
+      'payment_by': newReservation.paymentBy ?? '',
+      'contact_person': newReservation.contactPerson ?? '',
       'sales_code': salesCode,
       'user_name': userName,
       'device_id': deviceId,

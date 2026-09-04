@@ -99,7 +99,8 @@ class QuickHotelEntry {
       'selected_cost': 0.0,
       'cost_index': 0,
       'ec_lco_facility': eciLco,
-      'payment_by': paymentBy,
+      // `payment_by` is a reservation-level field now, so it is sent once at the
+      // top of the body rather than repeated on every room.
       // Everyone the room is booked for, named inside the row itself — the same
       // shape HotelDescipBallys.toJson() sends.
       'assigned_guests': assignedGuests.map((g) => g.toJson()).toList(),

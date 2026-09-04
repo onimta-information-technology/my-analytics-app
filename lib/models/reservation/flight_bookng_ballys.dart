@@ -331,7 +331,8 @@ class FlightBookingBallys {
       'air_line': airLine,
       'air_line_code': airLineCode,
       'iata_code': iataCode,
-      'contact_person': contactPerson,
+      // `contact_person` is a reservation-level field now — sent once at the top
+      // of the body instead of on every ticket. Still read back from older rows.
       'visa': visa,
       'meal': meal,
       'extra_leg_room_seat': extraLegroomSeat,

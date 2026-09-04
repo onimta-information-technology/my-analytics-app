@@ -8,6 +8,7 @@ import 'package:ballys_reservation_app/components/package_amount_field_ballys.da
 import 'package:ballys_reservation_app/components/passport_upload_widget_ballys.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/authorization_level_repository.dart';
+import 'package:ballys_reservation_app/data/repositories/contact_person_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/hotel_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/reservation_repository.dart';
@@ -41,6 +42,7 @@ import 'package:ballys_reservation_app/providers/selected_passport_provider_ball
 // import 'package:ballys_reservation_app/providers/selected_reservation_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -110,6 +112,19 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
   // next Add Guest / Add New Guest tap.
   int? _editingGuestIndex;
 
+  // ── Reservation-level payment & contact ───────────────────────────────
+  // Both used to be picked inside the hotel sheet / the air ticket screen and
+  // repeated on every room and every ticket. They describe the reservation
+  // rather than a single booking, so they are picked once on this screen and
+  // sent once at the top of the request body.
+  String _paymentBy = 'NA';
+  String? _selectedContactPerson;
+  List<String> _contactPersons = [];
+
+  /// Bellagio (bty.world) swaps the "Payment By" options to the Beyond Borders
+  /// wording and has no Hamoos contact person to pick.
+  bool _isBellagio = false;
+
   // ── Approval routing ──────────────────────────────────────────────────
   // Who this reservation is being sent to for approval, from
   // `GetAuthorizationLevels`. Empty until the fetch lands; a failed fetch just
@@ -129,6 +144,8 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
     _getHotels();
     _loadLocationPrefix();
     _loadAuthorizationLevels();
+    _loadBrand();
+    _loadContactPersons();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       FocusScope.of(context).requestFocus(FocusNode());
       final selectedReservation = ref.watch(selectedReservationBallysProvider);
@@ -150,6 +167,53 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
         _prefixes = isNumeric ? [] : ["BM", "BL", "BN"];
         _selectedPrefix = isNumeric ? "" : "BM";
       });
+    }
+  }
+
+  Future<void> _loadBrand() async {
+    final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+    if (!mounted) return;
+    setState(() {
+      _isBellagio = apiUrl.contains('bty.world');
+      // Bellagio uses "N/A" as the payment default instead of "NA".
+      if (_isBellagio && (_paymentBy.isEmpty || _paymentBy == 'NA')) {
+        _paymentBy = 'N/A';
+      }
+    });
+  }
+
+  /// The "Payment By" options. Bellagio bills through Beyond Borders, so it
+  /// gets its own wording — the values are the ones the back office already
+  /// stores, trailing space included.
+  List<DropdownMenuItem<String>> _paymentByItems() {
+    return _isBellagio
+        ? const [
+            DropdownMenuItem(value: 'N/A', child: Text('N/A')),
+            DropdownMenuItem(value: 'By Guest', child: Text('By Guest')),
+            DropdownMenuItem(
+                value: 'By Beyond Borders', child: Text('By Beyond Borders')),
+            DropdownMenuItem(
+                value: 'By Guest & Beyond',
+                child: Text('By Guest & Beyond Borders')),
+          ]
+        : const [
+            DropdownMenuItem(value: 'NA', child: Text('NA')),
+            DropdownMenuItem(value: 'By Guest', child: Text('By Guest')),
+            DropdownMenuItem(value: 'By Hamoos ', child: Text('By Hamoos')),
+            DropdownMenuItem(
+                value: 'By Guest & Hamoos', child: Text('By Guest & Hamoos')),
+          ];
+  }
+
+  /// Fills the Hamoos contact person dropdown. A failed fetch leaves it empty
+  /// rather than blocking the form — the field is optional.
+  Future<void> _loadContactPersons() async {
+    try {
+      final repo = ContactPersonRepository(ApiService(SecureStorage.instance));
+      final persons = await repo.getContactPersons();
+      if (mounted) setState(() => _contactPersons = persons);
+    } catch (_) {
+      // Leave the dropdown empty.
     }
   }
 
@@ -611,6 +675,25 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
       _guestEntries
         ..clear()
         ..addAll(entries);
+      // Reservations saved before these moved up carry them on their rooms and
+      // tickets, so the form is seeded from the first row that names one. A
+      // payment value the current brand's dropdown does not offer is ignored —
+      // feeding it to the dropdown would trip its own assertion.
+      final offered = _paymentByItems().map((i) => i.value).toSet();
+      for (final hotel in entries.expand((e) => e.hotels)) {
+        final banked = hotel.paymentBy?.trim() ?? '';
+        if (banked.isNotEmpty && offered.contains(banked)) {
+          _paymentBy = banked;
+          break;
+        }
+      }
+      for (final flight in entries.expand((e) => e.flights)) {
+        final banked = flight.contactPerson?.trim() ?? '';
+        if (banked.isNotEmpty) {
+          _selectedContactPerson = banked;
+          break;
+        }
+      }
       _isLoading = false;
     });
 
@@ -1540,6 +1623,10 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
           allGuests.expand((g) => g.toAirTicketDetailsJson()).toList(),
       reservationnewnumber: _reservationnewnumberController.text,
       packageAmount: _packageAmountController.text,
+      // Picked once on the form, so they leave the room / ticket rows and
+      // travel at the top of the body.
+      paymentBy: _paymentBy,
+      contactPerson: _selectedContactPerson ?? '',
       isSharedAmount: _sharedPackage,
       authorizationId: _selectedAuthorization?.idNo,
       authorizationPerson: _selectedAuthorization?.name,
@@ -1590,6 +1677,8 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
         _reservationNoController.clear();
         _hasFamilyMembers = false;
         _sharedPackage = false;
+        _paymentBy = _isBellagio ? 'N/A' : 'NA';
+        _selectedContactPerson = null;
         _selectedAuthorization = null;
         _clearExtraMembers();
         _arrivalDate = null;
@@ -3206,6 +3295,79 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
                               ),
                        
                         const SizedBox(height: 10.0),
+
+                        // ── Payment By ─────────────────────────
+                        // Reservation-level: one answer covers every room and
+                        // ticket on this reservation.
+                        DropdownButtonFormField<String>(
+                          key: ValueKey('payment_by_$_isBellagio'),
+                          value: _paymentBy,
+                          isExpanded: true,
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: fontSettings.fontWeight,
+                            color: Colors.black,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: "Payment By",
+                            labelStyle: TextStyle(
+                              fontSize: fontSettings.fontSize,
+                              fontWeight: fontSettings.fontWeight,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8.0),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12.0,
+                              vertical: 8.0,
+                            ),
+                          ),
+                          items: _paymentByItems(),
+                          onChanged: (value) => setState(
+                            () => _paymentBy =
+                                value ?? (_isBellagio ? 'N/A' : 'NA'),
+                          ),
+                        ),
+                        const SizedBox(height: 10.0),
+
+                        // ── Hamoos Contact Person ──────────────
+                        if (!_isBellagio) ...[
+                          DropdownSearch<String>(
+                            items: (filter, infiniteScrollProps) =>
+                                _contactPersons
+                                    .where((item) => item
+                                        .toLowerCase()
+                                        .contains(filter.toLowerCase()))
+                                    .toList(),
+                            selectedItem: _selectedContactPerson,
+                            onChanged: (value) => setState(
+                              () => _selectedContactPerson = value,
+                            ),
+                            decoratorProps: DropDownDecoratorProps(
+                              decoration: InputDecoration(
+                                labelText: "Hamoos Contact Person",
+                                labelStyle: TextStyle(
+                                  fontSize: fontSettings.fontSize,
+                                  fontWeight: fontSettings.fontWeight,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8.0),
+                                ),
+                                prefixIcon: const Icon(Icons.person_outline),
+                              ),
+                            ),
+                            popupProps: PopupProps.menu(
+                              showSearchBox: true,
+                              searchFieldProps: const TextFieldProps(
+                                decoration: InputDecoration(
+                                  hintText: "Search contact person",
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10.0),
+                        ],
 
                         // ── Request Approval From ──────────────
                         _buildAuthorizationDropdown(fontSettings),

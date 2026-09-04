@@ -14,6 +14,13 @@ class NewReservationBallys {
   String? reservationnewnumber;
   String? packageAmount;
 
+  /// Who settles the bill, and the Hamoos contact the reservation is handled
+  /// by. Both used to be picked per room / per ticket and repeated inside
+  /// `room_details` / `air_ticket_details`; they belong to the reservation, so
+  /// they are chosen once on the form and sent once at the top of the body.
+  String? paymentBy;
+  String? contactPerson;
+
   /// The "Shared" tick beside the package amount: the reservation is on a
   /// shared package. Sent in its own right so an empty [packageAmount] no
   /// longer has to stand in for it — a shared package may still carry one.
@@ -44,6 +51,8 @@ class NewReservationBallys {
     this.reservationNo,
     this.reservationnewnumber,
     this.packageAmount,
+    this.paymentBy,
+    this.contactPerson,
     this.isSharedAmount = false,
     this.selectedMarketingPerson,
     this.authorizationId,
@@ -69,6 +78,8 @@ class NewReservationBallys {
       'reservation_no': reservationNo,
       'manual_reserv_no': reservationnewnumber,
       'package_amount': packageAmount,
+      'payment_by': paymentBy,
+      'contact_person': contactPerson,
       'is_shared_amount': isSharedAmount,
       'selected_marketing_person': selectedMarketingPerson,
       'approve_person': approvePersonJson(),

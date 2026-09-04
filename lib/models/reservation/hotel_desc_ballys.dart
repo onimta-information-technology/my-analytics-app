@@ -146,7 +146,8 @@ class HotelDescipBallys {
       'selected_cost': _parseCostToDouble(selectedCost),
       'cost_index': costIndex,
       'ec_lco_facility': ecLcoFacility,
-      'payment_by': paymentBy,
+      // `payment_by` is a reservation-level field now — sent once at the top of
+      // the body instead of on every room. Still read back from older rows.
       // Everyone the room is booked for. The row itself is repeated per
       // assigned guest under their own BMNumber; this list says who else shares
       // it, so re-opening the reservation restores the assignment.

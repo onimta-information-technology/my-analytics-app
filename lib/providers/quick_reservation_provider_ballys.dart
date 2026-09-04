@@ -231,6 +231,8 @@ class QuickReservationBallysNotifier
     required String liveRemarks,
     required bool hasFamilyMembers,
     AuthorizationLevel? approver,
+    String paymentBy = '',
+    String contactPerson = '',
     void Function(String label, Object? payload)? log,
   }) {
     return _guarded(() => reservationRepository.saveHotelReservation(
@@ -239,6 +241,8 @@ class QuickReservationBallysNotifier
           liveRemarks: liveRemarks,
           hasFamilyMembers: hasFamilyMembers,
           approver: approver,
+          paymentBy: paymentBy,
+          contactPerson: contactPerson,
           log: log,
         ));
   }
@@ -250,6 +254,8 @@ class QuickReservationBallysNotifier
     required String liveRemarks,
     required bool hasFamilyMembers,
     AuthorizationLevel? approver,
+    String paymentBy = '',
+    String contactPerson = '',
     void Function(String label, Object? payload)? log,
   }) {
     return _guarded(() => reservationRepository.saveAirReservation(
@@ -259,6 +265,8 @@ class QuickReservationBallysNotifier
           liveRemarks: liveRemarks,
           hasFamilyMembers: hasFamilyMembers,
           approver: approver,
+          paymentBy: paymentBy,
+          contactPerson: contactPerson,
           log: log,
         ));
   }

@@ -4,8 +4,6 @@ import 'package:ballys_reservation_app/components/flight_card_ballys.dart';
 import 'package:ballys_reservation_app/components/passport_upload_widget_ballys.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/airport_repository.dart';
-import 'package:ballys_reservation_app/data/repositories/contact_person_repository.dart';
-import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/providers/selected_passport_provider_ballys.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:ballys_reservation_app/models/airport_search_response.dart';
@@ -23,7 +21,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:dropdown_search/dropdown_search.dart';
-import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 class AirTicketsSelectionBallysScreen extends ConsumerStatefulWidget {
   final AirportRepository airportRepository;
@@ -76,7 +73,6 @@ class _AirTicketsSelectionBallysScreenState
   bool _airlinesLoading = false;
   Key _airlineKey = UniqueKey();
 
-  List<String> _contactPersons = [];
 
   /// Passports picked on this screen, kept per guest by [_guestKey] so each
   /// member's bio page is filed against them. Only the guests ticked for the
@@ -107,7 +103,6 @@ class _AirTicketsSelectionBallysScreenState
     _syncHeadCountsToGuests();
     _getAirports();
     _loadBrand();
-    _loadContactPersons();
     _loadAirlines();
     _arrivalDate = widget.arrivalDate;
     _departureDate = widget.departureDate;
@@ -121,14 +116,6 @@ class _AirTicketsSelectionBallysScreenState
         _isBallys = !_isBellagio;
       });
     }
-  }
-
-  Future<void> _loadContactPersons() async {
-    try {
-      final repo = ContactPersonRepository(ApiService(SecureStorage.instance));
-      final persons = await repo.getContactPersons();
-      if (mounted) setState(() => _contactPersons = persons);
-    } catch (_) {}
   }
 
   static const String _defaultToAirportCode = "CMB";
@@ -643,7 +630,6 @@ class _AirTicketsSelectionBallysScreenState
   int numberOfRooms = 1;
 
   List<FlightBookingBallys> flightList = [];
-String? _selectedContactPerson;
   void _selectDateRange(BuildContext context) async {
     DateTimeRange? pickedDateRange = await showDateRangePicker(
       context: context,
@@ -852,7 +838,6 @@ String? _selectedContactPerson;
           ? flight.goldRouteType!
           : "Arrival";
       _mealRemarkController.text = flight.mealRemark ?? "";
-      _selectedContactPerson = flight.contactPerson;
 
       _departureFromAirport = flight.airports!.departure?.dFrom.toAirport();
       _departureToAirport = flight.airports!.departure?.dTo.toAirport();
@@ -1025,7 +1010,6 @@ String? _selectedContactPerson;
       airLine: _selectedAirline?.airlineName,
       airLineCode: _selectedAirline?.airlineCode,
       iataCode: _selectedAirline?.iataCode,
-      contactPerson: _selectedContactPerson,
       visa: _visa,
       meal: _meal,
       extraLegroomSeat: _extraLegroomSeat,
@@ -1492,7 +1476,6 @@ String? _selectedContactPerson;
       _silkRouteType = "Arrival";
       _goldRouteType = "Arrival";
       _mealRemarkController.clear();
-      _selectedContactPerson = null;
 
       _departureFromAirport = null;
       _departureToAirport = ref
@@ -2106,36 +2089,9 @@ String? _selectedContactPerson;
 //   ),
 // ),
 // const SizedBox(height: 5),
-if (!_isBellagio)
-DropdownSearch<String>(
-  items: (filter, infiniteScrollProps) => _contactPersons
-      .where((item) => item.toLowerCase().contains(filter.toLowerCase()))
-      .toList(),
-  selectedItem: _selectedContactPerson,
-  onChanged: (value) {
-    setState(() {
-      _selectedContactPerson = value;
-    });
-  },
-  decoratorProps: DropDownDecoratorProps(
-    decoration: InputDecoration(
-      labelText: "Hamoos Contact Person",
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8.0),
-      ),
-      prefixIcon: const Icon(Icons.person_outline),
-    ),
-  ),
-  popupProps: PopupProps.menu(
-    showSearchBox: true,
-    searchFieldProps: const TextFieldProps(
-      decoration: InputDecoration(
-        hintText: "Search contact person",
-        border: OutlineInputBorder(),
-      ),
-    ),
-  ),
-),
+// The Hamoos contact person is picked once on the reservation form now — it
+// describes the reservation, not the individual ticket, so it is no longer
+// asked for here.
                       const SizedBox(height: 16),
                       ..._buildOptionGrid([
                         _buildYesNoOption(

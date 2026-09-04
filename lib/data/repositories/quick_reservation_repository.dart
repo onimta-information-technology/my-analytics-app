@@ -50,6 +50,8 @@ class QuickReservationRepository {
     required String liveRemarks,
     required bool hasFamilyMembers,
     AuthorizationLevel? approver,
+    String paymentBy = '',
+    String contactPerson = '',
     void Function(String label, Object? payload)? log,
   }) async {
     final body = await buildHotelBody(
@@ -58,6 +60,8 @@ class QuickReservationRepository {
       liveRemarks: liveRemarks,
       hasFamilyMembers: hasFamilyMembers,
       approver: approver,
+      paymentBy: paymentBy,
+      contactPerson: contactPerson,
     );
     log?.call('Saving hotel reservation', body);
     final response = await apiService.post(_reservationEndpoint, body);
@@ -71,6 +75,10 @@ class QuickReservationRepository {
     required String liveRemarks,
     required bool hasFamilyMembers,
     AuthorizationLevel? approver,
+    // Both belong to the reservation, not to a single room or ticket, so they
+    // are sent once at the top of the body.
+    String paymentBy = '',
+    String contactPerson = '',
   }) async {
     // Flatten all hotel entries from all members into room_details. Each room
     // is sent once and names the guests it was ticked for inside its own
@@ -148,6 +156,8 @@ class QuickReservationRepository {
       'departure_date': firstHotel?.departureDate?.toIso8601String(),
       'has_air_ticket_reservation': false,
       'remarks': _hotelRemarks(primary, liveRemarks),
+      'payment_by': paymentBy,
+      'contact_person': contactPerson,
       'selected_marketing_person': '',
       'approve_person': approvePersonJson(approver),
       'reservation_status': 'Pending',
@@ -199,6 +209,8 @@ class QuickReservationRepository {
     required String liveRemarks,
     required bool hasFamilyMembers,
     AuthorizationLevel? approver,
+    String paymentBy = '',
+    String contactPerson = '',
     void Function(String label, Object? payload)? log,
   }) async {
     final body = await buildAirBody(
@@ -208,6 +220,8 @@ class QuickReservationRepository {
       liveRemarks: liveRemarks,
       hasFamilyMembers: hasFamilyMembers,
       approver: approver,
+      paymentBy: paymentBy,
+      contactPerson: contactPerson,
     );
     log?.call('Saving air ticket reservation', body);
     final response = await apiService.post(_reservationEndpoint, body);
@@ -222,6 +236,9 @@ class QuickReservationRepository {
     required String liveRemarks,
     required bool hasFamilyMembers,
     AuthorizationLevel? approver,
+    // Reservation-level, exactly as in [buildHotelBody].
+    String paymentBy = '',
+    String contactPerson = '',
   }) async {
     final primary = members.first;
     final primaryMemberId = primary['memberId'];
@@ -296,6 +313,8 @@ class QuickReservationRepository {
       'remarks': liveRemarks.trim().isNotEmpty
           ? liveRemarks.trim()
           : (firstTicket['remarks'] ?? ''),
+      'payment_by': paymentBy,
+      'contact_person': contactPerson,
       'selected_marketing_person': '',
       'approve_person': approvePersonJson(approver),
       'reservation_status': 'Pending',
@@ -333,7 +352,8 @@ class QuickReservationRepository {
       'air_line': m['airline'],
       'air_line_code': m['airlineCode'],
       'iata_code': m['iataCode'],
-      'contact_person': m['hamoueContactPerson'],
+      // `contact_person` is a reservation-level field now, so it is sent once at
+      // the top of the body rather than repeated on every ticket.
       'visa': (m['visa'] as String?) == 'Yes',
       'meal': (m['meal'] as String?) == 'Yes',
       'extra_leg_room_seat': (m['extraLegroomSeat'] as String?) == 'Yes',

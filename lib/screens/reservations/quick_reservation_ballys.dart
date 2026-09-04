@@ -263,9 +263,21 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   /// Meal requirement, asked for only while Meal is Yes.
   final _a_mealRemarkCtrl = TextEditingController();
 
-  // ── Air ticket — Hamoue contact person dropdown ───────────────────────────
+  // ── Payment By & Hamoos contact person ────────────────────────────────────
+  // Both describe the reservation rather than an individual room or ticket, so
+  // they are asked once per tab and sent at the top of the body. Each tab saves
+  // a reservation of its own, hence one pair of answers per tab.
   List<String> get _hamoueContactPersons => _quick.contactPersons;
   String? _a_hamoueContactPerson;
+  String? _h_hamoueContactPerson;
+
+  /// The Air tab's counterpart of [_h_paymentBy]. A plain string rather than a
+  /// controller — nothing is ever typed into it. Empty means "untouched", which
+  /// reads as the brand's default.
+  String _a_paymentBy = '';
+
+  /// "NA", or "N/A" on Bellagio.
+  String get _defaultPaymentBy => _quick.defaultPaymentBy;
 
   /// Bellagio (bty.world) hides the Hamoue contact person dropdown.
   bool get _isBellagio => _quick.isBellagio;
@@ -635,7 +647,8 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     _h_noOfPax.text = '1';
     _h_noOfChildren.text = '0';
     _h_mealPlan.clear();
-    _h_paymentBy.text = _isBellagio ? 'N/A' : 'NA';
+    _h_paymentBy.text = _defaultPaymentBy;
+    _h_hamoueContactPerson = null;
     _h_remarks.clear();
     _h_marketingPerson.clear();
     _h_approvedBy.clear();
@@ -745,7 +758,8 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       _h_noOfPax.text = '1';
       _h_noOfChildren.text = '0';
       _h_mealPlan.clear();
-      _h_paymentBy.text = _isBellagio ? 'N/A' : 'NA';
+      // Payment By is NOT cleared, for the same reason as the remarks below:
+      // it belongs to the reservation, not to the room being banked.
       // Remarks are NOT cleared: the API takes one remark for the whole
       // reservation, and the field sits below this button — wiping it here is
       // what sent `"remarks": ""` whenever it was typed after banking a hotel.
@@ -1024,7 +1038,9 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     _a_silkRouteType = 'Arrival';
     _a_goldRouteType = 'Arrival';
     _a_mealRemarkCtrl.clear();
-    _a_hamoueContactPerson = null;
+    // The contact person is NOT cleared here: it belongs to the reservation
+    // rather than to the ticket being banked. _clearAllAirForm drops it once
+    // the reservation is actually saved.
     _a_passportFiles = [];
     // The banked ticket took its guests' pages with it, so the next ticket
     // starts with empty uploaders.
@@ -1963,6 +1979,10 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     buf.writeln('Package Amount       : ${_packageAmountText(m)}');
     buf.writeln(
         'Family Members       : ${(m['hasFamilyMembers'] as bool? ?? false) ? 'Yes' : 'No'}');
+    if (!_isBellagio) {
+      buf.writeln(
+          'Hamoos Contact       : ${(_h_hamoueContactPerson ?? '').isEmpty ? 'NA' : _h_hamoueContactPerson}');
+    }
     if (hotels.isEmpty) {
       buf.writeln('  (No hotels added)');
     } else if (hotels.length == 1) {
@@ -2085,6 +2105,7 @@ Meal                     : ${m['meal']}${(m['meal'] as String?) == 'Yes' && (m['
 Extra Legroom Seat  : ${m['extraLegroomSeat']}
 Gold Route            : ${m['goldRoute']}${(m['goldRoute'] as String?) == 'Yes' ? ' (${m['goldRouteType'] ?? ''})' : ''}
 Hamoue Contact   : ${(m['hamoueContactPerson'] as String? ?? '').isEmpty ? 'NA' : m['hamoueContactPerson']}
+Payment By          : ${_a_paymentBy.isEmpty ? _defaultPaymentBy : _a_paymentBy}
 Passport File/s      : ${(m['passportFiles'] as String? ?? '').isEmpty ? 'None' : m['passportFiles']}
 Remarks              : ${m['remarks']}''';
     final buf = StringBuffer(body);
@@ -2261,8 +2282,11 @@ Remarks              : ${m['remarks']}''';
       _sharedPackageShared = false;
       // _sharedReservationNo.clear();
       _resetAirTicketFields();
-      // The reservation is saved, so its remark and approver go with it.
+      // The reservation is saved, so its remark, contact person and approver go
+      // with it.
       _a_remarksCtrl.clear();
+      _a_hamoueContactPerson = null;
+      _a_paymentBy = '';
       _a_approver = null;
       _a_assignedGuestKeys.clear();
       _a_guestAssignError = false;
@@ -2487,6 +2511,8 @@ Remarks              : ${m['remarks']}''';
       liveRemarks: _h_remarks.text,
       hasFamilyMembers: _sharedHasFamilyMembers,
       approver: _h_approver,
+      paymentBy: _h_paymentBy.text.trim(),
+      contactPerson: _h_hamoueContactPerson ?? '',
       log: _logLong,
     );
     _handleSaveResult(
@@ -2559,6 +2585,9 @@ Remarks              : ${m['remarks']}''';
       liveRemarks: _a_remarksCtrl.text,
       hasFamilyMembers: _sharedHasFamilyMembers,
       approver: _a_approver,
+      contactPerson: _a_hamoueContactPerson ?? '',
+      paymentBy:
+          _a_paymentBy.isEmpty ? _defaultPaymentBy : _a_paymentBy,
       log: _logLong,
     );
     _handleSaveResult(
@@ -5047,6 +5076,25 @@ class _HotelForm extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
+          // ── Hamoos contact person ────────────────────────────────────────────
+          if (!state._isBellagio) ...[
+            DropdownButtonFormField<String>(
+              value: state._h_hamoueContactPerson,
+              style: kInputTextStyle,
+              decoration: _fieldDeco(
+                'Hamoos Contact Person',
+                icon: Icons.support_agent_rounded,
+                accent: accent,
+              ),
+              items: state._hamoueContactPersons
+                  .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                  .toList(),
+              onChanged: (v) =>
+                  state.setState(() => state._h_hamoueContactPerson = v),
+            ),
+            const SizedBox(height: 12),
+          ],
+
           // ── Add Another Hotel button ─────────────────────────────────────────
           _addAnotherButton(
             accent: accent,
@@ -5897,6 +5945,34 @@ class _AirForm extends StatelessWidget {
             const SizedBox(height: 16),
           ],
 
+          // ── Payment By ───────────────────────────────────────────────────────
+          _LabeledCard(
+            label: 'Payment By',
+            accent: accent,
+            child: _ChipSelector(
+              key: ValueKey('air_payment_by_${state._isBellagio}'),
+              options: state._isBellagio
+                  ? const [
+                      'N/A',
+                      'By Guest',
+                      'By Beyond Borders',
+                      'By Guest & Beyond Borders',
+                    ]
+                  : const [
+                      'NA',
+                      'By Guest',
+                      'By Hamoos',
+                      'By Guest & Hamoos',
+                    ],
+              selected: state._a_paymentBy.isEmpty
+                  ? state._defaultPaymentBy
+                  : state._a_paymentBy,
+              accent: accent,
+              onChanged: (v) => state.setState(() => state._a_paymentBy = v),
+            ),
+          ),
+          const SizedBox(height: 16),
+
           // ── Passport bio data page upload ────────────────────────────────────
           Container(
             padding: const EdgeInsets.all(14),
@@ -6744,6 +6820,14 @@ class _ChipSelectorState extends State<_ChipSelector> {
   void initState() {
     super.initState();
     _selected = widget.selected;
+  }
+
+  @override
+  void didUpdateWidget(covariant _ChipSelector oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The value also moves from the outside — a form reset after a save — and
+    // the chips have to follow it rather than keep showing the old answer.
+    if (widget.selected != oldWidget.selected) _selected = widget.selected;
   }
 
   @override

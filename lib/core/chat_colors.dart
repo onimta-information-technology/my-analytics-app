@@ -23,6 +23,10 @@ class ChatColors {
   /// Behind the message list.
   static const Color chatBackground = Color(0xFFEFE7DE);
 
+  /// The doodle pattern drawn over that ground. Barely a shade darker — it is
+  /// texture, and must never compete with a bubble sitting on top of it.
+  static const Color wallpaperDoodle = Color(0xFFDDD2C6);
+
   /// Your own messages.
   static const Color outgoingBubble = Color(0xFFD9FDD3);
 

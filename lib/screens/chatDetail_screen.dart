@@ -6,6 +6,7 @@ import 'package:ballys_reservation_app/components/avatar_photo_view.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:ballys_reservation_app/components/badge_service.dart';
+import 'package:ballys_reservation_app/components/chat_wallpaper.dart';
 import 'package:ballys_reservation_app/components/forward_message_sheet.dart';
 import 'package:ballys_reservation_app/components/group_details_sheet.dart';
 import 'package:ballys_reservation_app/components/voice_message_bubble.dart';
@@ -5587,8 +5588,7 @@ Future<void> _markMessagesAsRead() async {
                     ),
                   ),
                 Expanded(
-                  child: Container(
-                    color: ChatColors.chatBackground,
+                  child: ChatWallpaper(
                     child: _messages.isEmpty
                         ? Center(
                             child: Text(

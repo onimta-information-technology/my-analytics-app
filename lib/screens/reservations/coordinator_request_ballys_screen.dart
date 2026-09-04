@@ -1,6 +1,14 @@
+import 'dart:convert';
+
+import 'package:ballys_reservation_app/components/bottom_sheets/member_search-new_sheet.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
+import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
+import 'package:ballys_reservation_app/data/services/api_service.dart';
+import 'package:ballys_reservation_app/models/guest_search_response.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -31,11 +39,28 @@ class CoordinatorOption {
   final String name;
 }
 
+/// A guest the coordinator is being asked to book for. Only [mid] and [name]
+/// are sent; the rest is what the picker gave us, kept so the list on screen
+/// can show the same card the other reservation screens do.
+class CoordinatorGuest {
+  const CoordinatorGuest({
+    required this.mid,
+    required this.name,
+    this.rating = '',
+    this.memberImage = '',
+  });
+
+  final String mid;
+  final String name;
+  final String rating;
+  final String memberImage;
+}
+
 /// Coordinator Request (Ballys only).
 ///
 /// Executives who cannot key a reservation in themselves hand it to a
-/// coordinator instead. This screen collects who should do it and what they
-/// are being asked to book.
+/// coordinator instead. This screen collects who should do it, which guests it
+/// is for, and what they are being asked to book.
 class CoordinatorRequestBallysScreen extends ConsumerStatefulWidget {
   const CoordinatorRequestBallysScreen({super.key});
 
@@ -59,14 +84,213 @@ class _CoordinatorRequestBallysScreenState
   CoordinatorOption? _selectedCoordinator;
   CoordinatorRequestType? _requestType;
 
+  /// The guests the request is for. A coordinator request can cover a party,
+  /// so guests are staged in the two fields below and banked into this list.
+  final List<CoordinatorGuest> _guests = [];
+
+  /// Staging fields for the guest being added — cleared after each "Add Guest".
+  /// [_memberIdController] holds the full BM number assembled from
+  /// [_selectedPrefix] and [_memberIdNumberController], the same split the
+  /// other Ballys forms use.
+  final TextEditingController _memberIdController = TextEditingController();
+  final TextEditingController _memberIdNumberController =
+      TextEditingController();
+  final TextEditingController _memberNameController = TextEditingController();
+
+  /// Bellagio member ids carry no letter prefix; Ballys ones do.
+  bool _isNumericOnlyLocation = false;
+  List<String> _prefixes = const ["BM", "BL", "BN"];
+  String _selectedPrefix = "BM";
+
   final TextEditingController _remarksController = TextEditingController();
 
+  bool _isSearching = false;
   bool _isSaving = false;
 
   @override
+  void initState() {
+    super.initState();
+    _loadLocationPrefix();
+  }
+
+  @override
   void dispose() {
+    _memberIdController.dispose();
+    _memberIdNumberController.dispose();
+    _memberNameController.dispose();
     _remarksController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadLocationPrefix() async {
+    final location = await StorageUtil.getCurrentLocation();
+    if (location == null || !mounted) return;
+    final isNumeric = location.code.split('_').first == "BELLAGIO";
+    setState(() {
+      _isNumericOnlyLocation = isNumeric;
+      _prefixes = isNumeric ? const [] : const ["BM", "BL", "BN"];
+      _selectedPrefix = isNumeric ? "" : "BM";
+    });
+  }
+
+  // ── Guests ─────────────────────────────────────────────────────────
+
+  /// Keeps the hidden full-id field in step with the prefix + number pair.
+  void _syncMemberId() {
+    _memberIdController.text = _isNumericOnlyLocation
+        ? _memberIdNumberController.text
+        : '$_selectedPrefix${_memberIdNumberController.text}';
+  }
+
+  /// Splits "BM1234" back into the dropdown prefix and the number, so a member
+  /// picked from search lands in the right two fields.
+  void _applyMemberId(String fullMemberId) {
+    if (fullMemberId.isEmpty) return;
+    if (_isNumericOnlyLocation) {
+      setState(() {
+        _memberIdNumberController.text = fullMemberId;
+        _memberIdController.text = fullMemberId;
+      });
+      return;
+    }
+    var prefix = 'BM';
+    var numberPart = fullMemberId;
+    for (final candidate in const ["BM", "BL", "BN"]) {
+      if (fullMemberId.startsWith(candidate)) {
+        prefix = candidate;
+        numberPart = fullMemberId.substring(candidate.length);
+        break;
+      }
+    }
+    setState(() {
+      _selectedPrefix = prefix;
+      _memberIdNumberController.text = numberPart;
+      _memberIdController.text = fullMemberId;
+    });
+  }
+
+  void _onMemberSelected(GuestSearchResponse guest) {
+    _applyMemberId(guest.mid);
+    setState(() {
+      _memberNameController.text = guest.mName;
+      _pendingRating = guest.gRating ?? '';
+      _pendingImage = guest.memImage2;
+    });
+  }
+
+  /// Rating and photo for the guest currently staged in the fields. Only a
+  /// guest picked from search has them; one typed by hand carries neither.
+  String _pendingRating = '';
+  String _pendingImage = '';
+
+  /// [iid] 8002 searches by member id, 8003 by name — the same pair the other
+  /// reservation screens use.
+  Future<void> _openMemberSearch(int iid) async {
+    FocusScope.of(context).unfocus();
+    final searchTerm =
+        iid == 8002 ? _memberIdController.text : _memberNameController.text;
+
+    if (searchTerm.trim().length < 3) {
+      _showSearchSheet(const [], searchTerm, iid);
+      return;
+    }
+
+    setState(() => _isSearching = true);
+    try {
+      final guests = await GuestRepository(ApiService(SecureStorage.instance))
+          .searchGuest(iid, searchTerm);
+      if (!mounted) return;
+      setState(() => _isSearching = false);
+      _showSearchSheet(guests, searchTerm, iid);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSearching = false);
+      _showMessage('Error searching guests: $e', isError: true);
+    }
+  }
+
+  void _showSearchSheet(
+    List<GuestSearchResponse> guests,
+    String searchTerm,
+    int iid,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => MemberNewSearchBottomSheet(
+        guests: guests,
+        initialSearchTerm: searchTerm,
+        searchIid: iid,
+        onSearch: (term, searchIid) => _researchFromSheet(term, searchIid),
+        onGuestSelected: _onMemberSelected,
+      ),
+    );
+  }
+
+  /// Re-runs the search from inside the sheet: the open sheet is closed and a
+  /// fresh one shown with the new results.
+  Future<void> _researchFromSheet(String searchTerm, int iid) async {
+    if (searchTerm.trim().length < 3) return;
+    try {
+      final guests = await GuestRepository(ApiService(SecureStorage.instance))
+          .searchGuest(iid, searchTerm);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      _showSearchSheet(guests, searchTerm, iid);
+    } catch (e) {
+      if (!mounted) return;
+      _showMessage('Error searching guests: $e', isError: true);
+    }
+  }
+
+  void _addGuest() {
+    FocusScope.of(context).unfocus();
+    _syncMemberId();
+
+    final mid = _memberIdController.text.trim();
+    final name = _memberNameController.text.trim();
+
+    if (mid.isEmpty || (!_isNumericOnlyLocation && mid == _selectedPrefix)) {
+      _showMessage('Enter the guest BM number', isError: true);
+      return;
+    }
+    if (name.isEmpty) {
+      _showMessage('Enter the guest name', isError: true);
+      return;
+    }
+    // The same guest twice would have the coordinator booking them twice over.
+    if (_guests.any((g) => g.mid.toUpperCase() == mid.toUpperCase())) {
+      _showMessage('$mid is already on this request', isError: true);
+      return;
+    }
+
+    setState(() {
+      _guests.add(
+        CoordinatorGuest(
+          mid: mid,
+          name: name,
+          rating: _pendingRating,
+          memberImage: _pendingImage,
+        ),
+      );
+      _clearGuestFields();
+    });
+  }
+
+  void _removeGuest(int index) {
+    setState(() => _guests.removeAt(index));
+  }
+
+  void _clearGuestFields() {
+    _memberIdController.clear();
+    _memberIdNumberController.clear();
+    _memberNameController.clear();
+    _pendingRating = '';
+    _pendingImage = '';
+    _selectedPrefix = _isNumericOnlyLocation ? "" : "BM";
   }
 
   // ── Save ──────────────────────────────────────────────────────────────────
@@ -84,14 +308,21 @@ class _CoordinatorRequestBallysScreenState
       _showMessage('Select what the coordinator should book', isError: true);
       return;
     }
+    if (_guests.isEmpty) {
+      _showMessage('Add at least one guest', isError: true);
+      return;
+    }
 
     setState(() => _isSaving = true);
     // TODO: post the request once the endpoint is available. Until then the
     // form only confirms what was captured.
     final coordinator = _selectedCoordinator!;
+    final guestList =
+        _guests.map((g) => '${g.mid} (${g.name})').join(', ');
     debugPrint(
       'Coordinator request → coordinator: ${coordinator.id} '
       '(${coordinator.name}), type: ${_requestType!.label}, '
+      'guests: [$guestList], '
       'remarks: ${_remarksController.text.trim()}',
     );
     if (!mounted) return;
@@ -104,6 +335,8 @@ class _CoordinatorRequestBallysScreenState
     setState(() {
       _selectedCoordinator = null;
       _requestType = null;
+      _guests.clear();
+      _clearGuestFields();
       _remarksController.clear();
     });
   }
@@ -152,6 +385,24 @@ class _CoordinatorRequestBallysScreenState
                   const SizedBox(height: 10),
                   _coordinatorField(fontSettings),
                   const SizedBox(height: 20),
+                  _sectionTitle('Guests'),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Who is the reservation for? Add every guest travelling.',
+                    style: TextStyle(
+                      fontSize: fontSettings.fontSize - 4,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _memberIdField(fontSettings),
+                  const SizedBox(height: 10),
+                  _memberNameField(fontSettings),
+                  const SizedBox(height: 10),
+                  _addGuestButton(fontSettings),
+                  const SizedBox(height: 10),
+                  _guestList(fontSettings),
+                  const SizedBox(height: 20),
                   _sectionTitle('Request Type'),
                   const SizedBox(height: 4),
                   Text(
@@ -170,7 +421,7 @@ class _CoordinatorRequestBallysScreenState
                 ],
               ),
             ),
-            if (_isSaving)
+            if (_isSearching || _isSaving)
               Container(
                 color: Colors.black26,
                 child: const Center(child: CircularProgressIndicator()),
@@ -253,6 +504,210 @@ class _CoordinatorRequestBallysScreenState
           onChanged: (value) => setState(() => _selectedCoordinator = value),
         ),
       ),
+    );
+  }
+
+  Widget _memberIdField(FontSettings fontSettings) {
+    return TextFormField(
+      controller: _memberIdNumberController,
+      keyboardType: TextInputType.number,
+      style: TextStyle(
+        fontSize: fontSettings.fontSize,
+        fontWeight: fontSettings.fontWeight,
+      ),
+      decoration: InputDecoration(
+        labelText: 'Guest BM Number',
+        labelStyle: TextStyle(
+          fontSize: fontSettings.fontSize,
+          fontWeight: fontSettings.fontWeight,
+        ),
+        border: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+        prefixIcon: _isNumericOnlyLocation
+            ? null
+            : Padding(
+                padding: const EdgeInsets.only(left: 12, right: 4),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _prefixes.contains(_selectedPrefix)
+                        ? _selectedPrefix
+                        : (_prefixes.isEmpty ? null : _prefixes.first),
+                    style: TextStyle(
+                      fontSize: fontSettings.fontSize,
+                      fontWeight: fontSettings.fontWeight,
+                      color: Colors.black,
+                    ),
+                    items: _prefixes
+                        .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                        .toList(),
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => _selectedPrefix = value);
+                      _syncMemberId();
+                    },
+                  ),
+                ),
+              ),
+        suffixIcon: IconButton(
+          icon: const Icon(Icons.search),
+          onPressed: () {
+            _syncMemberId();
+            _openMemberSearch(8002);
+          },
+        ),
+      ),
+      onChanged: (_) {
+        _syncMemberId();
+        setState(() {});
+      },
+    );
+  }
+
+  Widget _memberNameField(FontSettings fontSettings) {
+    return TextFormField(
+      controller: _memberNameController,
+      style: TextStyle(
+        fontSize: fontSettings.fontSize,
+        fontWeight: fontSettings.fontWeight,
+      ),
+      decoration: InputDecoration(
+        labelText: 'Guest Name',
+        labelStyle: TextStyle(
+          fontSize: fontSettings.fontSize,
+          fontWeight: fontSettings.fontWeight,
+        ),
+        border: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+        suffixIcon: IconButton(
+          icon: const Icon(Icons.search),
+          onPressed: () => _openMemberSearch(8003),
+        ),
+      ),
+      onChanged: (_) => setState(() {}),
+    );
+  }
+
+  Widget _addGuestButton(FontSettings fontSettings) {
+    return SizedBox(
+      width: double.infinity,
+      height: 44,
+      child: OutlinedButton.icon(
+        onPressed: _isSaving ? null : _addGuest,
+        icon: const Icon(Icons.person_add_alt_1),
+        label: Text(
+          'Add Guest',
+          style: TextStyle(
+            fontSize: fontSettings.fontSize - 2,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Constants.kPrimaryColor,
+          side: BorderSide(color: Constants.kPrimaryColor),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _guestList(FontSettings fontSettings) {
+    if (_guests.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.people_outline, size: 32, color: Colors.grey.shade400),
+            const SizedBox(height: 6),
+            Text(
+              'No guests added yet',
+              style: TextStyle(
+                fontSize: fontSettings.fontSize - 4,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '${_guests.length} guest${_guests.length == 1 ? '' : 's'} added',
+          style: TextStyle(
+            fontSize: fontSettings.fontSize - 4,
+            color: Colors.grey.shade700,
+          ),
+        ),
+        const SizedBox(height: 6),
+        for (var i = 0; i < _guests.length; i++)
+          Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: BorderSide(color: Colors.grey.shade300),
+            ),
+            child: ListTile(
+              leading: _guestAvatar(_guests[i]),
+              title: Text(
+                _guests[i].name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize - 3,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              subtitle: Text(
+                _guests[i].rating.isEmpty
+                    ? _guests[i].mid
+                    : '${_guests[i].mid}  •  ${_guests[i].rating}',
+                style: TextStyle(fontSize: fontSettings.fontSize - 5),
+              ),
+              trailing: IconButton(
+                tooltip: 'Remove',
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                onPressed: _isSaving ? null : () => _removeGuest(i),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// The member photo comes back base64-encoded and is sometimes empty or
+  /// malformed, so a bad decode falls back to the placeholder rather than
+  /// throwing mid-build.
+  Widget _guestAvatar(CoordinatorGuest guest) {
+    if (guest.memberImage.isNotEmpty) {
+      try {
+        return CircleAvatar(
+          radius: 20,
+          backgroundImage: MemoryImage(base64Decode(guest.memberImage)),
+        );
+      } catch (_) {
+        // Fall through to the placeholder below.
+      }
+    }
+    return CircleAvatar(
+      radius: 20,
+      backgroundColor: Constants.kPrimaryColor.withOpacity(0.15),
+      child: Icon(Icons.person, color: Constants.kPrimaryColor),
     );
   }
 

@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/core/chat_colors.dart';
 import 'dart:io';
 
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
@@ -115,7 +116,7 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
                 fontWeight: fontSettings.fontWeight,
               ),
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: ChatColors.primary,
             foregroundColor: Colors.white,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
@@ -167,7 +168,7 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
   Widget _buildHeader(FontSettings fontSettings) {
     return Container(
       width: double.infinity,
-      color: Colors.green,
+      color: ChatColors.primary,
       padding: const EdgeInsets.only(top: 8, bottom: 24),
       child: Column(
         children: [
@@ -189,7 +190,7 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
                               : _name.trim()[0].toUpperCase(),
                           style: const TextStyle(
                             fontSize: 40,
-                            color: Colors.green,
+                            color: ChatColors.primary,
                             fontWeight: FontWeight.bold,
                           ),
                         )
@@ -211,12 +212,12 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.green, width: 2),
+                      border: Border.all(color: ChatColors.primary, width: 2),
                     ),
                     child: const Icon(
                       Icons.camera_alt,
                       size: 18,
-                      color: Colors.green,
+                      color: ChatColors.primary,
                     ),
                   ),
                 ),
@@ -305,7 +306,7 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
     if (value == null) return const SizedBox.shrink();
 
     return ListTile(
-      leading: Icon(icon, color: Colors.green),
+      leading: Icon(icon, color: ChatColors.primary),
       title: Text(
         label,
         style: TextStyle(
@@ -345,7 +346,7 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
       messenger.showSnackBar(
         const SnackBar(
           content: Text('Profile photo updated'),
-          backgroundColor: Colors.green,
+          backgroundColor: ChatColors.primary,
         ),
       );
     } else {

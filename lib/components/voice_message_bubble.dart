@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/core/chat_colors.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -152,10 +153,12 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
 
   @override
   Widget build(BuildContext context) {
-    final onDark = widget.isMe;
-    final foreground = onDark ? Colors.white : Colors.black87;
-    final played = onDark ? Colors.white : const Color(0xFF2E7D32);
-    final unplayed = onDark ? Colors.white38 : Colors.black26;
+    // Both bubbles are light in the WhatsApp palette, so the player reads dark
+    // on either side; only the played-through part of the waveform picks up the
+    // chat green, and a touch deeper on the green bubble to stay visible.
+    const foreground = ChatColors.bubbleText;
+    final played = widget.isMe ? ChatColors.primaryDark : ChatColors.primary;
+    final unplayed = Colors.black26;
 
     return ValueListenableBuilder<String?>(
       valueListenable: _hub.playingKey,
@@ -257,7 +260,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                             Icon(
                               Icons.mic,
                               size: widget.fontSize - 6,
-                              color: onDark ? Colors.white70 : Colors.black54,
+                              color: ChatColors.bubbleMeta,
                             ),
                             const SizedBox(width: 2),
                             Text(
@@ -267,8 +270,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                                   ? position
                                   : total),
                               style: TextStyle(
-                                color:
-                                    onDark ? Colors.white70 : Colors.black54,
+                                color: ChatColors.bubbleMeta,
                                 fontSize: widget.fontSize - 5,
                               ),
                             ),

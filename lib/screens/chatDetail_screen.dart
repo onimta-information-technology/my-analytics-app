@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/core/chat_colors.dart';
 import 'dart:async';
 import 'package:ballys_reservation_app/components/group_avatar.dart';
 import 'package:ballys_reservation_app/components/user_avatar.dart';
@@ -75,8 +76,8 @@ const Color _kMentionColorOnGreen =Color.fromARGB(255, 12, 59, 121);
 /// Links in an incoming bubble read as the usual web blue; on the green
 /// outgoing bubble that blue goes muddy, so links there stay white and lean
 /// on the underline instead.
-const Color _kLinkColor = Color(0xFF1B6BC0);
-const Color _kLinkColorOnGreen = Colors.white;
+const Color _kLinkColor = ChatColors.link;
+const Color _kLinkColorOnGreen = ChatColors.link;
 
 /// Composer controller that paints picked "@Name" tokens in [_kMentionColor].
 ///
@@ -843,9 +844,9 @@ Future<void> _markMessagesAsRead() async {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
         decoration: BoxDecoration(
-          color: onGreen
-              ? Colors.white.withValues(alpha: 0.25)
-              : _kMentionColor.withValues(alpha: 0.14),
+          // Both bubbles are light now, so the pill is the same tint on
+          // either side.
+          color: _kMentionColor.withValues(alpha: 0.14),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(label, style: style),
@@ -1846,7 +1847,7 @@ Future<void> _markMessagesAsRead() async {
           children: [
              if (clipboardHasImage)
               ListTile(
-                leading: const Icon(Icons.content_paste, color: Colors.green),
+                leading: const Icon(Icons.content_paste, color: ChatColors.primary),
                 title: Text('Paste image', style: optionStyle),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -2014,7 +2015,7 @@ Future<void> _markMessagesAsRead() async {
 
     return TextButton.icon(
       style: TextButton.styleFrom(
-        foregroundColor: Colors.green,
+        foregroundColor: ChatColors.primary,
         padding: padding,
         visualDensity: VisualDensity.compact,
       ),
@@ -2250,7 +2251,7 @@ Future<void> _markMessagesAsRead() async {
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: isMine ? Colors.green.withOpacity(0.15) : null,
+                    color: isMine ? ChatColors.primary.withOpacity(0.15) : null,
                   ),
                   child: Text(
                     emoji,
@@ -2370,7 +2371,10 @@ Future<void> _markMessagesAsRead() async {
                 borderRadius: BorderRadius.circular(14),
                 // A ring the colour of the chat ground keeps the pill legible
                 // where it crosses the bubble.
-                border: Border.all(color: Colors.white, width: 1.5),
+                border: Border.all(
+                  color: ChatColors.chatBackground,
+                  width: 1.5,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.12),
@@ -2693,11 +2697,11 @@ Future<void> _markMessagesAsRead() async {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             color: selected
-                ? Colors.green.withOpacity(0.12)
+                ? ChatColors.primary.withOpacity(0.12)
                 : Colors.grey.withOpacity(0.12),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: selected ? Colors.green : Colors.transparent,
+              color: selected ? ChatColors.primary : Colors.transparent,
               width: 1.2,
             ),
           ),
@@ -3093,7 +3097,7 @@ Future<void> _markMessagesAsRead() async {
               ? 'Message copied'
               : '${copyable.length} messages copied',
         ),
-        backgroundColor: skipped > 0 ? Colors.orange[800] : Colors.green[700],
+        backgroundColor: skipped > 0 ? Colors.orange[800] : ChatColors.primaryDark,
         duration: const Duration(seconds: 2),
       ),
     );
@@ -3110,7 +3114,7 @@ Future<void> _markMessagesAsRead() async {
             width: 4,
             height: 36,
             decoration: BoxDecoration(
-              color: Colors.green,
+              color: ChatColors.primary,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -3123,7 +3127,7 @@ Future<void> _markMessagesAsRead() async {
                 Text(
                   'Replying to ${_senderLabel(msg)}',
                   style: TextStyle(
-                    color: Colors.green[800],
+                    color: ChatColors.primaryDark,
                     fontWeight: FontWeight.bold,
                     fontSize: fontSettings.fontSize - 4,
                   ),
@@ -3175,12 +3179,12 @@ Future<void> _markMessagesAsRead() async {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: onGreen
-            ? Colors.white.withOpacity(0.2)
-            : Colors.black.withOpacity(0.06),
+            ? ChatColors.quoteOnOutgoing
+            : ChatColors.quoteOnIncoming,
         borderRadius: BorderRadius.circular(8),
         border: Border(
           left: BorderSide(
-            color: onGreen ? Colors.white : Colors.green,
+            color: onGreen ? ChatColors.primaryDark : ChatColors.primary,
             width: 3,
           ),
         ),
@@ -3192,7 +3196,7 @@ Future<void> _markMessagesAsRead() async {
           Text(
             (name != null && name.isNotEmpty) ? name : 'Message',
             style: TextStyle(
-              color: onGreen ? Colors.white : Colors.green[800],
+              color: ChatColors.primaryDark,
               fontWeight: FontWeight.bold,
               fontSize: fontSettings.fontSize - 4,
             ),
@@ -3205,7 +3209,7 @@ Future<void> _markMessagesAsRead() async {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: onGreen ? Colors.white70 : Colors.grey[800],
+              color: ChatColors.bubbleMeta,
               fontSize: fontSettings.fontSize - 4,
             ),
           ),
@@ -3352,7 +3356,7 @@ Future<void> _markMessagesAsRead() async {
         content: Text(message),
         backgroundColor: delivered == 0
             ? Colors.red
-            : (failed == 0 ? Colors.green[700] : Colors.orange[800]),
+            : (failed == 0 ? ChatColors.primaryDark : Colors.orange[800]),
         duration: const Duration(seconds: 3),
       ),
     );
@@ -3691,7 +3695,7 @@ Future<void> _markMessagesAsRead() async {
                   ? '${selectedIds.length} message${selectedIds.length > 1 ? 's' : ''} deleted for everyone'
                   : '${selectedIds.length} message${selectedIds.length > 1 ? 's' : ''} deleted',
         ),
-        backgroundColor: hasError ? Colors.red : Colors.green[700],
+        backgroundColor: hasError ? Colors.red : ChatColors.primaryDark,
         duration: const Duration(seconds: 2),
       ),
     );
@@ -3828,7 +3832,7 @@ Future<void> _markMessagesAsRead() async {
     return Padding(
       padding: const EdgeInsets.only(right: 12, bottom: 12),
       child: Material(
-        color: Colors.green,
+        color: ChatColors.primary,
         shape: const CircleBorder(),
         elevation: 3,
         child: InkWell(
@@ -4007,7 +4011,7 @@ Future<void> _markMessagesAsRead() async {
 
   PreferredSizeWidget _buildSearchAppBar(FontSettings fontSettings) {
     return AppBar(
-      backgroundColor: Colors.green,
+      backgroundColor: ChatColors.primary,
       foregroundColor: Colors.white,
       titleSpacing: 0,
       leading: IconButton(
@@ -4078,13 +4082,13 @@ Future<void> _markMessagesAsRead() async {
           IconButton(
             icon: const Icon(Icons.keyboard_arrow_up),
             tooltip: 'Older match',
-            color: Colors.green,
+            color: ChatColors.primary,
             onPressed: _searchIndex < total - 1 ? () => _stepSearch(1) : null,
           ),
           IconButton(
             icon: const Icon(Icons.keyboard_arrow_down),
             tooltip: 'Newer match',
-            color: Colors.green,
+            color: ChatColors.primary,
             onPressed: _searchIndex > 0 ? () => _stepSearch(-1) : null,
           ),
         ],
@@ -4154,7 +4158,7 @@ Future<void> _markMessagesAsRead() async {
               child: const Center(
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: Colors.green,
+                  color: ChatColors.primary,
                 ),
               ),
             );
@@ -4253,7 +4257,7 @@ Future<void> _markMessagesAsRead() async {
                           color: Colors.grey[300],
                           child: const Center(
                             child: CircularProgressIndicator(
-                              color: Colors.green,
+                              color: ChatColors.primary,
                             ),
                           ),
                         ),
@@ -4386,7 +4390,9 @@ Future<void> _markMessagesAsRead() async {
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: message.isMe ? Colors.green[700] : Colors.grey[400],
+          color: message.isMe
+              ? ChatColors.attachmentOnOutgoing
+              : ChatColors.attachmentOnIncoming,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -4394,7 +4400,7 @@ Future<void> _markMessagesAsRead() async {
           children: [
             Icon(
               Icons.insert_drive_file,
-              color: message.isMe ? Colors.white : Colors.black87,
+              color: ChatColors.bubbleText,
               size: 24,
             ),
             const SizedBox(width: 8),
@@ -4402,7 +4408,7 @@ Future<void> _markMessagesAsRead() async {
               child: Text(
                 name,
                 style: TextStyle(
-                  color: message.isMe ? Colors.white : Colors.black87,
+                  color: ChatColors.bubbleText,
                   fontSize: fontSettings.fontSize - 2,
                 ),
               ),
@@ -4410,7 +4416,7 @@ Future<void> _markMessagesAsRead() async {
             const SizedBox(width: 8),
             Icon(
               Icons.download,
-              color: message.isMe ? Colors.white70 : Colors.black54,
+              color: ChatColors.bubbleMeta,
               size: 20,
             ),
           ],
@@ -4477,7 +4483,7 @@ Future<void> _markMessagesAsRead() async {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         color: isSelected
-            ? Colors.green.withOpacity(0.15)
+            ? ChatColors.selectionOverlay
             : isHighlighted
                 ? Colors.amber.withOpacity(0.35)
                 : Colors.transparent,
@@ -4498,9 +4504,9 @@ Future<void> _markMessagesAsRead() async {
                     height: 24,
                     child: Checkbox(
                       value: isSelected,
-                      activeColor: Colors.green,
+                      activeColor: ChatColors.primary,
                       shape: const CircleBorder(),
-                      side: const BorderSide(color: Colors.green, width: 2),
+                      side: const BorderSide(color: ChatColors.primary, width: 2),
                       onChanged: (_) => _toggleSelection(message.id),
                     ),
                   ),
@@ -4551,7 +4557,7 @@ Future<void> _markMessagesAsRead() async {
                           width: 9,
                           height: 9,
                           decoration: BoxDecoration(
-                            color: Colors.greenAccent,
+                            color: ChatColors.accent,
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white, width: 1.5),
                           ),
@@ -4580,11 +4586,11 @@ Future<void> _markMessagesAsRead() async {
                       decoration: BoxDecoration(
                         color: message.isMe
                             ? (isSelected
-                                ? Colors.green[600]
-                                : Colors.green)
+                                ? ChatColors.outgoingBubbleSelected
+                                : ChatColors.outgoingBubble)
                             : (isSelected
-                                ? Colors.grey[350]
-                                : const Color.fromARGB(255, 200, 199, 199)),
+                                ? ChatColors.incomingBubbleSelected
+                                : ChatColors.incomingBubble),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Column(
@@ -4637,9 +4643,7 @@ Future<void> _markMessagesAsRead() async {
                                   Icon(
                                     Icons.forward,
                                     size: fontSettings.fontSize - 3,
-                                    color: message.isMe
-                                        ? Colors.white70
-                                        : Colors.grey[700],
+                                    color: ChatColors.bubbleMeta,
                                   ),
                                   const SizedBox(width: 4),
                                   Flexible(
@@ -4655,9 +4659,7 @@ Future<void> _markMessagesAsRead() async {
                                       style: TextStyle(
                                         fontStyle: FontStyle.italic,
                                         fontSize: fontSettings.fontSize - 4,
-                                        color: message.isMe
-                                            ? Colors.white70
-                                            : Colors.grey[700],
+                                        color: ChatColors.bubbleMeta,
                                       ),
                                     ),
                                   ),
@@ -4720,9 +4722,7 @@ Future<void> _markMessagesAsRead() async {
                               child: _buildMessageText(
                                 message,
                                 TextStyle(
-                                  color: message.isMe
-                                      ? Colors.white
-                                      : Colors.black87,
+                                  color: ChatColors.bubbleText,
                                   fontSize: fontSettings.fontSize + 2,
                                   fontWeight: fontSettings.fontWeight,
                                 ),
@@ -4744,9 +4744,7 @@ Future<void> _markMessagesAsRead() async {
                                 Text(
                                   _formatTime(message.timestamp),
                                   style: TextStyle(
-                                    color: message.isMe
-                                        ? Colors.white70
-                                        : Colors.grey[600],
+                                    color: ChatColors.bubbleMeta,
                                     fontSize: fontSettings.fontSize - 4,
                                   ),
                                 ),
@@ -4758,9 +4756,7 @@ Future<void> _markMessagesAsRead() async {
                                   Text(
                                     'edited',
                                     style: TextStyle(
-                                      color: message.isMe
-                                          ? Colors.white70
-                                          : Colors.grey[600],
+                                      color: ChatColors.bubbleMeta,
                                       fontSize: fontSettings.fontSize - 5,
                                       fontStyle: FontStyle.italic,
                                     ),
@@ -4773,8 +4769,8 @@ Future<void> _markMessagesAsRead() async {
                                         ? Icons.done_all
                                         : Icons.done,
                                     color: message.isRead == true
-                                        ? Colors.blue[200]
-                                        : Colors.white70,
+                                        ? ChatColors.readTick
+                                        : ChatColors.bubbleMeta,
                                     size: 16,
                                   ),
                                 ],
@@ -4833,7 +4829,7 @@ Future<void> _markMessagesAsRead() async {
           alignment: Alignment.centerLeft,
           child: Icon(
             Icons.reply,
-            color: Colors.green[700],
+            color: ChatColors.primaryDark,
             size: fontSettings.fontSize + 6,
           ),
         ),
@@ -4858,14 +4854,14 @@ Future<void> _markMessagesAsRead() async {
         margin: const EdgeInsets.symmetric(horizontal: 32, vertical: 6),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: const Color.fromARGB(255, 236, 236, 226),
+          color: ChatColors.systemPill,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
           text,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: const Color.fromARGB(255, 80, 80, 80),
+            color: ChatColors.systemPillText,
             fontSize: fontSettings.fontSize - 4,
             fontWeight: FontWeight.w500,
           ),
@@ -4893,13 +4889,13 @@ Future<void> _markMessagesAsRead() async {
         padding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         decoration: BoxDecoration(
-          color: const Color.fromARGB(255, 236, 236, 226),
+          color: ChatColors.systemPill,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
           _formatDateSeparator(date),
           style: TextStyle(
-            color: const Color.fromARGB(255, 2, 2, 2),
+            color: ChatColors.systemPillText,
             fontSize: fontSettings.fontSize - 4,
             fontWeight: FontWeight.w900,
           ),
@@ -4923,7 +4919,7 @@ Future<void> _markMessagesAsRead() async {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: ChatColors.chatBackground,
             boxShadow: [
               BoxShadow(
                 color: Colors.grey.withOpacity(0.3),
@@ -4971,7 +4967,7 @@ Future<void> _markMessagesAsRead() async {
                           borderSide: BorderSide.none,
                         ),
                         filled: true,
-                        fillColor: Colors.grey[200],
+                        fillColor: ChatColors.incomingBubble,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 20,
                           vertical: 10,
@@ -5050,7 +5046,7 @@ Future<void> _markMessagesAsRead() async {
                 Icons.lock_outline,
                 size: 20,
                 // Greens up as the lock comes within reach.
-                color: Color.lerp(Colors.grey[600], Colors.green, progress),
+                color: Color.lerp(Colors.grey[600], ChatColors.primary, progress),
               ),
               const SizedBox(height: 4),
               Icon(
@@ -5077,7 +5073,7 @@ Future<void> _markMessagesAsRead() async {
     // has been stopped for review — neither has a finger on the mic any more.
     if (_previewPath != null) {
       return FloatingActionButton(
-        backgroundColor: Colors.green,
+        backgroundColor: ChatColors.primary,
         mini: true,
         onPressed: _sendPreview,
         child: const Icon(Icons.send, color: Colors.white),
@@ -5086,7 +5082,7 @@ Future<void> _markMessagesAsRead() async {
 
     if (_isVoiceLocked) {
       return FloatingActionButton(
-        backgroundColor: Colors.green,
+        backgroundColor: ChatColors.primary,
         mini: true,
         onPressed: _stopAndSendRecording,
         child: const Icon(Icons.send, color: Colors.white),
@@ -5095,7 +5091,7 @@ Future<void> _markMessagesAsRead() async {
 
     if (_hasComposerText && !_isRecording) {
       return FloatingActionButton(
-        backgroundColor: Colors.green,
+        backgroundColor: ChatColors.primary,
         mini: true,
         onPressed: _sendMessage,
         child: const Icon(Icons.send, color: Colors.white),
@@ -5160,12 +5156,12 @@ Future<void> _markMessagesAsRead() async {
         width: _isRecording ? 56 : 40,
         height: _isRecording ? 56 : 40,
         decoration: BoxDecoration(
-          color: cancelling ? Colors.red : Colors.green,
+          color: cancelling ? Colors.red : ChatColors.primary,
           shape: BoxShape.circle,
           boxShadow: _isRecording
               ? [
                   BoxShadow(
-                    color: (cancelling ? Colors.red : Colors.green)
+                    color: (cancelling ? Colors.red : ChatColors.primary)
                         .withOpacity(0.4),
                     blurRadius: 12,
                     spreadRadius: 4,
@@ -5349,9 +5345,10 @@ Future<void> _markMessagesAsRead() async {
           return true;
         },
         child: Scaffold(
+          backgroundColor: ChatColors.chatBackground,
           appBar: _isSelectionMode
               ? AppBar(
-                  backgroundColor: Colors.green[700],
+                  backgroundColor: ChatColors.primary,
                   foregroundColor: Colors.white,
                   leading: IconButton(
                     icon: const Icon(Icons.close),
@@ -5425,7 +5422,7 @@ Future<void> _markMessagesAsRead() async {
               : _isSearching
               ? _buildSearchAppBar(fontSettings)
               : AppBar(
-                  backgroundColor: Colors.green,
+                  backgroundColor: ChatColors.primary,
                   foregroundColor: Colors.white,
                   leading: IconButton(
                     icon: const Icon(Icons.arrow_back),
@@ -5480,7 +5477,7 @@ Future<void> _markMessagesAsRead() async {
                                 width: 12,
                                 height: 12,
                                 decoration: BoxDecoration(
-                                  color: Colors.greenAccent,
+                                  color: ChatColors.accent,
                                   shape: BoxShape.circle,
                                   border: Border.all(
                                     color: Colors.white,
@@ -5559,7 +5556,7 @@ Future<void> _markMessagesAsRead() async {
                 if (_isLoadingMessages)
                   const LinearProgressIndicator(
                     backgroundColor: Colors.grey,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                    valueColor: AlwaysStoppedAnimation<Color>(ChatColors.primary),
                   ),
                 if (_isUploading)
                   Container(
@@ -5567,7 +5564,7 @@ Future<void> _markMessagesAsRead() async {
                       horizontal: 16,
                       vertical: 6,
                     ),
-                    color: Colors.green.shade50,
+                    color: ChatColors.systemPill,
                     child: Row(
                       children: [
                         const SizedBox(
@@ -5575,7 +5572,7 @@ Future<void> _markMessagesAsRead() async {
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.green,
+                            color: ChatColors.primary,
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -5583,7 +5580,7 @@ Future<void> _markMessagesAsRead() async {
                           _uploadLabel,
                           style: TextStyle(
                             fontSize: fontSettings.fontSize - 4,
-                            color: Colors.green,
+                            color: ChatColors.primary,
                           ),
                         ),
                       ],
@@ -5591,7 +5588,7 @@ Future<void> _markMessagesAsRead() async {
                   ),
                 Expanded(
                   child: Container(
-                    color: const Color.fromARGB(255, 245, 245, 230),
+                    color: ChatColors.chatBackground,
                     child: _messages.isEmpty
                         ? Center(
                             child: Text(
@@ -5900,7 +5897,7 @@ class _EditMessageDialogState extends State<_EditMessageDialog> {
             decoration: InputDecoration(
               border: const OutlineInputBorder(),
               focusedBorder: const OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.green, width: 2),
+                borderSide: BorderSide(color: ChatColors.primary, width: 2),
               ),
               hintText: 'Message',
               hintStyle: TextStyle(fontSize: fontSettings.fontSize - 2),
@@ -5932,7 +5929,7 @@ class _EditMessageDialogState extends State<_EditMessageDialog> {
           child: Text(
             'Save',
             style: TextStyle(
-              color: Colors.green[700],
+              color: ChatColors.primaryDark,
               fontWeight: FontWeight.bold,
               fontSize: fontSettings.fontSize - 2,
             ),

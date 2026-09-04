@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/core/chat_colors.dart';
 import 'package:ballys_reservation_app/providers/chat_font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:flutter/material.dart';
@@ -26,7 +27,7 @@ class ChatSettingsScreen extends ConsumerWidget {
       child: Scaffold(
         backgroundColor: Colors.grey.shade100,
         appBar: AppBar(
-          backgroundColor: Colors.green,
+          backgroundColor: ChatColors.primary,
           foregroundColor: Colors.white,
           title: const Text(
             'Chat settings',
@@ -82,8 +83,8 @@ class ChatSettingsScreen extends ConsumerWidget {
                 icon: const Icon(Icons.restart_alt),
                 label: const Text('Reset to default'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.green.shade800,
-                  side: BorderSide(color: Colors.green.shade300),
+                  foregroundColor: ChatColors.primaryDark,
+                  side: const BorderSide(color: ChatColors.primary),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
@@ -118,7 +119,7 @@ class ChatSettingsScreen extends ConsumerWidget {
     title: Text(label, style: style),
     trailing: Icon(
       selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-      color: selected ? Colors.green : Colors.grey.shade400,
+      color: selected ? ChatColors.primary : Colors.grey.shade400,
     ),
   );
 
@@ -129,7 +130,7 @@ class ChatSettingsScreen extends ConsumerWidget {
       style: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w600,
-        color: Colors.green.shade800,
+        color: ChatColors.primaryDark,
         letterSpacing: 0.3,
       ),
     ),
@@ -151,7 +152,7 @@ class ChatSettingsScreen extends ConsumerWidget {
       margin: const EdgeInsets.symmetric(horizontal: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFECE5DD),
+        color: ChatColors.chatBackground,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -184,7 +185,7 @@ class ChatSettingsScreen extends ConsumerWidget {
         constraints: const BoxConstraints(maxWidth: 260),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isMine ? const Color(0xFFDCF8C6) : Colors.white,
+          color: isMine ? ChatColors.outgoingBubble : ChatColors.incomingBubble,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
@@ -195,14 +196,14 @@ class ChatSettingsScreen extends ConsumerWidget {
               style: TextStyle(
                 fontSize: settings.fontSize,
                 fontWeight: settings.fontWeight,
-                color: Colors.black87,
+                color: ChatColors.bubbleText,
               ),
             ),
             Text(
               '10:24 AM',
               style: TextStyle(
                 fontSize: settings.fontSize - 5,
-                color: Colors.black45,
+                color: ChatColors.bubbleMeta,
               ),
             ),
           ],

@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/core/chat_colors.dart';
 import 'dart:convert';
 
 import 'package:image_picker/image_picker.dart';
@@ -95,7 +96,7 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: error ? Colors.red : Colors.green,
+        backgroundColor: error ? Colors.red : ChatColors.primary,
         duration: const Duration(seconds: 2),
       ),
     );
@@ -355,7 +356,7 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
       messenger.showSnackBar(
         SnackBar(
           content: Text(delete ? 'Group deleted' : 'You left the group'),
-          backgroundColor: Colors.green,
+          backgroundColor: ChatColors.primary,
           duration: const Duration(seconds: 2),
         ),
       );
@@ -449,7 +450,7 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: Colors.green),
+              child: CircularProgressIndicator(color: ChatColors.primary),
             );
           }
 
@@ -508,7 +509,7 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
               if (_busy)
                 const LinearProgressIndicator(
                   backgroundColor: Colors.transparent,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                  valueColor: AlwaysStoppedAnimation<Color>(ChatColors.primary),
                 ),
               Padding(
                 padding: const EdgeInsets.all(16),
@@ -553,7 +554,7 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
                                 child: Container(
                                   padding: const EdgeInsets.all(3),
                                   decoration: BoxDecoration(
-                                    color: Colors.green,
+                                    color: ChatColors.primary,
                                     shape: BoxShape.circle,
                                     border: Border.all(
                                       color: Colors.white,
@@ -612,7 +613,7 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
                 const Divider(height: 1),
                 SwitchListTile(
                   value: details.adminOnlyMessaging,
-                  activeColor: Colors.green,
+                  activeColor: ChatColors.primary,
                   dense: true,
                   title: Text(
                     'Only admins can send messages',
@@ -646,7 +647,7 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
                           style: TextStyle(fontSize: _fs.fontSize - 3),
                         ),
                         style: TextButton.styleFrom(
-                          foregroundColor: Colors.green,
+                          foregroundColor: ChatColors.primary,
                         ),
                       ),
                   ],
@@ -716,13 +717,13 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
                                       vertical: 3,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.green.withOpacity(0.15),
+                                      color: ChatColors.primary.withOpacity(0.15),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: Text(
                                       'Admin',
                                       style: TextStyle(
-                                        color: Colors.green[800],
+                                        color: ChatColors.primaryDark,
                                         fontSize: _fs.fontSize - 5,
                                       ),
                                     ),
@@ -925,7 +926,7 @@ class _MemberPickerState extends State<_MemberPicker> {
                     final contact = _visible[index];
                     return CheckboxListTile(
                       value: _selected.containsKey(contact.userUuid),
-                      activeColor: Colors.green,
+                      activeColor: ChatColors.primary,
                       controlAffinity: ListTileControlAffinity.trailing,
                       onChanged: (checked) {
                         setState(() {
@@ -968,7 +969,7 @@ class _MemberPickerState extends State<_MemberPicker> {
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
+                        backgroundColor: ChatColors.primary,
                         foregroundColor: Colors.white,
                       ),
                       onPressed: _selected.isEmpty

@@ -1917,7 +1917,7 @@ if (message.data['msg_type'] == '35') {
           floatingActionButton: _selectedContactId == null
               ? FloatingActionButton(
                   // The FAB is the brighter green in WhatsApp, not the header's.
-                  backgroundColor: ChatColors.accent,
+                  backgroundColor:ChatColors.primary,
                   onPressed: () => _openNewChatScreen(),
                   child: const Icon(Icons.chat, color: Colors.white),
                 )

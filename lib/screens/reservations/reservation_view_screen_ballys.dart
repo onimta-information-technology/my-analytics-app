@@ -1458,7 +1458,7 @@ class _ReservationViewScreenBallysState
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           content: const Text(
-            'What would you like to amend?',
+            'What would you like to Modification?',
             style: TextStyle(fontSize: 15),
           ),
           contentPadding: const EdgeInsets.fromLTRB(24, 12, 24, 8),

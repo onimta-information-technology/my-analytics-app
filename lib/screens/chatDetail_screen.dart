@@ -231,6 +231,10 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
   bool _hasMoreOlder = false;
   bool _isLoadingOlder = false;
 
+  /// Whether the reader has scrolled far enough up from the newest message
+  /// for the "jump to bottom" button to be offered.
+  bool _showScrollToBottom = false;
+
   /// Whether the first page has landed. Until it has, the newest page also
   /// seeds [_olderCursor]; afterwards it must not, since its cursor points at
   /// history that may already be loaded.
@@ -917,6 +921,12 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     final position = _scrollController.position;
     if (position.pixels >= position.maxScrollExtent - 300) {
       _loadOlderMessages();
+    }
+    // Offset 0 is the newest message, so any distance from it means the
+    // reader has scrolled up into history.
+    final showScrollToBottom = position.pixels > 300;
+    if (showScrollToBottom != _showScrollToBottom) {
+      setState(() => _showScrollToBottom = showScrollToBottom);
     }
   }
 
@@ -4317,6 +4327,31 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     );
   }
 
+  /// Small round button, shown once the reader has scrolled up, that takes
+  /// them back down to the newest message.
+  Widget _buildScrollToBottomButton() {
+    return Padding(
+      padding: const EdgeInsets.only(right: 12, bottom: 12),
+      child: Material(
+        color: Colors.white,
+        shape: const CircleBorder(),
+        elevation: 3,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: _scrollToBottom,
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Icon(
+              Icons.keyboard_double_arrow_down,
+              color: Colors.grey[700],
+              size: 22,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   // ─── Message search ─────────────────────────────────────────────────────────
 
   bool get _hasSearchTerm => _isSearching && _searchQuery.isNotEmpty;
@@ -6158,15 +6193,36 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                                       );
                                     },
                                   ),
-                                  if (_reachableMentions.isNotEmpty &&
-                                      !_isSearching)
-                                    Positioned(
-                                      right: 0,
-                                      bottom: 0,
-                                      child: _buildMentionJumpButton(
-                                        fontSettings,
-                                      ),
+                                  Positioned(
+                                    right: 0,
+                                    bottom: 0,
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        if (_reachableMentions.isNotEmpty &&
+                                            !_isSearching)
+                                          _buildMentionJumpButton(
+                                            fontSettings,
+                                          ),
+                                        AnimatedSwitcher(
+                                          duration: const Duration(
+                                            milliseconds: 200,
+                                          ),
+                                          transitionBuilder:
+                                              (child, animation) =>
+                                                  ScaleTransition(
+                                                    scale: animation,
+                                                    child: child,
+                                                  ),
+                                          child: _showScrollToBottom
+                                              ? _buildScrollToBottomButton()
+                                              : const SizedBox.shrink(),
+                                        ),
+                                      ],
                                     ),
+                                  ),
                                 ],
                               ),
                       ),

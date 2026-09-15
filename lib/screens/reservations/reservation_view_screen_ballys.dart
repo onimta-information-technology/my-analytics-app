@@ -1454,7 +1454,7 @@ class _ReservationViewScreenBallysState
             borderRadius: BorderRadius.circular(16),
           ),
           title: const Text(
-            'Amendment',
+            'Modification',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           content: const Text(
@@ -2372,7 +2372,7 @@ class _ReservationViewScreenBallysState
                         ),
                         icon: const Icon(Icons.edit_note, size: 20),
                         label: Text(
-                          'AMENDMENT',
+                          'Modification',
                           style: TextStyle(
                             fontSize: fontSettings.fontSize + 2,
                             fontWeight: FontWeight.bold,

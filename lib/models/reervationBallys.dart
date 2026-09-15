@@ -8,6 +8,7 @@ import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.d
 import 'package:ballys_reservation_app/models/reservation/hotel_desc_ballys.dart';
 
 import 'package:ballys_reservation_app/models/reservation/reservation_passport_image_ballys.dart';
+import 'package:ballys_reservation_app/utils/amount_util.dart';
 
 class ReservationBallys {
   int idNo;
@@ -58,6 +59,24 @@ class ReservationBallys {
   /// `authorization_id` of the approver the reservation was sent to, from the
   /// `approve_person` block. Null when none was picked.
   int? approvePersonId;
+
+  /// The rest of the `approve_person` block: the approver's name, their
+  /// authorization level and job title. Null when none was picked.
+  String? approvePersonName;
+  int? approvePersonLevel;
+  String? approvePersonCategory;
+
+  /// Sales code of [selectedMarketingPerson], sent as
+  /// `selected_marketing_person_code`. Blank when raised under the requester's
+  /// own name.
+  String? selectedMarketingPersonCode;
+
+  /// Device the reservation was raised from, and the device each workflow
+  /// stage was actioned from.
+  String? deviceId;
+  String? checkedDeviceId;
+  String? approvedDeviceId;
+  String? rejectedDeviceId;
 
   /// Per-stage audit trail returned by `Reservation_GetAllReservations`.
   /// Each workflow stage (Pending → Checked → Approved/Rejected) records who
@@ -122,6 +141,14 @@ class ReservationBallys {
     this.paymentBy,
     this.contactPerson,
     this.approvePersonId,
+    this.approvePersonName,
+    this.approvePersonLevel,
+    this.approvePersonCategory,
+    this.selectedMarketingPersonCode,
+    this.deviceId,
+    this.checkedDeviceId,
+    this.approvedDeviceId,
+    this.rejectedDeviceId,
     this.pendingBy,
     this.pendingTime,
     this.checkedStatus,
@@ -358,8 +385,8 @@ class ReservationBallys {
           continue;
         }
 
-        final amount = g['PackageAmount']?.toString().trim() ?? '';
-        final currency = g['CurrencyType']?.toString().trim() ?? '';
+        final amount =
+            packageAmountFromApi(g['PackageAmount'], g['CurrencyType']);
         final guestFlights = flightsFor(bm);
 
         entries.add(GuestReservationEntryBallys(
@@ -377,9 +404,7 @@ class ReservationBallys {
               ? 'Yes'
               : 'No',
           hasFamilyMembers: g['HasFamilyMembers'] as bool? ?? false,
-          packageAmount: amount.isEmpty || currency.isEmpty
-              ? amount
-              : '$currency $amount',
+          packageAmount: amount,
           // Rows written before the tick was sent only showed a shared package
           // by carrying no amount, so that still stands in when it is absent.
           sharedPackage: g['IsSharedAmount'] as bool? ?? amount.isEmpty,
@@ -411,13 +436,17 @@ class ReservationBallys {
         approvePerson = null;
       }
     }
-    final approvePersonId = int.tryParse(
-      (approvePerson is Map
-                  ? approvePerson['authorization_id']
-                  : json['authorization_id'])
-              ?.toString() ??
-          '',
-    );
+    dynamic approver(String key) =>
+        approvePerson is Map ? approvePerson[key] : json[key];
+    String? approverText(String key) {
+      final value = approver(key)?.toString().trim() ?? '';
+      return value.isEmpty ? null : value;
+    }
+
+    final approvePersonId =
+        int.tryParse(approver('authorization_id')?.toString() ?? '');
+    final approvePersonLevel =
+        int.tryParse(approver('authorization_level')?.toString() ?? '');
 
     // Approval state as stored by the insert endpoint: "Pending" / "Checked" /
     // "Approved" / "Rejected". Blank rows fall back to Pending.
@@ -465,6 +494,15 @@ class ReservationBallys {
       paymentBy: json['payment_by']?.toString(),
       contactPerson: json['contact_person']?.toString(),
       approvePersonId: approvePersonId,
+      approvePersonName: approverText('authorization_person'),
+      approvePersonLevel: approvePersonLevel,
+      approvePersonCategory: approverText('authorization_category'),
+      selectedMarketingPersonCode:
+          json['selected_marketing_person_code']?.toString(),
+      deviceId: json['device_id']?.toString(),
+      checkedDeviceId: json['checked_device_id']?.toString(),
+      approvedDeviceId: json['approved_device_id']?.toString(),
+      rejectedDeviceId: json['rejected_device_id']?.toString(),
       pendingBy: json['pending_by'] as String?,
       pendingTime: parseDate(json['pending_time']),
       checkedStatus: json['checked_status'] as String?,

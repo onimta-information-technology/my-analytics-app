@@ -8,6 +8,10 @@ class FlightCardBallys extends StatelessWidget {
   final VoidCallback? onDoubleTap;
   final VoidCallback? onDelete;
 
+  /// Off where the contact person is shown once for the whole reservation
+  /// rather than on every ticket.
+  final bool showContactPerson;
+
   const FlightCardBallys({
     super.key,
     required this.flight,
@@ -15,6 +19,7 @@ class FlightCardBallys extends StatelessWidget {
     required this.showDelete,
     this.onDoubleTap,
     this.onDelete,
+    this.showContactPerson = true,
   });
 
   /// " (Arrival)" / " (Departure)" — blank when the flight carries no leg,
@@ -229,7 +234,8 @@ class FlightCardBallys extends StatelessWidget {
                         ),
                       ),
                     ],
-                    if (flight.contactPerson != null &&
+                    if (showContactPerson &&
+                        flight.contactPerson != null &&
                         (flight.contactPerson as String).trim().isNotEmpty) ...[
                       const SizedBox(height: 5),
                       Text(

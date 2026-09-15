@@ -346,7 +346,38 @@ class _ReservationViewScreenBallysState
     final marketingPerson = reservation.selectedMarketingPerson?.trim() ?? '';
     final salesCode = reservation.salesCode?.trim() ?? '';
 
-    if (requestedBy.isEmpty && marketingPerson.isEmpty && salesCode.isEmpty) {
+    // Payment By / Contact Person belong to the reservation. Older rows only
+    // carried them per room / per ticket, so fall back to the first one set.
+    String firstNonEmpty(Iterable<String?> values) => values
+        .map((v) => v?.trim() ?? '')
+        .firstWhere((v) => v.isNotEmpty, orElse: () => '');
+    final paymentBy = firstNonEmpty([
+      reservation.paymentBy,
+      ...reservation.hotelDescip.map((h) => h.paymentBy),
+    ]);
+    final contactPerson = firstNonEmpty([
+      reservation.contactPerson,
+      ...reservation.airticketDescrip.map((f) => f.contactPerson),
+    ]);
+
+    final approverName = reservation.approvePersonName?.trim() ?? '';
+    final approverCategory = reservation.approvePersonCategory?.trim() ?? '';
+    final approverLevel = reservation.approvePersonLevel;
+    final approver = approverName.isEmpty
+        ? ''
+        : [
+            approverLevel == null
+                ? approverName
+                : '$approverName (Level $approverLevel)',
+            if (approverCategory.isNotEmpty) approverCategory,
+          ].join('\n');
+
+    if (requestedBy.isEmpty &&
+        marketingPerson.isEmpty &&
+        salesCode.isEmpty &&
+        paymentBy.isEmpty &&
+        contactPerson.isEmpty &&
+        approver.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -424,6 +455,42 @@ class _ReservationViewScreenBallysState
                     iconColor: color,
                     label: 'Marketing Person',
                     value: marketingPerson,
+                    valueColor: Colors.black87,
+                    fontSize: fontSize,
+                    fontWeight: fontWeight,
+                  ),
+                ],
+                if (paymentBy.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _buildCardRow(
+                    icon: Icons.payments_outlined,
+                    iconColor: color,
+                    label: 'Payment By',
+                    value: paymentBy,
+                    valueColor: Colors.black87,
+                    fontSize: fontSize,
+                    fontWeight: fontWeight,
+                  ),
+                ],
+                if (contactPerson.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _buildCardRow(
+                    icon: Icons.contact_phone_outlined,
+                    iconColor: color,
+                    label: 'Contact Person',
+                    value: contactPerson,
+                    valueColor: Colors.black87,
+                    fontSize: fontSize,
+                    fontWeight: fontWeight,
+                  ),
+                ],
+                if (approver.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _buildCardRow(
+                    icon: Icons.how_to_reg_outlined,
+                    iconColor: color,
+                    label: 'Approval From',
+                    value: approver,
                     valueColor: Colors.black87,
                     fontSize: fontSize,
                     fontWeight: fontWeight,
@@ -2124,19 +2191,8 @@ class _ReservationViewScreenBallysState
                                           ),
                                         ),
                                       ],
-                                      if (hotel.paymentBy != null &&
-                                          hotel.paymentBy!
-                                              .trim()
-                                              .isNotEmpty) ...[
-                                        const SizedBox(height: 5),
-                                        Text(
-                                          "Payment By: ${hotel.paymentBy}",
-                                          style: TextStyle(
-                                            fontSize: fontSettings.fontSize,
-                                            fontWeight: fontSettings.fontWeight,
-                                          ),
-                                        ),
-                                      ],
+                                      // Payment By is reservation-level; it is
+                                      // shown in the Request Information card.
                                     ],
                                   ),
                                 ),
@@ -2264,6 +2320,8 @@ class _ReservationViewScreenBallysState
                                 flight: flight,
                                 index: selectedFlights.indexOf(flight),
                                 showDelete: false,
+                                // Shown once in the Request Information card.
+                                showContactPerson: false,
                               );
                             }).toList(),
                           ),

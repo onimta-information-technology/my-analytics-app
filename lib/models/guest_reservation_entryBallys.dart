@@ -74,16 +74,14 @@ class AccompanyingMember {
   factory AccompanyingMember.fromJson(Map<String, dynamic> json) {
     // Sent as a bare number plus a separate currency, mirroring the
     // reservation-level package_amount / currency_type pair.
-    final amount = json['PackageAmount']?.toString().trim() ?? '';
-    final currency = json['CurrencyType']?.toString().trim() ?? '';
+    final amount =
+        packageAmountFromApi(json['PackageAmount'], json['CurrencyType']);
 
     return AccompanyingMember(
       mid: json['BMNumber'] as String? ?? '',
       guestName: json['GuestName'] as String? ?? '',
       hasFamilyMembers: json['HasFamilyMembers'] as bool? ?? false,
-      packageAmount: amount.isEmpty || currency.isEmpty
-          ? amount
-          : '$currency $amount',
+      packageAmount: amount,
       // Records saved before the flag existed only marked a shared package by
       // leaving the amount out, so that still stands in when it is absent.
       sharedPackage: json['IsSharedAmount'] as bool? ?? amount.isEmpty,

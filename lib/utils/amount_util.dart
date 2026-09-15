@@ -2,6 +2,29 @@
 /// the backend.
 library;
 
+import 'package:intl/intl.dart';
+
+/// Builds the display string for a `PackageAmount` / `CurrencyType` pair read
+/// off the API, e.g. `750000.00` + `"INR"` -> `"INR 750,000"`.
+///
+/// The amount now arrives as a number; legacy rows carry a string that may
+/// already include the currency. A zero amount means no package of its own
+/// (a shared member) and reads as empty.
+String packageAmountFromApi(dynamic amount, dynamic currency) {
+  final cur = currency?.toString().trim() ?? '';
+  var text = amount?.toString().trim() ?? '';
+  final value = amount is num ? amount : double.tryParse(text);
+  if (value != null) {
+    if (value == 0) return '';
+    text = NumberFormat('#,##0.##').format(value);
+  }
+  if (text.isEmpty) return '';
+  if (cur.isEmpty || text.toUpperCase().startsWith(cur.toUpperCase())) {
+    return text;
+  }
+  return '$cur $text';
+}
+
 /// Converts a package-amount display string (e.g. `"IND 10,000"`,
 /// `"USD 25,000"`, `"12,500.50"`) into a plain integer string (`"10000"`,
 /// `"25000"`, `"12500"`).

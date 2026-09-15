@@ -421,6 +421,40 @@ class _ReservationScreenBallysState
                     ),
                     const SizedBox(height: 4),
 
+                    // Approver the request was sent to (`approve_person`)
+                    if ((reservation.approvePersonName ?? '').isNotEmpty) ...[
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.how_to_reg_outlined,
+                            size: 20,
+                            color: Colors.deepPurple,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Approval from: ',
+                            style: TextStyle(
+                              fontSize: fontSettings.fontSize + 2,
+                              fontWeight: fontSettings.fontWeight,
+                              color: const Color.fromARGB(255, 0, 0, 0),
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              reservation.approvePersonName!,
+                              style: TextStyle(
+                                fontSize: fontSettings.fontSize + 2,
+                                fontWeight: fontSettings.fontWeight,
+                                color: Colors.deepPurple[700],
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+
                     // Approved / Checked / Rejected By
                     if (isApprovedOrRejected)
                       Row(

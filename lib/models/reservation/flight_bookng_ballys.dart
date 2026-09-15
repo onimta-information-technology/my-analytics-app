@@ -132,17 +132,17 @@ class FlightBookingBallys {
 
   factory FlightBookingBallys.fromJson(Map<String, dynamic> json) {
     return FlightBookingBallys(
-      guestCount: json['guest_count'] ?? 0,
+      guestCount: _toInt(json['guest_count']),
       childrenCount: _toInt(json['children_count']),
       infantCount: _toInt(json['infant_count']),
       airports: json['airports'] != null
           ? FlightAirport.fromJson(json['airports'])
           : _parseFlatAirports(json),
-      airTicketClass: json['air_ticket_class'] ?? 0,
+      airTicketClass: _toInt(json['air_ticket_class']),
       arrivalDate: _parseCustomDate(json['arrival_date']),
       departureDate: _parseCustomDate(json['departure_date']),
-      silkRoute: json['silk_route'] ?? '',
-      airportTransportation: json['airport_transportation'] ?? 0,
+      silkRoute: _toInt(json['silk_route']),
+      airportTransportation: _toInt(json['airport_transportation']),
       airTicketClassName: json['air_ticket_class_name'] ?? '',
       isRoundTrip: json['is_round_trip'] ?? false,
       selectedCost: _parseCost(json['selected_cost']),

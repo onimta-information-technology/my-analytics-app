@@ -71,7 +71,7 @@ class HotelDescipBallys {
 
 // Helper method to safely parse integers
   static int? _toInt(dynamic value) {
-    if (value is int) return value;
+    if (value is num) return value.toInt();
     if (value is String) {
       return int.tryParse(value);
     }

@@ -36,27 +36,59 @@ final loggedInCoordinatorIdProvider =
   return id;
 });
 
-/// The requests sent to the coordinator who is logged in, newest first.
+/// Which side of the coordinator requests the logged-in user looks at.
+enum CoordinatorRequestsScope {
+  /// A coordinator — the requests sent to them.
+  received,
+
+  /// A marketing person — the requests they sent to coordinators.
+  sent,
+
+  /// Neither, so there is nothing to fetch.
+  none,
+}
+
+/// A coordinator login sees what it was sent; otherwise a login with its own
+/// marketing group sees what that group sent. Marketing_Code 0 means no group.
+final coordinatorRequestsScopeProvider =
+    FutureProvider.autoDispose<CoordinatorRequestsScope>((ref) async {
+  final coordinatorId = await ref.watch(loggedInCoordinatorIdProvider.future);
+  if (coordinatorId != null) return CoordinatorRequestsScope.received;
+  if (await StorageUtil.hasOwnMarketingGroup()) {
+    return CoordinatorRequestsScope.sent;
+  }
+  return CoordinatorRequestsScope.none;
+});
+
+/// The logged-in user's coordinator requests, newest first — received ones
+/// for a coordinator, sent ones for a marketing person (see
+/// [coordinatorRequestsScopeProvider]).
 ///
-/// Both halves the endpoint matches on come straight from the login response
-/// in storage: `Coordinatorid` via [loggedInCoordinatorIdProvider] and the
-/// display name via `StorageUtil.getUserName()`.
+/// A coordinator is matched on `Coordinatorid` and display name, a marketing
+/// person on their marketing code; all three come from the login response in
+/// storage.
 ///
 /// `autoDispose` so a request sent from this session shows up the next time
 /// the list is opened; `ref.invalidate` forces a refetch while it is on screen.
 final myCoordinatorRequestsProvider =
     FutureProvider.autoDispose<List<CoordinatorRequestRecord>>((ref) async {
-  final coordinatorId = await ref.watch(loggedInCoordinatorIdProvider.future);
-  if (coordinatorId == null) return const [];
+  final scope = await ref.watch(coordinatorRequestsScopeProvider.future);
+  final repository = ref.read(coordinatorRequestRepositoryProvider);
 
-  final coordinatorName = await StorageUtil.getUserName() ?? '';
-
-  debugPrint('Fetching requests for $coordinatorId / $coordinatorName');
-
-  return ref
-      .read(coordinatorRequestRepositoryProvider)
-      .getRequestsByCoordinator(
+  switch (scope) {
+    case CoordinatorRequestsScope.received:
+      final coordinatorId = await StorageUtil.getCoordinatorId() ?? '';
+      final coordinatorName = await StorageUtil.getUserName() ?? '';
+      debugPrint('Fetching requests for $coordinatorId / $coordinatorName');
+      return repository.getRequestsByCoordinator(
         coordinatorId: coordinatorId,
         coordinatorName: coordinatorName,
       );
+    case CoordinatorRequestsScope.sent:
+      final marketingCode = await StorageUtil.getMarketingCode() ?? '';
+      debugPrint('Fetching requests sent by marketing code $marketingCode');
+      return repository.getRequestsByMarketingCode(marketingCode);
+    case CoordinatorRequestsScope.none:
+      return const [];
+  }
 });

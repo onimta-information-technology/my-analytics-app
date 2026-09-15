@@ -35,6 +35,7 @@ class CoordinatorRequestRecord {
     this.remarks = '',
     this.salesCode = '',
     this.userName = '',
+    this.marketingCode = '',
     this.createdDate,
     this.guests = const [],
   });
@@ -56,6 +57,9 @@ class CoordinatorRequestRecord {
   final String salesCode;
   final String userName;
 
+  /// The requester's marketing group — what `GetByMarketingCode` matches on.
+  final String marketingCode;
+
   final DateTime? createdDate;
   final List<CoordinatorRequestRecordGuest> guests;
 
@@ -70,6 +74,7 @@ class CoordinatorRequestRecord {
       remarks: json['remarks']?.toString() ?? '',
       salesCode: json['sales_code']?.toString() ?? '',
       userName: json['user_name']?.toString() ?? '',
+      marketingCode: json['marketing_code']?.toString() ?? '',
       createdDate: DateTime.tryParse(json['created_date']?.toString() ?? ''),
       guests: guests is List
           ? guests

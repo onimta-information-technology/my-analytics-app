@@ -94,18 +94,18 @@ class _CoordinatorRequestsScreenState
   }
 
   Widget _requestList(FontSettings fontSettings) {
-    // No Coordinatorid on the login means there is nothing to fetch — say so,
-    // rather than show the same empty list a coordinator with no requests sees.
-    final coordinatorId = ref.watch(loggedInCoordinatorIdProvider).valueOrNull;
-    if (ref.watch(loggedInCoordinatorIdProvider).hasValue &&
-        coordinatorId == null) {
+    // Neither a coordinator nor a marketing person means there is nothing to
+    // fetch — say so, rather than show the same empty list as "no requests".
+    final scope = ref.watch(coordinatorRequestsScopeProvider).valueOrNull;
+    if (scope == CoordinatorRequestsScope.none) {
       return _placeholder(
         fontSettings,
         Icons.person_off_outlined,
-        'This login is not linked to a coordinator.\n'
+        'This login is not linked to a coordinator or a marketing group.\n'
         'Log out and log in again if you were set up as one recently.',
       );
     }
+    final isSent = scope == CoordinatorRequestsScope.sent;
 
     final requestsAsync = ref.watch(myCoordinatorRequestsProvider);
 
@@ -126,7 +126,9 @@ class _CoordinatorRequestsScreenState
           return _placeholder(
             fontSettings,
             Icons.inbox_outlined,
-            'You have not sent any coordinator requests yet',
+            isSent
+                ? 'You have not sent any coordinator requests yet'
+                : 'No coordinator requests have been sent to you yet',
           );
         }
         return RefreshIndicator(
@@ -138,14 +140,28 @@ class _CoordinatorRequestsScreenState
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             itemCount: requests.length,
             itemBuilder: (context, index) =>
-                _requestCard(fontSettings, requests[index]),
+                _requestCard(fontSettings, requests[index], isSent: isSent),
           ),
         );
       },
     );
   }
 
-  Widget _requestCard(FontSettings fontSettings, CoordinatorRequestRecord r) {
+  /// [isSent] is the marketing person's view of their own requests: the card
+  /// names the coordinator it went to, and is not tappable — keying in the
+  /// reservation is the coordinator's job.
+  Widget _requestCard(
+    FontSettings fontSettings,
+    CoordinatorRequestRecord r, {
+    required bool isSent,
+  }) {
+    final String who;
+    if (isSent) {
+      who = r.coordinatorName.isEmpty ? 'Unknown coordinator' : r.coordinatorName;
+    } else {
+      who = r.userName.isEmpty ? 'Unknown user' : r.userName;
+    }
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
@@ -154,7 +170,7 @@ class _CoordinatorRequestsScreenState
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => _openReservationForRequest(r),
+        onTap: isSent ? null : () => _openReservationForRequest(r),
         child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -166,12 +182,17 @@ class _CoordinatorRequestsScreenState
               ],
             ),
             const SizedBox(height: 8),
-            // Who raised it. The list is already scoped to the logged-in
-            // coordinator, so the requester is what this card has to name.
+            // The list is already scoped to the logged-in user, so the card
+            // names the other side: the requester for a coordinator, the
+            // coordinator for the marketing person who sent it.
             Row(
               children: [
-                Icon(Icons.account_circle_outlined,
-                    size: 18, color: Colors.grey.shade700),
+                Icon(
+                    isSent
+                        ? Icons.support_agent
+                        : Icons.account_circle_outlined,
+                    size: 18,
+                    color: Colors.grey.shade700),
                 const SizedBox(width: 6),
                 Expanded(
                   child: RichText(
@@ -184,9 +205,7 @@ class _CoordinatorRequestsScreenState
                         color: Colors.grey.shade800,
                       ),
                       children: [
-                        TextSpan(
-                          text: r.userName.isEmpty ? 'Unknown user' : r.userName,
-                        ),
+                        TextSpan(text: who),
                         // if (r.salesCode.isNotEmpty)
                         //   TextSpan(
                         //     text: '  (${r.salesCode})',

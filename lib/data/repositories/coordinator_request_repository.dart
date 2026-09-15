@@ -47,6 +47,10 @@ class CoordinatorRequestRepository {
   /// The read side: every request sent to one coordinator.
   static const String _requestsEndpoint = 'CoordinatorRequest/GetByCoordinator';
 
+  /// The other read side: every request one marketing person has sent.
+  static const String _requestsByMarketingCodeEndpoint =
+      'CoordinatorRequest/GetByMarketingCode';
+
   /// GET `{baseUrl}/Coordinators/Get` — the coordinator picker list.
   ///
   /// The response is `{ success, count, coordinators: [...] }`. Inactive rows
@@ -84,6 +88,22 @@ class CoordinatorRequestRepository {
         '&coordinatorName=${Uri.encodeQueryComponent(coordinatorName)}';
     final response = await apiService.get('$_requestsEndpoint?$query');
 print('getRequestsByCoordinator response: $response');
+    return _parseRequests(response);
+  }
+
+  /// GET `{baseUrl}/CoordinatorRequest/GetByMarketingCode` — the requests one
+  /// marketing person has sent to coordinators, newest first. Same
+  /// `{ success, count, requests: [...] }` shape as [getRequestsByCoordinator].
+  Future<List<CoordinatorRequestRecord>> getRequestsByMarketingCode(
+    String marketingCode,
+  ) async {
+    final query = 'marketingCode=${Uri.encodeQueryComponent(marketingCode)}';
+    final response =
+        await apiService.get('$_requestsByMarketingCodeEndpoint?$query');
+    return _parseRequests(response);
+  }
+
+  List<CoordinatorRequestRecord> _parseRequests(dynamic response) {
     if (response['success'] != true) return [];
 
     final data = response['requests'];
@@ -159,6 +179,7 @@ required String coordinatorId,
       'sales_code': await StorageUtil.getSalesCode(),
       'user_name': await StorageUtil.getUserName(),
       'device_id': await DeviceId.get(),
+      "marketing_code": await StorageUtil.getMarketingCode(),
       'guests': guests
           .map((g) => {
                 'bm_number': g.bmNumber,

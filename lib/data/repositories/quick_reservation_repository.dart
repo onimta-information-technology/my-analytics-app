@@ -501,6 +501,8 @@ class QuickReservationRepository {
       'pickup_date': pickupIso(m),
       'pickup_time': m['pickupTime'],
       'hire_type': m['hireType'],
+      'gate': m['gate'] ?? '',
+      'flight_no': m['flightNo'] ?? '',
       'pickup_location': m['pickupLocation'],
       'pickup_place_id': m['pickupPlaceId'],
       'drop_location': m['dropLocation'],

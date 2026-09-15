@@ -364,6 +364,28 @@ class _GroupReservationsBallysScreenState
               ),
             ],
             const SizedBox(height: 8),
+            // Who saved the group, on its own line above when they did.
+            if (r.userName.isNotEmpty) ...[
+              Row(
+                children: [
+                  Icon(Icons.account_circle_outlined,
+                      size: 14, color: Colors.grey.shade600),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      'Requested by: ${r.userName}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: fontSettings.fontSize,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+            ],
             Row(
               children: [
                 Icon(Icons.schedule, size: 14, color: Colors.grey.shade600),
@@ -373,27 +395,10 @@ class _GroupReservationsBallysScreenState
                       ? '—'
                       : _dateFormat.format(r.createdDate!),
                   style: TextStyle(
-                    fontSize: fontSettings.fontSize - 5,
+                    fontSize: fontSettings.fontSize,
                     color: Colors.grey.shade600,
                   ),
                 ),
-                if (r.userName.isNotEmpty) ...[
-                  const Spacer(),
-                  Icon(Icons.account_circle_outlined,
-                      size: 14, color: Colors.grey.shade600),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      r.userName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: fontSettings.fontSize - 5,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ),
-                ],
               ],
             ),
             // When it last moved — only once somebody has actioned it.
@@ -407,7 +412,7 @@ class _GroupReservationsBallysScreenState
                   Text(
                     '$status: ${_dateFormat.format(r.modifiedDate!)}',
                     style: TextStyle(
-                      fontSize: fontSettings.fontSize - 5,
+                      fontSize: fontSettings.fontSize,
                       color: _statusColor(status),
                     ),
                   ),

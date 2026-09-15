@@ -57,6 +57,14 @@ const List<String> kCarTypes = [
 const List<String> kHireTypes = [
   'Airport Pickup',
   'Airport Drop',
+  'Other',
+];
+
+// Airport gate route — asked only for Airport Pickup / Airport Drop hires.
+const List<String> kGateRoutes = [
+  'Normal Route',
+  'Silk Route',
+  'Gold Route',
 ];
 
 // Digit count allowed in the contact number, excluding the country code.
@@ -325,6 +333,11 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     TextEditingController(text: '1'),
   ];
   String? _t_hireType;
+  // Gate route and flight number apply only to airport hires.
+  String? _t_gate;
+  final _t_flightNoCtrl = TextEditingController();
+  bool get _t_isAirportHire =>
+      _t_hireType == 'Airport Pickup' || _t_hireType == 'Airport Drop';
   String _t_pickupPlaceId = '';
   String _t_dropPlaceId = '';
   String _t_airportPickup = 'No';
@@ -479,6 +492,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       _t_dropLocationCtrl,
       _t_noOfVehicles,
       _t_contactNumber,
+      _t_flightNoCtrl,
     ]) {
       c.dispose();
     }
@@ -1129,6 +1143,8 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       'pickupDate': _t_pickupDateCtrl.text,
       'pickupTime': _t_pickupTimeCtrl.text,
       'hireType': _t_hireType ?? '',
+      'gate': _t_isAirportHire ? (_t_gate ?? '') : '',
+      'flightNo': _t_isAirportHire ? _t_flightNoCtrl.text.trim() : '',
       'pickupLocation': _t_pickupLocationCtrl.text,
       'dropLocation': _t_dropLocationCtrl.text,
       'vehicleDetails': List.generate(_t_carTypes.length, (i) {
@@ -1166,6 +1182,8 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     }
     _t_passengerCtrls = [TextEditingController(text: '1')];
     _t_hireType = null;
+    _t_gate = null;
+    _t_flightNoCtrl.clear();
     _t_pickupPlaceId = '';
     _t_dropPlaceId = '';
     _t_airportPickup = 'No';
@@ -2246,8 +2264,14 @@ Remarks              : ${m['remarks']}''';
         ..writeln('$carTypeLabel: ${vehicles[i]['carType']}')
         ..writeln('$passengersLabel: ${vehicles[i]['noOfPassengers']}');
     }
+    buf.writeln('Hire Type          : ${m['hireType']}');
+    if ((m['gate'] as String? ?? '').isNotEmpty) {
+      buf.writeln('Gate               : ${m['gate']}');
+    }
+    if ((m['flightNo'] as String? ?? '').isNotEmpty) {
+      buf.writeln('Flight Number      : ${m['flightNo']}');
+    }
     buf
-      ..writeln('Hire Type          : ${m['hireType']}')
       ..writeln('Pickup Location    : ${m['pickupLocation']}')
       ..writeln('Drop Location      : ${m['dropLocation']}')
       ..writeln('No of Vehicles     : ${vehicles.length}')
@@ -6482,6 +6506,48 @@ class _TransportForm extends StatelessWidget {
             },
           ),
           const SizedBox(height: 12),
+
+          // ── Gate + flight number, airport hires only ─────────────────────────
+          if (state._t_isAirportHire) ...[
+            DropdownButtonFormField<String>(
+              value: state._t_gate,
+              style: kInputTextStyle,
+              isExpanded: true,
+              decoration: _fieldDeco(
+                'Gate *',
+                icon: Icons.meeting_room_outlined,
+                accent: accent,
+              ),
+              items: kGateRoutes
+                  .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                  .toList(),
+              onChanged: (v) => state.setState(() => state._t_gate = v),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Gate is required';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: state._t_flightNoCtrl,
+              style: kInputTextStyle,
+              textCapitalization: TextCapitalization.characters,
+              decoration: _fieldDeco(
+                'Flight Number *',
+                icon: Icons.flight_rounded,
+                accent: accent,
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Flight Number is required';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
 
           // ── Pickup / drop locations (Google Places) ──────────────────────────
           _LabeledCard(

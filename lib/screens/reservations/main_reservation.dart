@@ -269,7 +269,7 @@ class _ReservationMainScreenState extends ConsumerState<ReservationMainScreen>
                               return;
                             }
                             context.go(
-                              '/reservationMain/group-reservation-ballys',
+                              '/reservationMain/group-reservations-ballys',
                             );
                           },
                           child: Card(

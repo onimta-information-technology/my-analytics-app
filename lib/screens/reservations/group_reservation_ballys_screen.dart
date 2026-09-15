@@ -353,6 +353,15 @@ class _GroupReservationBallysScreenState
             }
           },
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Saved group reservations',
+            icon: const Icon(Icons.history),
+            onPressed: () => context.push(
+              '/reservationMain/group-reservations-ballys',
+            ),
+          ),
+        ],
       ),
       body: SafeArea(
         child: Stack(

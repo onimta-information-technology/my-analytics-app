@@ -1418,7 +1418,7 @@ class _PassportFilesSectionState extends State<_PassportFilesSection> {
     showDialog(
       context: context,
       barrierColor: Colors.black87,
-      builder: (_) => _PassportImageDialog(url: url, fileName: fileName),
+      builder: (_) => PassportImageDialog(url: url, fileName: fileName),
     );
   }
 
@@ -1561,17 +1561,21 @@ class _PassportFilesSectionState extends State<_PassportFilesSection> {
 /// The phone stays locked to portrait, so a landscape scan is turned inside the
 /// viewer instead: it opens already rotated a quarter turn, and the rotate
 /// button turns it further.
-class _PassportImageDialog extends StatefulWidget {
-  const _PassportImageDialog({required this.url, required this.fileName});
+class PassportImageDialog extends StatefulWidget {
+  const PassportImageDialog({
+    super.key,
+    required this.url,
+    required this.fileName,
+  });
 
   final String url;
   final String fileName;
 
   @override
-  State<_PassportImageDialog> createState() => _PassportImageDialogState();
+  State<PassportImageDialog> createState() => PassportImageDialogState();
 }
 
-class _PassportImageDialogState extends State<_PassportImageDialog> {
+class PassportImageDialogState extends State<PassportImageDialog> {
   final TransformationController _transformation = TransformationController();
   int _quarterTurns = 0;
 

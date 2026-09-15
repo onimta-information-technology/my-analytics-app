@@ -287,6 +287,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
   final _t_dropLocationCtrl = TextEditingController();
   final _t_noOfVehicles = TextEditingController(text: '1');
   final _t_contactNumber = TextEditingController();
+  final _t_specialComment = TextEditingController();
 
   Country _t_country = _defaultCountry();
 
@@ -423,6 +424,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       _t_dropLocationCtrl,
       _t_noOfVehicles,
       _t_contactNumber,
+      _t_specialComment,
     ]) {
       c.dispose();
     }
@@ -1022,6 +1024,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
           : '+${_t_country.phoneCode}${_t_contactNumber.text.trim()}',
       'silkRoute': _t_silkRoute,
       'airportPickup': _t_airportPickup,
+      'specialComment': _t_specialComment.text.trim(),
       'passportFiles': _t_passportFiles.map((f) => f.fileName).join(', '),
       'passportFileObjects': List<PassportFile>.from(_t_passportFiles),
       // typed fields used when building the API body
@@ -1051,6 +1054,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     _t_dropLocationCtrl.clear();
     _t_noOfVehicles.text = '1';
     _t_contactNumber.clear();
+    _t_specialComment.clear();
     _t_country = _defaultCountry();
     _t_pickupDate = null;
     _t_pickupTime = null;
@@ -1705,6 +1709,10 @@ Remarks              : ${m['remarks']}''';
       ..writeln('Contact Number     : ${m['contactNumber']}')
       ..writeln('Slik Route         : ${m['silkRoute'] ?? 'No'}')
       ..write('Airport Pickup     : ${m['airportPickup'] ?? 'No'}');
+    final comment = m['specialComment'] as String? ?? '';
+    if (comment.isNotEmpty) {
+      buf.write('\nSpecial Comment    : $comment');
+    }
     final passports = m['passportFiles'] as String? ?? '';
     if (passports.isNotEmpty) {
       buf.write('\nPassport Files     : $passports');
@@ -2061,6 +2069,7 @@ final phoneNumber = await StorageUtil.getMobileNumber();
       'contact_number': m['contactNumber'],
       'silk_route': (m['silkRoute'] as String?) == 'Yes' ? 1 : 0,
       'airport_pickup': (m['airportPickup'] as String?) == 'Yes' ? 1 : 0,
+      'special_comment': m['specialComment'] ?? '',
     };
   }
 
@@ -4749,6 +4758,19 @@ class _TransportForm extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: state._t_specialComment,
+            style: kInputTextStyle,
+            decoration: _fieldDeco(
+              'Special Comment',
+              icon: Icons.notes_rounded,
+              accent: accent,
+            ),
+            maxLines: 3,
+            keyboardType: TextInputType.multiline,
+            textCapitalization: TextCapitalization.sentences,
           ),
 
           const SizedBox(height: 16),

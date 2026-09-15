@@ -95,6 +95,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
   final _dropLocationCtrl = TextEditingController();
   final _noOfVehiclesCtrl = TextEditingController(text: '1');
   final _contactNumberCtrl = TextEditingController();
+  final _specialCommentCtrl = TextEditingController();
 
   Country _country = _defaultCountry();
   DateTime? _pickupDate;
@@ -188,6 +189,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
       _dropLocationCtrl,
       _noOfVehiclesCtrl,
       _contactNumberCtrl,
+      _specialCommentCtrl,
     ]) {
       c.dispose();
     }
@@ -606,6 +608,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
           : '+${_country.phoneCode}${_contactNumberCtrl.text.trim()}',
       'silkRoute': _silkRoute,
       'airportPickup': _airportPickup,
+      'specialComment': _specialCommentCtrl.text.trim(),
       'passportFiles': _passportFiles.map((f) => f.fileName).join(', '),
       'passportFileObjects': List<PassportFile>.from(_passportFiles),
       'pickupDateObj': _pickupDate,
@@ -622,6 +625,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
     _dropLocationCtrl.clear();
     _noOfVehiclesCtrl.text = '1';
     _contactNumberCtrl.clear();
+    _specialCommentCtrl.clear();
     _country = _defaultCountry();
     _pickupDate = null;
     _pickupTime = null;
@@ -786,6 +790,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
       'contact_number': m['contactNumber'],
       'silk_route': (m['silkRoute'] as String?) == 'Yes' ? 1 : 0,
       'airport_pickup': (m['airportPickup'] as String?) == 'Yes' ? 1 : 0,
+      'special_comment': m['specialComment'] ?? '',
     };
   }
 
@@ -981,6 +986,10 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
       ..writeln('Contact Number     : ${v('contactNumber')}')
       ..writeln('Slik Route         : ${v('silkRoute')}')
       ..write('Airport Pickup     : ${v('airportPickup')}');
+    final comment = m['specialComment'] as String? ?? '';
+    if (comment.isNotEmpty) {
+      buf.write('\nSpecial Comment    : $comment');
+    }
     final passports = m['passportFiles'] as String? ?? '';
     if (passports.isNotEmpty) {
       buf.write('\nPassport Files     : $passports');
@@ -1345,6 +1354,18 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _specialCommentCtrl,
+                  style: _kInputTextStyle,
+                  decoration: _fieldDeco(
+                    'Special Comment',
+                    icon: Icons.notes_rounded,
+                  ),
+                  maxLines: 3,
+                  keyboardType: TextInputType.multiline,
+                  textCapitalization: TextCapitalization.sentences,
                 ),
                 const SizedBox(height: 16),
 

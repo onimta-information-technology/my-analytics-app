@@ -149,6 +149,14 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
   AuthorizationLevel? _selectedAuthorization;
   bool _isLoadingAuthorizationLevels = false;
 
+  /// Approver id of a reservation loaded for update, held until the approver
+  /// list lands so it can be matched to a row in the dropdown.
+  int? _pendingAuthorizationId;
+
+  /// Bumped when a reservation is loaded for update: DropdownButtonFormField
+  /// only reads `value` when created, so Payment By is rebuilt to show it.
+  int _editSeed = 0;
+
   // Extra members travelling on the SAME package as the member currently in the
   // form: they share its hotels, air tickets and dates, so they never add rooms
   // or tickets of their own — only who they are and their family members.
@@ -312,6 +320,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
       if (!mounted) return;
       setState(() {
         _authorizationLevels = levels;
+        _applyPendingAuthorization();
         // A reservation loaded for editing may already name an approver that
         // is no longer in the list; drop the selection rather than letting the
         // dropdown assert on a value it cannot show.
@@ -328,6 +337,20 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
         setState(() => _isLoadingAuthorizationLevels = false);
       }
     }
+  }
+
+  /// Selects the approver a reservation loaded for update was sent to, once the
+  /// approver list is available. Call inside setState.
+  void _applyPendingAuthorization() {
+    final id = _pendingAuthorizationId;
+    if (id == null || _authorizationLevels.isEmpty) return;
+    for (final level in _authorizationLevels) {
+      if (level.idNo == id) {
+        _selectedAuthorization = level;
+        break;
+      }
+    }
+    _pendingAuthorizationId = null;
   }
 
   /// The "Request Approval From" dropdown. Each menu row shows the approver and
@@ -741,20 +764,46 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
       // payment value the current brand's dropdown does not offer is ignored —
       // feeding it to the dropdown would trip its own assertion.
       final offered = _paymentByItems().map((i) => i.value).toSet();
-      for (final hotel in entries.expand((e) => e.hotels)) {
-        final banked = hotel.paymentBy?.trim() ?? '';
-        if (banked.isNotEmpty && offered.contains(banked)) {
-          _paymentBy = banked;
-          break;
+      // Stored values can lose the trailing space some options carry, so match
+      // trimmed and keep the spelling the dropdown offers.
+      String? offeredPayment(String? raw) {
+        final wanted = raw?.trim() ?? '';
+        if (wanted.isEmpty) return null;
+        for (final value in offered) {
+          if (value?.trim() == wanted) return value;
+        }
+        return null;
+      }
+
+      // Reservation-level values first — that is where the save puts them now.
+      _paymentBy = offeredPayment(reservation.paymentBy);
+      if (_paymentBy == null) {
+        for (final hotel in entries.expand((e) => e.hotels)) {
+          final banked = offeredPayment(hotel.paymentBy);
+          if (banked != null) {
+            _paymentBy = banked;
+            break;
+          }
         }
       }
-      for (final flight in entries.expand((e) => e.flights)) {
-        final banked = flight.contactPerson?.trim() ?? '';
-        if (banked.isNotEmpty) {
-          _selectedContactPerson = banked;
-          break;
+
+      final contact = reservation.contactPerson?.trim() ?? '';
+      if (contact.isNotEmpty) {
+        _selectedContactPerson = contact;
+      } else {
+        for (final flight in entries.expand((e) => e.flights)) {
+          final banked = flight.contactPerson?.trim() ?? '';
+          if (banked.isNotEmpty) {
+            _selectedContactPerson = banked;
+            break;
+          }
         }
       }
+
+      _pendingAuthorizationId = reservation.approvePersonId;
+      _applyPendingAuthorization();
+
+      _editSeed++;
       _isLoading = false;
     });
 
@@ -765,6 +814,12 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
     ref.read(selectedFlightBallysProvider.notifier).setFlights([]);
     ref.read(selectedPassportBallysProvider.notifier).setFiles([]);
     ref.read(selectedGuestProvider.notifier).clearGuest();
+
+    // Pull the first guest into the form so the update opens with what was
+    // booked — member, dates, remarks, package, hotels, air tickets and
+    // passports — rather than a blank form under the guest cards. Saving
+    // replaces that card in place.
+    if (_guestEntries.isNotEmpty) _editGuestEntry(0);
   }
 
   /// Writes API passport images (base64) to disk so they behave like freshly
@@ -3492,7 +3547,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
                         // Reservation-level: one answer covers every room and
                         // ticket on this reservation.
                         DropdownButtonFormField<String>(
-                          key: ValueKey('payment_by_$_isBellagio'),
+                          key: ValueKey('payment_by_${_isBellagio}_$_editSeed'),
                           value: _paymentBy,
                           isExpanded: true,
                           style: TextStyle(

@@ -50,6 +50,15 @@ class ReservationBallys {
   /// [reqBy] by `Reservation_GetAllReservations`.
   String? salesCode;
 
+  /// Reservation-level "Payment By" and Hamoos contact person, as sent on
+  /// save as `payment_by` / `contact_person`.
+  String? paymentBy;
+  String? contactPerson;
+
+  /// `authorization_id` of the approver the reservation was sent to, from the
+  /// `approve_person` block. Null when none was picked.
+  int? approvePersonId;
+
   /// Per-stage audit trail returned by `Reservation_GetAllReservations`.
   /// Each workflow stage (Pending → Checked → Approved/Rejected) records who
   /// actioned it, when, and their remark. Fields are null when that stage has
@@ -110,6 +119,9 @@ class ReservationBallys {
     this.currencyType,
     this.selectedMarketingPerson,
     this.salesCode,
+    this.paymentBy,
+    this.contactPerson,
+    this.approvePersonId,
     this.pendingBy,
     this.pendingTime,
     this.checkedStatus,
@@ -389,6 +401,24 @@ class ReservationBallys {
 
     final hasAir = json['has_air_ticket_reservation'] == true;
 
+    // The approver goes out as an `approve_person` object (empty when none was
+    // picked); accept it back as an object, a JSON string, or flat keys.
+    dynamic approvePerson = json['approve_person'];
+    if (approvePerson is String && approvePerson.trim().isNotEmpty) {
+      try {
+        approvePerson = jsonDecode(approvePerson);
+      } catch (_) {
+        approvePerson = null;
+      }
+    }
+    final approvePersonId = int.tryParse(
+      (approvePerson is Map
+                  ? approvePerson['authorization_id']
+                  : json['authorization_id'])
+              ?.toString() ??
+          '',
+    );
+
     // Approval state as stored by the insert endpoint: "Pending" / "Checked" /
     // "Approved" / "Rejected". Blank rows fall back to Pending.
     final rawStatus = (json['reservation_status'] ??
@@ -432,6 +462,9 @@ class ReservationBallys {
       selectedMarketingPerson:
           json['selected_marketing_person']?.toString(),
       salesCode: json['sales_code']?.toString(),
+      paymentBy: json['payment_by']?.toString(),
+      contactPerson: json['contact_person']?.toString(),
+      approvePersonId: approvePersonId,
       pendingBy: json['pending_by'] as String?,
       pendingTime: parseDate(json['pending_time']),
       checkedStatus: json['checked_status'] as String?,

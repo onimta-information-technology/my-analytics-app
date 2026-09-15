@@ -1434,6 +1434,45 @@ class _ReservationViewScreenBallysState
     ref.read(selectedFlightBallysProvider.notifier).setFlights([]);
   }
 
+  // ── Update (Pending only) ──────────────────────────────────────────────
+  //
+  // Opens `NewReservationBallysScreen` on the selected reservation, which puts
+  // it in Update mode: the form is filled from this reservation and the save
+  // re-posts to `Reservation_InsertReservation` with the existing reservation
+  // no as `master_id`, so the backend overwrites the record.
+  Future<void> _openUpdateReservation() async {
+    final reservationBeforeEdit = ref.read(selectedReservationBallysProvider);
+    if (reservationBeforeEdit == null) return;
+
+    if (!_guestDataLoaded) await _loadGuestDataForView();
+    if (!mounted) return;
+
+    final result = await context.push(
+      '/reservationMain/reservations/new-reservation-ballys',
+    );
+    if (!mounted) return;
+
+    // Saved: hand `true` back so the list reloads from the API.
+    if (result == true) {
+      Navigator.of(context).pop(true);
+      return;
+    }
+
+    // Cancelled: the new-reservation screen clears the shared selection
+    // providers on pop, so put them back or this screen renders empty.
+    ref
+        .read(selectedReservationBallysProvider.notifier)
+        .setSelectedBallysReservation(reservationBeforeEdit);
+    ref
+        .read(selectedHotelBallysProvider.notifier)
+        .setHotels(reservationBeforeEdit.hotelDescip);
+    ref
+        .read(selectedFlightBallysProvider.notifier)
+        .setFlights(reservationBeforeEdit.airticketDescrip);
+    _guestDataLoaded = false;
+    await _loadGuestDataForView();
+  }
+
   // ── Amendment ──────────────────────────────────────────────────────────
   //
   // A reservation carries two amendable parts, and each has its own screen, so
@@ -2384,6 +2423,36 @@ class _ReservationViewScreenBallysState
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // ── Pending: Update ──────────────────────────────────
+                  if (selectedReservation?.requestStatus == 'Pending') ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _openUpdateReservation,
+                        icon: const Icon(Icons.mode_edit_outline, size: 20),
+                        label: const Text(
+                          "UPDATE",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 16,
+                            horizontal: 20,
                           ),
                         ),
                       ),

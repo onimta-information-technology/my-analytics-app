@@ -1751,68 +1751,18 @@ class _ReservationViewScreenBallysState
             ),
           ],
         ),
-        // actions: [
-        //   PopScope(
-        //     onPopInvokedWithResult: (bool didPop, dynamic result) {
-        //       _clearSelection();
-        //     },
-        //     child: Padding(
-        //       padding: const EdgeInsets.only(right: 8.0),
-        //       child: (selectedReservation?.requestStatus == 'Pending' &&
-        //               _isRequester(selectedReservation?.reqBy))
-        //           ? IconButton(
-        //               onPressed: () async {
-        //                 Future<void> navigateToEdit() async {
-        //                   final reservationBeforeEdit = ref.read(
-        //                     selectedReservationBallysProvider,
-        //                   );
-        //                   final result = await context.push(
-        //                     "/reservationMain/reservations/new-reservation-ballys",
-        //                   );
-        //                   if (!mounted) return;
-        //                   if (result == true) {
-        //                     Navigator.of(context).pop(true);
-        //                     return;
-        //                   }
-        //                   // Cancelled: NewReservationBallysScreen clears the
-        //                   // shared selection providers on pop, so put them back
-        //                   // or this screen renders with no reservation and no
-        //                   // guest.
-        //                   if (reservationBeforeEdit != null) {
-        //                     ref
-        //                         .read(
-        //                           selectedReservationBallysProvider.notifier,
-        //                         )
-        //                         .setSelectedBallysReservation(
-        //                           reservationBeforeEdit,
-        //                         );
-        //                     ref
-        //                         .read(selectedHotelBallysProvider.notifier)
-        //                         .setHotels(reservationBeforeEdit.hotelDescip);
-        //                     ref
-        //                         .read(selectedFlightBallysProvider.notifier)
-        //                         .setFlights(
-        //                           reservationBeforeEdit.airticketDescrip,
-        //                         );
-        //                     _guestDataLoaded = false;
-        //                     await _loadGuestDataForView();
-        //                   }
-        //                 }
-
-        //                 if (_memberIdController.text.isNotEmpty &&
-        //                     !_guestDataLoaded) {
-        //                   await _loadGuestDataForView();
-        //                   await navigateToEdit();
-        //                 } else {
-        //                   await navigateToEdit();
-        //                 }
-        //               },
-        //               icon: const Icon(Icons.mode_edit_outline_sharp),
-        //             )
-        //           : const SizedBox.shrink(),
-        //     ),
-        //   ),
-        // ],
+        // ── Update (Pending only) ─────────────────────────────────────
+        //
+        // Reopens the reservation in `NewReservationBallysScreen` in Update
+        // mode; only a pending reservation is still editable.
+        actions: [
+          if (selectedReservation?.requestStatus == 'Pending')
+            IconButton(
+              tooltip: 'Update',
+              onPressed: _openUpdateReservation,
+              icon: const Icon(Icons.mode_edit_outline),
+            ),
+        ],
       ),
       body: Stack(
         children: [
@@ -2481,36 +2431,6 @@ class _ReservationViewScreenBallysState
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-
-                  // ── Pending: Update ──────────────────────────────────
-                  if (selectedReservation?.requestStatus == 'Pending') ...[
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: _openUpdateReservation,
-                        icon: const Icon(Icons.mode_edit_outline, size: 20),
-                        label: const Text(
-                          "UPDATE",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 16,
-                            horizontal: 20,
                           ),
                         ),
                       ),

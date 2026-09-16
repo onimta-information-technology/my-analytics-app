@@ -49,6 +49,15 @@ class GroupReservationRecord {
     this.guestSheetPath = '',
     this.createdDate,
     this.modifiedDate,
+    this.checkedBy = '',
+    this.checkedRemark = '',
+    this.checkedDate,
+    this.approvedBy = '',
+    this.approvedRemark = '',
+    this.approvedDate,
+    this.rejectedBy = '',
+    this.rejectedRemark = '',
+    this.rejectedDate,
     this.passportImages = const [],
   });
 
@@ -77,7 +86,42 @@ class GroupReservationRecord {
 
   final DateTime? createdDate;
   final DateTime? modifiedDate;
+
+  /// Who actioned the group, what they typed in the remark box, and when —
+  /// one trio per status, all empty/null until that action happens.
+  final String checkedBy;
+  final String checkedRemark;
+  final DateTime? checkedDate;
+  final String approvedBy;
+  final String approvedRemark;
+  final DateTime? approvedDate;
+  final String rejectedBy;
+  final String rejectedRemark;
+  final DateTime? rejectedDate;
+
   final List<GroupReservationPassportImage> passportImages;
+
+  /// The trio that matches the current [status] — what the card shows.
+  String? get actionBy => switch (status) {
+        'Checked' => checkedBy.isEmpty ? null : checkedBy,
+        'Approved' => approvedBy.isEmpty ? null : approvedBy,
+        'Rejected' => rejectedBy.isEmpty ? null : rejectedBy,
+        _ => null,
+      };
+
+  String? get actionRemark => switch (status) {
+        'Checked' => checkedRemark.isEmpty ? null : checkedRemark,
+        'Approved' => approvedRemark.isEmpty ? null : approvedRemark,
+        'Rejected' => rejectedRemark.isEmpty ? null : rejectedRemark,
+        _ => null,
+      };
+
+  DateTime? get actionDate => switch (status) {
+        'Checked' => checkedDate,
+        'Approved' => approvedDate,
+        'Rejected' => rejectedDate,
+        _ => null,
+      };
 
   factory GroupReservationRecord.fromJson(Map<String, dynamic> json) {
     final passports = json['passport_images'];
@@ -95,6 +139,15 @@ class GroupReservationRecord {
       guestSheetPath: json['guest_sheet_path']?.toString() ?? '',
       createdDate: DateTime.tryParse(json['created_date']?.toString() ?? ''),
       modifiedDate: DateTime.tryParse(json['modified_date']?.toString() ?? ''),
+      checkedBy: json['checked_by']?.toString() ?? '',
+      checkedRemark: json['checked_remark']?.toString() ?? '',
+      checkedDate: DateTime.tryParse(json['checked_date']?.toString() ?? ''),
+      approvedBy: json['approved_by']?.toString() ?? '',
+      approvedRemark: json['approved_remark']?.toString() ?? '',
+      approvedDate: DateTime.tryParse(json['approved_date']?.toString() ?? ''),
+      rejectedBy: json['rejected_by']?.toString() ?? '',
+      rejectedRemark: json['rejected_remark']?.toString() ?? '',
+      rejectedDate: DateTime.tryParse(json['rejected_date']?.toString() ?? ''),
       passportImages: passports is List
           ? passports
               .whereType<Map>()

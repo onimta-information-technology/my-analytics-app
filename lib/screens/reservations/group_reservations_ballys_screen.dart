@@ -401,22 +401,50 @@ class _GroupReservationsBallysScreenState
                 ),
               ],
             ),
-            // When it last moved — only once somebody has actioned it.
-            if (status != 'Pending' && r.modifiedDate != null) ...[
+            // When it last moved, and who moved it — only once somebody has
+            // actioned it. The feed's own action date is the truth; fall back
+            // to modified_date on the older rows that have no action trio.
+            if (status != 'Pending' &&
+                (r.actionDate ?? r.modifiedDate) != null) ...[
               const SizedBox(height: 4),
               Row(
                 children: [
                   Icon(_statusIcon(status),
                       size: 14, color: _statusColor(status)),
                   const SizedBox(width: 4),
-                  Text(
-                    '$status: ${_dateFormat.format(r.modifiedDate!)}',
-                    style: TextStyle(
-                      fontSize: fontSettings.fontSize,
-                      color: _statusColor(status),
+                  Expanded(
+                    child: Text(
+                      '$status: '
+                      '${_dateFormat.format(r.actionDate ?? r.modifiedDate!)}'
+                      '${r.actionBy == null ? '' : ' by ${r.actionBy}'}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: fontSettings.fontSize,
+                        color: _statusColor(status),
+                      ),
                     ),
                   ),
                 ],
+              ),
+            ],
+            // The note the actioner typed when they checked/approved/rejected.
+            if (r.actionRemark != null) ...[
+              const SizedBox(height: 6),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: _statusColor(status).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '$status remark: ${r.actionRemark}',
+                  style: TextStyle(
+                    fontSize: fontSettings.fontSize - 1,
+                    color: _statusColor(status),
+                  ),
+                ),
               ),
             ],
             _actionButtons(fontSettings, r),
@@ -517,8 +545,8 @@ class _GroupReservationsBallysScreenState
   }
 
   Future<void> _submit(GroupReservationRecord r, String status) async {
-    final confirmed = await _confirmStatusChange(r, status);
-    if (confirmed != true || !mounted) return;
+    final remark = await _confirmStatusChange(r, status);
+    if (remark == null || !mounted) return;
 
     setState(() => _isSubmitting = true);
     GroupReservationResult result;
@@ -526,6 +554,7 @@ class _GroupReservationsBallysScreenState
       result = await ref.read(groupReservationRepositoryProvider).updateStatus(
             masterId: r.masterId,
             status: status,
+            actionRemark: remark,
             log: (label, payload) => debugPrint('$label: $payload'),
           );
     } catch (e) {
@@ -551,8 +580,18 @@ class _GroupReservationsBallysScreenState
     if (result.success) ref.invalidate(groupReservationsProvider);
   }
 
-  Future<bool?> _confirmStatusChange(GroupReservationRecord r, String status) {
+  /// Confirms the action and collects the remark that rides along with it.
+  ///
+  /// Returns the remark on confirm (empty string when none was typed) and
+  /// null when the actioner backed out. Remarks are mandatory on a reject —
+  /// the same rule the amendment view follows.
+  Future<String?> _confirmStatusChange(GroupReservationRecord r, String status) {
     final fontSettings = ref.read(fontSettingsProvider);
+    final controller = TextEditingController();
+    final isReject = status == 'Rejected';
+    // Held outside the builder so it survives the dialog's own rebuilds.
+    String? error;
+
     final (actionLabel, color) = switch (status) {
       'Checked' => ('Check', Colors.blue),
       'Approved' => ('Approve', Colors.green),
@@ -563,37 +602,64 @@ class _GroupReservationsBallysScreenState
       if (r.bmNumber.isNotEmpty) '(${r.bmNumber})',
     ].join(' ');
 
-    return showDialog<bool>(
+    return showDialog<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          '$actionLabel Group Reservation',
-          style: TextStyle(
-            fontSize: fontSettings.fontSize - 1,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Text(
-          guest.isEmpty
-              ? 'Mark this group reservation as $status?'
-              : 'Mark the group reservation for $guest as $status?',
-          style: TextStyle(fontSize: fontSettings.fontSize - 3),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: color,
-              foregroundColor: Colors.white,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            '$actionLabel Group Reservation',
+            style: TextStyle(
+              fontSize: fontSettings.fontSize - 1,
+              fontWeight: FontWeight.bold,
             ),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(actionLabel),
           ),
-        ],
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                guest.isEmpty
+                    ? 'Mark this group reservation as $status?'
+                    : 'Mark the group reservation for $guest as $status?',
+                style: TextStyle(fontSize: fontSettings.fontSize - 3),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                maxLines: 3,
+                style: TextStyle(fontSize: fontSettings.fontSize - 3),
+                decoration: InputDecoration(
+                  labelText: isReject ? 'Remarks *' : 'Remarks',
+                  hintText: 'Enter your remarks here...',
+                  errorText: error,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: color,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                if (isReject && controller.text.trim().isEmpty) {
+                  setDialogState(
+                    () => error = 'Please provide remarks to continue.',
+                  );
+                  return;
+                }
+                Navigator.of(dialogContext).pop(controller.text.trim());
+              },
+              child: Text(actionLabel),
+            ),
+          ],
+        ),
       ),
     );
   }

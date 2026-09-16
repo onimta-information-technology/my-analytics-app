@@ -82,9 +82,13 @@ class GroupReservationRepository {
   /// POST `{baseUrl}/GroupReservation/UpdateStatus` — moves one group to
   /// [status] ("Checked" / "Approved" / "Rejected"), recorded against the
   /// logged-in user and this device.
+  ///
+  /// [actionRemark] is the note the actioner typed in the confirm dialog —
+  /// mandatory on a reject, optional otherwise, so it can arrive empty.
   Future<GroupReservationResult> updateStatus({
     required String masterId,
     required String status,
+    String actionRemark = '',
     void Function(String label, Object? payload)? log,
   }) async {
     final body = {
@@ -92,6 +96,7 @@ class GroupReservationRepository {
       'status': status,
       'user_name': await StorageUtil.getUserName(),
       'device_id': await DeviceId.get(),
+      'action_remark': actionRemark,
     };
     log?.call('Updating group reservation status', body);
 

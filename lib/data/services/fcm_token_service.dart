@@ -78,9 +78,10 @@ class FcmTokenService {
     }
   }
 
-  /// App-start repair pass: pushes the token up when the backend is holding a
-  /// different one, or when the login-time sync never got through.
-  static Future<void> resyncOnStartup() async {
+  /// Repair pass, run at app start and on every resume: pushes the token up
+  /// when the backend is holding a different one, or when an earlier sync
+  /// never got through. A no-op once the backend has the current token.
+  static Future<void> resync() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       if (!(prefs.getBool('is_logged_in') ?? false)) return;

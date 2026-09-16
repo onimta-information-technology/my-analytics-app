@@ -189,6 +189,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     super.didChangeAppLifecycleState(state);
 
     if (state == AppLifecycleState.resumed) {
+      // A startup sync that failed (no network yet, token not ready) otherwise
+      // stays broken until the app is killed and reopened.
+      unawaited(FcmTokenService.resync());
       _syncBadgeIfLoggedIn();
       _reloadNotificationHistory();
     } else if (state == AppLifecycleState.paused) {
@@ -238,7 +241,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     FcmTokenService.startRefreshListener();
 
     // Repairs a row the backend is holding from an earlier run.
-    unawaited(FcmTokenService.resyncOnStartup());
+    unawaited(FcmTokenService.resync());
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _logPushMessage('foreground', message);

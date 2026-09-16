@@ -12,9 +12,6 @@ import FirebaseMessaging
   ) -> Bool {
     // Configure Firebase
     FirebaseApp.configure()
-    
-    // Set FCM delegate
-    Messaging.messaging().delegate = self
 
     // Set notification delegate
     if #available(iOS 10.0, *) {
@@ -22,6 +19,17 @@ import FirebaseMessaging
     }
 
     GeneratedPluginRegistrant.register(with: self)
+
+    // firebase_messaging raises `onTokenRefresh` in Dart only from its own
+    // MessagingDelegate callback, but it never installs itself as the delegate.
+    // With this class holding the delegate, a token that FCM hands out after
+    // launch — typically when the APNs token lands late on the first run of a
+    // fresh install, after getToken() has already given up — never reached
+    // Dart, so the backend kept the old token and pushes stopped until the app
+    // was killed and reopened. The plugin still calls this class's
+    // messaging(_:didReceiveRegistrationToken:) below after forwarding.
+    Messaging.messaging().delegate =
+      valuePublished(byPlugin: "FLTFirebaseMessagingPlugin") as? MessagingDelegate ?? self
 
     // Request notification permissions
     if #available(iOS 10.0, *) {

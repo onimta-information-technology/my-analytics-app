@@ -327,6 +327,8 @@ if (message.data['msg_type'] == '35') {
         _hasProcessedNotification = true;
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _popToChatList();
           _openSpecificChat(
             chatId,
             senderName,
@@ -336,6 +338,19 @@ if (message.data['msg_type'] == '35') {
         });
       }
     }
+  }
+
+  /// Closes whatever this screen has pushed (an open chat, settings, …) so a
+  /// chat opened from a notification sits straight on the list and back
+  /// returns to it. This screen lives in the shell navigator, which
+  /// NotificationService.popPagelessRoutes does not reach — without this a
+  /// tap while a chat is open stacks the new chat on the old one.
+  void _popToChatList() {
+    final chatListRoute = ModalRoute.of(context);
+    if (chatListRoute == null || chatListRoute.isCurrent) return;
+    Navigator.of(context).popUntil(
+      (route) => route == chatListRoute || route.isFirst,
+    );
   }
 
   ChatGroup? _groupForId(String chatId) => _groups.cast<ChatGroup?>().firstWhere(

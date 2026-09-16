@@ -392,7 +392,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    CurrentChatState().setCurrentChat(widget.contact.chatUuid);
+    CurrentChatState().setCurrentChat(widget.contact.chatUuid, owner: this);
     _avatarUrl = widget.contact.avatarUrl;
     if (widget.isGroup) _loadGroupInfo();
     _getCurrentUserName();
@@ -414,7 +414,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     // Closing the screen mid-word still has to clear the other side.
     _typingSignal?.dispose();
     WidgetsBinding.instance.removeObserver(this);
-    CurrentChatState().clearCurrentChat();
+    CurrentChatState().clearCurrentChat(owner: this);
     _messageController.dispose();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();

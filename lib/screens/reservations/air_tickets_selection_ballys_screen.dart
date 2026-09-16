@@ -826,6 +826,19 @@ class _AirTicketsSelectionBallysScreenState
     sMealPlanName = roomtype?['MealPlan'] ?? '';
     selectedRoomTypeName = '$sRoomTypeName - $sMealPlanName';  }
 
+  /// Scrolls up to the form and fills it with an added ticket's details, so
+  /// the "Add Air Ticket" button turns into an update of that ticket.
+  void _startEditingFlight(FlightBookingBallys flight, int index) {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+    __editFlightDetails(flight, index);
+  }
+
   void __editFlightDetails(FlightBookingBallys flight, int index) {
     setState(() {
       editMode = true;
@@ -2375,17 +2388,10 @@ class _AirTicketsSelectionBallysScreenState
                                       flight: flight,
                                       index: index,
                                       showDelete: true,
-                                      onDoubleTap: () {
-                                        if (_scrollController.hasClients) {
-                                          _scrollController.animateTo(
-                                            0,
-                                            duration: const Duration(
-                                                milliseconds: 300),
-                                            curve: Curves.easeInOut,
-                                          );
-                                        }
-                                        __editFlightDetails(flight, index);
-                                      },
+                                      onDoubleTap: () =>
+                                          _startEditingFlight(flight, index),
+                                      onEdit: () =>
+                                          _startEditingFlight(flight, index),
                                       onDelete: () {
                                         _removeFlight(index);
                                       },

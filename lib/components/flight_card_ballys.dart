@@ -8,6 +8,10 @@ class FlightCardBallys extends StatelessWidget {
   final VoidCallback? onDoubleTap;
   final VoidCallback? onDelete;
 
+  /// Pulls the ticket back into the form. Shown beside the delete icon, so
+  /// editing does not rely on discovering the double-tap.
+  final VoidCallback? onEdit;
+
   /// Off where the contact person is shown once for the whole reservation
   /// rather than on every ticket.
   final bool showContactPerson;
@@ -19,6 +23,7 @@ class FlightCardBallys extends StatelessWidget {
     required this.showDelete,
     this.onDoubleTap,
     this.onDelete,
+    this.onEdit,
     this.showContactPerson = true,
   });
 
@@ -59,7 +64,11 @@ class FlightCardBallys extends StatelessWidget {
           child: Stack(
             children: [
               Padding(
-                padding: const EdgeInsets.all(12.0),
+                // Room at the bottom for the edit / delete icons so they never
+                // sit on top of the last detail line.
+                padding: showDelete
+                    ? const EdgeInsets.fromLTRB(12, 12, 12, 44)
+                    : const EdgeInsets.all(12.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -320,9 +329,21 @@ class FlightCardBallys extends StatelessWidget {
                 Positioned(
                   bottom: 0,
                   right: 0,
-                  child: IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: onDelete,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (onEdit != null)
+                        IconButton(
+                          tooltip: "Edit",
+                          icon: const Icon(Icons.edit, color: Colors.blue),
+                          onPressed: onEdit,
+                        ),
+                      IconButton(
+                        tooltip: "Delete",
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: onDelete,
+                      ),
+                    ],
                   ),
                 ),
             ],

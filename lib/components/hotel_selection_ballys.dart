@@ -564,18 +564,28 @@ String selectedEcLcoFacility = 'NA';
     setState(() {
       editMode = true;
       editIndex = index;
-      numberOfAdults = hotel.guestCount!;
-      numberOfChildren = hotel.childrenCount!;
-      numberOfRooms = hotel.roomCount!;
+      // Rows read back off a saved reservation can leave counts out.
+      numberOfAdults = hotel.guestCount ?? 1;
+      numberOfChildren = hotel.childrenCount ?? 0;
+      numberOfRooms = hotel.roomCount ?? 1;
 
-      selectedDateRange = hotel.selectedDateRange;
-      numberOfNights = hotel.noOfNights;
-      arrivalDate = hotel.arrivalDate;
-      departureDate = hotel.departureDate;
-      _dateRangeController.text = _formatRange(
-        hotel.selectedDateRange.start,
-        hotel.selectedDateRange.end,
-      );
+      // Only rooms added in this session carry a date range; one loaded from a
+      // saved reservation has just its arrival / departure dates, so the range
+      // is rebuilt from those.
+      final DateTimeRange? range = hotel.selectedDateRange is DateTimeRange
+          ? hotel.selectedDateRange as DateTimeRange
+          : (hotel.arrivalDate != null && hotel.departureDate != null)
+              ? DateTimeRange(
+                  start: hotel.arrivalDate!,
+                  end: hotel.departureDate!,
+                )
+              : null;
+      selectedDateRange = range;
+      arrivalDate = range?.start ?? hotel.arrivalDate;
+      departureDate = range?.end ?? hotel.departureDate;
+      numberOfNights = hotel.noOfNights ?? range?.duration.inDays;
+      _dateRangeController.text =
+          range == null ? '' : _formatRange(range.start, range.end);
       _useReservationDates = _hasReservationDates &&
           DateUtils.isSameDay(
             hotel.arrivalDate,
@@ -586,16 +596,27 @@ String selectedEcLcoFacility = 'NA';
             widget.reservationDepartureDate,
           );
 
-      selectedHotelId = hotel.hotel;
+      // The catalog keys hotels by a double, but a row read back off a saved
+      // reservation carries the id as an int (or text).
+      final rawHotelId = hotel.hotel;
+      selectedHotelId = rawHotelId is num
+          ? rawHotelId.toDouble()
+          : double.tryParse(rawHotelId?.toString() ?? '');
       selectedHotelName = hotel.hotelName;
-      selectedHotel = {"Hotel_IID": hotel.hotel, "HotelName": hotel.hotelName};
+      selectedHotel = {
+        "Hotel_IID": selectedHotelId,
+        "HotelName": hotel.hotelName,
+      };
       // A saved row names its hotel, not its type — read the type back off the
       // catalog so the question shows as answered rather than sending the user
       // to re-pick a hotel they already booked.
-      selectedHotelLocation =
-          ref.read(hotelCatalogProvider.notifier).locationOfHotel(hotel.hotel);
+      selectedHotelLocation = ref
+          .read(hotelCatalogProvider.notifier)
+          .locationOfHotel(selectedHotelId);
 
-      getSelectedHotelRoomCategories(selectedHotelId!, clearSelection: false);
+      if (selectedHotelId != null) {
+        getSelectedHotelRoomCategories(selectedHotelId!, clearSelection: false);
+      }
 
       selectedRoomCategoryId = hotel.roomCategoryId;
       selectedRoomCategoryName = hotel.roomCategoryName;
@@ -604,25 +625,43 @@ String selectedEcLcoFacility = 'NA';
         "CatName": hotel.roomCategoryName,
       };
 
-      getSelectedHotelCategoryRoomTypes(
-        selectedHotelId!,
-        selectedRoomCategoryId!,
-        clearSelection: false,
-      );
+      if (selectedHotelId != null && selectedRoomCategoryId != null) {
+        getSelectedHotelCategoryRoomTypes(
+          selectedHotelId!,
+          selectedRoomCategoryId!,
+          clearSelection: false,
+        );
+      }
 
       selectedRoomTypeId = hotel.roomTypeId;
       selectedRoomTypeName = hotel.roomTypeName;
-      List<String> parts = hotel.roomTypeName!.split("-");
+      // Saved as "<RoomType> - <MealPlan>". Split on the first " - " only, so
+      // a hyphenated name ("Half-Board") stays whole.
+      final roomTypeName = hotel.roomTypeName ?? '';
+      final separator = roomTypeName.indexOf(' - ');
+      sRoomTypeName = (separator < 0
+              ? roomTypeName
+              : roomTypeName.substring(0, separator))
+          .trim();
+      sMealPlanName =
+          (separator < 0 ? '' : roomTypeName.substring(separator + 3)).trim();
       selectedRoomType = {
         "ID": hotel.roomTypeId,
-        "RoomType": parts[0].trim(),
-        "MealPlan": parts[1].trim(),
+        "RoomType": sRoomTypeName,
+        "MealPlan": sMealPlanName,
       };
-      sRoomTypeName = parts[0].trim();
-      sMealPlanName = parts[1].trim();
       selectedCost = hotel.selectedCost;
-      costNotifier.value = hotel.selectedCost;
+      // The row stores its cost as a number (0 when none was calculated) or
+      // as formatted text, but the notifier only takes text.
+      final cost = hotel.selectedCost;
+      costNotifier.value =
+          (cost == null || (cost is num && cost == 0)) ? "0" : cost.toString();
       costIndex = hotel.costIndex;
+      // The dropdown asserts on a value it does not list.
+      const ecLcoOptions = ['NA', 'ECI', 'LCO', 'ECI & LCO'];
+      selectedEcLcoFacility = ecLcoOptions.contains(hotel.ecLcoFacility)
+          ? hotel.ecLcoFacility!
+          : 'NA';
 
       _applyAssignedGuests(hotel.assignedGuests);
       _syncRoomCountToGuests();
@@ -2042,7 +2081,7 @@ const SizedBox(height: 16),
                                                   ),
                                                   const SizedBox(height: 24),
                                                   const Text(
-                                                    "Double-tap to edit",
+                                                    "Tap the edit icon or double-tap to edit",
                                                     style: TextStyle(
                                                       fontSize: 11,
                                                       color: Colors.grey,
@@ -2056,13 +2095,29 @@ const SizedBox(height: 16),
                                             Positioned(
                                               bottom: 0,
                                               right: 0,
-                                              child: IconButton(
-                                                icon: const Icon(
-                                                  Icons.delete,
-                                                  color: Colors.red,
-                                                ),
-                                                onPressed: () =>
-                                                    _removeHotel(index),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  IconButton(
+                                                    tooltip: "Edit",
+                                                    icon: const Icon(
+                                                      Icons.edit,
+                                                      color: Colors.blue,
+                                                    ),
+                                                    onPressed: () =>
+                                                        _editHotel(
+                                                            hotel, index),
+                                                  ),
+                                                  IconButton(
+                                                    tooltip: "Delete",
+                                                    icon: const Icon(
+                                                      Icons.delete,
+                                                      color: Colors.red,
+                                                    ),
+                                                    onPressed: () =>
+                                                        _removeHotel(index),
+                                                  ),
+                                                ],
                                               ),
                                             ),
                                           ],

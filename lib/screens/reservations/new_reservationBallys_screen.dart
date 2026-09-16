@@ -712,7 +712,12 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
             flights: List<FlightBookingBallys>.from(guest.flights),
             arrivalDate: guest.arrivalDate ?? reservation.arrDate,
             departureDate: guest.departureDate ?? reservation.depDate,
-            remarks: guest.remarks,
+            // The save writes the first guest's remark at reservation level
+            // and sends nothing per guest, so that is where it comes back
+            // from — otherwise an update opens with the remark blanked.
+            remarks: guest.remarks.trim().isNotEmpty
+                ? guest.remarks
+                : (isFirst ? reservation.remarks : ''),
             airTicketRequisition: guest.airTicketRequisition,
             passportImages: await _materializePassports([
               ...reservation.passportImages

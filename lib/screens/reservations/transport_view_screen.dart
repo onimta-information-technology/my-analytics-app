@@ -114,40 +114,46 @@ class TransportViewScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildSummaryCard(transport, fontSettings),
-                    // A rejected request can't be amended, so the Rejected tab
-                    // opens this screen without the Amendment action.
+                    // A rejected request can't be amended or rejected again, so
+                    // the Rejected tab opens this screen without either action.
                     if (transport.status != TransportStatus.rejected) ...[
                       const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          icon: const Icon(Icons.edit_note),
-                          label: Text(
-                            'Amendment',
-                            style: TextStyle(
-                              fontSize: fontSettings.fontSize,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Constants.kPrimaryColor,
-                            side: const BorderSide(
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _actionButton(
+                              icon: Icons.edit_note,
+                              label: 'Amendment',
                               color: Constants.kPrimaryColor,
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          onPressed: () => showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (_) => _AmendmentDialog(
-                              transport: transport,
                               fontSettings: fontSettings,
+                              onPressed: () => showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (_) => _AmendmentDialog(
+                                  transport: transport,
+                                  fontSettings: fontSettings,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _actionButton(
+                              icon: Icons.cancel_outlined,
+                              label: 'Reject',
+                              color: Colors.red,
+                              fontSettings: fontSettings,
+                              onPressed: () => showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (_) => _RejectDialog(
+                                  transport: transport,
+                                  fontSettings: fontSettings,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                     if (transport.amendments.isNotEmpty) ...[
@@ -193,6 +199,34 @@ class TransportViewScreen extends ConsumerWidget {
                 ),
               ),
             ),
+    );
+  }
+
+  static Widget _actionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required FontSettings fontSettings,
+    required VoidCallback onPressed,
+  }) {
+    return OutlinedButton.icon(
+      icon: Icon(icon),
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: fontSettings.fontSize,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: color,
+        side: BorderSide(color: color),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+      onPressed: onPressed,
     );
   }
 
@@ -1186,6 +1220,189 @@ class _AmendmentsSection extends StatelessWidget {
   }
 }
 
+/// Reloads the transport list and re-points the selected request at the
+/// fresh copy, so this screen rebuilds with whatever was just saved.
+/// A failed reload is ignored — the save itself already went through.
+Future<void> _refreshSelectedTransport(WidgetRef ref, String masterId) async {
+  try {
+    await ref.read(transportProvider.notifier).getTransportData();
+    final updated = ref
+        .read(transportProvider)
+        .reservations
+        .where((r) => r.masterId == masterId);
+    if (updated.isNotEmpty) {
+      ref
+          .read(selectedTransportProvider.notifier)
+          .setSelectedTransport(updated.first);
+    }
+  } catch (_) {
+    // Leave the screen on the copy it already has.
+  }
+}
+
+/// Rejects a request. The remark is mandatory — Submit refuses an empty one.
+class _RejectDialog extends ConsumerStatefulWidget {
+  const _RejectDialog({required this.transport, required this.fontSettings});
+
+  final TransportReservation transport;
+  final FontSettings fontSettings;
+
+  @override
+  ConsumerState<_RejectDialog> createState() => _RejectDialogState();
+}
+
+class _RejectDialogState extends ConsumerState<_RejectDialog> {
+  final TextEditingController _controller = TextEditingController();
+  bool _submitting = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final remark = _controller.text.trim();
+    if (remark.isEmpty) {
+      setState(() => _error = 'Remark is required');
+      return;
+    }
+
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+
+    try {
+      final repo = TransportRepository(
+        ApiService(SecureStorage.instance),
+      );
+      final result = await repo.rejectTransport(
+        masterId: widget.transport.masterId,
+        mid: widget.transport.mid,
+        guestName: widget.transport.guestName,
+        remark: remark,
+      );
+      if (!mounted) return;
+
+      if (result.success) {
+        // Refresh so the request drops its Amendment/Reject actions and moves
+        // to the Rejected tab on the list.
+        await _refreshSelectedTransport(ref, widget.transport.masterId);
+        if (!mounted) return;
+
+        final messenger = ScaffoldMessenger.of(context);
+        Navigator.of(context).pop();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(result.message ?? 'Transport request rejected'),
+            backgroundColor: Colors.green.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        _submitting = false;
+        _error = result.message ?? 'Failed to reject request';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fontSettings = widget.fontSettings;
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      title: Row(
+        children: [
+          const Icon(Icons.cancel_outlined, color: Colors.red),
+          const SizedBox(width: 8),
+          Text(
+            'Reject Request',
+            style: TextStyle(
+              fontSize: fontSettings.fontSize + 2,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text.rich(
+            TextSpan(
+              text: 'Remark',
+              children: const [
+                TextSpan(text: ' *', style: TextStyle(color: Colors.red)),
+              ],
+            ),
+            style: TextStyle(
+              fontSize: fontSettings.fontSize,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _controller,
+            enabled: !_submitting,
+            autofocus: true,
+            maxLines: 4,
+            textCapitalization: TextCapitalization.sentences,
+            style: TextStyle(fontSize: fontSettings.fontSize),
+            decoration: InputDecoration(
+              hintText: 'Enter the reason for rejection',
+              errorText: _error,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onChanged: (_) {
+              if (_error != null) setState(() => _error = null);
+            },
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _submitting ? null : _submit,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          child: _submitting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text('Reject'),
+        ),
+      ],
+    );
+  }
+}
+
 /// Free-text amendment note for an existing request, posted to `amendment`
 /// with the request's `master_id`.
 class _AmendmentDialog extends ConsumerStatefulWidget {
@@ -1207,27 +1424,6 @@ class _AmendmentDialogState extends ConsumerState<_AmendmentDialog> {
   void dispose() {
     _controller.dispose();
     super.dispose();
-  }
-
-  /// Reloads the transport list and re-points the selected request at the
-  /// fresh copy, so this screen rebuilds with the amendment just saved.
-  /// A failed reload is ignored — the amendment itself already went through.
-  Future<void> _refreshSelectedTransport() async {
-    try {
-      await ref.read(transportProvider.notifier).getTransportData();
-      if (!mounted) return;
-      final updated = ref
-          .read(transportProvider)
-          .reservations
-          .where((r) => r.masterId == widget.transport.masterId);
-      if (updated.isNotEmpty) {
-        ref
-            .read(selectedTransportProvider.notifier)
-            .setSelectedTransport(updated.first);
-      }
-    } catch (_) {
-      // Leave the screen on the copy it already has.
-    }
   }
 
   Future<void> _submit() async {
@@ -1257,7 +1453,7 @@ class _AmendmentDialogState extends ConsumerState<_AmendmentDialog> {
       if (result.success) {
         // Pull the request back down so the new note shows up in the
         // Amendments section (and on the list card) without a manual refresh.
-        await _refreshSelectedTransport();
+        await _refreshSelectedTransport(ref, widget.transport.masterId);
         if (!mounted) return;
 
         // Grab the messenger before popping — the dialog's own context is gone

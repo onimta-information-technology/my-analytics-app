@@ -458,9 +458,10 @@ class QuickReservationRepository {
 
   Future<QuickReservationResult> saveTransportReservation({
     required List<Map<String, dynamic>> members,
+    AuthorizationLevel? approver,
     void Function(String label, Object? payload)? log,
   }) async {
-    final body = await buildTransportBody(members: members);
+    final body = await buildTransportBody(members: members, approver: approver);
     log?.call('Saving transport reservation', body);
     final response = await apiService.post(_transportEndpoint, body);
     log?.call('Transport reservation response', response);
@@ -469,6 +470,7 @@ class QuickReservationRepository {
 
   Future<Map<String, dynamic>> buildTransportBody({
     required List<Map<String, dynamic>> members,
+    AuthorizationLevel? approver,
   }) async {
     final transportDetails = members.map(transportDetailOf).toList();
     final primary = members.first;
@@ -480,7 +482,8 @@ class QuickReservationRepository {
       'guest_name': primary['guestName'],
       'pickup_date': pickupIso(primary),
       'contact_number': phoneNumber,
-      'reservation_status': 'Requested',
+      'approve_person': approvePersonJson(approver),
+      'reservation_status': 'Pending',
       'transport_details': transportDetails,
     };
   }

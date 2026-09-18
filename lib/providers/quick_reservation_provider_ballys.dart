@@ -270,10 +270,12 @@ class QuickReservationBallysNotifier
 
   Future<QuickReservationResult> saveTransportReservation({
     required List<Map<String, dynamic>> members,
+    AuthorizationLevel? approver,
     void Function(String label, Object? payload)? log,
   }) {
     return _guarded(() => reservationRepository.saveTransportReservation(
           members: members,
+          approver: approver,
           log: log,
         ));
   }

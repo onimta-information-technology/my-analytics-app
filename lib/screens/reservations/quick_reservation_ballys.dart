@@ -173,6 +173,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   // the remarks field is.
   AuthorizationLevel? _h_approver;
   AuthorizationLevel? _a_approver;
+  AuthorizationLevel? _t_approver;
 
   DateTime? _h_arrivalDate;
   DateTime? _h_departureDate;
@@ -635,6 +636,9 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       }
       if (_a_approver != null && !levels.contains(_a_approver)) {
         _a_approver = null;
+      }
+      if (_t_approver != null && !levels.contains(_t_approver)) {
+        _t_approver = null;
       }
     });
   }
@@ -1195,6 +1199,8 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       _transportMembers.clear();
       _resetSharedGuest();
       _resetTransportFields();
+      // The reservation is saved, so its approver goes with it.
+      _t_approver = null;
     });
   }
 
@@ -2516,6 +2522,7 @@ Remarks              : ${m['remarks']}''';
 
     final result = await _quickNotifier.saveTransportReservation(
       members: allMembers,
+      approver: _t_approver,
       log: _logLong,
     );
     _handleSaveResult(
@@ -6667,6 +6674,17 @@ class _TransportForm extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // ── Request Approval From ────────────────────────────────────────────
+          _approverDropdown(
+            value: state._t_approver,
+            levels: state._quick.authorizationLevels,
+            loading: state._quick.authorizationLevelsLoading,
+            accent: accent,
+            onChanged: (v) => state.setState(() => state._t_approver = v),
           ),
 
           const SizedBox(height: 16),

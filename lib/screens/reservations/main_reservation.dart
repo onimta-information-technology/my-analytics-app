@@ -383,6 +383,10 @@ class _ReservationMainScreenState extends ConsumerState<ReservationMainScreen>
                       Expanded(
                         child: GestureDetector(
                           onTap: () {
+                                 if (_userLevel == '3') {
+                              _showAccessDeniedDialog();
+                              return;
+                            }
                             context.go('/reservationMain/transport-ballys');
                           },
                           child: Card(

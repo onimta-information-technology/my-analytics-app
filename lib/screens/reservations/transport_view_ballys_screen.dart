@@ -115,8 +115,8 @@ class TransportViewBallysScreen extends ConsumerWidget {
       children: [
         if (approver != null) ...[
           _row('Approver', approver.authorizationPerson, fontSettings),
-          _row('Category', approver.authorizationCategory, fontSettings),
-          _row('Level', approver.authorizationLevel.toString(), fontSettings),
+          // _row('Category', approver.authorizationCategory, fontSettings),
+          // _row('Level', approver.authorizationLevel.toString(), fontSettings),
         ],
         if (reservation.checkedBy != null) ...[
           _row('Checked by', reservation.checkedBy!, fontSettings),

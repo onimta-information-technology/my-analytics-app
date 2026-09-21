@@ -125,8 +125,11 @@ class TransportReservationBallys {
 
 /// The `reservation_status` values, one per tab.
 enum TransportStatusBallys {
-  pending('Pending'),
-  checked('Checked'),
+  /// Raised, waiting to be checked.
+  pending('Pending Check'),
+
+  /// Checked, waiting for the approver.
+  checked('Pending Approval'),
   approved('Approved'),
   rejected('Rejected');
 

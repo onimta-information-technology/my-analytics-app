@@ -35,7 +35,7 @@ class QuickReservationRepository {
   QuickReservationRepository(this.apiService);
 
   static const String _reservationEndpoint = 'Reservation_InsertReservation';
-  static const String _transportEndpoint = 'Transport_Insert';
+  static const String _transportEndpoint = 'TransportReservation/Insert';
   static const String _visaEndpoint = 'Visa_Insert';
 
   // ── Hotel ───────────────────────────────────────────────────────────────────
@@ -616,10 +616,14 @@ class QuickReservationRepository {
 
   QuickReservationResult _toResult(
       Map<String, dynamic> response, String fallbackError) {
-    final success = response['Status'] as bool? ?? false;
+    // Older endpoints reply with `Status`/`Message`; the newer ones (e.g.
+    // TransportReservation/Insert) use lowercase `success`/`message`.
+    final success =
+        (response['Status'] ?? response['success']) as bool? ?? false;
+    final message = (response['Message'] ?? response['message']) as String?;
     return QuickReservationResult(
       success: success,
-      message: response['Message'] as String? ?? (success ? null : fallbackError),
+      message: message ?? (success ? null : fallbackError),
     );
   }
 }

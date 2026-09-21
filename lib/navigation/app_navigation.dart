@@ -72,7 +72,9 @@ import 'package:ballys_reservation_app/screens/reservations/reservation_screen.d
 import 'package:ballys_reservation_app/screens/reservations/reservation_screen_ballys.dart';
 import 'package:ballys_reservation_app/screens/reservations/reservation_view_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/reservation_view_screen_ballys.dart';
+import 'package:ballys_reservation_app/screens/reservations/transport_ballys_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/transport_add_screen.dart';
+import 'package:ballys_reservation_app/screens/reservations/transport_view_ballys_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/transport_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/transport_view_screen.dart';
 import 'package:ballys_reservation_app/screens/settings_screen.dart';
@@ -759,6 +761,38 @@ class AppNavigation {
           );
         },
       ),
+    ),
+
+    // Transport (Ballys) — separate list and view off TransportReservation/Get.
+    GoRoute(
+      path: 'transport-ballys',
+      pageBuilder: (context, state) => CustomTransitionPage(
+        fullscreenDialog: false,
+        key: state.pageKey,
+        child: const TransportBallysScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+            child: child,
+          );
+        },
+      ),
+      routes: [
+        GoRoute(
+          path: 'transport-view',
+          pageBuilder: (context, state) => CustomTransitionPage(
+            fullscreenDialog: false,
+            key: state.pageKey,
+            child: const TransportViewBallysScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(
+                opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+                child: child,
+              );
+            },
+          ),
+        ),
+      ],
     ),
 
     // Transport (Bellagio only)

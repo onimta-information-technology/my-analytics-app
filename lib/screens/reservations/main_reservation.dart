@@ -379,8 +379,38 @@ class _ReservationMainScreenState extends ConsumerState<ReservationMainScreen>
                           ),
                         ),
                       ),
-                      // Keeps the card the same width as the cards above.
-                      const Expanded(child: SizedBox()),
+                      // ── Transport (Ballys) ─────────────────────────
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            context.go('/reservationMain/transport-ballys');
+                          },
+                          child: Card(
+                            color: const Color.fromARGB(255, 0, 150, 136),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              child: Column(
+                                children: const [
+                                  Icon(
+                                    Icons.directions_car_filled,
+                                    size: 80,
+                                    color: Colors.white,
+                                  ),
+                                  Text(
+                                    'Transport',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 16.0,
+                                      fontWeight: FontWeight.normal,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
 

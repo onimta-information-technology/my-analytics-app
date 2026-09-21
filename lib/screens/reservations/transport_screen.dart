@@ -41,6 +41,7 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
   final Map<TransportStatus, ScrollController> _scrollControllers = {
     for (final status in TransportStatus.values) status: ScrollController(),
   };
+  final ScrollController _allScrollController = ScrollController();
   final Map<String, GlobalKey> _cardKeys = {};
 
   // ── Visibility gating ──
@@ -59,7 +60,7 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
   void initState() {
     super.initState();
     _tabController =
-        TabController(length: TransportStatus.values.length, vsync: this);
+        TabController(length: TransportStatus.values.length + 1, vsync: this);
     _highlightMasterId = _normaliseMasterId(widget.highlightMasterId);
     _loadAccessSettings();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -129,6 +130,7 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
     for (final controller in _scrollControllers.values) {
       controller.dispose();
     }
+    _allScrollController.dispose();
     _tabController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -158,8 +160,9 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
 
     _highlightRevealed = true;
 
-    final tabIndex = TransportStatus.values.indexOf(target.status);
-    if (tabIndex >= 0 && _tabController.index != tabIndex) {
+    // Tab 0 is "All", so status tabs start at 1.
+    final tabIndex = TransportStatus.values.indexOf(target.status) + 1;
+    if (tabIndex > 0 && _tabController.index != tabIndex) {
       _tabController.animateTo(tabIndex);
     }
 
@@ -342,6 +345,7 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
           isScrollable: true,
           tabAlignment: TabAlignment.start,
           tabs: [
+            _buildTab('All', reservations.length, Colors.teal),
             for (final status in TransportStatus.values)
               _buildTab(
                 status.label,
@@ -356,6 +360,9 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
           TabBarView(
             controller: _tabController,
             children: [
+              _buildTransportList(reservations,
+                  status: null,
+                  isLoading: transportState.isLoading || !_accessLoaded),
               for (final status in TransportStatus.values)
                 _buildTransportList(byStatus[status]!,
                     status: status,
@@ -400,9 +407,11 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
     );
   }
 
+  /// [status] is null for the "All" tab, where each card is outlined in its
+  /// status colour so the mix of statuses is readable at a glance.
   Widget _buildTransportList(
     List<TransportReservation> reservations, {
-    required TransportStatus status,
+    required TransportStatus? status,
     required bool isLoading,
   }) {
     return RefreshIndicator(
@@ -415,24 +424,34 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
               ],
             )
           : ListView.builder(
-              controller: _scrollControllers[status],
+              controller: status == null
+                  ? _allScrollController
+                  : _scrollControllers[status],
               padding: const EdgeInsets.symmetric(vertical: 8),
               itemCount: reservations.length,
-              itemBuilder: (context, index) =>
-                  _buildTransportCard(reservations[index]),
+              itemBuilder: (context, index) => _buildTransportCard(
+                reservations[index],
+                showStatusBorder: status == null,
+              ),
             ),
     );
   }
 
-  Widget _buildTransportCard(TransportReservation reservation) {
+  Widget _buildTransportCard(
+    TransportReservation reservation, {
+    bool showStatusBorder = false,
+  }) {
     final fontSettings = ref.watch(fontSettingsProvider);
 
     // The request a notification pointed us at wears a gold border and a warm
     // tint until the highlight times out.
     final isHighlighted = _highlightMasterId != null &&
         reservation.masterId == _highlightMasterId;
-    final cardKey =
-        _cardKeys.putIfAbsent(reservation.masterId, () => GlobalKey());
+    // The same request also appears in the "All" tab; a GlobalKey can only be
+    // mounted once, so only the status-tab card carries it (used for reveal).
+    final cardKey = showStatusBorder
+        ? null
+        : _cardKeys.putIfAbsent(reservation.masterId, () => GlobalKey());
 
     return Card(
       key: cardKey,
@@ -443,7 +462,10 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
         borderRadius: BorderRadius.circular(10),
         side: isHighlighted
             ? const BorderSide(color: Constants.kPrimaryColor, width: 2)
-            : BorderSide.none,
+            : showStatusBorder
+                ? BorderSide(
+                    color: _getStatusColor(reservation.status), width: 2)
+                : BorderSide.none,
       ),
       child: ListTile(
         contentPadding:
@@ -569,38 +591,38 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
             const SizedBox(height: 8),
             Row(
               children: [
-                if (reservation.hasAmendments) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.deepOrange,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.edit_note,
-                          size: 14,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(width: 2),
-                        Text(
-                          '${reservation.amendments.length}',
-                          style: TextStyle(
-                            fontSize: fontSettings.fontSize,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
+              //   if (reservation.hasAmendments) ...[
+                  // Container(
+                  //   padding: const EdgeInsets.symmetric(
+                  //     horizontal: 8,
+                  //     vertical: 4,
+                  //   ),
+                  //   decoration: BoxDecoration(
+                  //     color: Colors.deepOrange,
+                  //     borderRadius: BorderRadius.circular(12),
+                  //   ),
+                    // child: Row(
+                    //   mainAxisSize: MainAxisSize.min,
+                      // children: [
+                      //   const Icon(
+                      //     Icons.edit_note,
+                      //     size: 14,
+                      //     color: Colors.white,
+                      //   ),
+                      //   const SizedBox(width: 2),
+                      //   Text(
+                      //     '${reservation.amendments.length}',
+                      //     style: TextStyle(
+                      //       fontSize: fontSettings.fontSize,
+                      //       color: Colors.white,
+                      //       fontWeight: FontWeight.bold,
+                      //     ),
+                      //   ),
+                      // ],
+                  //   ),
+                  // ),
+                //   const SizedBox(width: 8),
+                // ],
                 Flexible(
                   child: Container(
                     padding:

@@ -256,7 +256,7 @@ class _PassportUploadWidgetState extends State<PassportUploadWidget> {
                       size: 40, color: Colors.grey.shade400),
                   const SizedBox(height: 8),
                   Text(
-                    "Tap to upload passport bio page",
+                    "Tap to upload Air Ticket",
                     style:
                         TextStyle(fontSize: 14, color: Colors.grey.shade500),
                   ),

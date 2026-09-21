@@ -475,9 +475,10 @@ class QuickReservationRepository {
     final transportDetails = members.map(transportDetailOf).toList();
     final primary = members.first;
     final phoneNumber = await StorageUtil.getMobileNumber();
-
+   final marketingCode = await StorageUtil.getMarketingCode();
     return {
       ...await _requestEnvelope(),
+      'marketing_code' : marketingCode,
       'MID': primary['memberId'],
       'guest_name': primary['guestName'],
       'pickup_date': pickupIso(primary),
@@ -519,7 +520,7 @@ class QuickReservationRepository {
               })
           .toList(),
       'contact_number': m['contactNumber'],
-      'airport_pickup': (m['airportPickup'] as String?) == 'Yes' ? 1 : 0,
+      // 'airport_pickup': (m['airportPickup'] as String?) == 'Yes' ? 1 : 0,
     };
   }
 
